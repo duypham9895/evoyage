@@ -1,0 +1,260 @@
+/**
+ * Seed Vietnam-specific EV models (VinFast + BYD) into the EVVehicle table.
+ *
+ * Run: npx tsx scripts/seed-vietnam-models.ts
+ */
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+const VIETNAM_MODELS = [
+  // ── VinFast ──
+  {
+    brand: 'VinFast', model: 'VF 3', variant: null,
+    modelYear: 2024, bodyType: 'Hatchback', segment: 'A', seats: 4, doors: 5,
+    batteryCapacityKwh: 18.64, usableBatteryKwh: 17.6,
+    officialRangeKm: 210, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 30, acChargingPowerKw: 3.3,
+    chargingTimeDC_10to80_min: 36, chargingPortType: 'CCS2',
+    powerKw: 95, torqueNm: 135, driveType: 'FWD',
+    acceleration0to100: 12.0, topSpeedKmh: 120,
+    lengthMm: 3133, widthMm: 1638, heightMm: 1560, wheelbaseMm: 2000,
+    weightKg: 1095, cargoVolumeLiters: 190,
+    availableInVietnam: true, priceVndMillions: 322,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 5', variant: 'Plus',
+    modelYear: 2024, bodyType: 'SUV', segment: 'B', seats: 5, doors: 5,
+    batteryCapacityKwh: 37.23, usableBatteryKwh: 35.5,
+    officialRangeKm: 326, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 50, acChargingPowerKw: 7.0,
+    chargingTimeDC_10to80_min: 30, chargingPortType: 'CCS2',
+    powerKw: 134, torqueNm: 135, driveType: 'FWD',
+    acceleration0to100: 9.0, topSpeedKmh: 150,
+    lengthMm: 4000, widthMm: 1720, heightMm: 1560, wheelbaseMm: 2513,
+    weightKg: 1490, cargoVolumeLiters: 370,
+    availableInVietnam: true, priceVndMillions: 529,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 6', variant: 'Eco',
+    modelYear: 2024, bodyType: 'SUV', segment: 'B', seats: 5, doors: 5,
+    batteryCapacityKwh: 59.6, usableBatteryKwh: 56.6,
+    officialRangeKm: 399, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 88, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 24, chargingPortType: 'CCS2',
+    powerKw: 130, torqueNm: 310, driveType: 'FWD',
+    acceleration0to100: 7.9, topSpeedKmh: 150,
+    lengthMm: 4238, widthMm: 1820, heightMm: 1594, wheelbaseMm: 2730,
+    weightKg: 1726, cargoVolumeLiters: 466,
+    availableInVietnam: true, priceVndMillions: 689,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 6', variant: 'Plus',
+    modelYear: 2024, bodyType: 'SUV', segment: 'B', seats: 5, doors: 5,
+    batteryCapacityKwh: 59.6, usableBatteryKwh: 56.6,
+    officialRangeKm: 381, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 88, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 24, chargingPortType: 'CCS2',
+    powerKw: 150, torqueNm: 310, driveType: 'FWD',
+    acceleration0to100: 7.5, topSpeedKmh: 150,
+    lengthMm: 4238, widthMm: 1820, heightMm: 1594, wheelbaseMm: 2730,
+    weightKg: 1760, cargoVolumeLiters: 466,
+    availableInVietnam: true, priceVndMillions: 745,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 7', variant: 'Eco',
+    modelYear: 2024, bodyType: 'SUV', segment: 'C', seats: 5, doors: 5,
+    batteryCapacityKwh: 59.6, usableBatteryKwh: 56.6,
+    officialRangeKm: 375, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 88, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 25, chargingPortType: 'CCS2',
+    powerKw: 130, torqueNm: 310, driveType: 'FWD',
+    acceleration0to100: 8.5, topSpeedKmh: 150,
+    lengthMm: 4545, widthMm: 1890, heightMm: 1635, wheelbaseMm: 2840,
+    weightKg: 1820, cargoVolumeLiters: 540,
+    availableInVietnam: true, priceVndMillions: 799,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 7', variant: 'Plus',
+    modelYear: 2024, bodyType: 'SUV', segment: 'C', seats: 5, doors: 5,
+    batteryCapacityKwh: 75.3, usableBatteryKwh: 71.5,
+    officialRangeKm: 431, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 25, chargingPortType: 'CCS2',
+    powerKw: 260, torqueNm: 500, driveType: 'AWD',
+    acceleration0to100: 5.8, topSpeedKmh: 175,
+    lengthMm: 4545, widthMm: 1890, heightMm: 1635, wheelbaseMm: 2840,
+    weightKg: 2080, cargoVolumeLiters: 540,
+    availableInVietnam: true, priceVndMillions: 999,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 8', variant: 'Eco',
+    modelYear: 2024, bodyType: 'SUV', segment: 'D', seats: 5, doors: 5,
+    batteryCapacityKwh: 87.7, usableBatteryKwh: 82.0,
+    officialRangeKm: 471, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 31, chargingPortType: 'CCS2',
+    powerKw: 260, torqueNm: 500, driveType: 'AWD',
+    acceleration0to100: 6.5, topSpeedKmh: 175,
+    lengthMm: 4750, widthMm: 1900, heightMm: 1660, wheelbaseMm: 2950,
+    weightKg: 2145, cargoVolumeLiters: 578,
+    availableInVietnam: true, priceVndMillions: 1099,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 8', variant: 'Plus',
+    modelYear: 2024, bodyType: 'SUV', segment: 'D', seats: 5, doors: 5,
+    batteryCapacityKwh: 87.7, usableBatteryKwh: 82.0,
+    officialRangeKm: 447, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 31, chargingPortType: 'CCS2',
+    powerKw: 300, torqueNm: 620, driveType: 'AWD',
+    acceleration0to100: 5.5, topSpeedKmh: 200,
+    lengthMm: 4750, widthMm: 1900, heightMm: 1660, wheelbaseMm: 2950,
+    weightKg: 2215, cargoVolumeLiters: 578,
+    availableInVietnam: true, priceVndMillions: 1199,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 9', variant: 'Eco',
+    modelYear: 2024, bodyType: 'SUV', segment: 'E', seats: 7, doors: 5,
+    batteryCapacityKwh: 123.0, usableBatteryKwh: 116.0,
+    officialRangeKm: 626, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 35, chargingPortType: 'CCS2',
+    powerKw: 300, torqueNm: 620, driveType: 'AWD',
+    acceleration0to100: 6.5, topSpeedKmh: 175,
+    lengthMm: 5120, widthMm: 2000, heightMm: 1721, wheelbaseMm: 3150,
+    weightKg: 2540, cargoVolumeLiters: 645,
+    availableInVietnam: true, priceVndMillions: 1489,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'VinFast', model: 'VF 9', variant: 'Plus',
+    modelYear: 2024, bodyType: 'SUV', segment: 'E', seats: 7, doors: 5,
+    batteryCapacityKwh: 123.0, usableBatteryKwh: 116.0,
+    officialRangeKm: 594, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 35, chargingPortType: 'CCS2',
+    powerKw: 300, torqueNm: 620, driveType: 'AWD',
+    acceleration0to100: 6.5, topSpeedKmh: 175,
+    lengthMm: 5120, widthMm: 2000, heightMm: 1721, wheelbaseMm: 3150,
+    weightKg: 2640, cargoVolumeLiters: 645,
+    availableInVietnam: true, priceVndMillions: 1589,
+    source: 'manual_seed',
+  },
+
+  // ── BYD ──
+  {
+    brand: 'BYD', model: 'Dolphin', variant: 'GLX',
+    modelYear: 2024, bodyType: 'Hatchback', segment: 'B', seats: 5, doors: 5,
+    batteryCapacityKwh: 44.9, usableBatteryKwh: 42.5,
+    officialRangeKm: 340, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 60, acChargingPowerKw: 7.0,
+    chargingTimeDC_10to80_min: 29, chargingPortType: 'CCS2',
+    powerKw: 150, torqueNm: 310, driveType: 'FWD',
+    acceleration0to100: 7.0, topSpeedKmh: 160,
+    lengthMm: 4290, widthMm: 1770, heightMm: 1570, wheelbaseMm: 2700,
+    weightKg: 1520, cargoVolumeLiters: 345,
+    availableInVietnam: true, priceVndMillions: 659,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'BYD', model: 'Atto 3', variant: 'Dynamic',
+    modelYear: 2024, bodyType: 'SUV', segment: 'C', seats: 5, doors: 5,
+    batteryCapacityKwh: 49.9, usableBatteryKwh: 47.0,
+    officialRangeKm: 345, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 70, acChargingPowerKw: 7.0,
+    chargingTimeDC_10to80_min: 29, chargingPortType: 'CCS2',
+    powerKw: 150, torqueNm: 310, driveType: 'FWD',
+    acceleration0to100: 7.3, topSpeedKmh: 160,
+    lengthMm: 4455, widthMm: 1875, heightMm: 1615, wheelbaseMm: 2720,
+    weightKg: 1750, cargoVolumeLiters: 440,
+    availableInVietnam: true, priceVndMillions: 786,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'BYD', model: 'Atto 3', variant: 'Premium',
+    modelYear: 2024, bodyType: 'SUV', segment: 'C', seats: 5, doors: 5,
+    batteryCapacityKwh: 60.4, usableBatteryKwh: 57.0,
+    officialRangeKm: 420, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 80, acChargingPowerKw: 7.0,
+    chargingTimeDC_10to80_min: 29, chargingPortType: 'CCS2',
+    powerKw: 150, torqueNm: 310, driveType: 'FWD',
+    acceleration0to100: 7.3, topSpeedKmh: 160,
+    lengthMm: 4455, widthMm: 1875, heightMm: 1615, wheelbaseMm: 2720,
+    weightKg: 1830, cargoVolumeLiters: 440,
+    availableInVietnam: true, priceVndMillions: 886,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'BYD', model: 'Seal', variant: 'Advance',
+    modelYear: 2024, bodyType: 'Sedan', segment: 'D', seats: 5, doors: 4,
+    batteryCapacityKwh: 82.5, usableBatteryKwh: 78.0,
+    officialRangeKm: 570, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 26, chargingPortType: 'CCS2',
+    powerKw: 230, torqueNm: 360, driveType: 'RWD',
+    acceleration0to100: 5.9, topSpeedKmh: 180,
+    lengthMm: 4800, widthMm: 1875, heightMm: 1460, wheelbaseMm: 2920,
+    weightKg: 2050, cargoVolumeLiters: 400,
+    availableInVietnam: true, priceVndMillions: 1120,
+    source: 'manual_seed',
+  },
+  {
+    brand: 'BYD', model: 'Seal', variant: 'Performance AWD',
+    modelYear: 2024, bodyType: 'Sedan', segment: 'D', seats: 5, doors: 4,
+    batteryCapacityKwh: 82.5, usableBatteryKwh: 78.0,
+    officialRangeKm: 520, rangeStandard: 'NEDC',
+    dcMaxChargingPowerKw: 150, acChargingPowerKw: 11.0,
+    chargingTimeDC_10to80_min: 26, chargingPortType: 'CCS2',
+    powerKw: 390, torqueNm: 670, driveType: 'AWD',
+    acceleration0to100: 3.8, topSpeedKmh: 200,
+    lengthMm: 4800, widthMm: 1875, heightMm: 1460, wheelbaseMm: 2920,
+    weightKg: 2180, cargoVolumeLiters: 400,
+    availableInVietnam: true, priceVndMillions: 1360,
+    source: 'manual_seed',
+  },
+] as const;
+
+async function main() {
+  console.log('Seeding Vietnam EV models...');
+
+  for (const vehicle of VIETNAM_MODELS) {
+    await prisma.eVVehicle.upsert({
+      where: {
+        brand_model_variant: {
+          brand: vehicle.brand,
+          model: vehicle.model,
+          variant: vehicle.variant ?? '',
+        },
+      },
+      update: {
+        ...vehicle,
+        variant: vehicle.variant ?? null,
+        lastUpdated: new Date(),
+      },
+      create: {
+        ...vehicle,
+        variant: vehicle.variant ?? null,
+      },
+    });
+
+    const displayName = vehicle.variant
+      ? `${vehicle.brand} ${vehicle.model} ${vehicle.variant}`
+      : `${vehicle.brand} ${vehicle.model}`;
+    console.log(`  ✓ ${displayName} (${vehicle.officialRangeKm}km, ${vehicle.priceVndMillions}M VND)`);
+  }
+
+  console.log(`\nSeeded ${VIETNAM_MODELS.length} Vietnam EV models.`);
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());

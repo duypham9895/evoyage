@@ -1,4 +1,4 @@
-# EV Road Planner VN — Project Blueprint
+# EVoyage — Project Blueprint
 
 > Generated: 2026-03-17 | Status: Sprint-1 Ready
 > Team Simulation: PM → Designer → Leadership Debate → Engineer + QA + DevOps + Security
@@ -13,7 +13,7 @@
 
 ### Product Overview
 
-**Product Name:** EV Road Planner VN
+**Product Name:** EVoyage
 **Vision:** The go-to trip planning tool for EV drivers in Vietnam — brand-agnostic, safety-first, Vietnamese-native.
 **One-liner:** Plan your EV road trip across Vietnam with accurate range calculations, brand-aware charging stops, and the 80% real-world range rule built in.
 
@@ -232,7 +232,7 @@ Home (/)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ EV Road Planner VN                          [🇻🇳/🇬🇧]       │
+│ EVoyage                          [🇻🇳/🇬🇧]       │
 ├──────────────┬──────────────────────────────────────────────┤
 │              │                                              │
 │  📍 Start    │                                              │
@@ -269,7 +269,7 @@ Home (/)
 
 ```
 ┌──────────────────────┐
-│ EV Road Planner VN 🇻🇳│
+│ EVoyage 🇻🇳│
 ├──────────────────────┤
 │ 📍 HCM → Nha Trang  │
 │ 🚗 VF 8 Eco | 🔋 80% │
@@ -692,7 +692,7 @@ function planChargingStops(
 
 | # | Task | Size | Skill(s) | Details |
 |---|---|---|---|---|
-| 0.1 | Project setup | S | — | `npx create-next-app@latest ev-road-planner-vn --typescript --tailwind --app` |
+| 0.1 | Project setup | S | — | `npx create-next-app@latest evoyage --typescript --tailwind --app` |
 | 0.2 | Supabase project + Prisma setup | S | — | Create project, configure connection string with pgbouncer (per D8), init Prisma |
 | 0.3 | Database schema + migration | S | — | Create EVVehicle + ChargingStation models, run `prisma migrate dev` |
 | 0.4 | Seed Vietnam EV models | S | — | `npm run seed` script with 15 hardcoded models (per D1) |
@@ -1257,7 +1257,7 @@ VinFast's website terms likely prohibit scraping. Open Charge Map data is CC BY-
 
 ## Executive Summary
 
-**EV Road Planner VN** is a web-based EV trip planning tool for Vietnam that differentiates through honest range calculation (80% real-world factor), brand-aware station filtering, and Vietnamese-native UX.
+**EVoyage** is a web-based EV trip planning tool for Vietnam that differentiates through honest range calculation (80% real-world factor), brand-aware station filtering, and Vietnamese-native UX.
 
 ### Locked Decisions (Binding)
 
@@ -1278,8 +1278,8 @@ VinFast's website terms likely prohibit scraping. Open Charge Map data is CC BY-
 
 **Day 1:**
 ```bash
-npx create-next-app@latest ev-road-planner-vn --typescript --tailwind --app --src-dir
-cd ev-road-planner-vn
+npx create-next-app@latest evoyage --typescript --tailwind --app --src-dir
+cd evoyage
 npm install prisma @prisma/client @googlemaps/js-api-loader
 npx prisma init
 ```

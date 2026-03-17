@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model EVVehicle {
+  id                        String   @id @default(cuid())
+
+  // Identity
+  brand                     String
+  model                     String
+  variant                   String?
+  modelYear                 Int?
+
+  // Body & Category
+  bodyType                  String
+  segment                   String?
+  seats                     Int
+  doors                     Int?
+
+  // Battery & Range (CORE for trip planning)
+  batteryCapacityKwh        Float
+  usableBatteryKwh          Float?
+  officialRangeKm           Float
+  rangeStandard             String?
+  efficiencyWhPerKm         Float?
+
+  // Charging (CORE for trip planning)
+  dcMaxChargingPowerKw      Float?
+  acChargingPowerKw         Float?
+  chargingTimeDC_10to80_min Int?
+  chargingPortType          String?
+
+  // Performance
+  powerKw                   Float?
+  torqueNm                  Float?
+  driveType                 String?
+  acceleration0to100        Float?
+  topSpeedKmh               Float?
+
+  // Dimensions & Weight
+  lengthMm                  Int?
+  widthMm                   Int?
+  heightMm                  Int?
+  wheelbaseMm               Int?
+  weightKg                  Int?
+  cargoVolumeLiters         Int?
+
+  // Availability
+  availableInVietnam        Boolean  @default(false)
+  priceVndMillions          Float?
+
+  // Data Source
+  source                    String   @default("crawled")
+  sourceUrl                 String?
+  isUserAdded               Boolean  @default(false)
+  lastUpdated               DateTime @default(now())
+
+  @@unique([brand, model, variant])
+  @@index([brand])
+  @@index([availableInVietnam])
+  @@index([bodyType])
+  @@index([seats])
+}
+
+model ChargingStation {
+  id             String   @id @default(cuid())
+  ocmId          String?  @unique
+  name           String
+  address        String
+  province       String
+  latitude       Float
+  longitude      Float
+  chargerTypes   String
+  connectorTypes String
+  portCount      Int
+  maxPowerKw     Float
+  stationType    String
+  isVinFastOnly  Boolean  @default(false)
+  operatingHours String?
+  provider       String
+  scrapedAt      DateTime @default(now())
+
+  @@index([latitude, longitude])
+  @@index([province])
+  @@index([provider])
+  @@index([isVinFastOnly])
+}
+
+model RouteCache {
+  id              String   @id @default(cuid())
+  startPlaceId    String
+  endPlaceId      String
+  polyline        String
+  distanceMeters  Int
+  durationSeconds Int
+  createdAt       DateTime @default(now())
+
+  @@unique([startPlaceId, endPlaceId])
+  @@index([createdAt])
+}

@@ -1,65 +1,229 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import { LocaleProvider } from '@/lib/locale';
+import Header from '@/components/Header';
+import TripInput from '@/components/TripInput';
+import BrandModelSelector from '@/components/BrandModelSelector';
+import AddCustomVehicle from '@/components/AddCustomVehicle';
+import BatteryStatusPanel from '@/components/BatteryStatusPanel';
+import TripSummary from '@/components/TripSummary';
+import Map from '@/components/Map';
+import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
+import {
+  DEFAULT_RANGE_SAFETY_FACTOR,
+  DEFAULT_CURRENT_BATTERY,
+  DEFAULT_MIN_ARRIVAL,
+} from '@/types';
 
 export default function Home() {
+  // Google Maps loading state
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+
+  // Trip inputs
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+
+  // Vehicle
+  const [selectedVehicle, setSelectedVehicle] = useState<EVVehicleData | null>(null);
+  const [customVehicle, setCustomVehicle] = useState<CustomVehicleInput | null>(null);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+
+  // Battery
+  const [currentBattery, setCurrentBattery] = useState(DEFAULT_CURRENT_BATTERY);
+  const [minArrival, setMinArrival] = useState(DEFAULT_MIN_ARRIVAL);
+  const [rangeSafetyFactor, setRangeSafetyFactor] = useState(DEFAULT_RANGE_SAFETY_FACTOR);
+
+  // Trip result
+  const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
+  const [isPlanning, setIsPlanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load Google Maps API using functional API (v2)
+  useEffect(() => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.warn('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY not set — map disabled');
+      return;
+    }
+
+    setOptions({
+      key: apiKey,
+      v: 'weekly',
+      language: 'vi',
+      region: 'VN',
+    });
+
+    // Import both core maps and places libraries
+    Promise.all([
+      importLibrary('maps'),
+      importLibrary('places'),
+    ])
+      .then(() => setMapsLoaded(true))
+      .catch(console.error);
+  }, []);
+
+  // Load persisted state from localStorage
+  useEffect(() => {
+    const savedRSF = localStorage.getItem('ev-planner-rsf');
+    if (savedRSF) {
+      const val = parseFloat(savedRSF);
+      if (!isNaN(val) && val >= 0.5 && val <= 1.0) {
+        setRangeSafetyFactor(val);
+      }
+    }
+
+    const savedCustom = localStorage.getItem('ev-planner-custom-vehicle');
+    if (savedCustom) {
+      try {
+        setCustomVehicle(JSON.parse(savedCustom));
+      } catch { /* ignore invalid data */ }
+    }
+  }, []);
+
+  // Persist RSF to localStorage
+  const handleRSFChange = useCallback((val: number) => {
+    setRangeSafetyFactor(val);
+    localStorage.setItem('ev-planner-rsf', val.toString());
+  }, []);
+
+  // Save custom vehicle
+  const handleSaveCustomVehicle = useCallback((vehicle: CustomVehicleInput) => {
+    setCustomVehicle(vehicle);
+    setSelectedVehicle(null);
+    localStorage.setItem('ev-planner-custom-vehicle', JSON.stringify(vehicle));
+  }, []);
+
+  // Select DB vehicle (clears custom)
+  const handleSelectVehicle = useCallback((vehicle: EVVehicleData | null) => {
+    setSelectedVehicle(vehicle);
+    setCustomVehicle(null);
+  }, []);
+
+  // Plan trip — POST to /api/route
+  const handlePlanTrip = useCallback(async () => {
+    if (!start || !end) {
+      setError('Please enter start and end locations');
+      return;
+    }
+    if (!selectedVehicle && !customVehicle) {
+      setError('Please select a vehicle');
+      return;
+    }
+
+    setIsPlanning(true);
+    setError(null);
+    setTripPlan(null);
+
+    try {
+      const response = await fetch('/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start,
+          end,
+          vehicleId: selectedVehicle?.id ?? null,
+          customVehicle: selectedVehicle ? null : customVehicle,
+          currentBatteryPercent: currentBattery,
+          minArrivalPercent: minArrival,
+          rangeSafetyFactor,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Route calculation failed');
+      }
+
+      setTripPlan(data as TripPlan);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setIsPlanning(false);
+    }
+  }, [start, end, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor]);
+
+  const activeVehicle = selectedVehicle ?? customVehicle;
+  const canPlan = Boolean(start && end && activeVehicle && !isPlanning);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <LocaleProvider>
+      <div className="h-screen flex flex-col">
+        <Header />
+
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* Sidebar — inputs + summary */}
+          <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
+            <TripInput
+              start={start}
+              end={end}
+              onStartChange={setStart}
+              onEndChange={setEnd}
+              isLoaded={mapsLoaded}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            <BrandModelSelector
+              selectedVehicle={selectedVehicle}
+              onSelect={handleSelectVehicle}
+              onCustomCarClick={() => setShowCustomForm(true)}
+            />
+
+            <BatteryStatusPanel
+              vehicle={activeVehicle}
+              currentBattery={currentBattery}
+              minArrival={minArrival}
+              rangeSafetyFactor={rangeSafetyFactor}
+              onCurrentBatteryChange={setCurrentBattery}
+              onMinArrivalChange={setMinArrival}
+              onRangeSafetyFactorChange={handleRSFChange}
+            />
+
+            {/* Plan trip button */}
+            <button
+              onClick={handlePlanTrip}
+              disabled={!canPlan}
+              className={`w-full py-3 rounded-lg font-bold font-[family-name:var(--font-heading)] text-lg transition-all ${
+                canPlan
+                  ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
+                  : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed'
+              }`}
+            >
+              {isPlanning ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
+                  Planning...
+                </span>
+              ) : (
+                'LÊN KẾ HOẠCH ⚡'
+              )}
+            </button>
+
+            {/* Error display */}
+            {error && (
+              <div className="p-3 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Trip results */}
+            <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />
+          </aside>
+
+          {/* Map pane */}
+          <main className="flex-1 relative min-h-[300px]">
+            <Map tripPlan={tripPlan} isLoaded={mapsLoaded} />
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* Custom vehicle modal */}
+      <AddCustomVehicle
+        isOpen={showCustomForm}
+        onClose={() => setShowCustomForm(false)}
+        onSave={handleSaveCustomVehicle}
+      />
+    </LocaleProvider>
   );
 }
