@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "npx tsx scripts/seed-vietnam-models.ts",
+    "seed:stations": "npx tsx scripts/seed-osm-stations.ts",
     "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate"
   },
