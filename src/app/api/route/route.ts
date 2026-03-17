@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { fetchDirections } from '@/lib/google-maps';
+import { fetchDirections } from '@/lib/osrm';
 import { planChargingStops } from '@/lib/route-planner';
 import type { ChargingStationData, TripPlan } from '@/types';
 
