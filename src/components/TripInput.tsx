@@ -1,12 +1,17 @@
 'use client';
 
+import { useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
+import PlaceAutocomplete from './PlaceAutocomplete';
+import type { NominatimResult } from '@/lib/nominatim';
 
 interface TripInputProps {
   readonly start: string;
   readonly end: string;
   readonly onStartChange: (value: string) => void;
   readonly onEndChange: (value: string) => void;
+  readonly onStartSelect?: (result: NominatimResult) => void;
+  readonly onEndSelect?: (result: NominatimResult) => void;
   readonly isLoaded: boolean;
 }
 
@@ -15,8 +20,26 @@ export default function TripInput({
   end,
   onStartChange,
   onEndChange,
+  onStartSelect,
+  onEndSelect,
 }: TripInputProps) {
   const { t } = useLocale();
+
+  const handleStartSelect = useCallback(
+    (result: NominatimResult) => {
+      onStartChange(result.displayName);
+      onStartSelect?.(result);
+    },
+    [onStartChange, onStartSelect],
+  );
+
+  const handleEndSelect = useCallback(
+    (result: NominatimResult) => {
+      onEndChange(result.displayName);
+      onEndSelect?.(result);
+    },
+    [onEndChange, onEndSelect],
+  );
 
   return (
     <div className="space-y-3">
@@ -25,35 +48,25 @@ export default function TripInput({
       </h2>
 
       <div className="space-y-2">
-        <div>
-          <label className="text-xs text-[var(--color-muted)] mb-1 block">
-            {t('Điểm xuất phát', 'Starting point')}
-          </label>
-          <input
-            type="text"
-            value={start}
-            onChange={(e) => onStartChange(e.target.value)}
-            placeholder={t('VD: Hồ Chí Minh', 'e.g., Ho Chi Minh City')}
-            className="w-full px-3 py-2.5 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
-          />
-        </div>
+        <PlaceAutocomplete
+          value={start}
+          onChange={onStartChange}
+          onSelect={handleStartSelect}
+          label={t('Điểm xuất phát', 'Starting point')}
+          placeholder={t('VD: Thủ Thiêm, TP.HCM', 'e.g., Thu Thiem, HCMC')}
+        />
 
         <div className="flex justify-center">
           <div className="w-px h-4 bg-[var(--color-surface-hover)]" />
         </div>
 
-        <div>
-          <label className="text-xs text-[var(--color-muted)] mb-1 block">
-            {t('Điểm đến', 'Destination')}
-          </label>
-          <input
-            type="text"
-            value={end}
-            onChange={(e) => onEndChange(e.target.value)}
-            placeholder={t('VD: Nha Trang', 'e.g., Nha Trang')}
-            className="w-full px-3 py-2.5 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
-          />
-        </div>
+        <PlaceAutocomplete
+          value={end}
+          onChange={onEndChange}
+          onSelect={handleEndSelect}
+          label={t('Điểm đến', 'Destination')}
+          placeholder={t('VD: Vũng Tàu', 'e.g., Vung Tau')}
+        />
       </div>
     </div>
   );
