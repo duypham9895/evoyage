@@ -1,19 +1,18 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import type { TripPlan } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface MapProps {
   readonly tripPlan: TripPlan | null;
-  readonly isLoaded: boolean;
 }
 
-// Vietnam center coordinates
-const VIETNAM_CENTER = { lat: 14.0583, lng: 108.2772 };
+const VIETNAM_CENTER: L.LatLngExpression = [14.0583, 108.2772];
 const VIETNAM_ZOOM = 6;
 
-// Station marker colors by provider
 const PROVIDER_COLORS: Record<string, string> = {
   VinFast: '#34C759',
   EverCharge: '#007AFF',
@@ -23,164 +22,132 @@ const PROVIDER_COLORS: Record<string, string> = {
 };
 const DEFAULT_MARKER_COLOR = '#8E8E93';
 
-// Dark map style
-const MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ color: '#1C1C1E' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#0A0A0B' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#8E8E93' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2C2C2E' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#3A3A3C' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3A3A3C' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0A1628' }] },
-  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4E6D8C' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#1C1C1E' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1C1C1E' }] },
-];
+// Dark tile layer (CartoDB Dark Matter)
+const DARK_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>';
 
-export default function Map({ tripPlan, isLoaded }: MapProps) {
+function createCircleIcon(color: string, label: string): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+    popupAnchor: [0, -16],
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid #0A0A0B;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#0A0A0B;font-family:system-ui">${label}</div>`,
+  });
+}
+
+function createEndpointIcon(label: string): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -18],
+    html: `<div style="width:30px;height:30px;border-radius:50%;background:#00D4AA;border:2px solid #0A0A0B;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;color:#0A0A0B;font-family:system-ui">${label}</div>`,
+  });
+}
+
+export default function Map({ tripPlan }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const polylineRef = useRef<google.maps.Polyline | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const overlaysRef = useRef<L.LayerGroup | null>(null);
 
   // Initialize map
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || mapInstanceRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current) return;
 
-    mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+    const map = L.map(mapRef.current, {
       center: VIETNAM_CENTER,
       zoom: VIETNAM_ZOOM,
-      styles: MAP_STYLES,
-      disableDefaultUI: false,
       zoomControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
     });
 
-    infoWindowRef.current = new google.maps.InfoWindow();
-  }, [isLoaded]);
+    L.tileLayer(DARK_TILE_URL, {
+      attribution: TILE_ATTRIBUTION,
+      maxZoom: 19,
+    }).addTo(map);
 
-  // Clear existing overlays
-  const clearOverlays = useCallback(() => {
-    polylineRef.current?.setMap(null);
-    polylineRef.current = null;
-    markersRef.current.forEach((m) => m.setMap(null));
-    markersRef.current = [];
-    infoWindowRef.current?.close();
+    overlaysRef.current = L.layerGroup().addTo(map);
+    mapInstanceRef.current = map;
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+      overlaysRef.current = null;
+    };
   }, []);
 
-  // Render trip plan on map
+  // Render trip plan
   useEffect(() => {
     const map = mapInstanceRef.current;
-    if (!map || !tripPlan) return;
+    const overlays = overlaysRef.current;
+    if (!map || !overlays) return;
 
-    clearOverlays();
+    overlays.clearLayers();
 
-    // Decode and draw route polyline
-    const path = decodePolyline(tripPlan.polyline).map(
-      (p) => new google.maps.LatLng(p.lat, p.lng),
-    );
+    if (!tripPlan) return;
 
-    polylineRef.current = new google.maps.Polyline({
-      path,
-      strokeColor: '#00D4AA',
-      strokeOpacity: 0.9,
-      strokeWeight: 4,
-      map,
+    const path = decodePolyline(tripPlan.polyline);
+    const latLngs: L.LatLngExpression[] = path.map((p) => [p.lat, p.lng]);
+
+    // Route polyline
+    const polyline = L.polyline(latLngs, {
+      color: '#00D4AA',
+      weight: 4,
+      opacity: 0.9,
     });
-
-    // Fit bounds to route
-    const bounds = new google.maps.LatLngBounds();
-    path.forEach((p) => bounds.extend(p));
+    overlays.addLayer(polyline);
 
     // Start marker
-    const startMarker = new google.maps.Marker({
-      position: path[0],
-      map,
-      label: { text: 'A', color: '#0A0A0B', fontWeight: 'bold', fontSize: '12px' },
-      title: tripPlan.startAddress,
-      zIndex: 10,
-    });
-    markersRef.current.push(startMarker);
+    if (latLngs.length > 0) {
+      const startMarker = L.marker(latLngs[0], { icon: createEndpointIcon('A') })
+        .bindPopup(`<b>Start:</b> ${tripPlan.startAddress}`);
+      overlays.addLayer(startMarker);
 
-    // End marker
-    const endMarker = new google.maps.Marker({
-      position: path[path.length - 1],
-      map,
-      label: { text: 'B', color: '#0A0A0B', fontWeight: 'bold', fontSize: '12px' },
-      title: tripPlan.endAddress,
-      zIndex: 10,
-    });
-    markersRef.current.push(endMarker);
+      // End marker
+      const endMarker = L.marker(latLngs[latLngs.length - 1], { icon: createEndpointIcon('B') })
+        .bindPopup(`<b>End:</b> ${tripPlan.endAddress}`);
+      overlays.addLayer(endMarker);
+    }
 
     // Charging stop markers
     tripPlan.chargingStops.forEach((stop, index) => {
       const color = PROVIDER_COLORS[stop.station.provider] ?? DEFAULT_MARKER_COLOR;
-      const marker = new google.maps.Marker({
-        position: { lat: stop.station.latitude, lng: stop.station.longitude },
-        map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: color,
-          fillOpacity: 1,
-          strokeColor: '#0A0A0B',
-          strokeWeight: 2,
-          scale: 12,
-        },
-        label: {
-          text: `${index + 1}`,
-          color: '#0A0A0B',
-          fontWeight: 'bold',
-          fontSize: '11px',
-        },
-        title: stop.station.name,
-        zIndex: 5,
-      });
+      const marker = L.marker(
+        [stop.station.latitude, stop.station.longitude],
+        { icon: createCircleIcon(color, `${index + 1}`) },
+      );
 
-      bounds.extend(marker.getPosition()!);
-
-      marker.addListener('click', () => {
-        const content = `
-          <div style="color:#0A0A0B;font-family:system-ui;max-width:250px">
-            <h3 style="font-weight:bold;margin:0 0 4px">${stop.station.name}</h3>
-            <p style="font-size:12px;margin:0 0 4px;color:#666">${stop.station.address}</p>
-            <p style="font-size:12px;margin:0">
-              <span style="color:#FF3B30;font-weight:bold">${stop.arrivalBatteryPercent}%</span>
-              → <span style="color:#34C759;font-weight:bold">${stop.departureBatteryPercent}%</span>
-              | ~${stop.estimatedChargingTimeMin}min
-            </p>
-            <p style="font-size:11px;margin:4px 0 0;color:#888">
-              ⚡ ${stop.station.maxPowerKw}kW | ${stop.station.connectorTypes.join(', ')} | ${stop.station.provider}
-            </p>
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${stop.station.latitude},${stop.station.longitude}"
-               target="_blank" rel="noopener noreferrer"
-               style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0A0A0B;
-                      border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
-              Navigate
-            </a>
-          </div>
-        `;
-        infoWindowRef.current?.setContent(content);
-        infoWindowRef.current?.open(map, marker);
-      });
-
-      markersRef.current.push(marker);
+      const popupContent = `
+        <div style="font-family:system-ui;max-width:250px">
+          <h3 style="font-weight:bold;margin:0 0 4px">${stop.station.name}</h3>
+          <p style="font-size:12px;margin:0 0 4px;color:#666">${stop.station.address}</p>
+          <p style="font-size:12px;margin:0">
+            <span style="color:#FF3B30;font-weight:bold">${stop.arrivalBatteryPercent}%</span>
+            → <span style="color:#34C759;font-weight:bold">${stop.departureBatteryPercent}%</span>
+            | ~${stop.estimatedChargingTimeMin}min
+          </p>
+          <p style="font-size:11px;margin:4px 0 0;color:#888">
+            ⚡ ${stop.station.maxPowerKw}kW | ${stop.station.connectorTypes.join(', ')} | ${stop.station.provider}
+          </p>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${stop.station.latitude},${stop.station.longitude}"
+             target="_blank" rel="noopener noreferrer"
+             style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0A0A0B;
+                    border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
+            Navigate
+          </a>
+        </div>
+      `;
+      marker.bindPopup(popupContent);
+      overlays.addLayer(marker);
     });
 
-    map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-  }, [tripPlan, clearOverlays]);
-
-  if (!isLoaded) {
-    return (
-      <div className="w-full h-full bg-[var(--color-surface)] flex items-center justify-center">
-        <div className="text-[var(--color-muted)] text-sm animate-pulse">
-          Loading map...
-        </div>
-      </div>
-    );
-  }
+    // Fit bounds
+    const bounds = polyline.getBounds();
+    tripPlan.chargingStops.forEach((stop) => {
+      bounds.extend([stop.station.latitude, stop.station.longitude]);
+    });
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }, [tripPlan]);
 
   return <div ref={mapRef} className="w-full h-full" />;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
+import dynamic from 'next/dynamic';
 import { LocaleProvider } from '@/lib/locale';
 import Header from '@/components/Header';
 import TripInput from '@/components/TripInput';
@@ -9,7 +9,6 @@ import BrandModelSelector from '@/components/BrandModelSelector';
 import AddCustomVehicle from '@/components/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/BatteryStatusPanel';
 import TripSummary from '@/components/TripSummary';
-import Map from '@/components/Map';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,
@@ -17,10 +16,10 @@ import {
   DEFAULT_MIN_ARRIVAL,
 } from '@/types';
 
-export default function Home() {
-  // Google Maps loading state
-  const [mapsLoaded, setMapsLoaded] = useState(false);
+// Leaflet must be loaded client-side only (uses window/document)
+const Map = dynamic(() => import('@/components/Map'), { ssr: false });
 
+export default function Home() {
   // Trip inputs
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -39,30 +38,6 @@ export default function Home() {
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Load Google Maps API using functional API (v2)
-  useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      console.warn('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY not set — map disabled');
-      return;
-    }
-
-    setOptions({
-      key: apiKey,
-      v: 'weekly',
-      language: 'vi',
-      region: 'VN',
-    });
-
-    // Import both core maps and places libraries
-    Promise.all([
-      importLibrary('maps'),
-      importLibrary('places'),
-    ])
-      .then(() => setMapsLoaded(true))
-      .catch(console.error);
-  }, []);
 
   // Load persisted state from localStorage
   useEffect(() => {
@@ -161,7 +136,7 @@ export default function Home() {
               end={end}
               onStartChange={setStart}
               onEndChange={setEnd}
-              isLoaded={mapsLoaded}
+              isLoaded={true}
             />
 
             <BrandModelSelector
@@ -213,7 +188,7 @@ export default function Home() {
 
           {/* Map pane */}
           <main className="flex-1 relative min-h-[300px]">
-            <Map tripPlan={tripPlan} isLoaded={mapsLoaded} />
+            <Map tripPlan={tripPlan} />
           </main>
         </div>
       </div>
