@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get route from Google Directions API
+    // Get route from OSRM
     const directions = await fetchDirections(start, end);
     const totalDistanceKm = directions.distanceMeters / 1000;
     const totalDurationMin = Math.round(directions.durationSeconds / 60);
