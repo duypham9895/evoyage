@@ -11,6 +11,10 @@
     "test:watch": "vitest",
     "seed": "npx tsx scripts/seed-vietnam-models.ts",
     "seed:stations": "npx tsx scripts/seed-osm-stations.ts",
+    "crawl:gmaps": "npx tsx scripts/crawl-gmaps-stations.ts",
+    "seed:enrich": "npx tsx scripts/enrich-stations.ts",
+    "seed:clean": "npx tsx scripts/clean-non-vn.ts",
+    "seed:all": "npm run seed && npm run seed:stations && npm run crawl:gmaps && npm run seed:clean && npm run seed:enrich",
     "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate"
   },
@@ -36,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.7",
     "jsdom": "^29.0.0",
+    "playwright": "^1.58.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.0"
