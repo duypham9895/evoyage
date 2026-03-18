@@ -12,6 +12,7 @@ const VINFAST_CAR_API = 'https://api.service.finaldivision.com/stations/charging
 
 interface VinFastStation {
   readonly entity_id: string;
+  readonly bundle: string;
   readonly name: string;
   readonly address: string;
   readonly code: string;
@@ -21,16 +22,26 @@ interface VinFastStation {
   readonly hotline: string;
   readonly status: string;
   readonly province_id: string;
+  readonly type: string;
+  readonly multiple_type: readonly string[];
+  readonly marker_icon: string;
+  readonly marker_icon_clicked: string;
   readonly category_name: string;
   readonly category_slug: string;
+  readonly hotline_xdv: string;
+  readonly open_time_service: string;
+  readonly close_time_service: string;
+  readonly open_time_sales: string;
+  readonly close_time_sales: string;
+  readonly base_image_uri: string;
+  readonly get_direction: string;
+  readonly button_action: readonly unknown[];
   readonly access_type: string;
   readonly party_id: string;
   readonly charging_publish: boolean;
   readonly charging_status: string;
   readonly has_link: boolean;
   readonly parking_fee: boolean;
-  readonly open_time_service: string;
-  readonly close_time_service: string;
 }
 
 /**
@@ -129,6 +140,21 @@ async function main() {
       provider: 'VinFast',
       operatingHours: buildOperatingHours(s.open_time_service, s.close_time_service),
       scrapedAt: new Date(),
+      // All VinFast data points
+      entityId: s.entity_id,
+      stationCode: s.code,
+      storeId: s.store_id,
+      hotline: s.hotline || null,
+      hotlineService: s.hotline_xdv || null,
+      chargingStatus: s.charging_status,
+      parkingFee: s.parking_fee,
+      accessType: s.access_type,
+      partyId: s.party_id,
+      hasLink: s.has_link ?? false,
+      categoryName: s.category_name,
+      categorySlug: s.category_slug,
+      markerIcon: s.marker_icon || null,
+      rawData: JSON.stringify(s),
     };
 
     // 1. Check if this VinFast station already exists by its own ID

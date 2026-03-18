@@ -87,10 +87,28 @@ model ChargingStation {
   provider       String
   scrapedAt      DateTime @default(now())
 
+  // VinFast-specific fields (from finaldivision API)
+  entityId        String?  // VinFast entity_id for detail API lookup
+  stationCode     String?  // e.g., "vfc_C.HNO0009"
+  storeId         String?  // e.g., "C.HNO0009"
+  hotline         String?  // Customer hotline
+  hotlineService  String?  // Service hotline (hotline_xdv)
+  chargingStatus  String?  // ACTIVE, BUSY, INACTIVE, UNAVAILABLE, OUTOFSERVICE
+  parkingFee      Boolean? // Whether parking fee is required
+  accessType      String?  // Public, Restricted
+  partyId         String?  // VFC (car), VFS (scooter)
+  hasLink         Boolean? // Whether station has linked detail
+  categoryName    String?  // e.g., "Trạm sạc ô tô điện"
+  categorySlug    String?  // e.g., "car_charging_station"
+  markerIcon      String?  // Icon URL for map display
+  rawData         String?  // Complete original JSON from source API
+
   @@index([latitude, longitude])
   @@index([province])
   @@index([provider])
   @@index([isVinFastOnly])
+  @@index([chargingStatus])
+  @@index([entityId])
 }
 
 model VinFastStationDetail {
