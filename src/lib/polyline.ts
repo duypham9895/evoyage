@@ -1,18 +1,19 @@
 import type { LatLng } from '@/types';
 
 /**
- * Decode a Google Maps encoded polyline string into an array of LatLng points.
+ * Decode an encoded polyline string into an array of LatLng points.
+ * Supports both precision-5 (Google/OSRM) and precision-6 (Mapbox).
  *
  * Algorithm: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
  */
-export function decodePolyline(encoded: string): readonly LatLng[] {
+export function decodePolyline(encoded: string, precision: 5 | 6 = 5): readonly LatLng[] {
+  const factor = precision === 6 ? 1e6 : 1e5;
   const points: LatLng[] = [];
   let index = 0;
   let lat = 0;
   let lng = 0;
 
   while (index < encoded.length) {
-    // Decode latitude
     let shift = 0;
     let result = 0;
     let byte: number;
@@ -25,7 +26,6 @@ export function decodePolyline(encoded: string): readonly LatLng[] {
 
     lat += result & 1 ? ~(result >> 1) : result >> 1;
 
-    // Decode longitude
     shift = 0;
     result = 0;
 
@@ -37,10 +37,47 @@ export function decodePolyline(encoded: string): readonly LatLng[] {
 
     lng += result & 1 ? ~(result >> 1) : result >> 1;
 
-    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+    points.push({ lat: lat / factor, lng: lng / factor });
   }
 
   return points;
+}
+
+/**
+ * Encode an array of LatLng points into a polyline string.
+ * Used to normalize Mapbox precision-6 polylines to precision-5.
+ */
+export function encodePolyline(points: readonly LatLng[], precision: 5 | 6 = 5): string {
+  const factor = precision === 6 ? 1e6 : 1e5;
+  let encoded = '';
+  let prevLat = 0;
+  let prevLng = 0;
+
+  for (const point of points) {
+    const lat = Math.round(point.lat * factor);
+    const lng = Math.round(point.lng * factor);
+
+    encoded += encodeValue(lat - prevLat);
+    encoded += encodeValue(lng - prevLng);
+
+    prevLat = lat;
+    prevLng = lng;
+  }
+
+  return encoded;
+}
+
+function encodeValue(value: number): string {
+  let v = value < 0 ? ~(value << 1) : value << 1;
+  let encoded = '';
+
+  while (v >= 0x20) {
+    encoded += String.fromCharCode((0x20 | (v & 0x1f)) + 63);
+    v >>= 5;
+  }
+
+  encoded += String.fromCharCode(v + 63);
+  return encoded;
 }
 
 /**
