@@ -22,6 +22,7 @@ import {
 // Both map components must be loaded client-side only (use window/document)
 const LeafletMap = dynamic(() => import('@/components/Map'), { ssr: false });
 const GoogleMap = dynamic(() => import('@/components/GoogleMap'), { ssr: false });
+const MapboxMap = dynamic(() => import('@/components/MapboxMap'), { ssr: false });
 
 function HomeContent() {
   const { mode } = useMapMode();
@@ -237,6 +238,8 @@ function HomeContent() {
         <main className="flex-1 relative min-h-[300px]">
           {mode === 'google' ? (
             <GoogleMap tripPlan={tripPlan} />
+          ) : mode === 'mapbox' ? (
+            <MapboxMap tripPlan={tripPlan} />
           ) : (
             <LeafletMap tripPlan={tripPlan} />
           )}
