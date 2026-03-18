@@ -193,10 +193,10 @@ function HomeContent() {
       {isPlanning ? (
         <span className="flex items-center justify-center gap-2">
           <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
-          {t('Đang tính...', 'Planning...')}
+          {t('planning')}
         </span>
       ) : (
-        t('LÊN KẾ HOẠCH ⚡', 'PLAN TRIP ⚡')
+        t('plan_trip_button')
       )}
     </button>
   );

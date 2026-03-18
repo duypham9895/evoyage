@@ -54,7 +54,7 @@ export default function Header() {
 
         {/* Language toggle — compact on mobile */}
         <span className="hidden sm:inline text-xs text-[var(--color-muted)]">
-          {t('Ngôn ngữ', 'Language')}
+          {t('language')}
         </span>
         <button
           onClick={toggleLocale}

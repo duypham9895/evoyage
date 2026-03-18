@@ -44,7 +44,7 @@ export default function TripInput({
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
-        {t('Hành trình', 'Trip Route')}
+        {t('trip_route')}
       </h2>
 
       <div className="space-y-2">
@@ -52,8 +52,8 @@ export default function TripInput({
           value={start}
           onChange={onStartChange}
           onSelect={handleStartSelect}
-          label={t('Điểm xuất phát', 'Starting point')}
-          placeholder={t('VD: Thủ Thiêm, TP.HCM', 'e.g., Thu Thiem, HCMC')}
+          label={t('starting_point')}
+          placeholder={t('starting_point_placeholder')}
         />
 
         <div className="flex justify-center">
@@ -64,8 +64,8 @@ export default function TripInput({
           value={end}
           onChange={onEndChange}
           onSelect={handleEndSelect}
-          label={t('Điểm đến', 'Destination')}
-          placeholder={t('VD: Vũng Tàu', 'e.g., Vung Tau')}
+          label={t('destination')}
+          placeholder={t('destination_placeholder')}
         />
       </div>
     </div>

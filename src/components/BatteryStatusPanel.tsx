@@ -45,7 +45,7 @@ export default function BatteryStatusPanel({
   onMinArrivalChange,
   onRangeSafetyFactorChange,
 }: BatteryStatusPanelProps) {
-  const { t } = useLocale();
+  const { t, tBi } = useLocale();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingRSF, setPendingRSF] = useState<number | null>(null);
@@ -105,14 +105,14 @@ export default function BatteryStatusPanel({
   return (
     <div className={`space-y-4 p-3 rounded-lg bg-[var(--color-background)] border ${warningBorderColor} transition-colors`}>
       <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
-        {t('Pin hiện tại', 'Current Battery')}
+        {t('current_battery_title')}
       </h2>
 
       {/* Current battery slider */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-[var(--color-muted)]">
-            {t('Pin hiện tại', 'Current battery')}
+            {t('current_battery_label')}
           </label>
           <span className="text-lg font-bold font-[family-name:var(--font-mono)] text-[var(--color-accent)]">
             {currentBattery}%
@@ -149,7 +149,7 @@ export default function BatteryStatusPanel({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs text-[var(--color-muted)]">
-            {t('Pin tối thiểu khi đến', 'Min arrival battery')}
+            {t('min_arrival_battery')}
           </label>
           <span className="text-sm font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
             {minArrival}%
@@ -171,16 +171,13 @@ export default function BatteryStatusPanel({
       {rangeResult && vehicleName && (
         <div className="p-3 bg-[var(--color-surface)] rounded-lg">
           <div className="text-xs text-[var(--color-muted)] mb-1">
-            {t('Quãng đường khả dụng', 'Usable range')}
+            {t('usable_range')}
           </div>
           <div className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-accent)]">
             ~{Math.round(rangeResult.usableRangeKm)} km
           </div>
           <div className="text-xs text-[var(--color-muted)] mt-1">
-            {t(
-              `${vehicleName} tại ${currentBattery}% pin`,
-              `${vehicleName} at ${currentBattery}% battery`,
-            )}
+            {t('vehicle_at_battery', { vehicle: vehicleName, percent: currentBattery })}
           </div>
         </div>
       )}
@@ -194,17 +191,14 @@ export default function BatteryStatusPanel({
           <span className={`transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>
             ▶
           </span>
-          {t('Hệ số an toàn quãng đường', 'Range Safety Factor')}
+          {t('range_safety_factor')}
         </button>
 
         {showAdvanced && (
           <div className="mt-3 space-y-3 animate-in slide-in-from-top-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--color-muted)]">
-                {t(
-                  `Bạn tin tưởng ${Math.round(rangeSafetyFactor * 100)}% quãng đường công bố`,
-                  `You trust ${Math.round(rangeSafetyFactor * 100)}% of claimed range`,
-                )}
+                {t('trust_range', { percent: Math.round(rangeSafetyFactor * 100) })}
               </span>
               <span className="text-sm font-bold font-[family-name:var(--font-mono)]">
                 {Math.round(rangeSafetyFactor * 100)}%
@@ -248,7 +242,7 @@ export default function BatteryStatusPanel({
                     : 'bg-[var(--color-danger)]/10 text-[var(--color-danger)]'
               }`}
             >
-              <div>{t(warning.messageVi, warning.messageEn)}</div>
+              <div>{tBi(warning)}</div>
             </div>
           </div>
         )}
@@ -259,29 +253,23 @@ export default function BatteryStatusPanel({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-[var(--color-surface)] rounded-xl p-6 max-w-sm w-full shadow-2xl border border-[var(--color-danger)]/30">
             <h3 className="text-lg font-bold font-[family-name:var(--font-heading)] text-[var(--color-danger)] mb-3">
-              {t(
-                '⚠️ Xác nhận mức rủi ro cao',
-                '⚠️ Confirm high risk level',
-              )}
+              {t('confirm_high_risk_title')}
             </h3>
             <p className="text-sm text-[var(--color-foreground)] mb-4 leading-relaxed">
-              {t(
-                `Với hệ số ${Math.round((pendingRSF ?? 0.95) * 100)}%, quãng đường tính toán gần bằng quãng đường nhà sản xuất. Điều này cực kỳ không thực tế trong điều kiện lái thực tế tại Việt Nam (nóng, bật A/C, giao thông đông).`,
-                `At ${Math.round((pendingRSF ?? 0.95) * 100)}% factor, the calculated range nearly equals the manufacturer's figure. This is extremely unrealistic under real Vietnamese driving conditions (heat, AC usage, traffic).`,
-              )}
+              {t('confirm_high_risk_body', { percent: Math.round((pendingRSF ?? 0.95) * 100) })}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={resetRSF}
                 className="flex-1 px-4 py-2 text-sm bg-[var(--color-accent)] text-[var(--color-background)] rounded-lg font-semibold hover:opacity-90 transition-opacity"
               >
-                {t('Quay về 80%', 'Reset to 80%')}
+                {t('reset_to_80')}
               </button>
               <button
                 onClick={confirmRSF}
                 className="flex-1 px-4 py-2 text-sm border border-[var(--color-danger)] text-[var(--color-danger)] rounded-lg hover:bg-[var(--color-danger)]/10 transition-colors"
               >
-                {t('Tôi hiểu rủi ro', 'I understand the risk')}
+                {t('understand_risk')}
               </button>
             </div>
           </div>

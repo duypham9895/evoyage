@@ -9,7 +9,7 @@ interface TripSummaryProps {
 }
 
 export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
-  const { t } = useLocale();
+  const { t, tBi } = useLocale();
 
   if (isLoading) {
     return (
@@ -32,7 +32,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
-        {t('Tóm tắt hành trình', 'Trip Summary')}
+        {t('trip_summary')}
       </h2>
 
       <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
@@ -45,7 +45,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <div className="text-xs text-[var(--color-muted)]">
-              {t('Khoảng cách', 'Distance')}
+              {t('distance')}
             </div>
             <div className="text-xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
               {tripPlan.totalDistanceKm} km
@@ -53,7 +53,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
           </div>
           <div>
             <div className="text-xs text-[var(--color-muted)]">
-              {t('Tổng thời gian', 'Total time')}
+              {t('total_time')}
             </div>
             <div className="text-xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
               {hours}h{minutes > 0 ? `${minutes}m` : ''}
@@ -61,7 +61,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
           </div>
           <div>
             <div className="text-xs text-[var(--color-muted)]">
-              {t('Lái xe', 'Driving')}
+              {t('driving')}
             </div>
             <div className="text-sm font-[family-name:var(--font-mono)]">
               {driveHours}h{driveMinutes > 0 ? `${driveMinutes}m` : ''}
@@ -69,11 +69,11 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
           </div>
           <div>
             <div className="text-xs text-[var(--color-muted)]">
-              {t('Sạc pin', 'Charging')}
+              {t('charging')}
             </div>
             <div className="text-sm font-[family-name:var(--font-mono)]">
               {tripPlan.totalChargingTimeMin}m ({tripPlan.chargingStops.length}{' '}
-              {t('điểm', 'stops')})
+              {t('stops')})
             </div>
           </div>
         </div>
@@ -81,7 +81,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
         {/* Battery journey bar */}
         <div>
           <div className="text-xs text-[var(--color-muted)] mb-2">
-            {t('Hành trình pin', 'Battery journey')}
+            {t('battery_journey')}
           </div>
           <div className="flex h-7 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
             {tripPlan.batterySegments.map((seg, i) => {
@@ -109,11 +109,11 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
           </div>
           <div className="flex justify-between text-[10px] text-[var(--color-muted)] mt-1">
             <span>
-              {t('Xuất phát', 'Start')}{' '}
+              {t('start')}{' '}
               {tripPlan.batterySegments[0]?.startBatteryPercent}%
             </span>
             <span>
-              {t('Đến', 'Arrive')} {tripPlan.arrivalBatteryPercent}%
+              {t('arrive')} {tripPlan.arrivalBatteryPercent}%
             </span>
           </div>
         </div>
@@ -121,10 +121,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
         {/* No charging needed */}
         {tripPlan.chargingStops.length === 0 && tripPlan.warnings.length === 0 && (
           <div className="p-3 bg-[var(--color-safe)]/10 text-[var(--color-safe)] rounded-lg text-sm">
-            {t(
-              '✅ Không cần sạc! Bạn đủ pin cho chuyến đi.',
-              '✅ No charging needed! You have enough range.',
-            )}
+            {t('no_charging_needed')}
           </div>
         )}
 
@@ -134,7 +131,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
             key={i}
             className="p-3 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-lg text-sm"
           >
-            {t(w.messageVi, w.messageEn)}
+            {tBi(w)}
           </div>
         ))}
       </div>
@@ -143,7 +140,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
       {tripPlan.chargingStops.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-            {t('Điểm sạc', 'Charging Stops')}
+            {t('charging_stops')}
           </h3>
           {tripPlan.chargingStops.map((stop, i) => (
             <div
@@ -198,7 +195,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
                   rel="noopener noreferrer"
                   className="inline-block mt-1 px-3 py-1 text-xs bg-[var(--color-accent)] text-[var(--color-background)] rounded-md font-semibold hover:opacity-90 transition-opacity"
                 >
-                  {t('Chỉ đường', 'Navigate')}
+                  {t('navigate')}
                 </a>
               </div>
             </div>
@@ -208,10 +205,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
 
       {/* Disclaimer */}
       <div className="text-[10px] text-[var(--color-muted)] leading-relaxed p-2">
-        {t(
-          'Quãng đường thực tế có thể thay đổi tùy vào tốc độ, điều hòa, địa hình và tải trọng. Ứng dụng sử dụng 80% quãng đường công bố của nhà sản xuất để đảm bảo an toàn.',
-          'Real-world range varies based on speed, AC, terrain, and load. App uses 80% of manufacturer\'s published range for safety.',
-        )}
+        {t('disclaimer')}
       </div>
     </div>
   );

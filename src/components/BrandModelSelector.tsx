@@ -60,7 +60,7 @@ export default function BrandModelSelector({
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
-        {t('Chọn xe', 'Select Vehicle')}
+        {t('select_vehicle')}
       </h2>
 
       {/* Tab switcher */}
@@ -73,7 +73,7 @@ export default function BrandModelSelector({
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
           }`}
         >
-          {t('🇻🇳 Việt Nam', '🇻🇳 Vietnam')}
+          {t('vietnam_tab')}
         </button>
         <button
           onClick={() => setVietnamOnly(false)}
@@ -83,7 +83,7 @@ export default function BrandModelSelector({
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
           }`}
         >
-          {t('🌍 Tất cả', '🌍 All EVs')}
+          {t('all_evs_tab')}
         </button>
       </div>
 
@@ -92,7 +92,7 @@ export default function BrandModelSelector({
         type="text"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder={t('Tìm kiếm xe...', 'Search vehicles...')}
+        placeholder={t('search_vehicles')}
         className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
       />
 
@@ -100,11 +100,11 @@ export default function BrandModelSelector({
       <div className="max-h-56 overflow-y-auto space-y-1 scrollbar-thin">
         {isLoading ? (
           <div className="text-center py-4 text-sm text-[var(--color-muted)]">
-            {t('Đang tải...', 'Loading...')}
+            {t('loading')}
           </div>
         ) : Object.keys(grouped).length === 0 ? (
           <div className="text-center py-4 text-sm text-[var(--color-muted)]">
-            {t('Không tìm thấy xe', 'No vehicles found')}
+            {t('no_vehicles_found')}
           </div>
         ) : (
           Object.entries(grouped).map(([brand, models]) => (
@@ -145,7 +145,7 @@ export default function BrandModelSelector({
         onClick={onCustomCarClick}
         className="w-full px-3 py-2 text-sm border border-dashed border-[var(--color-surface-hover)] rounded-lg text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors"
       >
-        {t('+ Xe của tôi không có trong danh sách', '+ My car is not listed')}
+        {t('car_not_listed')}
       </button>
 
       {/* Selected vehicle summary */}
@@ -176,10 +176,7 @@ export default function BrandModelSelector({
           </div>
           {selectedVehicle.brand !== 'VinFast' && (
             <div className="mt-2 text-xs text-[var(--color-warn)] bg-[var(--color-warn)]/10 px-2 py-1 rounded">
-              {t(
-                '⚠️ Trạm sạc VinFast chỉ dành cho xe VinFast',
-                '⚠️ VinFast stations are exclusive to VinFast vehicles',
-              )}
+              {t('vinfast_warning')}
             </div>
           )}
         </div>

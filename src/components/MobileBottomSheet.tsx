@@ -7,6 +7,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
+import { useLocale } from '@/lib/locale';
 
 type SnapPoint = 'peek' | 'half' | 'full';
 
@@ -25,6 +26,7 @@ export default function MobileBottomSheet({
   children,
   initialSnap = 'half',
 }: MobileBottomSheetProps) {
+  const { t } = useLocale();
   const [snap, setSnap] = useState<SnapPoint>(initialSnap);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -134,7 +136,7 @@ export default function MobileBottomSheet({
             onClick={() => setSnap('half')}
             className="mt-2 text-sm font-semibold text-[var(--color-accent)] font-[family-name:var(--font-heading)]"
           >
-            Lên kế hoạch chuyến đi ⚡
+            {t('plan_your_trip')}
           </button>
         )}
       </div>

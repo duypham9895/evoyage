@@ -11,10 +11,10 @@ interface MobileTabBarProps {
   readonly hasRoute: boolean;
 }
 
-const TABS: readonly { readonly id: MobileTab; readonly iconVi: string; readonly iconEn: string; readonly labelVi: string; readonly labelEn: string }[] = [
-  { id: 'route', iconVi: '📍', iconEn: '📍', labelVi: 'Hành trình', labelEn: 'Route' },
-  { id: 'vehicle', iconVi: '🚗', iconEn: '🚗', labelVi: 'Xe', labelEn: 'Vehicle' },
-  { id: 'battery', iconVi: '🔋', iconEn: '🔋', labelVi: 'Pin', labelEn: 'Battery' },
+const TABS: readonly { readonly id: MobileTab; readonly icon: string; readonly labelKey: 'tab_route' | 'tab_vehicle' | 'tab_battery' }[] = [
+  { id: 'route', icon: '📍', labelKey: 'tab_route' },
+  { id: 'vehicle', icon: '🚗', labelKey: 'tab_vehicle' },
+  { id: 'battery', icon: '🔋', labelKey: 'tab_battery' },
 ];
 
 export default function MobileTabBar({
@@ -27,7 +27,7 @@ export default function MobileTabBar({
 
   return (
     <div className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl mb-3">
-      {TABS.map(({ id, iconVi, iconEn, labelVi, labelEn }) => {
+      {TABS.map(({ id, icon, labelKey }) => {
         const isActive = activeTab === id;
         const showDot =
           (id === 'route' && hasRoute) ||
@@ -43,8 +43,8 @@ export default function MobileTabBar({
                 : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
             }`}
           >
-            <span>{t(iconVi, iconEn)}</span>
-            <span>{t(labelVi, labelEn)}</span>
+            <span>{icon}</span>
+            <span>{t(labelKey)}</span>
             {showDot && !isActive && (
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
             )}

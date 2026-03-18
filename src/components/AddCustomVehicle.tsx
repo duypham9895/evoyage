@@ -50,13 +50,13 @@ export default function AddCustomVehicle({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="bg-[var(--color-surface)] rounded-xl p-6 max-w-sm w-full shadow-2xl">
         <h3 className="text-lg font-bold font-[family-name:var(--font-heading)] text-[var(--color-accent)] mb-4">
-          {t('Thêm xe của bạn', 'Add your vehicle')}
+          {t('add_vehicle')}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="text-xs text-[var(--color-muted)] mb-1 block">
-              {t('Hãng xe', 'Brand')}
+              {t('brand')}
             </label>
             <input
               type="text"
@@ -70,7 +70,7 @@ export default function AddCustomVehicle({
 
           <div>
             <label className="text-xs text-[var(--color-muted)] mb-1 block">
-              {t('Mẫu xe', 'Model')}
+              {t('model')}
             </label>
             <input
               type="text"
@@ -84,7 +84,7 @@ export default function AddCustomVehicle({
 
           <div>
             <label className="text-xs text-[var(--color-muted)] mb-1 block">
-              {t('Dung lượng pin (kWh)', 'Battery capacity (kWh)')}
+              {t('battery_capacity')}
             </label>
             <input
               type="number"
@@ -100,7 +100,7 @@ export default function AddCustomVehicle({
 
           <div>
             <label className="text-xs text-[var(--color-muted)] mb-1 block">
-              {t('Quãng đường công bố (km)', 'Official range (km)')}
+              {t('official_range')}
             </label>
             <input
               type="number"
@@ -119,13 +119,13 @@ export default function AddCustomVehicle({
               onClick={onClose}
               className="flex-1 px-4 py-2 text-sm border border-[var(--color-surface-hover)] rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] transition-colors"
             >
-              {t('Hủy', 'Cancel')}
+              {t('cancel')}
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 text-sm bg-[var(--color-accent)] text-[var(--color-background)] rounded-lg font-semibold hover:opacity-90 transition-opacity"
             >
-              {t('Lưu', 'Save')}
+              {t('save')}
             </button>
           </div>
         </form>
