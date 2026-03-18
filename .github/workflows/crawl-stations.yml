@@ -40,3 +40,6 @@ jobs:
 
       - name: Enrich station data
         run: npx tsx scripts/enrich-stations.ts
+
+      - name: Crawl VinFast stations
+        run: npx tsx scripts/crawl-vinfast-stations.ts

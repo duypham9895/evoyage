@@ -55,5 +55,52 @@
 
   "tab_route": "Hành trình",
   "tab_vehicle": "Xe",
-  "tab_battery": "Pin"
+  "tab_battery": "Pin",
+
+  "stations_best": "✓ Tốt nhất",
+  "stations_ok": "~ Được",
+  "stations_slow": "✗ Chậm",
+  "stations_view_alternatives": "Xem {{count}} trạm khác",
+  "stations_total_time": "Tổng: {{time}} phút",
+  "stations_detour": "+{{time}} phút đường vòng",
+  "stations_no_stations": "Không tìm thấy trạm sạc gần đây",
+  "stations_vinfast_bonus": "Sạc miễn phí VinFast",
+
+  "elevation_title": "Độ cao tuyến đường",
+  "elevation_ascent": "↑ {{meters}}m",
+  "elevation_descent": "↓ {{meters}}m",
+  "elevation_mountain_route": "Đường đèo",
+  "elevation_steep": "Dốc",
+
+  "waypoints_add": "Thêm điểm dừng",
+  "waypoints_max": "Tối đa 5 điểm dừng",
+  "waypoints_remove": "Xóa điểm dừng",
+  "waypoints_reorder": "Kéo để sắp xếp lại",
+  "waypoints_unreachable": "Không đủ pin để đến {{name}}",
+  "waypoints_suggestion": "Sắp xếp lại điểm dừng, sạc đầy trước khi đi, hoặc chọn xe có tầm xa hơn",
+  "waypoints_search_placeholder": "Tìm điểm dừng...",
+  "waypoints_loop": "Vòng lặp",
+  "waypoints_return_to": "Quay về {{name}}",
+
+  "share_button": "Chia sẻ chuyến đi",
+  "share_generating": "Đang tạo ảnh...",
+  "share_download": "Tải PNG",
+  "share_copy": "Sao chép",
+  "share_share": "Chia sẻ",
+  "share_error": "Không thể tạo ảnh. Vui lòng thử lại.",
+  "share_expired": "Chuyến đi đã hết hạn. Vui lòng lập kế hoạch lại.",
+
+  "vinfast_detail": "Xem chi tiết",
+  "vinfast_detail_loading": "Đang tải thông tin trạm...",
+  "vinfast_status": "Trạng thái",
+  "vinfast_status_available": "Sẵn sàng",
+  "vinfast_status_busy": "Đang bận",
+  "vinfast_status_unavailable": "Không khả dụng",
+  "vinfast_ports": "{{count}} cổng sạc",
+  "vinfast_24h": "24/7",
+  "vinfast_parking_fee": "Có phí gửi xe",
+  "vinfast_no_parking_fee": "Gửi xe miễn phí",
+  "vinfast_connector": "{{type}} · {{power}}kW",
+  "vinfast_hardware": "Thiết bị: {{vendor}} {{model}}",
+  "vinfast_detail_unavailable": "Không có thông tin chi tiết"
 }

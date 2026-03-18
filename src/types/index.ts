@@ -121,7 +121,7 @@ export interface BatterySegment {
 export interface TripPlan {
   readonly totalDistanceKm: number;
   readonly totalDurationMin: number;
-  readonly chargingStops: readonly ChargingStop[];
+  readonly chargingStops: readonly (ChargingStop | ChargingStopWithAlternatives)[];
   readonly warnings: readonly NoStationWarning[];
   readonly batterySegments: readonly BatterySegment[];
   readonly arrivalBatteryPercent: number;
@@ -129,6 +129,7 @@ export interface TripPlan {
   readonly polyline: string;
   readonly startAddress: string;
   readonly endAddress: string;
+  readonly tripId?: string;
 }
 
 export type MapMode = 'osm' | 'mapbox' | 'google';
@@ -145,3 +146,102 @@ export interface VehicleSearchParams {
 
 // ── Locale ──
 export type Locale = 'vi' | 'en';
+
+// ── Smart Station Ranking Types ──
+export interface RankedStation {
+  readonly station: ChargingStationData;
+  readonly detourDriveTimeSec: number;
+  readonly estimatedChargeTimeMin: number;
+  readonly totalStopTimeMin: number;
+  readonly rank: 'best' | 'ok' | 'slow';
+  readonly score: number;
+}
+
+export interface ChargingStopWithAlternatives {
+  readonly selected: RankedStation;
+  readonly alternatives: readonly RankedStation[];
+  readonly distanceAlongRouteKm: number;
+  readonly batteryPercentAtArrival: number;
+  readonly batteryPercentAfterCharge: number;
+}
+
+export interface ScoreStationInput {
+  readonly detourDriveTimeSec: number;
+  readonly stationPowerKw: number;
+  readonly energyNeededKwh: number;
+  readonly isVinFastStation: boolean;
+  readonly isVinFastVehicle: boolean;
+  readonly vehicleMaxChargeKw?: number;
+  readonly station: ChargingStationData;
+}
+
+/** Extract station data from either ChargingStop or ChargingStopWithAlternatives */
+export function getStopStation(stop: ChargingStop | ChargingStopWithAlternatives): ChargingStationData {
+  return 'selected' in stop ? stop.selected.station : stop.station;
+}
+
+export function getStopDistance(stop: ChargingStop | ChargingStopWithAlternatives): number {
+  return 'selected' in stop ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
+}
+
+// ── VinFast Station Detail (OCPI) ──
+export interface VinFastDetailResponse {
+  readonly detail: VinFastStationDetailData | null;
+  readonly cached: boolean;
+  readonly fallback?: boolean;
+  readonly station: {
+    readonly id: string;
+    readonly name: string;
+    readonly provider: string;
+    readonly address?: string;
+    readonly maxPowerKw?: number;
+    readonly connectorTypes?: readonly string[];
+    readonly portCount?: number;
+  };
+}
+
+export interface VinFastStationDetailData {
+  readonly entityId: string;
+  readonly storeId: string;
+  readonly name: string;
+  readonly address: string;
+  readonly province: string;
+  readonly district: string;
+  readonly commune: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly evses: ReadonlyArray<{
+    readonly connectors: ReadonlyArray<{
+      readonly standard: string;
+      readonly format: string;
+      readonly power_type: string;
+      readonly max_electric_power: number;
+    }>;
+    readonly physical_reference: string;
+    readonly last_updated: string;
+  }>;
+  readonly images: ReadonlyArray<{ readonly url: string; readonly category: string }>;
+  readonly depotStatus: string;
+  readonly is24h: boolean;
+  readonly chargingWhenClosed: boolean;
+  readonly parkingFee: boolean;
+  readonly accessType: string;
+  readonly hardwareStations: ReadonlyArray<{
+    readonly code: string;
+    readonly vendor: string;
+    readonly maxPower: number;
+    readonly modelCode: string;
+  }>;
+  readonly connectorSummary: readonly string[];
+  readonly maxPowerKw: number;
+  readonly portCount: number;
+  readonly fetchedAt: string;
+}
+
+export interface ScoredStation {
+  readonly station: ChargingStationData;
+  readonly detourDriveTimeSec: number;
+  readonly estimatedChargeTimeMin: number;
+  readonly totalStopTimeMin: number;
+  readonly score: number;
+}

@@ -55,5 +55,52 @@
 
   "tab_route": "Route",
   "tab_vehicle": "Vehicle",
-  "tab_battery": "Battery"
+  "tab_battery": "Battery",
+
+  "stations_best": "✓ Best",
+  "stations_ok": "~ OK",
+  "stations_slow": "✗ Slow",
+  "stations_view_alternatives": "View {{count}} alternatives",
+  "stations_total_time": "Total: {{time}} min",
+  "stations_detour": "+{{time}} min detour",
+  "stations_no_stations": "No charging stations found nearby",
+  "stations_vinfast_bonus": "Free VinFast charging",
+
+  "elevation_title": "Route Elevation",
+  "elevation_ascent": "↑ {{meters}}m",
+  "elevation_descent": "↓ {{meters}}m",
+  "elevation_mountain_route": "Mountain route",
+  "elevation_steep": "Steep",
+
+  "waypoints_add": "Add stop",
+  "waypoints_max": "Maximum 5 stops",
+  "waypoints_remove": "Remove stop",
+  "waypoints_reorder": "Drag to reorder",
+  "waypoints_unreachable": "Insufficient battery to reach {{name}}",
+  "waypoints_suggestion": "Reorder stops, fully charge before departing, or choose a longer-range vehicle",
+  "waypoints_search_placeholder": "Search for a stop...",
+  "waypoints_loop": "Loop trip",
+  "waypoints_return_to": "Return to {{name}}",
+
+  "share_button": "Share trip",
+  "share_generating": "Generating image...",
+  "share_download": "Download PNG",
+  "share_copy": "Copy image",
+  "share_share": "Share",
+  "share_error": "Could not generate image. Please try again.",
+  "share_expired": "Trip expired. Please re-plan.",
+
+  "vinfast_detail": "View detail",
+  "vinfast_detail_loading": "Loading station detail...",
+  "vinfast_status": "Status",
+  "vinfast_status_available": "Available",
+  "vinfast_status_busy": "Busy",
+  "vinfast_status_unavailable": "Unavailable",
+  "vinfast_ports": "{{count}} charging ports",
+  "vinfast_24h": "24/7",
+  "vinfast_parking_fee": "Parking fee required",
+  "vinfast_no_parking_fee": "Free parking",
+  "vinfast_connector": "{{type}} · {{power}}kW",
+  "vinfast_hardware": "Hardware: {{vendor}} {{model}}",
+  "vinfast_detail_unavailable": "Detail unavailable"
 }

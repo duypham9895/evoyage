@@ -93,6 +93,16 @@ model ChargingStation {
   @@index([isVinFastOnly])
 }
 
+model VinFastStationDetail {
+  id        String   @id @default(cuid())
+  entityId  String   @unique
+  storeId   String
+  detail    String   // JSON blob of VinFastStationDetail
+  fetchedAt DateTime @default(now())
+
+  @@index([fetchedAt])
+}
+
 model RouteCache {
   id              String   @id @default(cuid())
   startPlaceId    String

@@ -97,6 +97,13 @@ export async function GET(request: NextRequest) {
       data.elements ?? [];
 
     let upserted = 0;
+    let skippedVinFast = 0;
+
+    // Load VinFast station coordinates to avoid overwriting them with inferior OSM data
+    const vinfastStations = await prisma.chargingStation.findMany({
+      where: { ocmId: { startsWith: 'vinfast-' } },
+      select: { latitude: true, longitude: true },
+    });
 
     for (const el of elements) {
       const tags = el.tags ?? {};
@@ -104,6 +111,17 @@ export async function GET(request: NextRequest) {
 
       // Skip e-bike only stations
       if (name.toLowerCase().includes('e-bike') && !tags['motorcar']) continue;
+
+      // Skip if this station is near an existing VinFast-sourced entry (within 50m)
+      const nearVinFast = vinfastStations.some((vf) => {
+        const dLat = (el.lat - vf.latitude) * 111_320;
+        const dLng = (el.lon - vf.longitude) * 111_320 * Math.cos((el.lat * Math.PI) / 180);
+        return Math.sqrt(dLat * dLat + dLng * dLng) < 50;
+      });
+      if (nearVinFast) {
+        skippedVinFast++;
+        continue;
+      }
 
       const connectorTypes = parseConnectorTypes(tags);
       const maxPower = parseMaxPower(tags);
@@ -159,6 +177,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       stationsProcessed: upserted,
+      skippedVinFast,
       totalFromOSM: elements.length,
       timestamp: new Date().toISOString(),
     });

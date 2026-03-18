@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/refresh-stations",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-vinfast",
+      "schedule": "0 1 * * *"
     }
   ]
 }
