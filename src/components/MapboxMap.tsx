@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import MapGL, { Source, Layer, Marker, Popup, useMap } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { TripPlan, ChargingStop } from '@/types';
+import type { TripPlan, ChargingStop, ChargingStopWithAlternatives } from '@/types';
+import { getStopStation } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
 import {
   VIETNAM_CENTER,
@@ -61,18 +62,19 @@ function StopMarker({
   isSelected,
   onSelect,
 }: {
-  readonly stop: ChargingStop;
+  readonly stop: ChargingStop | ChargingStopWithAlternatives;
   readonly index: number;
   readonly isSelected: boolean;
   readonly onSelect: (index: number | null) => void;
 }) {
-  const color = PROVIDER_COLORS[stop.station.provider] ?? DEFAULT_MARKER_COLOR;
+  const station = getStopStation(stop);
+  const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
 
   return (
     <>
       <Marker
-        latitude={stop.station.latitude}
-        longitude={stop.station.longitude}
+        latitude={station.latitude}
+        longitude={station.longitude}
         anchor="center"
         onClick={(e: { originalEvent: MouseEvent }) => {
           e.originalEvent.stopPropagation();
@@ -101,26 +103,30 @@ function StopMarker({
       </Marker>
       {isSelected && (
         <Popup
-          latitude={stop.station.latitude}
-          longitude={stop.station.longitude}
+          latitude={station.latitude}
+          longitude={station.longitude}
           offset={16}
           closeOnClick={false}
           onClose={() => onSelect(null)}
         >
           <div style={{ fontFamily: 'system-ui', maxWidth: 250 }}>
-            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(stop.station.name)}</h3>
-            <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(stop.station.address)}</p>
+            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(station.name)}</h3>
+            <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(station.address)}</p>
             <p style={{ fontSize: 12, margin: 0 }}>
-              <span style={{ color: '#FF3B30', fontWeight: 'bold' }}>{stop.arrivalBatteryPercent}%</span>
+              <span style={{ color: '#FF3B30', fontWeight: 'bold' }}>
+                {'selected' in stop ? Math.round(stop.batteryPercentAtArrival) : stop.arrivalBatteryPercent}%
+              </span>
               {' → '}
-              <span style={{ color: '#00D4AA', fontWeight: 'bold' }}>{stop.departureBatteryPercent}%</span>
-              {` | ~${stop.estimatedChargingTimeMin}min`}
+              <span style={{ color: '#00D4AA', fontWeight: 'bold' }}>
+                {'selected' in stop ? Math.round(stop.batteryPercentAfterCharge) : stop.departureBatteryPercent}%
+              </span>
+              {` | ~${'selected' in stop ? Math.round(stop.selected.estimatedChargeTimeMin) : stop.estimatedChargingTimeMin}min`}
             </p>
             <p style={{ fontSize: 11, margin: '4px 0 0', color: '#888' }}>
-              ⚡ {stop.station.maxPowerKw}kW | {stop.station.connectorTypes.join(', ')} | {stop.station.provider}
+              ⚡ {station.maxPowerKw}kW | {station.connectorTypes.join(', ')} | {station.provider}
             </p>
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${stop.station.latitude},${stop.station.longitude}`}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -170,8 +176,9 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
       [path[0].lng, path[0].lat],
     );
     path.forEach((p) => bounds.extend([p.lng, p.lat]));
-    tripPlan.chargingStops.forEach((stop) => {
-      bounds.extend([stop.station.longitude, stop.station.latitude]);
+    tripPlan.chargingStops.forEach((s) => {
+      const st = getStopStation(s);
+      bounds.extend([st.longitude, st.latitude]);
     });
     mapRef.fitBounds(bounds, { padding: 50 });
   }, [mapRef, path, tripPlan.chargingStops]);
@@ -195,7 +202,7 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
 
       {tripPlan.chargingStops.map((stop, index) => (
         <StopMarker
-          key={stop.station.id}
+          key={getStopStation(stop).id}
           stop={stop}
           index={index}
           isSelected={selectedStop === index}

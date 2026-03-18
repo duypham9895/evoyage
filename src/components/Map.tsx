@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { TripPlan } from '@/types';
+import { getStopStation } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
 import {
   VIETNAM_CENTER,
@@ -107,9 +108,10 @@ export default function Map({ tripPlan }: MapProps) {
 
     // Charging stop markers
     tripPlan.chargingStops.forEach((stop, index) => {
-      const color = PROVIDER_COLORS[stop.station.provider] ?? DEFAULT_MARKER_COLOR;
+      const station = getStopStation(stop);
+      const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
       const marker = L.marker(
-        [stop.station.latitude, stop.station.longitude],
+        [station.latitude, station.longitude],
         { icon: createCircleIcon(color, `${index + 1}`) },
       );
 
@@ -120,7 +122,8 @@ export default function Map({ tripPlan }: MapProps) {
     // Fit bounds
     const bounds = polyline.getBounds();
     tripPlan.chargingStops.forEach((stop) => {
-      bounds.extend([stop.station.latitude, stop.station.longitude]);
+      const station = getStopStation(stop);
+      bounds.extend([station.latitude, station.longitude]);
     });
     map.fitBounds(bounds, { padding: [50, 50] });
   }, [tripPlan]);

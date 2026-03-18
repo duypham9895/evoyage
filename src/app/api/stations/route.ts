@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp, stationsLimiter } from '@/lib/rate-limit';
 
 function safeJsonArray(value: string): string[] {
   try {
@@ -23,11 +23,12 @@ function safeJsonArray(value: string): string[] {
 export async function GET(request: NextRequest) {
   // Rate limiting: 30 requests per minute per IP
   const ip = getClientIp(request);
-  const limit = checkRateLimit(`stations:${ip}`, 30, 60_000);
+  const limit = await checkRateLimit(`stations:${ip}`, 30, 60_000, stationsLimiter);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: 'Too many requests. Please try again later.' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
+      { error: 'Too many requests. Please try again later.',
+        retryAfter: limit.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
     );
   }
 

@@ -3,6 +3,8 @@
 import { useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
 import PlaceAutocomplete from './PlaceAutocomplete';
+import WaypointInput from './WaypointInput';
+import type { WaypointData } from './WaypointInput';
 import type { NominatimResult } from '@/lib/nominatim';
 
 interface TripInputProps {
@@ -13,6 +15,14 @@ interface TripInputProps {
   readonly onStartSelect?: (result: NominatimResult) => void;
   readonly onEndSelect?: (result: NominatimResult) => void;
   readonly isLoaded: boolean;
+  // Waypoint props (optional for backward compatibility)
+  readonly waypoints?: readonly WaypointData[];
+  readonly onAddWaypoint?: (afterIndex: number) => void;
+  readonly onRemoveWaypoint?: (index: number) => void;
+  readonly onUpdateWaypoint?: (index: number, name: string, coords: { lat: number; lng: number } | null) => void;
+  readonly onReorderWaypoints?: (fromIndex: number, toIndex: number) => void;
+  readonly isLoopTrip?: boolean;
+  readonly onToggleLoop?: () => void;
 }
 
 export default function TripInput({
@@ -22,6 +32,13 @@ export default function TripInput({
   onEndChange,
   onStartSelect,
   onEndSelect,
+  waypoints,
+  onAddWaypoint,
+  onRemoveWaypoint,
+  onUpdateWaypoint,
+  onReorderWaypoints,
+  isLoopTrip = false,
+  onToggleLoop,
 }: TripInputProps) {
   const { t } = useLocale();
 
@@ -41,6 +58,8 @@ export default function TripInput({
     [onEndChange, onEndSelect],
   );
 
+  const hasWaypoints = waypoints && onAddWaypoint && onRemoveWaypoint && onUpdateWaypoint && onReorderWaypoints && onToggleLoop;
+
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
@@ -48,6 +67,7 @@ export default function TripInput({
       </h2>
 
       <div className="space-y-2">
+        {/* Start point */}
         <PlaceAutocomplete
           value={start}
           onChange={onStartChange}
@@ -60,13 +80,39 @@ export default function TripInput({
           <div className="w-px h-4 bg-[var(--color-surface-hover)]" />
         </div>
 
-        <PlaceAutocomplete
-          value={end}
-          onChange={onEndChange}
-          onSelect={handleEndSelect}
-          label={t('destination')}
-          placeholder={t('destination_placeholder')}
-        />
+        {/* Waypoints (if enabled) */}
+        {hasWaypoints && (
+          <>
+            <WaypointInput
+              waypoints={waypoints}
+              onAdd={onAddWaypoint}
+              onRemove={onRemoveWaypoint}
+              onUpdate={onUpdateWaypoint}
+              onReorder={onReorderWaypoints}
+              isLoopTrip={isLoopTrip}
+              onToggleLoop={onToggleLoop}
+              startName={start}
+            />
+            <div className="flex justify-center">
+              <div className="w-px h-4 bg-[var(--color-surface-hover)]" />
+            </div>
+          </>
+        )}
+
+        {/* End point */}
+        {isLoopTrip && start ? (
+          <div className="p-3 bg-[var(--color-surface)] rounded-lg border border-[var(--color-accent)]/30 text-sm text-[var(--color-accent)]">
+            ↻ {t('waypoints_return_to', { name: start })}
+          </div>
+        ) : (
+          <PlaceAutocomplete
+            value={end}
+            onChange={onEndChange}
+            onSelect={handleEndSelect}
+            label={t('destination')}
+            placeholder={t('destination_placeholder')}
+          />
+        )}
       </div>
     </div>
   );

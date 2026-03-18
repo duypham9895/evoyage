@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
 import type { TripPlan } from '@/types';
+import { getStopStation } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
 import {
   VIETNAM_CENTER,
@@ -105,16 +106,17 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
 
     // Charging stop markers
     tripPlan.chargingStops.forEach((stop, index) => {
-      const color = PROVIDER_COLORS[stop.station.provider] ?? DEFAULT_MARKER_COLOR;
+      const station = getStopStation(stop);
+      const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
 
       const marker = new google.maps.Marker({
         map,
-        position: { lat: stop.station.latitude, lng: stop.station.longitude },
+        position: { lat: station.latitude, lng: station.longitude },
         icon: {
           url: createSvgMarkerUrl(color, `${index + 1}`),
           scaledSize: new google.maps.Size(26, 26),
         },
-        title: stop.station.name,
+        title: station.name,
       });
 
       marker.addListener('click', () => {
@@ -129,7 +131,8 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
     const bounds = new google.maps.LatLngBounds();
     path.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
     tripPlan.chargingStops.forEach((stop) => {
-      bounds.extend({ lat: stop.station.latitude, lng: stop.station.longitude });
+      const station = getStopStation(stop);
+      bounds.extend({ lat: station.latitude, lng: station.longitude });
     });
     map.fitBounds(bounds, 50);
 

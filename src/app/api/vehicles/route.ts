@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp, vehiclesLimiter } from '@/lib/rate-limit';
 import type { EVVehicleData } from '@/types';
 
 /**
@@ -19,11 +19,12 @@ import type { EVVehicleData } from '@/types';
 export async function GET(request: NextRequest) {
   // Rate limiting: 30 requests per minute per IP
   const ip = getClientIp(request);
-  const limit = checkRateLimit(`vehicles:${ip}`, 30, 60_000);
+  const limit = await checkRateLimit(`vehicles:${ip}`, 30, 60_000, vehiclesLimiter);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: 'Too many requests. Please try again later.' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
+      { error: 'Too many requests. Please try again later.',
+        retryAfter: limit.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
     );
   }
 

@@ -17,6 +17,7 @@ import MobileBottomSheet from '@/components/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/MobileTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
 import type { NominatimResult } from '@/lib/nominatim';
+import type { WaypointData } from '@/components/WaypointInput';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,
   DEFAULT_CURRENT_BATTERY,
@@ -43,6 +44,10 @@ function HomeContent() {
   // Store coordinates from Nominatim for Google mode
   const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [endCoords, setEndCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Waypoints
+  const [waypoints, setWaypoints] = useState<WaypointData[]>([]);
+  const [isLoopTrip, setIsLoopTrip] = useState(false);
 
   // Vehicle
   const [selectedVehicle, setSelectedVehicle] = useState<EVVehicleData | null>(null);
@@ -127,6 +132,43 @@ function HomeContent() {
     setEndCoords(null);
   }, []);
 
+  // Waypoint handlers
+  const handleAddWaypoint = useCallback((afterIndex: number) => {
+    setWaypoints(prev => {
+      const next = [...prev];
+      next.splice(afterIndex + 1, 0, { name: '', coords: null });
+      return next;
+    });
+  }, []);
+
+  const handleRemoveWaypoint = useCallback((index: number) => {
+    setWaypoints(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleUpdateWaypoint = useCallback((index: number, name: string, coords: { lat: number; lng: number } | null) => {
+    setWaypoints(prev => prev.map((wp, i) => i === index ? { name, coords } : wp));
+  }, []);
+
+  const handleReorderWaypoints = useCallback((fromIndex: number, toIndex: number) => {
+    setWaypoints(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }, []);
+
+  const handleToggleLoop = useCallback(() => {
+    setIsLoopTrip(prev => {
+      if (!prev && start) {
+        // When enabling loop, set end to start
+        setEnd(start);
+        setEndCoords(startCoords);
+      }
+      return !prev;
+    });
+  }, [start, startCoords]);
+
   // Plan trip — POST to /api/route
   const handlePlanTrip = useCallback(async () => {
     if (!start || !end) {
@@ -147,18 +189,25 @@ function HomeContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          start,
-          end,
+          start: isLoopTrip ? start : start,
+          end: isLoopTrip ? start : end,
           startLat: startCoords?.lat,
           startLng: startCoords?.lng,
-          endLat: endCoords?.lat,
-          endLng: endCoords?.lng,
+          endLat: isLoopTrip ? startCoords?.lat : endCoords?.lat,
+          endLng: isLoopTrip ? startCoords?.lng : endCoords?.lng,
           vehicleId: selectedVehicle?.id ?? null,
           customVehicle: selectedVehicle ? null : customVehicle,
           currentBatteryPercent: currentBattery,
           minArrivalPercent: minArrival,
           rangeSafetyFactor,
           provider: mode === 'google' ? 'google' : mode === 'mapbox' ? 'mapbox' : 'osrm',
+          waypoints: waypoints
+            .filter(wp => wp.coords)
+            .map(wp => ({
+              lat: wp.coords!.lat,
+              lng: wp.coords!.lng,
+              name: wp.name,
+            })),
         }),
       });
 
@@ -252,6 +301,13 @@ function HomeContent() {
                   onStartSelect={handleStartSelect}
                   onEndSelect={handleEndSelect}
                   isLoaded={true}
+                  waypoints={waypoints}
+                  onAddWaypoint={handleAddWaypoint}
+                  onRemoveWaypoint={handleRemoveWaypoint}
+                  onUpdateWaypoint={handleUpdateWaypoint}
+                  onReorderWaypoints={handleReorderWaypoints}
+                  isLoopTrip={isLoopTrip}
+                  onToggleLoop={handleToggleLoop}
                 />
                 {tripPlan && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />}
               </>

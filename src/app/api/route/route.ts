@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
+import { isValidCoordinate, COORDINATE_ERROR_EN } from '@/lib/coordinate-validation';
 import { fetchDirections } from '@/lib/osrm';
 import { fetchDirectionsGoogle } from '@/lib/google-directions';
 import { fetchDirectionsMapbox } from '@/lib/mapbox-directions';
-import { planChargingStops } from '@/lib/route-planner';
+import { planChargingStops, findChargingDecisionPoints } from '@/lib/route-planner';
 import { decodePolyline, encodePolyline } from '@/lib/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/route-cache';
-import type { ChargingStationData, TripPlan } from '@/types';
+import { fetchMatrixDurations } from '@/lib/matrix-api';
+import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/station-ranker';
+import { cacheTripPlan } from '@/lib/trip-cache';
+import { getStopStation } from '@/types';
+import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
 
 function safeJsonArray(value: string): string[] {
   try {
@@ -50,11 +56,13 @@ const routeRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   // Rate limiting: 10 requests per minute per IP
   const ip = getClientIp(request);
-  const limit = checkRateLimit(`route:${ip}`, 10, 60_000);
+  const limit = await checkRateLimit(`route:${ip}`, 10, 60_000, routeLimiter);
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: 'Too many requests. Please try again later.' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
+      { error: 'Bạn đang gửi yêu cầu quá nhanh. Vui lòng thử lại sau.',
+        error_en: 'Too many requests. Please try again later.',
+        retryAfter: limit.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
     );
   }
 
@@ -135,6 +143,13 @@ export async function POST(request: NextRequest) {
       if (startLat == null || startLng == null || endLat == null || endLng == null) {
         return NextResponse.json(
           { error: `${provider === 'google' ? 'Google' : 'Mapbox'} mode requires coordinates — select locations from the autocomplete dropdown` },
+          { status: 400 },
+        );
+      }
+      // Validate coordinates within Southeast Asia bounds
+      if (!isValidCoordinate(startLat, startLng) || !isValidCoordinate(endLat, endLng)) {
+        return NextResponse.json(
+          { error: COORDINATE_ERROR_EN },
           { status: 400 },
         );
       }
@@ -249,7 +264,75 @@ export async function POST(request: NextRequest) {
       provider: s.provider,
     }));
 
-    // Plan charging stops
+    // Smart station ranking via Matrix API (when Mapbox token available)
+    let rankedStationsPerStop: ReadonlyMap<number, readonly RankedStation[]> | undefined;
+    const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
+
+    if (mapboxToken && stations.length > 0) {
+      try {
+        const planInput = {
+          encodedPolyline: directions.polyline,
+          totalDistanceKm,
+          vehicle,
+          currentBatteryPercent,
+          minArrivalPercent,
+          rangeSafetyFactor,
+          stations,
+        };
+
+        const decisionPoints = findChargingDecisionPoints(planInput);
+
+        if (decisionPoints.length > 0) {
+          const isVinFast = vehicle.brand.toLowerCase() === 'vinfast';
+          const vehicleMaxChargeKw = ('dcMaxChargingPowerKw' in vehicle && vehicle.dcMaxChargingPowerKw)
+            ? vehicle.dcMaxChargingPowerKw as number
+            : undefined;
+          const energyToCharge = vehicle.batteryCapacityKwh * 0.6; // rough: 20% → 80%
+
+          const rankedMap = new Map<number, readonly RankedStation[]>();
+
+          // Process each decision point (sequential to respect rate limits)
+          for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
+            const dp = decisionPoints[dpIdx];
+
+            try {
+              const matrix = await fetchMatrixDurations(
+                dp.point,
+                dp.candidates.map(s => ({ lat: s.latitude, lng: s.longitude })),
+                mapboxToken,
+              );
+
+              const scored = dp.candidates.map((station, j) =>
+                scoreStation({
+                  detourDriveTimeSec: matrix.durations[j] ?? 0,
+                  stationPowerKw: getEffectivePowerKw(station, vehicleMaxChargeKw),
+                  energyNeededKwh: energyToCharge,
+                  isVinFastStation: station.isVinFastOnly,
+                  isVinFastVehicle: isVinFast,
+                  vehicleMaxChargeKw,
+                  station,
+                }),
+              );
+
+              const ranked = rankStations(scored);
+              rankedMap.set(dpIdx, ranked);
+            } catch (matrixError) {
+              // Matrix API failed for this point — will fall back to haversine
+              console.error('Matrix API error at decision point', dpIdx, matrixError);
+            }
+          }
+
+          if (rankedMap.size > 0) {
+            rankedStationsPerStop = rankedMap;
+          }
+        }
+      } catch (rankingError) {
+        // Ranking failed entirely — fall back to haversine
+        console.error('Station ranking error:', rankingError);
+      }
+    }
+
+    // Plan charging stops (uses ranked stations if available, else haversine)
     const plan = planChargingStops({
       encodedPolyline: directions.polyline,
       totalDistanceKm,
@@ -258,12 +341,22 @@ export async function POST(request: NextRequest) {
       minArrivalPercent,
       rangeSafetyFactor,
       stations,
+      rankedStationsPerStop,
     });
 
     const totalChargingTimeMin = plan.chargingStops.reduce(
-      (sum, stop) => sum + stop.estimatedChargingTimeMin,
+      (sum, stop: ChargingStop | ChargingStopWithAlternatives) =>
+        sum + ('selected' in stop ? Math.round(stop.selected.estimatedChargeTimeMin) : stop.estimatedChargingTimeMin),
       0,
     );
+
+    // Generate tripId from route parameters for caching
+    const tripIdInput = JSON.stringify({
+      start, end, vehicleId,
+      customVehicle: customVehicle ? `${customVehicle.brand}-${customVehicle.model}-${customVehicle.batteryCapacityKwh}` : null,
+      currentBatteryPercent, minArrivalPercent, rangeSafetyFactor, provider,
+    });
+    const tripId = createHash('sha256').update(tripIdInput).digest('hex').slice(0, 16);
 
     const tripPlan: TripPlan = {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
@@ -276,7 +369,11 @@ export async function POST(request: NextRequest) {
       polyline: directions.polyline,
       startAddress: directions.startAddress,
       endAddress: directions.endAddress,
+      tripId,
     };
+
+    // Cache trip plan for share card generation
+    cacheTripPlan(tripId, tripPlan);
 
     return NextResponse.json(tripPlan);
   } catch (error) {

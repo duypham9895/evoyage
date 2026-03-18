@@ -157,7 +157,7 @@ describe('planChargingStops', () => {
     });
 
     const hasVinFastStop = result.chargingStops.some(
-      (stop) => stop.station.isVinFastOnly,
+      (stop) => ('selected' in stop ? stop.selected.station.isVinFastOnly : stop.station.isVinFastOnly),
     );
     expect(hasVinFastStop).toBe(false);
   });
@@ -174,7 +174,8 @@ describe('planChargingStops', () => {
     });
 
     for (const stop of result.chargingStops) {
-      expect(stop.departureBatteryPercent).toBe(80);
+      const departureBattery = 'selected' in stop ? stop.batteryPercentAfterCharge : stop.departureBatteryPercent;
+      expect(departureBattery).toBe(80);
     }
   });
 
@@ -231,7 +232,7 @@ describe('planChargingStops', () => {
 
     // VinFast should be able to use VinFast-only stations
     const vinFastStops = result.chargingStops.filter(
-      (s) => s.station.isVinFastOnly,
+      (s) => ('selected' in s ? s.selected.station.isVinFastOnly : s.station.isVinFastOnly),
     );
     // May or may not use VinFast stations depending on proximity,
     // but at least it shouldn't be filtered out
