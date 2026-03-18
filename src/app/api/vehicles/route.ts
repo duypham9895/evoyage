@@ -18,11 +18,11 @@ import type { EVVehicleData } from '@/types';
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
-  const query = (searchParams.get('q') ?? '').toLowerCase();
+  const query = (searchParams.get('q') ?? '').slice(0, 200).toLowerCase();
   const vietnamOnly = searchParams.get('vietnamOnly') !== 'false';
-  const bodyType = searchParams.get('bodyType');
+  const bodyType = searchParams.get('bodyType')?.slice(0, 50) ?? null;
   const seats = searchParams.get('seats');
-  const brand = searchParams.get('brand');
+  const brand = searchParams.get('brand')?.slice(0, 100) ?? null;
   const minRange = searchParams.get('minRange');
 
   // Try DB first, fall back to hardcoded data
@@ -41,15 +41,43 @@ export async function GET(request: NextRequest) {
 
     if (dbVehicles.length > 0) {
       vehicles = dbVehicles.map((v) => ({
-        ...v,
-        variant: v.variant ?? null,
+        id: v.id,
+        brand: v.brand,
+        model: v.model,
+        variant: v.variant,
+        modelYear: v.modelYear,
+        bodyType: v.bodyType,
+        segment: v.segment,
+        seats: v.seats,
+        doors: v.doors,
+        batteryCapacityKwh: v.batteryCapacityKwh,
+        usableBatteryKwh: v.usableBatteryKwh,
+        officialRangeKm: v.officialRangeKm,
+        rangeStandard: v.rangeStandard,
+        efficiencyWhPerKm: v.efficiencyWhPerKm,
+        dcMaxChargingPowerKw: v.dcMaxChargingPowerKw,
+        acChargingPowerKw: v.acChargingPowerKw,
+        chargingTimeDC_10to80_min: v.chargingTimeDC_10to80_min,
+        chargingPortType: v.chargingPortType,
+        powerKw: v.powerKw,
+        torqueNm: v.torqueNm,
+        driveType: v.driveType,
+        acceleration0to100: v.acceleration0to100,
+        topSpeedKmh: v.topSpeedKmh,
+        lengthMm: v.lengthMm,
+        widthMm: v.widthMm,
+        heightMm: v.heightMm,
+        wheelbaseMm: v.wheelbaseMm,
+        weightKg: v.weightKg,
+        cargoVolumeLiters: v.cargoVolumeLiters,
+        availableInVietnam: v.availableInVietnam,
+        priceVndMillions: v.priceVndMillions,
         source: v.source ?? 'crawled',
-        sourceUrl: undefined,
-        lastUpdated: undefined,
-      })) as unknown as EVVehicleData[];
+        isUserAdded: v.isUserAdded,
+      }));
     }
-  } catch {
-    // DB unavailable — use fallback
+  } catch (err) {
+    console.error('DB query failed, using fallback:', err);
   }
 
   // Fallback: use hardcoded Vietnam models if DB returned nothing

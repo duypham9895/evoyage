@@ -83,7 +83,7 @@ export default function TripSummary({ tripPlan, isLoading }: TripSummaryProps) {
           <div className="text-xs text-[var(--color-muted)] mb-2">
             {t('Hành trình pin', 'Battery journey')}
           </div>
-          <div className="flex h-6 rounded-full overflow-hidden bg-[var(--color-background)]">
+          <div className="flex h-7 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
             {tripPlan.batterySegments.map((seg, i) => {
               const widthPercent =
                 ((seg.endKm - seg.startKm) / tripPlan.totalDistanceKm) * 100;

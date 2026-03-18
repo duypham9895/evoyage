@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+function safeJsonArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
 /**
  * GET /api/stations — Get charging stations with optional filters.
  *
@@ -14,7 +23,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
   const vinFastOnly = searchParams.get('vinFastOnly');
-  const provider = searchParams.get('provider');
+  const provider = searchParams.get('provider')?.slice(0, 100) ?? null;
   const bounds = searchParams.get('bounds');
 
   const where: Record<string, unknown> = {};
@@ -45,8 +54,8 @@ export async function GET(request: NextRequest) {
   // Parse JSON string fields back to arrays
   const parsed = stations.map((s) => ({
     ...s,
-    chargerTypes: JSON.parse(s.chargerTypes) as string[],
-    connectorTypes: JSON.parse(s.connectorTypes) as string[],
+    chargerTypes: safeJsonArray(s.chargerTypes),
+    connectorTypes: safeJsonArray(s.connectorTypes),
   }));
 
   return NextResponse.json({ stations: parsed, count: parsed.length });

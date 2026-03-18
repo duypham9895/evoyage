@@ -2,12 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { fetchDirections } from '@/lib/osrm';
+import { fetchDirectionsGoogle } from '@/lib/google-directions';
 import { planChargingStops } from '@/lib/route-planner';
+import { decodePolyline } from '@/lib/polyline';
+import { getCachedRoute, setCachedRoute } from '@/lib/route-cache';
 import type { ChargingStationData, TripPlan } from '@/types';
+
+function safeJsonArray(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
 
 const routeRequestSchema = z.object({
   start: z.string().min(1).max(200),
   end: z.string().min(1).max(200),
+  startLat: z.number().optional(),
+  startLng: z.number().optional(),
+  endLat: z.number().optional(),
+  endLng: z.number().optional(),
   vehicleId: z.string().nullable(),
   customVehicle: z
     .object({
@@ -22,10 +38,12 @@ const routeRequestSchema = z.object({
   currentBatteryPercent: z.number().min(10).max(100),
   minArrivalPercent: z.number().min(5).max(30),
   rangeSafetyFactor: z.number().min(0.5).max(1.0),
+  provider: z.enum(['osrm', 'google']).default('osrm'),
 });
 
 /**
  * POST /api/route — Calculate a trip plan with charging stops.
+ * Supports both OSRM and Google Directions providers.
  */
 export async function POST(request: NextRequest) {
   let body: unknown;
@@ -46,11 +64,16 @@ export async function POST(request: NextRequest) {
   const {
     start,
     end,
+    startLat,
+    startLng,
+    endLat,
+    endLng,
     vehicleId,
     customVehicle,
     currentBatteryPercent,
     minArrivalPercent,
     rangeSafetyFactor,
+    provider,
   } = parsed.data;
 
   // Resolve vehicle
@@ -95,13 +118,67 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get route from OSRM
-    const directions = await fetchDirections(start, end);
+    // Get route from selected provider
+    let directions;
+    if (provider === 'google') {
+      if (startLat == null || startLng == null || endLat == null || endLng == null) {
+        return NextResponse.json(
+          { error: 'Google mode requires coordinates — select locations from the autocomplete dropdown' },
+          { status: 400 },
+        );
+      }
+      // Try cache first for Google directions (saves API cost)
+      const cached = await getCachedRoute(startLat, startLng, endLat, endLng, 'google');
+      if (cached) {
+        directions = {
+          polyline: cached.polyline,
+          distanceMeters: cached.distanceMeters,
+          durationSeconds: cached.durationSeconds,
+          startAddress: start,
+          endAddress: end,
+        };
+      } else {
+        const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
+        if (!googleApiKey) {
+          return NextResponse.json(
+            { error: 'Google Maps API key not configured on server' },
+            { status: 500 },
+          );
+        }
+        directions = await fetchDirectionsGoogle(
+          startLat, startLng, endLat, endLng,
+          googleApiKey,
+        );
+        // Cache the result for future lookups
+        await setCachedRoute(startLat, startLng, endLat, endLng, 'google', {
+          polyline: directions.polyline,
+          distanceMeters: directions.distanceMeters,
+          durationSeconds: directions.durationSeconds,
+        });
+      }
+    } else {
+      directions = await fetchDirections(start, end);
+    }
+
     const totalDistanceKm = directions.distanceMeters / 1000;
     const totalDurationMin = Math.round(directions.durationSeconds / 60);
 
-    // Get all charging stations from DB
-    const dbStations = await prisma.chargingStation.findMany();
+    // Get charging stations within route corridor bounding box
+    const routePoints = decodePolyline(directions.polyline);
+    const lats = routePoints.map(p => p.lat);
+    const lngs = routePoints.map(p => p.lng);
+    const BUFFER_DEG = 0.5; // ~55km buffer around route corridor
+    const minLat = Math.min(...lats) - BUFFER_DEG;
+    const maxLat = Math.max(...lats) + BUFFER_DEG;
+    const minLng = Math.min(...lngs) - BUFFER_DEG;
+    const maxLng = Math.max(...lngs) + BUFFER_DEG;
+
+    const dbStations = await prisma.chargingStation.findMany({
+      where: {
+        latitude: { gte: minLat, lte: maxLat },
+        longitude: { gte: minLng, lte: maxLng },
+      },
+    });
     const stations: ChargingStationData[] = dbStations.map((s) => ({
       id: s.id,
       name: s.name,
@@ -109,8 +186,8 @@ export async function POST(request: NextRequest) {
       province: s.province,
       latitude: s.latitude,
       longitude: s.longitude,
-      chargerTypes: JSON.parse(s.chargerTypes) as string[],
-      connectorTypes: JSON.parse(s.connectorTypes) as string[],
+      chargerTypes: safeJsonArray(s.chargerTypes),
+      connectorTypes: safeJsonArray(s.connectorTypes),
       portCount: s.portCount,
       maxPowerKw: s.maxPowerKw,
       stationType: s.stationType as 'public' | 'private',
@@ -150,8 +227,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(tripPlan);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Route calculation error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Route calculation error:', error);
+    return NextResponse.json({ error: 'Route calculation failed. Please try again.' }, { status: 500 });
   }
 }

@@ -21,6 +21,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "@types/leaflet": "^1.9.21",
+    "@vis.gl/react-google-maps": "^1.7.1",
     "leaflet": "^1.9.4",
     "next": "16.1.7",
     "prisma": "^6.19.2",

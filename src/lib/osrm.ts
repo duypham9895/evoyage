@@ -35,6 +35,7 @@ async function geocodeAddress(address: string): Promise<Coordinate> {
     headers: {
       'User-Agent': 'EVoyage/1.0 (https://evoyagevn.vercel.app)',
     },
+    signal: AbortSignal.timeout(10000),
   });
 
   if (!response.ok) {
@@ -72,6 +73,7 @@ export async function fetchDirections(
 
   const response = await fetch(
     `${OSRM_BASE}/route/v1/driving/${coordinates}?overview=full&geometries=polyline`,
+    { signal: AbortSignal.timeout(10000) },
   );
 
   if (!response.ok) {

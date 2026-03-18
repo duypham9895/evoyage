@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { LocaleProvider } from '@/lib/locale';
+import { MapModeProvider, useMapMode } from '@/lib/map-mode';
 import Header from '@/components/Header';
 import TripInput from '@/components/TripInput';
 import BrandModelSelector from '@/components/BrandModelSelector';
@@ -10,19 +12,27 @@ import AddCustomVehicle from '@/components/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/BatteryStatusPanel';
 import TripSummary from '@/components/TripSummary';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
+import type { NominatimResult } from '@/lib/nominatim';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,
   DEFAULT_CURRENT_BATTERY,
   DEFAULT_MIN_ARRIVAL,
 } from '@/types';
 
-// Leaflet must be loaded client-side only (uses window/document)
-const Map = dynamic(() => import('@/components/Map'), { ssr: false });
+// Both map components must be loaded client-side only (use window/document)
+const LeafletMap = dynamic(() => import('@/components/Map'), { ssr: false });
+const GoogleMap = dynamic(() => import('@/components/GoogleMap'), { ssr: false });
 
-export default function Home() {
+function HomeContent() {
+  const { mode } = useMapMode();
+
   // Trip inputs
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+
+  // Store coordinates from Nominatim for Google mode
+  const [startCoords, setStartCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [endCoords, setEndCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Vehicle
   const [selectedVehicle, setSelectedVehicle] = useState<EVVehicleData | null>(null);
@@ -51,9 +61,20 @@ export default function Home() {
 
     const savedCustom = localStorage.getItem('ev-planner-custom-vehicle');
     if (savedCustom) {
+      const customSchema = z.object({
+        brand: z.string().min(1).max(100),
+        model: z.string().min(1).max(100),
+        batteryCapacityKwh: z.number().positive().max(300),
+        officialRangeKm: z.number().positive().max(2000),
+        chargingTimeDC_10to80_min: z.number().positive().optional(),
+        chargingPortType: z.string().optional(),
+      });
       try {
-        setCustomVehicle(JSON.parse(savedCustom));
-      } catch { /* ignore invalid data */ }
+        const result = customSchema.safeParse(JSON.parse(savedCustom));
+        if (result.success) {
+          setCustomVehicle(result.data);
+        }
+      } catch { /* ignore invalid JSON */ }
     }
   }, []);
 
@@ -74,6 +95,26 @@ export default function Home() {
   const handleSelectVehicle = useCallback((vehicle: EVVehicleData | null) => {
     setSelectedVehicle(vehicle);
     setCustomVehicle(null);
+  }, []);
+
+  // Capture coordinates from Nominatim selection
+  const handleStartSelect = useCallback((result: NominatimResult) => {
+    setStartCoords({ lat: result.lat, lng: result.lng });
+  }, []);
+
+  const handleEndSelect = useCallback((result: NominatimResult) => {
+    setEndCoords({ lat: result.lat, lng: result.lng });
+  }, []);
+
+  // Clear coords when text input changes manually
+  const handleStartChange = useCallback((value: string) => {
+    setStart(value);
+    setStartCoords(null);
+  }, []);
+
+  const handleEndChange = useCallback((value: string) => {
+    setEnd(value);
+    setEndCoords(null);
   }, []);
 
   // Plan trip — POST to /api/route
@@ -98,11 +139,16 @@ export default function Home() {
         body: JSON.stringify({
           start,
           end,
+          startLat: startCoords?.lat,
+          startLng: startCoords?.lng,
+          endLat: endCoords?.lat,
+          endLng: endCoords?.lng,
           vehicleId: selectedVehicle?.id ?? null,
           customVehicle: selectedVehicle ? null : customVehicle,
           currentBatteryPercent: currentBattery,
           minArrivalPercent: minArrival,
           rangeSafetyFactor,
+          provider: mode === 'google' ? 'google' : 'osrm',
         }),
       });
 
@@ -118,79 +164,83 @@ export default function Home() {
     } finally {
       setIsPlanning(false);
     }
-  }, [start, end, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode]);
 
   const activeVehicle = selectedVehicle ?? customVehicle;
   const canPlan = Boolean(start && end && activeVehicle && !isPlanning);
 
   return (
-    <LocaleProvider>
-      <div className="h-screen flex flex-col">
-        <Header />
+    <div className="h-screen flex flex-col">
+      <Header />
 
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-          {/* Sidebar — inputs + summary */}
-          <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
-            <TripInput
-              start={start}
-              end={end}
-              onStartChange={setStart}
-              onEndChange={setEnd}
-              isLoaded={true}
-            />
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Sidebar — inputs + summary */}
+        <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
+          <TripInput
+            start={start}
+            end={end}
+            onStartChange={handleStartChange}
+            onEndChange={handleEndChange}
+            onStartSelect={handleStartSelect}
+            onEndSelect={handleEndSelect}
+            isLoaded={true}
+          />
 
-            <BrandModelSelector
-              selectedVehicle={selectedVehicle}
-              onSelect={handleSelectVehicle}
-              onCustomCarClick={() => setShowCustomForm(true)}
-            />
+          <BrandModelSelector
+            selectedVehicle={selectedVehicle}
+            onSelect={handleSelectVehicle}
+            onCustomCarClick={() => setShowCustomForm(true)}
+          />
 
-            <BatteryStatusPanel
-              vehicle={activeVehicle}
-              currentBattery={currentBattery}
-              minArrival={minArrival}
-              rangeSafetyFactor={rangeSafetyFactor}
-              onCurrentBatteryChange={setCurrentBattery}
-              onMinArrivalChange={setMinArrival}
-              onRangeSafetyFactorChange={handleRSFChange}
-            />
+          <BatteryStatusPanel
+            vehicle={activeVehicle}
+            currentBattery={currentBattery}
+            minArrival={minArrival}
+            rangeSafetyFactor={rangeSafetyFactor}
+            onCurrentBatteryChange={setCurrentBattery}
+            onMinArrivalChange={setMinArrival}
+            onRangeSafetyFactorChange={handleRSFChange}
+          />
 
-            {/* Plan trip button */}
-            <button
-              onClick={handlePlanTrip}
-              disabled={!canPlan}
-              className={`w-full py-3 rounded-lg font-bold font-[family-name:var(--font-heading)] text-lg transition-all ${
-                canPlan
-                  ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
-                  : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed'
-              }`}
-            >
-              {isPlanning ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
-                  Planning...
-                </span>
-              ) : (
-                'LÊN KẾ HOẠCH ⚡'
-              )}
-            </button>
-
-            {/* Error display */}
-            {error && (
-              <div className="p-3 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-sm">
-                {error}
-              </div>
+          {/* Plan trip button */}
+          <button
+            onClick={handlePlanTrip}
+            disabled={!canPlan}
+            className={`w-full py-3 rounded-lg font-bold font-[family-name:var(--font-heading)] text-lg transition-all ${
+              canPlan
+                ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
+                : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed'
+            }`}
+          >
+            {isPlanning ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
+                Planning...
+              </span>
+            ) : (
+              'LÊN KẾ HOẠCH ⚡'
             )}
+          </button>
 
-            {/* Trip results */}
-            <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />
-          </aside>
+          {/* Error display */}
+          {error && (
+            <div className="p-3 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
-          {/* Map pane */}
-          <main className="flex-1 relative min-h-[300px]">
-            <Map tripPlan={tripPlan} />
-          </main>
-        </div>
+          {/* Trip results */}
+          <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />
+        </aside>
+
+        {/* Map pane */}
+        <main className="flex-1 relative min-h-[300px]">
+          {mode === 'google' ? (
+            <GoogleMap tripPlan={tripPlan} />
+          ) : (
+            <LeafletMap tripPlan={tripPlan} />
+          )}
+        </main>
       </div>
 
       {/* Custom vehicle modal */}
@@ -199,6 +249,16 @@ export default function Home() {
         onClose={() => setShowCustomForm(false)}
         onSave={handleSaveCustomVehicle}
       />
+    </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <LocaleProvider>
+      <MapModeProvider>
+        <HomeContent />
+      </MapModeProvider>
     </LocaleProvider>
   );
 }

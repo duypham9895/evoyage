@@ -3,24 +3,20 @@
 import { useEffect, useRef } from 'react';
 import type { TripPlan } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
+import {
+  VIETNAM_CENTER,
+  VIETNAM_ZOOM,
+  PROVIDER_COLORS,
+  DEFAULT_MARKER_COLOR,
+  buildStopPopupHtml,
+  escapeHtml,
+} from '@/lib/map-utils';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface MapProps {
   readonly tripPlan: TripPlan | null;
 }
-
-const VIETNAM_CENTER: L.LatLngExpression = [14.0583, 108.2772];
-const VIETNAM_ZOOM = 6;
-
-const PROVIDER_COLORS: Record<string, string> = {
-  VinFast: '#34C759',
-  EverCharge: '#007AFF',
-  EVONE: '#5856D6',
-  EVPower: '#FF9500',
-  'CHARGE+': '#FF2D55',
-};
-const DEFAULT_MARKER_COLOR = '#8E8E93';
 
 // Dark tile layer (CartoDB Dark Matter)
 const DARK_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
@@ -56,7 +52,7 @@ export default function Map({ tripPlan }: MapProps) {
     if (!mapRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapRef.current, {
-      center: VIETNAM_CENTER,
+      center: [VIETNAM_CENTER.lat, VIETNAM_CENTER.lng],
       zoom: VIETNAM_ZOOM,
       zoomControl: true,
     });
@@ -100,12 +96,12 @@ export default function Map({ tripPlan }: MapProps) {
     // Start marker
     if (latLngs.length > 0) {
       const startMarker = L.marker(latLngs[0], { icon: createEndpointIcon('A') })
-        .bindPopup(`<b>Start:</b> ${tripPlan.startAddress}`);
+        .bindPopup(`<b>Start:</b> ${escapeHtml(tripPlan.startAddress)}`);
       overlays.addLayer(startMarker);
 
       // End marker
       const endMarker = L.marker(latLngs[latLngs.length - 1], { icon: createEndpointIcon('B') })
-        .bindPopup(`<b>End:</b> ${tripPlan.endAddress}`);
+        .bindPopup(`<b>End:</b> ${escapeHtml(tripPlan.endAddress)}`);
       overlays.addLayer(endMarker);
     }
 
@@ -117,27 +113,7 @@ export default function Map({ tripPlan }: MapProps) {
         { icon: createCircleIcon(color, `${index + 1}`) },
       );
 
-      const popupContent = `
-        <div style="font-family:system-ui;max-width:250px">
-          <h3 style="font-weight:bold;margin:0 0 4px">${stop.station.name}</h3>
-          <p style="font-size:12px;margin:0 0 4px;color:#666">${stop.station.address}</p>
-          <p style="font-size:12px;margin:0">
-            <span style="color:#FF3B30;font-weight:bold">${stop.arrivalBatteryPercent}%</span>
-            → <span style="color:#34C759;font-weight:bold">${stop.departureBatteryPercent}%</span>
-            | ~${stop.estimatedChargingTimeMin}min
-          </p>
-          <p style="font-size:11px;margin:4px 0 0;color:#888">
-            ⚡ ${stop.station.maxPowerKw}kW | ${stop.station.connectorTypes.join(', ')} | ${stop.station.provider}
-          </p>
-          <a href="https://www.google.com/maps/dir/?api=1&destination=${stop.station.latitude},${stop.station.longitude}"
-             target="_blank" rel="noopener noreferrer"
-             style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0A0A0B;
-                    border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
-            Navigate
-          </a>
-        </div>
-      `;
-      marker.bindPopup(popupContent);
+      marker.bindPopup(buildStopPopupHtml(stop));
       overlays.addLayer(marker);
     });
 

@@ -131,15 +131,7 @@ export interface TripPlan {
   readonly endAddress: string;
 }
 
-export interface RouteCalculationInput {
-  readonly startPlaceId: string;
-  readonly endPlaceId: string;
-  readonly vehicleId: string | null;
-  readonly customVehicle: CustomVehicleInput | null;
-  readonly currentBatteryPercent: number;
-  readonly minArrivalPercent: number;
-  readonly rangeSafetyFactor: number;
-}
+export type MapMode = 'leaflet' | 'google';
 
 // ── Vehicle Search/Filter Types ──
 export interface VehicleSearchParams {
