@@ -45,6 +45,10 @@ function checkLocalRateLimit(
 
 const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
+if (process.env.NODE_ENV === 'production' && !hasRedis) {
+  console.error('[SECURITY] Rate limiting is disabled — UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not set');
+}
+
 // Pre-configured rate limiters
 export const routeLimiter = hasRedis ? createRedisRatelimiter(10, 60) : null;
 export const routeMultiWaypointLimiter = hasRedis ? createRedisRatelimiter(5, 60) : null;

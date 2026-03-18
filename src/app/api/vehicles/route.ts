@@ -110,6 +110,9 @@ export async function GET(request: NextRequest) {
 
   if (seats) {
     const seatCount = parseInt(seats, 10);
+    if (isNaN(seatCount) || seatCount < 1 || seatCount > 20) {
+      return NextResponse.json({ error: 'Invalid seats parameter (1-20)' }, { status: 400 });
+    }
     filtered = filtered.filter((v) => v.seats === seatCount);
   }
 
@@ -119,6 +122,9 @@ export async function GET(request: NextRequest) {
 
   if (minRange) {
     const min = parseFloat(minRange);
+    if (isNaN(min) || !isFinite(min) || min < 0 || min > 2000) {
+      return NextResponse.json({ error: 'Invalid minRange parameter (0-2000)' }, { status: 400 });
+    }
     filtered = filtered.filter((v) => v.officialRangeKm >= min);
   }
 

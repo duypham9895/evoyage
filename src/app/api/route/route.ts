@@ -32,7 +32,7 @@ const routeRequestSchema = z.object({
   startLng: z.number().optional(),
   endLat: z.number().optional(),
   endLng: z.number().optional(),
-  vehicleId: z.string().min(1).max(100).nullable(),
+  vehicleId: z.string().min(1).max(36).regex(/^[a-z0-9]+$/).nullable(),
   customVehicle: z
     .object({
       brand: z.string().min(1).max(100),
@@ -40,7 +40,7 @@ const routeRequestSchema = z.object({
       batteryCapacityKwh: z.number().positive(),
       officialRangeKm: z.number().positive(),
       chargingTimeDC_10to80_min: z.number().positive().optional(),
-      chargingPortType: z.string().optional(),
+      chargingPortType: z.string().max(50).optional(),
     })
     .nullable(),
   currentBatteryPercent: z.number().min(10).max(100),

@@ -1,10 +1,11 @@
 /**
- * VinFast station detail client using impit for Cloudflare TLS bypass.
+ * VinFast station detail client.
+ *
+ * Attempts to use impit for Cloudflare TLS bypass when native bindings are available.
+ * Falls back to standard fetch when impit is not available (e.g., darwin-arm64 dev).
  *
  * Flow: visit main locator page → collect CF cookies → call detail API.
- * Replicates the curl-cffi approach from vinfast-scraper (Python).
  */
-import { Impit } from 'impit';
 
 const LOCATOR_PAGE = 'https://vinfastauto.com/vn_en/tim-kiem-showroom-tram-sac';
 const DETAIL_URL_PREFIX = 'https://vinfastauto.com/vn_en/get-locator/';
@@ -125,7 +126,9 @@ function parseDetailResponse(raw: Record<string, unknown>): VinFastStationDetail
       ? (inner.coordinates as Record<string, string>).longitude
       : outer.lng),
     evses: evses as unknown as VinFastEvse[],
-    images: images.map((img) => ({ url: String(img.url ?? ''), category: String(img.category ?? '') })),
+    images: images
+      .map((img) => ({ url: String(img.url ?? ''), category: String(img.category ?? '') }))
+      .filter((img) => img.url.startsWith('https://') && img.url.includes('vinfastauto.com')),
     depotStatus: String(extraData.depot_status ?? outer.charging_status ?? 'unknown'),
     is24h: openingTimes.twentyfourseven === true,
     chargingWhenClosed: inner.charging_when_closed === true,
@@ -145,41 +148,100 @@ function parseDetailResponse(raw: Record<string, unknown>): VinFastStationDetail
 }
 
 /**
- * Fetch VinFast station detail with Cloudflare bypass.
- * Uses impit to impersonate Chrome's TLS fingerprint.
+ * Try to load impit dynamically. Returns null if native bindings unavailable.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function tryLoadImpit(): Promise<any | null> {
+  try {
+    // Use indirect require to prevent Turbopack from statically analyzing the import
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require(/* webpackIgnore: true */ 'impit');
+    // Test that native bindings are actually usable
+    new mod.Impit({ browser: 'chrome' });
+    return mod;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch VinFast station detail.
+ * Attempts impit for Cloudflare TLS bypass, falls back to standard fetch.
  */
 export async function fetchVinFastDetail(entityId: string): Promise<VinFastStationDetail | null> {
-  const client = new Impit({ browser: 'chrome' });
+  const impit = await tryLoadImpit();
 
-  // Step 1: Visit main page to collect Cloudflare cookies
-  const pageResponse = await client.fetch(LOCATOR_PAGE, {
-    headers: {
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'accept-language': 'en-US,en;q=0.9',
-    },
-  });
-
-  if (!pageResponse.ok) {
-    console.error(`VinFast main page failed: ${pageResponse.status}`);
-    return null;
+  if (impit) {
+    return fetchWithImpit(impit, entityId);
   }
 
-  // Consume body to complete the request
-  await pageResponse.text();
+  // Fallback: standard fetch (may be blocked by Cloudflare)
+  return fetchWithStandardFetch(entityId);
+}
 
-  // Step 2: Call detail API with CF cookies (auto-managed by impit session)
-  const detailResponse = await client.fetch(`${DETAIL_URL_PREFIX}${entityId}`, {
-    headers: DETAIL_HEADERS,
-  });
+async function fetchWithImpit(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  impit: any,
+  entityId: string,
+): Promise<VinFastStationDetail | null> {
+  try {
+    const client = new impit.Impit({ browser: 'chrome' });
 
-  if (!detailResponse.ok) {
-    console.error(`VinFast detail API failed: ${detailResponse.status}`);
+    // Step 1: Visit main page to collect Cloudflare cookies
+    const pageResponse = await client.fetch(LOCATOR_PAGE, {
+      headers: {
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'accept-language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (!pageResponse.ok) {
+      console.error(`VinFast main page failed: ${pageResponse.status}`);
+      return null;
+    }
+
+    await pageResponse.text();
+
+    // Step 2: Call detail API with CF cookies
+    const detailResponse = await client.fetch(`${DETAIL_URL_PREFIX}${entityId}`, {
+      headers: DETAIL_HEADERS,
+    });
+
+    if (!detailResponse.ok) {
+      console.error(`VinFast detail API failed: ${detailResponse.status}`);
+      return null;
+    }
+
+    return parseResponse(await detailResponse.text());
+  } catch (err) {
+    console.error('VinFast impit fetch error:', err);
     return null;
   }
+}
 
-  const text = await detailResponse.text();
+async function fetchWithStandardFetch(entityId: string): Promise<VinFastStationDetail | null> {
+  try {
+    const detailResponse = await fetch(`${DETAIL_URL_PREFIX}${entityId}`, {
+      headers: {
+        ...DETAIL_HEADERS,
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
 
-  // Check for Cloudflare challenge page
+    if (!detailResponse.ok) {
+      console.error(`VinFast detail API failed (standard fetch): ${detailResponse.status}`);
+      return null;
+    }
+
+    return parseResponse(await detailResponse.text());
+  } catch (err) {
+    console.error('VinFast standard fetch error:', err);
+    return null;
+  }
+}
+
+function parseResponse(text: string): VinFastStationDetail | null {
   if (text.includes('::IM_UNDER_ATTACK_BOX::') || text.includes('challenge-platform')) {
     console.error('VinFast detail: blocked by Cloudflare challenge');
     return null;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { verifyCronSecret } from '@/lib/cron-auth';
 
 /**
  * GET /api/cron/refresh-stations — Vercel Cron endpoint.
@@ -60,22 +60,7 @@ function inferProvince(lat: number): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret in production
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    console.error('CRON_SECRET environment variable is not set');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const expectedToken = `Bearer ${cronSecret}`;
-  const providedToken = authHeader ?? '';
-  const isValid =
-    expectedToken.length === providedToken.length &&
-    timingSafeEqual(Buffer.from(expectedToken), Buffer.from(providedToken));
-
-  if (!isValid) {
+  if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

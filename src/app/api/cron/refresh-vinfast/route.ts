@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { verifyCronSecret } from '@/lib/cron-auth';
 
 /**
  * GET /api/cron/refresh-vinfast — Vercel Cron endpoint.
@@ -39,20 +39,6 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function verifyCronSecret(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) return false;
-
-  const expectedToken = `Bearer ${cronSecret}`;
-  const providedToken = authHeader ?? '';
-
-  if (expectedToken.length !== providedToken.length) return false;
-
-  return timingSafeEqual(Buffer.from(expectedToken), Buffer.from(providedToken));
 }
 
 export async function GET(request: NextRequest) {

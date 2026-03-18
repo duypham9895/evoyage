@@ -21,6 +21,11 @@ export async function GET(
 ) {
   const { id: stationId } = await params;
 
+  // Validate stationId format (CUID)
+  if (!/^[a-z0-9]{20,36}$/.test(stationId)) {
+    return NextResponse.json({ error: 'Invalid station ID' }, { status: 400 });
+  }
+
   // Rate limit: 20 req/min per IP
   const ip = getClientIp(request);
   const limit = await checkRateLimit(`vinfast-detail:${ip}`, 20, 60_000);
@@ -41,15 +46,17 @@ export async function GET(
   }
 
   // Only VinFast stations have detail
-  if (!station.ocmId?.startsWith('vinfast-')) {
+  if (!station.isVinFastOnly) {
     return NextResponse.json(
       { error: 'Detail only available for VinFast stations' },
       { status: 400 },
     );
   }
 
-  // Extract entity_id from finaldivision bulk data lookup
-  const storeId = station.ocmId.replace('vinfast-', '');
+  // Extract store_id: try vinfast- prefix first, then osm- prefix
+  const storeId = station.ocmId?.startsWith('vinfast-')
+    ? station.ocmId.replace('vinfast-', '')
+    : station.ocmId?.replace('osm-', '') ?? station.id;
 
   // Check cache first
   const cached = await prisma.vinFastStationDetail.findFirst({
@@ -89,6 +96,11 @@ export async function GET(
     });
   }
 
+  // Validate entityId format before passing to external API (prevent SSRF)
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
+    return NextResponse.json({ detail: null, cached: false, fallback: true, station: { id: station.id, name: station.name, provider: station.provider } });
+  }
+
   // Fetch fresh detail from VinFast
   const detail = await fetchVinFastDetail(entityId);
 
@@ -108,6 +120,12 @@ export async function GET(
         portCount: station.portCount,
       },
     });
+  }
+
+  // Guard against pathologically large responses
+  const serialized = JSON.stringify(detail);
+  if (serialized.length > 100_000) {
+    return NextResponse.json({ detail, cached: false, station: { id: station.id, name: station.name, provider: station.provider } });
   }
 
   // Cache the result

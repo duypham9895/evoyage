@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
   const vinFastOnly = searchParams.get('vinFastOnly');
-  const provider = searchParams.get('provider')?.slice(0, 100) ?? null;
+  const ALLOWED_PROVIDERS = new Set(['VinFast', 'EverCharge', 'EVONE', 'EVPower', 'CHARGE+', 'Other']);
+  const rawProvider = searchParams.get('provider')?.slice(0, 100) ?? null;
+  const provider = rawProvider && ALLOWED_PROVIDERS.has(rawProvider) ? rawProvider : null;
   const bounds = searchParams.get('bounds');
 
   const where: Record<string, unknown> = {};
@@ -63,6 +65,14 @@ export async function GET(request: NextRequest) {
       if (minLat < -90 || maxLat > 90 || minLng < -180 || maxLng > 180) {
         return NextResponse.json(
           { error: 'Invalid bounds: lat must be -90 to 90, lng must be -180 to 180' },
+          { status: 400 },
+        );
+      }
+
+      // Reject overly large bounding boxes to prevent full table scans
+      if ((maxLat - minLat) > 5 || (maxLng - minLng) > 5) {
+        return NextResponse.json(
+          { error: 'Bounding box too large (max 5° × 5°)' },
           { status: 400 },
         );
       }

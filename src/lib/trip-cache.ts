@@ -6,16 +6,24 @@ interface CachedTrip {
 }
 
 const TTL_MS = 60 * 60 * 1000; // 1 hour
+const MAX_CACHE_SIZE = 500;
 
 const tripCache = new Map<string, CachedTrip>();
 
 /**
  * Store a trip plan in the in-memory cache with a 1-hour TTL.
+ * Capped at MAX_CACHE_SIZE entries to prevent unbounded memory growth.
  */
 export function cacheTripPlan(tripId: string, plan: TripPlan): void {
   // Clean expired entries periodically (every 100 writes)
   if (tripCache.size > 0 && tripCache.size % 100 === 0) {
     pruneExpired();
+  }
+
+  // Evict oldest entry if cache is full (LRU-like: Map preserves insertion order)
+  if (tripCache.size >= MAX_CACHE_SIZE) {
+    const firstKey = tripCache.keys().next().value;
+    if (firstKey !== undefined) tripCache.delete(firstKey);
   }
 
   tripCache.set(tripId, {

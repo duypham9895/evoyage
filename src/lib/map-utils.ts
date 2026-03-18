@@ -46,7 +46,7 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
       <p style="font-size:11px;margin:4px 0 0;color:#888">
         ⚡ ${station.maxPowerKw}kW | ${connectors} | ${provider}
       </p>
-      <a href="https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}"
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${Number(station.latitude).toFixed(6)},${Number(station.longitude).toFixed(6)}"
          target="_blank" rel="noopener noreferrer"
          style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0A0A0B;
                 border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
@@ -58,9 +58,12 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
 
 /** Build an SVG marker URL for both map renderers. */
 export function createSvgMarkerUrl(color: string, label: string): string {
+  // Validate color is a hex color to prevent SVG injection
+  const safeColor = /^#[0-9A-Fa-f]{3,6}$/.test(color) ? color : '#8E8E93';
+  const safeLabel = escapeHtml(label);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
-    <circle cx="15" cy="15" r="13" fill="${color}" stroke="#0A0A0B" stroke-width="2"/>
-    <text x="15" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0A0A0B" font-family="system-ui">${label}</text>
+    <circle cx="15" cy="15" r="13" fill="${safeColor}" stroke="#0A0A0B" stroke-width="2"/>
+    <text x="15" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0A0A0B" font-family="system-ui">${safeLabel}</text>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
