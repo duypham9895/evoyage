@@ -44,6 +44,8 @@ const makeStation = (
   isVinFastOnly,
   operatingHours: null,
   provider: isVinFastOnly ? 'VinFast' : 'EverCharge',
+  chargingStatus: null,
+  parkingFee: null,
 });
 
 // Generate a synthetic encoded polyline for a straight-line route

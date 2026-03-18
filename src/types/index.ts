@@ -87,6 +87,8 @@ export interface ChargingStationData {
   readonly isVinFastOnly: boolean;
   readonly operatingHours: string | null;
   readonly provider: string;
+  readonly chargingStatus: string | null;
+  readonly parkingFee: boolean | null;
 }
 
 // ── Route Planning Types ──

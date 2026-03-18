@@ -12,6 +12,7 @@ import { decodePolyline, encodePolyline } from '@/lib/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/route-cache';
 import { fetchMatrixDurations } from '@/lib/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/station-ranker';
+import { estimateDetourTimeSec, type StationWithRouteInfo } from '@/lib/station-finder';
 import { cacheTripPlan } from '@/lib/trip-cache';
 import { safeJsonArray } from '@/lib/safe-json';
 import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
@@ -270,73 +271,95 @@ export async function POST(request: NextRequest) {
       isVinFastOnly: s.isVinFastOnly,
       operatingHours: s.operatingHours,
       provider: s.provider,
+      chargingStatus: s.chargingStatus ?? null,
+      parkingFee: s.parkingFee ?? null,
     }));
 
-    // Smart station ranking via Matrix API (when Mapbox token available)
+    // Smart station ranking: corridor scoring + Matrix API fallback
     let rankedStationsPerStop: ReadonlyMap<number, readonly RankedStation[]> | undefined;
     const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
 
-    if (mapboxToken && stations.length > 0) {
-      try {
-        const planInput = {
-          encodedPolyline: directions.polyline,
-          totalDistanceKm,
-          vehicle,
-          currentBatteryPercent,
-          minArrivalPercent,
-          rangeSafetyFactor,
-          stations,
-        };
+    const planInput = {
+      encodedPolyline: directions.polyline,
+      totalDistanceKm,
+      vehicle,
+      currentBatteryPercent,
+      minArrivalPercent,
+      rangeSafetyFactor,
+      stations,
+    };
 
-        const decisionPoints = findChargingDecisionPoints(planInput);
+    // Pre-compute decision points once (shared between ranking and planning)
+    const decisionPoints = stations.length > 0
+      ? findChargingDecisionPoints(planInput)
+      : [];
 
-        if (decisionPoints.length > 0) {
-          const isVinFast = vehicle.brand.toLowerCase() === 'vinfast';
-          const vehicleMaxChargeKw = ('dcMaxChargingPowerKw' in vehicle && vehicle.dcMaxChargingPowerKw)
-            ? vehicle.dcMaxChargingPowerKw as number
-            : undefined;
-          const energyToCharge = vehicle.batteryCapacityKwh * 0.6; // rough: 20% → 80%
+    if (decisionPoints.length > 0) {
+      const isVinFast = vehicle.brand.toLowerCase() === 'vinfast';
+      const vehicleMaxChargeKw = ('dcMaxChargingPowerKw' in vehicle && vehicle.dcMaxChargingPowerKw)
+        ? vehicle.dcMaxChargingPowerKw as number
+        : undefined;
+      const energyToCharge = vehicle.batteryCapacityKwh * 0.6; // rough: 20% → 80%
 
-          const rankedMap = new Map<number, readonly RankedStation[]>();
+      const rankedMap = new Map<number, readonly RankedStation[]>();
 
-          // Process each decision point (sequential to respect rate limits)
-          for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
-            const dp = decisionPoints[dpIdx];
+      for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
+        const dp = decisionPoints[dpIdx];
+        if (dp.candidates.length === 0) continue;
 
-            try {
-              const matrix = await fetchMatrixDurations(
-                dp.point,
-                dp.candidates.map(s => ({ lat: s.latitude, lng: s.longitude })),
-                mapboxToken,
-              );
+        try {
+          if (dp.useCorridorScoring) {
+            // Corridor candidates: estimate detour from distance-to-route
+            // This avoids Matrix API bias for stations spread along the route
+            const scored = dp.candidates.map((station) => {
+              const routeInfo = station as StationWithRouteInfo;
+              const detourSec = routeInfo.distanceToRouteKm !== undefined
+                ? estimateDetourTimeSec(routeInfo.distanceToRouteKm)
+                : 300; // fallback: 5 min
 
-              const scored = dp.candidates.map((station, j) =>
-                scoreStation({
-                  detourDriveTimeSec: matrix.durations[j] ?? 0,
-                  stationPowerKw: getEffectivePowerKw(station, vehicleMaxChargeKw),
-                  energyNeededKwh: energyToCharge,
-                  isVinFastStation: station.isVinFastOnly,
-                  isVinFastVehicle: isVinFast,
-                  vehicleMaxChargeKw,
-                  station,
-                }),
-              );
+              return scoreStation({
+                detourDriveTimeSec: detourSec,
+                stationPowerKw: getEffectivePowerKw(station, vehicleMaxChargeKw),
+                energyNeededKwh: energyToCharge,
+                isVinFastStation: station.isVinFastOnly,
+                isVinFastVehicle: isVinFast,
+                vehicleMaxChargeKw,
+                station,
+              });
+            });
 
-              const ranked = rankStations(scored);
-              rankedMap.set(dpIdx, ranked);
-            } catch (matrixError) {
-              // Matrix API failed for this point — will fall back to haversine
-              console.error('Matrix API error at decision point', dpIdx, matrixError);
-            }
+            const ranked = rankStations(scored);
+            rankedMap.set(dpIdx, ranked);
+          } else if (mapboxToken) {
+            // Non-corridor (fallback) candidates: use Matrix API for actual drive times
+            const matrix = await fetchMatrixDurations(
+              dp.point,
+              dp.candidates.map(s => ({ lat: s.latitude, lng: s.longitude })),
+              mapboxToken,
+            );
+
+            const scored = dp.candidates.map((station, j) =>
+              scoreStation({
+                detourDriveTimeSec: matrix.durations[j] ?? 0,
+                stationPowerKw: getEffectivePowerKw(station, vehicleMaxChargeKw),
+                energyNeededKwh: energyToCharge,
+                isVinFastStation: station.isVinFastOnly,
+                isVinFastVehicle: isVinFast,
+                vehicleMaxChargeKw,
+                station,
+              }),
+            );
+
+            const ranked = rankStations(scored);
+            rankedMap.set(dpIdx, ranked);
           }
-
-          if (rankedMap.size > 0) {
-            rankedStationsPerStop = rankedMap;
-          }
+        } catch (scoringError) {
+          console.error('Station scoring error at decision point', dpIdx, scoringError);
         }
-      } catch (rankingError) {
-        // Ranking failed entirely — fall back to haversine
-        console.error('Station ranking error:', rankingError);
+      }
+
+      if (rankedMap.size > 0) {
+        rankedStationsPerStop = rankedMap;
       }
     }
 
@@ -350,6 +373,7 @@ export async function POST(request: NextRequest) {
       rangeSafetyFactor,
       stations,
       rankedStationsPerStop,
+      precomputedDecisionPoints: decisionPoints,
     });
 
     const totalChargingTimeMin = plan.chargingStops.reduce(

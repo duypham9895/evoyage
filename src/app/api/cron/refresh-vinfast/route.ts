@@ -17,18 +17,25 @@ const DEDUP_RADIUS_M = 50;
 interface VinFastStation {
   readonly entity_id: string;
   readonly store_id: string;
+  readonly code: string;
   readonly name: string;
   readonly address: string;
   readonly lat: string;
   readonly lng: string;
+  readonly hotline: string;
   readonly province_id: string;
   readonly access_type: string;
+  readonly party_id: string;
   readonly charging_publish: boolean;
   readonly charging_status: string;
+  readonly category_name: string;
   readonly category_slug: string;
+  readonly hotline_xdv: string;
   readonly open_time_service: string;
   readonly close_time_service: string;
   readonly parking_fee: boolean;
+  readonly has_link: boolean;
+  readonly marker_icon: string;
 }
 
 function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -88,14 +95,16 @@ export async function GET(request: NextRequest) {
       const lng = parseFloat(s.lng);
       const vinfastOcmId = `vinfast-${s.store_id}`;
       const operatingHours =
-        s.open_time_service && s.close_time_service
-          ? `${s.open_time_service} - ${s.close_time_service}`
-          : null;
+        s.open_time_service === '00:00' && s.close_time_service === '23:59'
+          ? '24/7'
+          : s.open_time_service && s.close_time_service
+            ? `${s.open_time_service} - ${s.close_time_service}`
+            : null;
 
       const stationData = {
         name: s.name,
         address: s.address,
-        province: s.province_id,
+        province: s.province_id || (lat > 20.5 ? 'Northern Vietnam' : lat > 15.5 ? 'Central Vietnam' : lat > 10.5 ? 'Southern Vietnam' : 'Mekong Delta'),
         latitude: lat,
         longitude: lng,
         chargerTypes: JSON.stringify(['DC_150kW', 'AC_11kW']),
@@ -107,6 +116,21 @@ export async function GET(request: NextRequest) {
         provider: 'VinFast',
         operatingHours,
         scrapedAt: new Date(),
+        // All VinFast data points
+        entityId: s.entity_id,
+        stationCode: s.code,
+        storeId: s.store_id,
+        hotline: s.hotline || null,
+        hotlineService: s.hotline_xdv || null,
+        chargingStatus: s.charging_status,
+        parkingFee: s.parking_fee,
+        accessType: s.access_type,
+        partyId: s.party_id,
+        hasLink: s.has_link ?? false,
+        categoryName: s.category_name,
+        categorySlug: s.category_slug,
+        markerIcon: s.marker_icon || null,
+        rawData: JSON.stringify(s),
       };
 
       // Check existing VinFast entry

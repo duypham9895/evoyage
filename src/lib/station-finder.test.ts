@@ -26,6 +26,8 @@ const makeStation = (
   isVinFastOnly: false,
   operatingHours: null,
   provider: 'EverCharge',
+  chargingStatus: null,
+  parkingFee: null,
   ...overrides,
 });
 

@@ -14,7 +14,7 @@ import { safeJsonArray } from '@/lib/safe-json';
  * Cache: 6 hours in DB. Fallback: basic ChargingStation data.
  */
 
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function GET(
   request: NextRequest,

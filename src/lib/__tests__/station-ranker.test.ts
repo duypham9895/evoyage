@@ -28,6 +28,8 @@ function makeStation(
     isVinFastOnly: false,
     operatingHours: '24/7',
     provider: 'TestProvider',
+    chargingStatus: null,
+    parkingFee: null,
     ...overrides,
   };
 }
