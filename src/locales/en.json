@@ -106,19 +106,5 @@
   "station_hardware": "Hardware: {{vendor}} {{model}}",
   "station_section_connectors": "Connector details",
   "station_section_images": "Station photos",
-  "station_last_updated": "Updated: {{time}}",
-
-  "vinfast_detail": "View detail",
-  "vinfast_detail_loading": "Loading station detail...",
-  "vinfast_status": "Status",
-  "vinfast_status_available": "Available",
-  "vinfast_status_busy": "Busy",
-  "vinfast_status_unavailable": "Unavailable",
-  "vinfast_ports": "{{count}} charging ports",
-  "vinfast_24h": "24/7",
-  "vinfast_parking_fee": "Parking fee required",
-  "vinfast_no_parking_fee": "Free parking",
-  "vinfast_connector": "{{type}} · {{power}}kW",
-  "vinfast_hardware": "Hardware: {{vendor}} {{model}}",
-  "vinfast_detail_unavailable": "Detail unavailable"
+  "station_last_updated": "Updated: {{time}}"
 }

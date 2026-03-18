@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useLocale } from '@/lib/locale';
 import type { TripPlan, ChargingStop, RankedStation } from '@/types';
-import VinFastDetailPanel from './VinFastDetailPanel';
+import StationInfoChips from './StationInfoChips';
+import StationDetailExpander from './StationDetailExpander';
 
 interface TripSummaryProps {
   readonly tripPlan: TripPlan | null;
@@ -224,21 +225,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                         {t('stations_total_time', { time: String(Math.round(stop.selected.totalStopTimeMin)) })}
                       </div>
                     )}
-                    <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
-                      <span>⚡ {station.maxPowerKw}kW</span>
-                      <span>|</span>
-                      <span>{station.connectorTypes.join(', ')}</span>
-                      <span>|</span>
-                      <span
-                        className={
-                          station.provider === 'VinFast'
-                            ? 'text-[var(--color-safe)]'
-                            : 'text-[var(--color-accent)]'
-                        }
-                      >
-                        {station.provider}
-                      </span>
-                    </div>
+                    <StationInfoChips station={station} />
                     <div className="flex items-center gap-2 mt-1">
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
@@ -249,7 +236,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                         {t('navigate')}
                       </a>
                     </div>
-                    <VinFastDetailPanel stationId={station.id} stationProvider={station.provider} />
+                    <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
                   </div>
                 </div>
 

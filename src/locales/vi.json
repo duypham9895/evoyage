@@ -106,19 +106,5 @@
   "station_hardware": "Thiết bị: {{vendor}} {{model}}",
   "station_section_connectors": "Chi tiết các cổng sạc",
   "station_section_images": "Hình ảnh trạm",
-  "station_last_updated": "Cập nhật: {{time}}",
-
-  "vinfast_detail": "Xem chi tiết",
-  "vinfast_detail_loading": "Đang tải thông tin trạm...",
-  "vinfast_status": "Trạng thái",
-  "vinfast_status_available": "Sẵn sàng",
-  "vinfast_status_busy": "Đang bận",
-  "vinfast_status_unavailable": "Không khả dụng",
-  "vinfast_ports": "{{count}} cổng sạc",
-  "vinfast_24h": "24/7",
-  "vinfast_parking_fee": "Có phí gửi xe",
-  "vinfast_no_parking_fee": "Gửi xe miễn phí",
-  "vinfast_connector": "{{type}} · {{power}}kW",
-  "vinfast_hardware": "Thiết bị: {{vendor}} {{model}}",
-  "vinfast_detail_unavailable": "Không có thông tin chi tiết"
+  "station_last_updated": "Cập nhật: {{time}}"
 }
