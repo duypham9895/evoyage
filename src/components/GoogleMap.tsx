@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { APIProvider, Map, useMap, useApiIsLoaded } from '@vis.gl/react-google-maps';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
 import type { TripPlan } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
 import {
@@ -150,10 +150,30 @@ function MapLoadingSkeleton() {
   );
 }
 
-function MapContent({ tripPlan }: GoogleMapProps) {
-  const isLoaded = useApiIsLoaded();
+/** Poll for google.maps availability since useApiIsLoaded() can stall with async loading */
+function useGoogleMapsReady(): boolean {
+  const [ready, setReady] = useState(
+    () => typeof google !== 'undefined' && typeof google.maps?.Map === 'function',
+  );
 
-  if (!isLoaded) {
+  useEffect(() => {
+    if (ready) return;
+    const interval = setInterval(() => {
+      if (typeof google !== 'undefined' && typeof google.maps?.Map === 'function') {
+        setReady(true);
+        clearInterval(interval);
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [ready]);
+
+  return ready;
+}
+
+function MapContent({ tripPlan }: GoogleMapProps) {
+  const isReady = useGoogleMapsReady();
+
+  if (!isReady) {
     return <MapLoadingSkeleton />;
   }
 
