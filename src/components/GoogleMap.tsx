@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { APIProvider, Map, useMap, useMapsLibrary, useApiIsLoaded } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, useMap, useApiIsLoaded } from '@vis.gl/react-google-maps';
 import type { TripPlan } from '@/types';
 import { decodePolyline } from '@/lib/polyline';
 import {
@@ -36,9 +36,8 @@ const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
 
 function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
   const map = useMap();
-  const markerLib = useMapsLibrary('marker');
   const overlaysRef = useRef<google.maps.Polyline | null>(null);
-  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
 
   const path = useMemo(() => decodePolyline(tripPlan.polyline), [tripPlan.polyline]);
@@ -46,13 +45,13 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
   const clearOverlays = useCallback(() => {
     overlaysRef.current?.setMap(null);
     overlaysRef.current = null;
-    markersRef.current.forEach((m) => (m.map = null));
+    markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
     infoWindowRef.current?.close();
   }, []);
 
   useEffect(() => {
-    if (!map || !markerLib) return;
+    if (!map) return;
 
     clearOverlays();
 
@@ -71,14 +70,13 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
 
     // Start marker
     if (path.length > 0) {
-      const startImg = document.createElement('img');
-      startImg.src = createSvgMarkerUrl('#00D4AA', 'A');
-      startImg.width = 30;
-      startImg.height = 30;
-      const startMarker = new google.maps.marker.AdvancedMarkerElement({
+      const startMarker = new google.maps.Marker({
         map,
         position: { lat: path[0].lat, lng: path[0].lng },
-        content: startImg,
+        icon: {
+          url: createSvgMarkerUrl('#00D4AA', 'A'),
+          scaledSize: new google.maps.Size(30, 30),
+        },
         title: `Start: ${tripPlan.startAddress}`,
       });
       startMarker.addListener('click', () => {
@@ -89,14 +87,13 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
 
       // End marker
       const endPt = path[path.length - 1];
-      const endImg = document.createElement('img');
-      endImg.src = createSvgMarkerUrl('#00D4AA', 'B');
-      endImg.width = 30;
-      endImg.height = 30;
-      const endMarker = new google.maps.marker.AdvancedMarkerElement({
+      const endMarker = new google.maps.Marker({
         map,
         position: { lat: endPt.lat, lng: endPt.lng },
-        content: endImg,
+        icon: {
+          url: createSvgMarkerUrl('#00D4AA', 'B'),
+          scaledSize: new google.maps.Size(30, 30),
+        },
         title: `End: ${tripPlan.endAddress}`,
       });
       endMarker.addListener('click', () => {
@@ -109,15 +106,14 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
     // Charging stop markers
     tripPlan.chargingStops.forEach((stop, index) => {
       const color = PROVIDER_COLORS[stop.station.provider] ?? DEFAULT_MARKER_COLOR;
-      const img = document.createElement('img');
-      img.src = createSvgMarkerUrl(color, `${index + 1}`);
-      img.width = 26;
-      img.height = 26;
 
-      const marker = new google.maps.marker.AdvancedMarkerElement({
+      const marker = new google.maps.Marker({
         map,
         position: { lat: stop.station.latitude, lng: stop.station.longitude },
-        content: img,
+        icon: {
+          url: createSvgMarkerUrl(color, `${index + 1}`),
+          scaledSize: new google.maps.Size(26, 26),
+        },
         title: stop.station.name,
       });
 
@@ -138,7 +134,7 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
     map.fitBounds(bounds, 50);
 
     return clearOverlays;
-  }, [map, markerLib, tripPlan, path, clearOverlays]);
+  }, [map, tripPlan, path, clearOverlays]);
 
   return null;
 }
@@ -168,7 +164,7 @@ function MapContent({ tripPlan }: GoogleMapProps) {
       styles={DARK_MAP_STYLES}
       gestureHandling="greedy"
       disableDefaultUI={false}
-      className="w-full h-full"
+      style={{ width: '100%', height: '100%' }}
     >
       {tripPlan && <TripOverlay tripPlan={tripPlan} />}
     </Map>
