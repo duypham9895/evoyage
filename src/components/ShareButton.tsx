@@ -2,16 +2,35 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocale } from '@/lib/locale';
+import type { TripPlan } from '@/types';
 
 interface ShareButtonProps {
-  readonly tripId?: string;
-  readonly locale: 'vi' | 'en';
+  readonly tripPlan: TripPlan | null;
 }
 
 type ShareState = 'idle' | 'loading' | 'preview' | 'error';
 
-export default function ShareButton({ tripId, locale }: ShareButtonProps) {
-  const { t } = useLocale();
+function getStopInfo(stop: TripPlan['chargingStops'][number]) {
+  if ('selected' in stop) {
+    return {
+      name: stop.selected.station.name,
+      powerKw: stop.selected.station.maxPowerKw,
+      chargeTimeMin: stop.selected.estimatedChargeTimeMin,
+      lat: stop.selected.station.latitude,
+      lng: stop.selected.station.longitude,
+    };
+  }
+  return {
+    name: stop.station.name,
+    powerKw: stop.station.maxPowerKw,
+    chargeTimeMin: stop.estimatedChargingTimeMin,
+    lat: stop.station.latitude,
+    lng: stop.station.longitude,
+  };
+}
+
+export default function ShareButton({ tripPlan }: ShareButtonProps) {
+  const { t, locale } = useLocale();
   const [visible, setVisible] = useState(false);
   const [state, setState] = useState<ShareState>('idle');
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
@@ -19,42 +38,51 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Slide-up animation after 1s delay
   useEffect(() => {
-    if (!tripId) {
+    if (!tripPlan) {
       setVisible(false);
       return;
     }
-
     const timer = setTimeout(() => setVisible(true), 1000);
     return () => clearTimeout(timer);
-  }, [tripId]);
+  }, [tripPlan]);
 
-  // Clean up object URL on unmount or when imageUrl changes
   useEffect(() => {
     return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl);
-      }
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
     };
   }, [imageUrl]);
 
   const handleGenerate = useCallback(async () => {
-    if (!tripId) return;
+    if (!tripPlan) return;
 
     setState('loading');
     setErrorMessage(null);
 
     try {
+      const startBattery = tripPlan.batterySegments[0]?.startBatteryPercent ?? 80;
+
       const response = await fetch('/api/share-card', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripId, locale }),
+        body: JSON.stringify({
+          locale,
+          startAddress: tripPlan.startAddress,
+          endAddress: tripPlan.endAddress,
+          totalDistanceKm: tripPlan.totalDistanceKm,
+          totalDurationMin: tripPlan.totalDurationMin,
+          totalChargingTimeMin: tripPlan.totalChargingTimeMin,
+          arrivalBatteryPercent: tripPlan.arrivalBatteryPercent,
+          startBatteryPercent: startBattery,
+          chargingStops: tripPlan.chargingStops.map(getStopInfo),
+          polyline: tripPlan.polyline,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error ?? t('share_error'));
+        const msg = typeof errorData?.error === 'string' ? errorData.error.slice(0, 200) : t('share_error');
+        throw new Error(msg);
       }
 
       const blob = await response.blob();
@@ -67,19 +95,16 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
       setErrorMessage(err instanceof Error ? err.message : t('share_error'));
       setState('error');
     }
-  }, [tripId, locale, t]);
+  }, [tripPlan, locale, t]);
 
   const handleShare = useCallback(async () => {
     if (!imageBlob) return;
-
     try {
       const file = new File([imageBlob], 'evoyage-trip.png', { type: 'image/png' });
-
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file] });
       }
     } catch (err) {
-      // User cancelled share or share failed — not an error to display
       if (err instanceof Error && err.name !== 'AbortError') {
         console.error('Share failed:', err);
       }
@@ -88,7 +113,6 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
 
   const handleDownload = useCallback(() => {
     if (!imageUrl) return;
-
     const link = document.createElement('a');
     link.href = imageUrl;
     link.download = 'evoyage-trip.png';
@@ -99,11 +123,8 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
 
   const handleCopy = useCallback(async () => {
     if (!imageBlob) return;
-
     try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'image/png': imageBlob }),
-      ]);
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageBlob })]);
     } catch (err) {
       console.error('Copy failed:', err);
     }
@@ -111,34 +132,26 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
 
   const handleCloseModal = useCallback(() => {
     setState('idle');
-    if (imageUrl) {
-      URL.revokeObjectURL(imageUrl);
-    }
+    if (imageUrl) URL.revokeObjectURL(imageUrl);
     setImageBlob(null);
     setImageUrl(null);
   }, [imageUrl]);
 
-  // Close modal on Escape key
   useEffect(() => {
     if (state !== 'preview') return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleCloseModal();
-      }
+      if (e.key === 'Escape') handleCloseModal();
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [state, handleCloseModal]);
 
   const supportsWebShare = typeof navigator !== 'undefined' && !!navigator.share;
 
-  if (!tripId) return null;
+  if (!tripPlan) return null;
 
   return (
     <>
-      {/* Floating share button */}
       <button
         onClick={handleGenerate}
         disabled={state === 'loading'}
@@ -164,38 +177,33 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
         )}
       </button>
 
-      {/* Error toast */}
       {state === 'error' && errorMessage && (
         <div className="fixed z-50 bottom-32 lg:bottom-16 right-4 max-w-xs p-3 bg-[var(--color-danger)]/90 text-white text-sm rounded-lg shadow-lg">
           {errorMessage}
         </div>
       )}
 
-      {/* Preview modal */}
       {state === 'preview' && imageUrl && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleCloseModal();
-          }}
+          onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal(); }}
           role="dialog"
           aria-modal="true"
           aria-label="Share card preview"
         >
-          <div
-            ref={modalRef}
-            className="bg-[var(--color-surface)] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl"
-          >
-            {/* Card preview */}
+          <div ref={modalRef} className="bg-[var(--color-surface)] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl relative">
+            <button
+              onClick={handleCloseModal}
+              aria-label="Close"
+              className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors z-10"
+            >
+              ✕
+            </button>
+
             <div className="p-4">
-              <img
-                src={imageUrl}
-                alt={`Trip share card`}
-                className="w-full rounded-lg"
-              />
+              <img src={imageUrl} alt="Trip share card" className="w-full rounded-lg" />
             </div>
 
-            {/* Action buttons */}
             <div className="flex items-center gap-2 p-4 pt-0">
               {supportsWebShare && (
                 <button
@@ -221,15 +229,6 @@ export default function ShareButton({ tripId, locale }: ShareButtonProps) {
                 {t('share_copy')}
               </button>
             </div>
-
-            {/* Close button */}
-            <button
-              onClick={handleCloseModal}
-              aria-label="Close"
-              className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
-            >
-              X
-            </button>
           </div>
         </div>
       )}

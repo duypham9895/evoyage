@@ -44,7 +44,7 @@ export async function fetchDirectionsGoogle(
   const data = await response.json();
 
   if (data.status !== 'OK' || !data.routes?.length) {
-    throw new Error(`Google Directions: ${data.status} — ${data.error_message ?? 'No route found'}`);
+    throw new Error(`Google Directions: ${data.status} — No route found`);
   }
 
   const route = data.routes[0];

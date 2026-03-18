@@ -13,17 +13,8 @@ import { getCachedRoute, setCachedRoute } from '@/lib/route-cache';
 import { fetchMatrixDurations } from '@/lib/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/station-ranker';
 import { cacheTripPlan } from '@/lib/trip-cache';
-import { getStopStation } from '@/types';
+import { safeJsonArray } from '@/lib/safe-json';
 import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
-
-function safeJsonArray(value: string): string[] {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
-    return [];
-  }
-}
 
 const routeRequestSchema = z.object({
   start: z.string().min(1).max(200),

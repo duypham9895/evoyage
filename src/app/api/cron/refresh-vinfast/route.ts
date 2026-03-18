@@ -15,6 +15,7 @@ const VINFAST_CAR_API = 'https://api.service.finaldivision.com/stations/charging
 const DEDUP_RADIUS_M = 50;
 
 interface VinFastStation {
+  readonly entity_id: string;
   readonly store_id: string;
   readonly name: string;
   readonly address: string;
@@ -79,6 +80,9 @@ export async function GET(request: NextRequest) {
     let updated = 0;
     let merged = 0;
 
+    // Track merged ocmIds to avoid re-matching already-claimed stations
+    const mergedOcmIds = new Set<string>();
+
     for (const s of valid) {
       const lat = parseFloat(s.lat);
       const lng = parseFloat(s.lng);
@@ -113,9 +117,9 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Check nearby duplicate from OSM/GMaps
+      // Check nearby duplicate from OSM/GMaps (skip already-merged entries)
       const nearbyDuplicate = existing.find((e) => {
-        if (e.ocmId?.startsWith('vinfast-')) return false;
+        if (e.ocmId?.startsWith('vinfast-') || mergedOcmIds.has(e.ocmId ?? '')) return false;
         return haversineMeters(lat, lng, e.latitude, e.longitude) < DEDUP_RADIUS_M;
       });
 
@@ -124,20 +128,42 @@ export async function GET(request: NextRequest) {
           where: { id: nearbyDuplicate.id },
           data: { ...stationData, ocmId: vinfastOcmId },
         });
-        nearbyDuplicate.ocmId = vinfastOcmId;
+        mergedOcmIds.add(nearbyDuplicate.ocmId ?? '');
         merged++;
         continue;
       }
 
       // New station
       await prisma.chargingStation.create({ data: { ocmId: vinfastOcmId, ...stationData } });
-      existing.push({ id: '', ocmId: vinfastOcmId, latitude: lat, longitude: lng });
       created++;
+    }
+
+    // Persist entity_id → store_id mappings so the detail endpoint
+    // can look up entity_id locally instead of downloading the full list
+    let mappingsSaved = 0;
+    for (const s of valid) {
+      if (!s.entity_id || !s.store_id) continue;
+      try {
+        await prisma.vinFastStationDetail.upsert({
+          where: { entityId: s.entity_id },
+          update: { storeId: s.store_id },
+          create: {
+            entityId: s.entity_id,
+            storeId: s.store_id,
+            detail: '{}',
+            fetchedAt: new Date(0), // epoch = not cached, will be fetched on demand
+          },
+        });
+        mappingsSaved++;
+      } catch {
+        // Skip on constraint errors
+      }
     }
 
     return NextResponse.json({
       success: true,
       source: 'vinfast',
+      mappingsSaved,
       totalFromAPI: stations.length,
       validStations: valid.length,
       created,

@@ -48,7 +48,7 @@ export async function fetchDirectionsMapbox(
   const data = await response.json();
 
   if (!data.routes?.length) {
-    throw new Error(`Mapbox Directions: No route found — ${data.message ?? 'Unknown error'}`);
+    throw new Error('Mapbox Directions: No route found');
   }
 
   const route = data.routes[0];

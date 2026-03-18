@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { fetchVinFastDetail } from '@/lib/vinfast-client';
+import { safeJsonArray } from '@/lib/safe-json';
 
 /**
  * GET /api/stations/[id]/vinfast-detail
@@ -156,30 +157,14 @@ export async function GET(
 }
 
 /**
- * Look up VinFast entity_id from store_id via finaldivision API.
+ * Look up VinFast entity_id from store_id via local DB mapping
+ * (populated by the refresh-vinfast cron job).
  */
 async function findEntityId(storeId: string): Promise<string | null> {
-  try {
-    const response = await fetch(
-      'https://api.service.finaldivision.com/stations/charging-stations',
-      { headers: { 'Accept-Encoding': 'gzip, deflate' }, signal: AbortSignal.timeout(30_000) },
-    );
-
-    if (!response.ok) return null;
-
-    const stations: Array<{ entity_id: string; store_id: string }> = await response.json();
-    const match = stations.find((s) => s.store_id === storeId);
-    return match?.entity_id ?? null;
-  } catch {
-    return null;
-  }
+  const mapping = await prisma.vinFastStationDetail.findFirst({
+    where: { storeId },
+    select: { entityId: true },
+  });
+  return mapping?.entityId ?? null;
 }
 
-function safeJsonArray(value: string): string[] {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
-    return [];
-  }
-}

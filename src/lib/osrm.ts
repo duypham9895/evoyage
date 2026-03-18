@@ -83,7 +83,7 @@ export async function fetchDirections(
   const data = await response.json();
 
   if (data.code !== 'Ok' || !data.routes?.length) {
-    throw new Error(`No route found: ${data.code} — ${data.message ?? 'Unknown error'}`);
+    throw new Error(`OSRM: No route found (code: ${data.code})`);
   }
 
   const route = data.routes[0];

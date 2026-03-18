@@ -64,6 +64,7 @@ export default function AddCustomVehicle({
               onChange={(e) => setBrand(e.target.value)}
               placeholder="Tesla, Hyundai, Mercedes..."
               required
+              maxLength={100}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)]"
             />
           </div>
@@ -78,6 +79,7 @@ export default function AddCustomVehicle({
               onChange={(e) => setModel(e.target.value)}
               placeholder="Model 3 Long Range, Ioniq 5..."
               required
+              maxLength={100}
               className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)]"
             />
           </div>
