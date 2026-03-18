@@ -237,18 +237,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (!directions) {
+      return NextResponse.json(
+        { error: 'Failed to get directions from provider' },
+        { status: 502 },
+      );
+    }
+
     const totalDistanceKm = directions.distanceMeters / 1000;
     const totalDurationMin = Math.round(directions.durationSeconds / 60);
 
     // Get charging stations within route corridor bounding box
     const routePoints = decodePolyline(directions.polyline);
-    const lats = routePoints.map(p => p.lat);
-    const lngs = routePoints.map(p => p.lng);
+
+    if (routePoints.length === 0) {
+      return NextResponse.json(
+        { error: 'Route polyline is empty — the directions provider returned no path' },
+        { status: 502 },
+      );
+    }
+
+    // Use reduce instead of Math.min/max(...array) to avoid stack overflow
+    // on large polylines (V8 limits spread to ~65K arguments)
     const BUFFER_DEG = 0.5; // ~55km buffer around route corridor
-    const minLat = Math.min(...lats) - BUFFER_DEG;
-    const maxLat = Math.max(...lats) + BUFFER_DEG;
-    const minLng = Math.min(...lngs) - BUFFER_DEG;
-    const maxLng = Math.max(...lngs) + BUFFER_DEG;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+    for (const p of routePoints) {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
+    }
+    minLat -= BUFFER_DEG;
+    maxLat += BUFFER_DEG;
+    minLng -= BUFFER_DEG;
+    maxLng += BUFFER_DEG;
 
     const dbStations = await prisma.chargingStation.findMany({
       where: {
@@ -409,7 +434,36 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(tripPlan);
   } catch (error) {
-    console.error('Route calculation error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error('Route calculation error:', { message, stack, provider });
+
+    // Return specific error messages for known failure modes
+    if (message.includes('timeout') || message.includes('abort')) {
+      return NextResponse.json(
+        { error: 'Route provider timed out. Please try again or switch to a different map provider.' },
+        { status: 504 },
+      );
+    }
+    if (message.includes('No route found')) {
+      return NextResponse.json(
+        { error: 'No driving route found between these locations. Please check your start and end points.' },
+        { status: 422 },
+      );
+    }
+    if (message.includes('Location not found')) {
+      return NextResponse.json(
+        { error: message },
+        { status: 422 },
+      );
+    }
+    if (message.includes('API error') || message.includes('routing error')) {
+      return NextResponse.json(
+        { error: `Directions service error: ${message}` },
+        { status: 502 },
+      );
+    }
+
     return NextResponse.json({ error: 'Route calculation failed. Please try again.' }, { status: 500 });
   }
 }
