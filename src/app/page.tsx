@@ -148,7 +148,7 @@ function HomeContent() {
           currentBatteryPercent: currentBattery,
           minArrivalPercent: minArrival,
           rangeSafetyFactor,
-          provider: mode === 'google' ? 'google' : 'osrm',
+          provider: mode === 'google' ? 'google' : mode === 'mapbox' ? 'mapbox' : 'osrm',
         }),
       });
 

@@ -131,7 +131,7 @@ export interface TripPlan {
   readonly endAddress: string;
 }
 
-export type MapMode = 'leaflet' | 'google';
+export type MapMode = 'osm' | 'mapbox' | 'google';
 
 // ── Vehicle Search/Filter Types ──
 export interface VehicleSearchParams {

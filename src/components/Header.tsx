@@ -2,10 +2,19 @@
 
 import { useLocale } from '@/lib/locale';
 import { useMapMode } from '@/lib/map-mode';
+import type { MapMode } from '@/types';
+
+const MAP_MODES: readonly { readonly mode: MapMode; readonly label: string }[] = [
+  { mode: 'osm', label: 'OSM' },
+  { mode: 'mapbox', label: 'Mapbox' },
+  { mode: 'google', label: 'Google' },
+];
 
 export default function Header() {
   const { locale, toggleLocale, t } = useLocale();
   const { mode, setMode } = useMapMode();
+
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface)] border-b border-[var(--color-surface-hover)]">
@@ -16,29 +25,28 @@ export default function Header() {
       </div>
       <div className="flex items-center gap-3">
         {/* Map mode toggle */}
-        <div className="flex items-center gap-1.5 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)] p-0.5">
-          <button
-            onClick={() => setMode('leaflet')}
-            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              mode === 'leaflet'
-                ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-bold'
-                : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
-            }`}
-            aria-label="Use Leaflet map"
-          >
-            {t('Bản đồ', 'Map')}
-          </button>
-          <button
-            onClick={() => setMode('google')}
-            className={`px-2.5 py-1 text-xs rounded-md transition-all ${
-              mode === 'google'
-                ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-bold'
-                : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
-            }`}
-            aria-label="Use Google Maps"
-          >
-            Google
-          </button>
+        <div className="flex items-center gap-1 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)] p-0.5">
+          {MAP_MODES.map(({ mode: m, label }) => {
+            const isDisabled = m === 'mapbox' && !mapboxToken;
+            return (
+              <button
+                key={m}
+                onClick={() => !isDisabled && setMode(m)}
+                disabled={isDisabled}
+                title={isDisabled ? 'Mapbox token not configured' : undefined}
+                className={`px-2.5 py-1 text-xs rounded-md transition-all ${
+                  mode === m
+                    ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-bold'
+                    : isDisabled
+                      ? 'text-[var(--color-muted)] opacity-40 cursor-not-allowed'
+                      : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
+                }`}
+                aria-label={`Use ${label} map`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Language toggle */}

@@ -11,17 +11,18 @@ interface MapModeContextType {
 const STORAGE_KEY = 'evoyage-map-mode';
 
 const MapModeContext = createContext<MapModeContextType>({
-  mode: 'leaflet',
+  mode: 'osm',
   setMode: () => {},
 });
 
 export function MapModeProvider({ children }: { readonly children: ReactNode }) {
-  const [mode, setModeState] = useState<MapMode>('leaflet');
+  const [mode, setModeState] = useState<MapMode>('osm');
 
-  // Load persisted mode from localStorage (must be in useEffect for SSR safety)
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'leaflet' || saved === 'google') {
+    if (saved === 'leaflet' || saved === 'osm') {
+      setModeState('osm');
+    } else if (saved === 'mapbox' || saved === 'google') {
       setModeState(saved);
     }
   }, []);
