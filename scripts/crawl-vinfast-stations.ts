@@ -57,6 +57,14 @@ function buildOperatingHours(open: string, close: string): string | null {
   return null;
 }
 
+function inferProvince(lat: number): string {
+  if (lat > 20.5) return 'Northern Vietnam';
+  if (lat > 15.5) return 'Central Vietnam';
+  if (lat > 11.5) return 'Central Highlands';
+  if (lat > 10.5) return 'Southern Vietnam';
+  return 'Mekong Delta';
+}
+
 async function main() {
   console.log('Fetching VinFast car charging stations...');
 
@@ -109,7 +117,7 @@ async function main() {
     const stationData = {
       name: s.name,
       address: s.address,
-      province: s.province_id,
+      province: s.province_id || inferProvince(lat),
       latitude: lat,
       longitude: lng,
       chargerTypes: JSON.stringify(['DC_150kW', 'AC_11kW']),
