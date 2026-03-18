@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { fetchDirections } from '@/lib/osrm';
 import { fetchDirectionsGoogle } from '@/lib/google-directions';
+import { fetchDirectionsMapbox } from '@/lib/mapbox-directions';
 import { planChargingStops } from '@/lib/route-planner';
-import { decodePolyline } from '@/lib/polyline';
+import { decodePolyline, encodePolyline } from '@/lib/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/route-cache';
 import type { ChargingStationData, TripPlan } from '@/types';
 
@@ -38,7 +39,7 @@ const routeRequestSchema = z.object({
   currentBatteryPercent: z.number().min(10).max(100),
   minArrivalPercent: z.number().min(5).max(30),
   rangeSafetyFactor: z.number().min(0.5).max(1.0),
-  provider: z.enum(['osrm', 'google']).default('osrm'),
+  provider: z.enum(['osrm', 'mapbox', 'google']).default('osrm'),
 });
 
 /**
@@ -118,17 +119,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Get route from selected provider
-    let directions;
-    if (provider === 'google') {
+    // Shared coordinate validation for Google and Mapbox
+    if (provider !== 'osrm') {
       if (startLat == null || startLng == null || endLat == null || endLng == null) {
         return NextResponse.json(
-          { error: 'Google mode requires coordinates — select locations from the autocomplete dropdown' },
+          { error: `${provider === 'google' ? 'Google' : 'Mapbox'} mode requires coordinates — select locations from the autocomplete dropdown` },
           { status: 400 },
         );
       }
-      // Try cache first for Google directions (saves API cost)
-      const cached = await getCachedRoute(startLat, startLng, endLat, endLng, 'google');
+    }
+
+    // Get route from selected provider
+    let directions;
+    if (provider === 'google') {
+      const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google');
       if (cached) {
         directions = {
           polyline: cached.polyline,
@@ -146,12 +150,50 @@ export async function POST(request: NextRequest) {
           );
         }
         directions = await fetchDirectionsGoogle(
-          startLat, startLng, endLat, endLng,
+          startLat!, startLng!, endLat!, endLng!,
           googleApiKey,
         );
-        // Cache the result for future lookups
-        await setCachedRoute(startLat, startLng, endLat, endLng, 'google', {
+        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google', {
           polyline: directions.polyline,
+          distanceMeters: directions.distanceMeters,
+          durationSeconds: directions.durationSeconds,
+        });
+      }
+    } else if (provider === 'mapbox') {
+      const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox');
+      if (cached) {
+        directions = {
+          polyline: cached.polyline,
+          distanceMeters: cached.distanceMeters,
+          durationSeconds: cached.durationSeconds,
+          startAddress: start,
+          endAddress: end,
+        };
+      } else {
+        const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
+        if (!mapboxToken) {
+          return NextResponse.json(
+            { error: 'Mapbox access token not configured on server' },
+            { status: 500 },
+          );
+        }
+        const mapboxResult = await fetchDirectionsMapbox(
+          startLat!, startLng!, endLat!, endLng!,
+          mapboxToken,
+        );
+        // Normalize precision-6 polyline to precision-5 for uniform downstream use
+        const decoded = decodePolyline(mapboxResult.polyline, 6);
+        const normalizedPolyline = encodePolyline(decoded, 5);
+
+        directions = {
+          polyline: normalizedPolyline,
+          distanceMeters: mapboxResult.distanceMeters,
+          durationSeconds: mapboxResult.durationSeconds,
+          startAddress: mapboxResult.startAddress,
+          endAddress: mapboxResult.endAddress,
+        };
+        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox', {
+          polyline: normalizedPolyline,
           distanceMeters: directions.distanceMeters,
           durationSeconds: directions.durationSeconds,
         });
