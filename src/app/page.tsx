@@ -257,15 +257,24 @@ function HomeContent() {
     </div>
   ) : null;
 
+  // Waypoint markers for map components
+  const waypointMarkers = waypoints
+    .filter(wp => wp.coords)
+    .map((wp, i) => ({
+      lat: wp.coords!.lat,
+      lng: wp.coords!.lng,
+      label: String(i + 1),
+    }));
+
   // Map component
   const mapContent = (
     <>
       {mode === 'google' ? (
-        <GoogleMap tripPlan={tripPlan} />
+        <GoogleMap tripPlan={tripPlan} waypoints={waypointMarkers} />
       ) : mode === 'mapbox' ? (
-        <MapboxMap tripPlan={tripPlan} />
+        <MapboxMap tripPlan={tripPlan} waypoints={waypointMarkers} />
       ) : (
-        <LeafletMap tripPlan={tripPlan} />
+        <LeafletMap tripPlan={tripPlan} waypoints={waypointMarkers} />
       )}
     </>
   );

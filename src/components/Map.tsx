@@ -15,8 +15,15 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+interface WaypointMarkerData {
+  readonly lat: number;
+  readonly lng: number;
+  readonly label: string;
+}
+
 interface MapProps {
   readonly tripPlan: TripPlan | null;
+  readonly waypoints?: readonly WaypointMarkerData[];
 }
 
 // Dark tile layer (CartoDB Dark Matter)
@@ -33,6 +40,16 @@ function createCircleIcon(color: string, label: string): L.DivIcon {
   });
 }
 
+function createWaypointIcon(label: string): L.DivIcon {
+  return L.divIcon({
+    className: '',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16],
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2px solid #0A0A0B;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;color:#ffffff;font-family:system-ui">${label}</div>`,
+  });
+}
+
 function createEndpointIcon(label: string): L.DivIcon {
   return L.divIcon({
     className: '',
@@ -43,7 +60,7 @@ function createEndpointIcon(label: string): L.DivIcon {
   });
 }
 
-export default function Map({ tripPlan }: MapProps) {
+export default function Map({ tripPlan, waypoints }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const overlaysRef = useRef<L.LayerGroup | null>(null);
@@ -119,14 +136,23 @@ export default function Map({ tripPlan }: MapProps) {
       overlays.addLayer(marker);
     });
 
+    // Waypoint markers (blue numbered)
+    waypoints?.forEach((wp) => {
+      const wpMarker = L.marker([wp.lat, wp.lng], { icon: createWaypointIcon(wp.label) });
+      overlays.addLayer(wpMarker);
+    });
+
     // Fit bounds
     const bounds = polyline.getBounds();
     tripPlan.chargingStops.forEach((stop) => {
       const station = getStopStation(stop);
       bounds.extend([station.latitude, station.longitude]);
     });
+    waypoints?.forEach((wp) => {
+      bounds.extend([wp.lat, wp.lng]);
+    });
     map.fitBounds(bounds, { padding: [50, 50] });
-  }, [tripPlan]);
+  }, [tripPlan, waypoints]);
 
   return <div ref={mapRef} className="w-full h-full" />;
 }

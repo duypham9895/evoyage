@@ -57,13 +57,14 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
 }
 
 /** Build an SVG marker URL for both map renderers. */
-export function createSvgMarkerUrl(color: string, label: string): string {
-  // Validate color is a hex color to prevent SVG injection
+export function createSvgMarkerUrl(color: string, label: string, textColor: string = '#0A0A0B'): string {
+  // Validate colors are hex to prevent SVG injection
   const safeColor = /^#[0-9A-Fa-f]{3,6}$/.test(color) ? color : '#8E8E93';
+  const safeTextColor = /^#[0-9A-Fa-f]{3,6}$/.test(textColor) ? textColor : '#0A0A0B';
   const safeLabel = escapeHtml(label);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
     <circle cx="15" cy="15" r="13" fill="${safeColor}" stroke="#0A0A0B" stroke-width="2"/>
-    <text x="15" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#0A0A0B" font-family="system-ui">${safeLabel}</text>
+    <text x="15" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="${safeTextColor}" font-family="system-ui">${safeLabel}</text>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }

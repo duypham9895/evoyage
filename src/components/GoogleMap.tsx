@@ -15,8 +15,15 @@ import {
   createSvgMarkerUrl,
 } from '@/lib/map-utils';
 
+interface WaypointMarkerData {
+  readonly lat: number;
+  readonly lng: number;
+  readonly label: string;
+}
+
 interface GoogleMapProps {
   readonly tripPlan: TripPlan | null;
+  readonly waypoints?: readonly WaypointMarkerData[];
 }
 
 // Google Maps dark theme styling (matching CartoDB Dark Matter feel)
@@ -35,7 +42,7 @@ const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#1C1C1E' }] },
 ];
 
-function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
+function TripOverlay({ tripPlan, waypoints }: { readonly tripPlan: TripPlan; readonly waypoints?: readonly WaypointMarkerData[] }) {
   const map = useMap();
   const overlaysRef = useRef<google.maps.Polyline | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -127,6 +134,20 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
       markersRef.current.push(marker);
     });
 
+    // Waypoint markers (blue numbered)
+    waypoints?.forEach((wp) => {
+      const wpMarker = new google.maps.Marker({
+        map,
+        position: { lat: wp.lat, lng: wp.lng },
+        icon: {
+          url: createSvgMarkerUrl('#3b82f6', wp.label, '#ffffff'),
+          scaledSize: new google.maps.Size(28, 28),
+        },
+        title: `Waypoint ${wp.label}`,
+      });
+      markersRef.current.push(wpMarker);
+    });
+
     // Fit bounds
     const bounds = new google.maps.LatLngBounds();
     path.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
@@ -134,10 +155,13 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
       const station = getStopStation(stop);
       bounds.extend({ lat: station.latitude, lng: station.longitude });
     });
+    waypoints?.forEach((wp) => {
+      bounds.extend({ lat: wp.lat, lng: wp.lng });
+    });
     map.fitBounds(bounds, 50);
 
     return clearOverlays;
-  }, [map, tripPlan, path, clearOverlays]);
+  }, [map, tripPlan, path, clearOverlays, waypoints]);
 
   return null;
 }
@@ -173,7 +197,7 @@ function useGoogleMapsReady(): boolean {
   return ready;
 }
 
-function MapContent({ tripPlan }: GoogleMapProps) {
+function MapContent({ tripPlan, waypoints }: GoogleMapProps) {
   const isReady = useGoogleMapsReady();
 
   if (!isReady) {
@@ -189,12 +213,12 @@ function MapContent({ tripPlan }: GoogleMapProps) {
       disableDefaultUI={false}
       style={{ width: '100%', height: '100%' }}
     >
-      {tripPlan && <TripOverlay tripPlan={tripPlan} />}
+      {tripPlan && <TripOverlay tripPlan={tripPlan} waypoints={waypoints} />}
     </Map>
   );
 }
 
-export default function GoogleMapView({ tripPlan }: GoogleMapProps) {
+export default function GoogleMapView({ tripPlan, waypoints }: GoogleMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
@@ -207,7 +231,7 @@ export default function GoogleMapView({ tripPlan }: GoogleMapProps) {
 
   return (
     <APIProvider apiKey={apiKey}>
-      <MapContent tripPlan={tripPlan} />
+      <MapContent tripPlan={tripPlan} waypoints={waypoints} />
     </APIProvider>
   );
 }

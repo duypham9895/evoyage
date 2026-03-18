@@ -15,8 +15,15 @@ import {
   escapeHtml,
 } from '@/lib/map-utils';
 
+export interface WaypointMarkerData {
+  readonly lat: number;
+  readonly lng: number;
+  readonly label: string;
+}
+
 interface MapboxMapProps {
   readonly tripPlan: TripPlan | null;
+  readonly waypoints?: readonly WaypointMarkerData[];
 }
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
@@ -150,7 +157,32 @@ function StopMarker({
   );
 }
 
-function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
+function WaypointMarker({ lat, lng, label }: { readonly lat: number; readonly lng: number; readonly label: string }) {
+  return (
+    <Marker latitude={lat} longitude={lng} anchor="center">
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          background: '#3b82f6',
+          border: '2px solid #0A0A0B',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          fontSize: 12,
+          color: '#ffffff',
+          fontFamily: 'system-ui',
+        }}
+      >
+        {label}
+      </div>
+    </Marker>
+  );
+}
+
+function TripOverlay({ tripPlan, waypoints }: { readonly tripPlan: TripPlan; readonly waypoints?: readonly WaypointMarkerData[] }) {
   const { current: mapRef } = useMap();
   const [selectedStop, setSelectedStop] = useState<number | null>(null);
 
@@ -180,6 +212,9 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
       const st = getStopStation(s);
       bounds.extend([st.longitude, st.latitude]);
     });
+    waypoints?.forEach((wp) => {
+      bounds.extend([wp.lng, wp.lat]);
+    });
     mapRef.fitBounds(bounds, { padding: 50 });
   }, [mapRef, path, tripPlan.chargingStops]);
 
@@ -200,6 +235,12 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
         </>
       )}
 
+      {/* Waypoint markers (blue numbered) */}
+      {waypoints?.map((wp, i) => (
+        <WaypointMarker key={`wp-${i}`} lat={wp.lat} lng={wp.lng} label={wp.label} />
+      ))}
+
+      {/* Charging stop markers (yellow) */}
       {tripPlan.chargingStops.map((stop, index) => (
         <StopMarker
           key={getStopStation(stop).id}
@@ -213,7 +254,7 @@ function TripOverlay({ tripPlan }: { readonly tripPlan: TripPlan }) {
   );
 }
 
-export default function MapboxMap({ tripPlan }: MapboxMapProps) {
+export default function MapboxMap({ tripPlan, waypoints }: MapboxMapProps) {
   if (!MAPBOX_TOKEN) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-[var(--color-surface)] text-[var(--color-danger)]">
@@ -233,7 +274,7 @@ export default function MapboxMap({ tripPlan }: MapboxMapProps) {
       style={{ width: '100%', height: '100%' }}
       mapStyle="mapbox://styles/mapbox/dark-v11"
     >
-      {tripPlan && <TripOverlay tripPlan={tripPlan} />}
+      {tripPlan && <TripOverlay tripPlan={tripPlan} waypoints={waypoints} />}
     </MapGL>
   );
 }
