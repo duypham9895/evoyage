@@ -27,9 +27,17 @@ export async function fetchDirectionsMapbox(
   destLat: number,
   destLng: number,
   accessToken: string,
+  waypoints?: readonly { lat: number; lng: number }[],
 ): Promise<DirectionsResult> {
   // Mapbox uses lng,lat order
-  const coordinates = `${originLng},${originLat};${destLng},${destLat}`;
+  const coordParts = [`${originLng},${originLat}`];
+  if (waypoints && waypoints.length > 0) {
+    for (const wp of waypoints) {
+      coordParts.push(`${wp.lng},${wp.lat}`);
+    }
+  }
+  coordParts.push(`${destLng},${destLat}`);
+  const coordinates = coordParts.join(';');
 
   const params = new URLSearchParams({
     access_token: accessToken,

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
 import { isValidCoordinate, COORDINATE_ERROR_EN } from '@/lib/coordinate-validation';
-import { fetchDirections } from '@/lib/osrm';
+import { fetchDirections, fetchDirectionsWithWaypoints } from '@/lib/osrm';
 import { fetchDirectionsGoogle } from '@/lib/google-directions';
 import { fetchDirectionsMapbox } from '@/lib/mapbox-directions';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/route-planner';
@@ -38,6 +38,11 @@ const routeRequestSchema = z.object({
   minArrivalPercent: z.number().min(5).max(30),
   rangeSafetyFactor: z.number().min(0.5).max(1.0),
   provider: z.enum(['osrm', 'mapbox', 'google']).default('osrm'),
+  waypoints: z.array(z.object({
+    lat: z.number().min(0).max(30),
+    lng: z.number().min(95).max(115),
+    name: z.string().max(200).optional(),
+  })).max(5).optional().default([]),
 });
 
 /**
@@ -85,6 +90,7 @@ export async function POST(request: NextRequest) {
     minArrivalPercent,
     rangeSafetyFactor,
     provider,
+    waypoints,
   } = parsed.data;
 
   // Resolve vehicle
@@ -148,8 +154,9 @@ export async function POST(request: NextRequest) {
 
     // Get route from selected provider
     let directions;
+    const hasWaypoints = waypoints && waypoints.length > 0;
     if (provider === 'google') {
-      const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google');
+      const cached = hasWaypoints ? null : await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google');
       if (cached) {
         directions = {
           polyline: cached.polyline,
@@ -169,15 +176,18 @@ export async function POST(request: NextRequest) {
         directions = await fetchDirectionsGoogle(
           startLat!, startLng!, endLat!, endLng!,
           googleApiKey,
+          waypoints,
         );
-        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google', {
-          polyline: directions.polyline,
-          distanceMeters: directions.distanceMeters,
-          durationSeconds: directions.durationSeconds,
-        });
+        if (!hasWaypoints) {
+          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google', {
+            polyline: directions.polyline,
+            distanceMeters: directions.distanceMeters,
+            durationSeconds: directions.durationSeconds,
+          });
+        }
       }
     } else if (provider === 'mapbox') {
-      const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox');
+      const cached = hasWaypoints ? null : await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox');
       if (cached) {
         directions = {
           polyline: cached.polyline,
@@ -197,6 +207,7 @@ export async function POST(request: NextRequest) {
         const mapboxResult = await fetchDirectionsMapbox(
           startLat!, startLng!, endLat!, endLng!,
           mapboxToken,
+          waypoints,
         );
         // Normalize precision-6 polyline to precision-5 for uniform downstream use
         const decoded = decodePolyline(mapboxResult.polyline, 6);
@@ -209,14 +220,20 @@ export async function POST(request: NextRequest) {
           startAddress: mapboxResult.startAddress,
           endAddress: mapboxResult.endAddress,
         };
-        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox', {
-          polyline: normalizedPolyline,
-          distanceMeters: directions.distanceMeters,
-          durationSeconds: directions.durationSeconds,
-        });
+        if (!hasWaypoints) {
+          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox', {
+            polyline: normalizedPolyline,
+            distanceMeters: directions.distanceMeters,
+            durationSeconds: directions.durationSeconds,
+          });
+        }
       }
     } else {
-      directions = await fetchDirections(start, end);
+      if (waypoints && waypoints.length > 0) {
+        directions = await fetchDirectionsWithWaypoints(start, end, waypoints);
+      } else {
+        directions = await fetchDirections(start, end);
+      }
     }
 
     const totalDistanceKm = directions.distanceMeters / 1000;

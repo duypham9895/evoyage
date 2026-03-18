@@ -25,6 +25,7 @@ export async function fetchDirectionsGoogle(
   destLat: number,
   destLng: number,
   apiKey: string,
+  waypoints?: readonly { lat: number; lng: number }[],
 ): Promise<DirectionsResult> {
   const params = new URLSearchParams({
     origin: `${originLat},${originLng}`,
@@ -32,6 +33,13 @@ export async function fetchDirectionsGoogle(
     mode: 'driving',
     key: apiKey,
   });
+
+  if (waypoints && waypoints.length > 0) {
+    const waypointStr = waypoints
+      .map(wp => `${wp.lat},${wp.lng}`)
+      .join('|');
+    params.set('waypoints', waypointStr);
+  }
 
   const response = await fetch(`${DIRECTIONS_BASE}?${params}`, {
     signal: AbortSignal.timeout(10000),
@@ -48,13 +56,22 @@ export async function fetchDirectionsGoogle(
   }
 
   const route = data.routes[0];
-  const leg = route.legs[0];
+
+  // Sum distance and duration across all legs (multiple legs when waypoints used)
+  const totalDistance = route.legs.reduce(
+    (sum: number, leg: { distance: { value: number } }) => sum + leg.distance.value,
+    0,
+  );
+  const totalDuration = route.legs.reduce(
+    (sum: number, leg: { duration: { value: number } }) => sum + leg.duration.value,
+    0,
+  );
 
   return {
     polyline: route.overview_polyline.points,
-    distanceMeters: leg.distance.value,
-    durationSeconds: leg.duration.value,
-    startAddress: leg.start_address,
-    endAddress: leg.end_address,
+    distanceMeters: totalDistance,
+    durationSeconds: totalDuration,
+    startAddress: route.legs[0].start_address,
+    endAddress: route.legs[route.legs.length - 1].end_address,
   };
 }
