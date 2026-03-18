@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import MapGL, { Source, Layer, Marker, Popup, useMap } from 'react-map-gl/mapbox';
-import type { LayerProps } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { TripPlan, ChargingStop } from '@/types';
@@ -21,9 +20,9 @@ interface MapboxMapProps {
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
 
-const ROUTE_LAYER: LayerProps = {
+const ROUTE_LAYER = {
   id: 'route-line',
-  type: 'line',
+  type: 'line' as const,
   paint: {
     'line-color': '#00D4AA',
     'line-width': 4,
@@ -75,7 +74,7 @@ function StopMarker({
         latitude={stop.station.latitude}
         longitude={stop.station.longitude}
         anchor="center"
-        onClick={(e) => {
+        onClick={(e: { originalEvent: MouseEvent }) => {
           e.originalEvent.stopPropagation();
           onSelect(isSelected ? null : index);
         }}
