@@ -28,6 +28,14 @@ interface BatteryStatusPanelProps {
 const BATTERY_QUICK_SELECT = [50, 60, 70, 80, 90, 100] as const;
 const RSF_QUICK_SELECT = [0.60, 0.70, 0.80, 0.90, 1.00] as const;
 
+/** Returns inline style for a filled slider track gradient */
+function sliderFillStyle(value: number, min: number, max: number): React.CSSProperties {
+  const pct = ((value - min) / (max - min)) * 100;
+  return {
+    background: `linear-gradient(to right, var(--color-accent) 0%, var(--color-accent) ${pct}%, var(--color-surface-hover) ${pct}%, var(--color-surface-hover) 100%)`,
+  };
+}
+
 export default function BatteryStatusPanel({
   vehicle,
   currentBattery,
@@ -118,6 +126,7 @@ export default function BatteryStatusPanel({
           value={currentBattery}
           onChange={(e) => onCurrentBatteryChange(parseInt(e.target.value, 10))}
           className="w-full"
+          style={sliderFillStyle(currentBattery, 10, 100)}
         />
         <div className="flex gap-1 mt-2">
           {BATTERY_QUICK_SELECT.map((val) => (
@@ -154,6 +163,7 @@ export default function BatteryStatusPanel({
           value={minArrival}
           onChange={(e) => onMinArrivalChange(parseInt(e.target.value, 10))}
           className="w-full"
+          style={sliderFillStyle(minArrival, 5, 30)}
         />
       </div>
 
@@ -209,6 +219,7 @@ export default function BatteryStatusPanel({
               value={Math.round(rangeSafetyFactor * 100)}
               onChange={(e) => handleRSFChange(parseInt(e.target.value, 10) / 100)}
               className="w-full"
+              style={sliderFillStyle(Math.round(rangeSafetyFactor * 100), 50, 100)}
             />
 
             <div className="flex gap-1">
