@@ -2,8 +2,8 @@ name: Crawl Charging Stations
 
 on:
   schedule:
-    # Run weekly on Sunday at 00:00 UTC (7:00 AM Vietnam)
-    - cron: '0 0 * * 0'
+    # Run daily at 00:00 UTC (7:00 AM Vietnam)
+    - cron: '0 0 * * *'
   workflow_dispatch: # Allow manual trigger
 
 env:
