@@ -13,6 +13,7 @@ import BrandModelSelector from '@/components/BrandModelSelector';
 import AddCustomVehicle from '@/components/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/BatteryStatusPanel';
 import TripSummary from '@/components/TripSummary';
+import ShareButton from '@/components/ShareButton';
 import MobileBottomSheet from '@/components/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/MobileTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
@@ -31,7 +32,7 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), { ssr: false }
 
 function HomeContent() {
   const { mode } = useMapMode();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const isMobile = useIsMobile();
 
   // Mobile tab state
@@ -339,6 +340,9 @@ function HomeContent() {
           </div>
         </MobileBottomSheet>
 
+        {/* Share button */}
+        <ShareButton tripPlan={tripPlan} />
+
         {/* Custom vehicle modal */}
         <AddCustomVehicle
           isOpen={showCustomForm}
@@ -365,6 +369,13 @@ function HomeContent() {
             onStartSelect={handleStartSelect}
             onEndSelect={handleEndSelect}
             isLoaded={true}
+            waypoints={waypoints}
+            onAddWaypoint={handleAddWaypoint}
+            onRemoveWaypoint={handleRemoveWaypoint}
+            onUpdateWaypoint={handleUpdateWaypoint}
+            onReorderWaypoints={handleReorderWaypoints}
+            isLoopTrip={isLoopTrip}
+            onToggleLoop={handleToggleLoop}
           />
 
           <BrandModelSelector
@@ -395,6 +406,9 @@ function HomeContent() {
           {mapContent}
         </main>
       </div>
+
+      {/* Share button */}
+      <ShareButton tripPlan={tripPlan} />
 
       {/* Custom vehicle modal */}
       <AddCustomVehicle
