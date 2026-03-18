@@ -1,15 +1,15 @@
 # EVoyage Security Audit Report
 
 **Date:** 2026-03-18
-**Scope:** API endpoint and runtime security
-**Auditor:** Head of DevSecOps (automated review)
+**Scope:** `src/components/`, `src/lib/`, and directly-serving API routes
+**Auditor:** Claude Security Reviewer (full client-side pass)
 **Project path:** `/Users/edwardpham/Documents/Programming/Projects/evoyage/`
 
 ---
 
 ## Executive Summary
 
-The EVoyage codebase is well-structured for a Next.js 16 app. There are **no dependency CVEs**, no raw SQL, no eval/innerHTML usage, and secrets are correctly kept server-side where possible. However, two CRITICAL issues were found: live credentials stored in the `.env` file that must be rotated immediately, and a complete absence of rate limiting across all public API endpoints. Several HIGH and MEDIUM issues compound the exposure.
+The EVoyage codebase is well-structured for a Next.js app. There are **no dependency CVEs**, no raw SQL, no `eval`/`dangerouslySetInnerHTML`/`innerHTML` usage, and secrets are correctly kept server-side where possible. Rate limiting was added in a prior commit. However, this client-side pass found **live credentials on disk** that must be rotated immediately, plus several new issues: unvalidated external image URLs, SVG injection patterns in map utilities, an SSRF risk in the VinFast Cloudflare-bypass client, and unsanitized third-party data flowing into HTML strings.
 
 ---
 
@@ -367,3 +367,300 @@ All production dependencies are clean. No action required.
 - [ ] **L-2:** Replace string equality cron secret check with `timingSafeEqual`
 - [ ] **L-3:** Add pagination to `/api/stations` and `/api/vehicles`
 - [ ] **H-2:** Sanitize Google Directions error messages before logging
+
+---
+
+## Client-Side Audit Additions (2026-03-18 — second pass)
+
+The following issues were found during the dedicated `src/components/` and `src/lib/` review.
+
+---
+
+### NEW-C1: Unvalidated External Image URLs from VinFast API Rendered in Browser
+
+**Severity: CRITICAL**
+**Files:**
+- `src/components/VinFastDetailPanel.tsx` line 104
+- `src/lib/vinfast-client.ts` line 128
+
+```tsx
+// VinFastDetailPanel.tsx:104 — img.url comes from VinFast OCPI API
+<img src={img.url} alt={`Station photo ${i + 1}`} ... />
+```
+
+`img.url` is fetched from `vinfastauto.com` and coerced to a string (`String(img.url ?? '')`) with no origin check. A compromised VinFast backend or MITM attack could supply a `data:text/html,...` URI that renders arbitrary HTML, or a cross-origin URL that exfiltrates headers via request timing. Although modern browsers do not execute scripts via `<img src>`, a `data:` URI with `text/html` content type will render as a new browsing context in some scenarios and can be used for UI redressing.
+
+**Remediation — `src/lib/vinfast-client.ts` line 128:**
+
+```typescript
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname.endsWith('vinfastauto.com');
+  } catch {
+    return false;
+  }
+}
+
+// Replace the images mapping:
+images: images
+  .filter((img) => isAllowedImageUrl(String(img.url ?? '')))
+  .map((img) => ({ url: String(img.url), category: String(img.category ?? '') })),
+```
+
+---
+
+### NEW-H1: SSRF via Unvalidated `entityId` Concatenated into VinFast Fetch URL
+
+**Severity: HIGH**
+**Files:**
+- `src/lib/vinfast-client.ts` line 171
+- `src/app/api/stations/[id]/vinfast-detail/route.ts` lines 143–157
+
+```typescript
+// vinfast-client.ts:171
+const detailResponse = await client.fetch(`${DETAIL_URL_PREFIX}${entityId}`, {
+  headers: DETAIL_HEADERS,
+});
+```
+
+`entityId` is resolved from the third-party `api.service.finaldivision.com` API without runtime format validation (see also NEW-M2 below). A compromised `finaldivision` response or a path-traversal payload such as `../../admin` would cause the `impit` client — which already holds a valid Cloudflare session cookie from the main VinFast locator page — to make a credentialed request to an unintended endpoint on `vinfastauto.com`.
+
+**Remediation — `src/app/api/stations/[id]/vinfast-detail/route.ts` after `findEntityId()`:**
+
+```typescript
+if (!entityId || !/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
+  return NextResponse.json({ error: 'Could not resolve station entity' }, { status: 502 });
+}
+```
+
+---
+
+### NEW-H2: Raw HTML Href Built from Database-Sourced Coordinates in Leaflet Popup
+
+**Severity: HIGH**
+**File:** `src/lib/map-utils.ts` line 49
+
+```typescript
+// buildStopPopupHtml — used by Map.tsx (Leaflet) and GoogleMap.tsx
+<a href="https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}"
+```
+
+This string is passed directly to Leaflet's `bindPopup()` and Google Maps `infoWindow.setContent()`, which inject it as raw HTML into the DOM. `station.latitude` and `station.longitude` are Prisma `Float` columns — safe today — but the pattern has no numeric coercion guard. If a future migration or seeding script introduces a non-numeric value, `${station.latitude}` in a string template produces a string that becomes an unescaped href attribute, allowing `&` parameter injection into the Google Maps URL.
+
+The `MapboxMap.tsx` Popup component (line 129) builds the same URL in JSX, which is safe because React escapes attribute values.
+
+**Remediation — `src/lib/map-utils.ts` line 49:**
+
+```typescript
+const lat = Number(station.latitude).toFixed(6);
+const lng = Number(station.longitude).toFixed(6);
+// use lat and lng in the href instead of station.latitude / station.longitude
+<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}"
+```
+
+---
+
+### NEW-H3: `stationId` URL Path Param Has No Format Validation Before DB Lookup
+
+**Severity: HIGH**
+**File:** `src/app/api/stations/[id]/vinfast-detail/route.ts` lines 22–36
+
+```typescript
+const { id: stationId } = await params;
+const station = await prisma.chargingStation.findUnique({
+  where: { id: stationId },
+});
+```
+
+No length or format guard on `stationId`. A 64 KB URL path segment is sent verbatim to Prisma. Prisma parameterizes the query so SQL injection is impossible, but the oversized string causes unnecessary database round-trip processing.
+
+**Remediation:**
+
+```typescript
+if (!/^[a-zA-Z0-9_-]{1,128}$/.test(stationId)) {
+  return NextResponse.json({ error: 'Invalid station ID' }, { status: 400 });
+}
+```
+
+---
+
+### NEW-M1: SVG Injection Pattern in `createSvgMarkerUrl` — No Input Guards
+
+**Severity: MEDIUM (CRITICAL by pattern)**
+**File:** `src/lib/map-utils.ts` lines 60–66
+
+```typescript
+export function createSvgMarkerUrl(color: string, label: string): string {
+  const svg = `<svg ...>
+    <circle ... fill="${color}" .../>
+    <text ...>${label}</text>
+  </svg>`;
+```
+
+Both `color` and `label` are interpolated without sanitization into a raw SVG string. Current callers always pass constant values (`'A'`, `'B'`, `index + 1`, PROVIDER_COLORS constants). The function itself has no guards, so any future call with user-provided data introduces SVG injection.
+
+**Remediation:**
+
+```typescript
+export function createSvgMarkerUrl(color: string, label: string): string {
+  const safeColor = /^#[0-9A-Fa-f]{3,6}$/.test(color) ? color : '#8E8E93';
+  const safeLabel = escapeHtml(String(label)).slice(0, 3);
+  const svg = `<svg ...>
+    <circle ... fill="${safeColor}" .../>
+    <text ...>${safeLabel}</text>
+  </svg>`;
+```
+
+---
+
+### NEW-M2: `finaldivision` API Response Used Without Schema Validation
+
+**Severity: MEDIUM**
+**File:** `src/app/api/stations/[id]/vinfast-detail/route.ts` lines 152–154
+
+```typescript
+const stations: Array<{ entity_id: string; store_id: string }> = await response.json();
+const match = stations.find((s) => s.store_id === storeId);
+return match?.entity_id ?? null;
+```
+
+TypeScript type annotation is not runtime validation. A malformed response from `api.service.finaldivision.com` (wrong shape, non-string `entity_id`) flows unguarded into `entityId` and then into the URL concatenation in NEW-H1.
+
+**Remediation:**
+
+```typescript
+import { z } from 'zod';
+
+const finaldivisionSchema = z.array(z.object({
+  entity_id: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/),
+  store_id: z.string(),
+}));
+
+const parseResult = finaldivisionSchema.safeParse(await response.json());
+if (!parseResult.success) return null;
+const match = parseResult.data.find((s) => s.store_id === storeId);
+return match?.entity_id ?? null;
+```
+
+---
+
+### NEW-M3: `ShareButton` Renders Untruncated Server Error String in DOM
+
+**Severity: MEDIUM**
+**File:** `src/components/ShareButton.tsx` lines 56–57, 169–171
+
+```typescript
+const errorData = await response.json().catch(() => null);
+throw new Error(errorData?.error ?? t('share_error'));
+// ...
+{state === 'error' && errorMessage && (
+  <div ...>{errorMessage}</div>
+)}
+```
+
+React renders `errorMessage` as text (not HTML), so XSS is not possible. However, `errorData.error` from the server has no length cap. A 10,000-character error string renders in full. More critically, the error string comes from the server's response body — if the server is misconfigured and leaks an internal error trace, it would be displayed to the user.
+
+**Remediation:**
+
+```typescript
+const rawError = errorData?.error;
+const safeError = typeof rawError === 'string' ? rawError.slice(0, 200) : t('share_error');
+throw new Error(safeError);
+```
+
+---
+
+### NEW-M4: `NEXT_PUBLIC_APP_URL` Unvalidated Before QR Code Generation
+
+**Severity: MEDIUM**
+**File:** `src/app/api/share-card/route.tsx` line 208
+
+```typescript
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://evoyage.app';
+qrCodeDataUrl = await QRCode.toDataURL(appUrl, ...);
+```
+
+If `NEXT_PUBLIC_APP_URL` is set to an attacker-controlled domain (misconfigured deployment), all share-card QR codes point to a phishing site. The variable is not documented in `.env.example`.
+
+**Remediation:**
+
+```typescript
+const rawUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+const appUrl = /^https:\/\/(www\.)?evoyage\.app/.test(rawUrl) ? rawUrl : 'https://evoyage.app';
+```
+
+Also add `NEXT_PUBLIC_APP_URL=https://evoyage.app` to `.env.example`.
+
+---
+
+### NEW-L1: Leaflet `DivIcon.html` Uses Unescaped `label` Parameter
+
+**Severity: LOW**
+**File:** `src/components/Map.tsx` lines 28–44
+
+```typescript
+html: `<div ...>${label}</div>`,
+```
+
+`label` is always `'A'`, `'B'`, or a numeric index — safe. But the pattern is unsafe by convention. The `escapeHtml()` utility from `map-utils.ts` is already imported.
+
+**Remediation:** Use `escapeHtml(label)` in both `createCircleIcon` and `createEndpointIcon`.
+
+---
+
+### NEW-L2: In-Memory Rate Limiter Is a No-Op in Serverless Without Redis
+
+**Severity: LOW**
+**File:** `src/lib/rate-limit.ts` lines 18–44
+
+The local `Map`-based fallback is reset on every cold start on Vercel, making it ineffective in production if `UPSTASH_REDIS_REST_URL` is not configured.
+
+**Remediation:** Add a production startup warning:
+
+```typescript
+if (process.env.NODE_ENV === 'production' && !hasRedis) {
+  console.warn('[SECURITY] Rate limiting is using in-memory fallback. Configure UPSTASH_REDIS_REST_URL for production protection.');
+}
+```
+
+---
+
+### NEW-L3: `AddCustomVehicle` Inputs Have No `maxLength` Attribute
+
+**Severity: LOW**
+**File:** `src/components/AddCustomVehicle.tsx` lines 64, 76
+
+Server-side Zod schema caps brand/model at 100 chars. The browser `<input>` has no `maxLength`, so users can type arbitrarily long strings before the server rejects them.
+
+**Remediation:** Add `maxLength={100}` to the brand and model inputs.
+
+---
+
+## Updated Summary Table (including client-side pass)
+
+| ID | Severity | File:Line | Issue |
+|----|----------|-----------|-------|
+| C-1 | CRITICAL | `.env:1-6` | Live DB password + API keys on disk; client keys unrestricted |
+| C-2 | CRITICAL | (resolved by prior commit) | Rate limiting added |
+| NEW-C1 | CRITICAL | `VinFastDetailPanel.tsx:104`, `vinfast-client.ts:128` | Unvalidated external image URLs rendered without origin check |
+| H-1 | HIGH | `.env:3-5` | Same API key used for server and client |
+| H-2 | HIGH | `google-directions.ts:47` | Third-party error message in error chain |
+| H-3 | HIGH | `stations/route.ts:54` | No bounding box size cap |
+| H-4 | HIGH | `next.config.ts` | Missing HSTS and CSP headers |
+| NEW-H1 | HIGH | `vinfast-client.ts:171`, `vinfast-detail/route.ts:143` | SSRF via unvalidated entityId URL concatenation |
+| NEW-H2 | HIGH | `map-utils.ts:49` | Coordinates interpolated raw into Leaflet/Google Maps HTML href |
+| NEW-H3 | HIGH | `vinfast-detail/route.ts:22` | stationId not format-validated before DB query |
+| M-1 | MEDIUM | `route/route.ts:28` | vehicleId not validated as CUID |
+| M-2 | MEDIUM | `route/route.ts:31` | customVehicle strings no max length |
+| M-3 | MEDIUM | `prisma.ts` | Prisma logging not configured |
+| NEW-M1 | MEDIUM | `map-utils.ts:60` | SVG injection pattern — no guards on color/label |
+| NEW-M2 | MEDIUM | `vinfast-detail/route.ts:152` | finaldivision API response not schema-validated |
+| NEW-M3 | MEDIUM | `ShareButton.tsx:57` | Server error string rendered without length cap |
+| NEW-M4 | MEDIUM | `share-card/route.tsx:208` | NEXT_PUBLIC_APP_URL not validated for QR code |
+| L-1 | LOW | `DATABASE_URL` | No connection timeout |
+| L-2 | LOW | `cron/route.ts` | Cron secret not timing-safe compared |
+| L-3 | LOW | `stations/route.ts`, `vehicles/route.ts` | No pagination |
+| NEW-L1 | LOW | `Map.tsx:28` | Leaflet DivIcon label not escaped |
+| NEW-L2 | LOW | `rate-limit.ts:18` | In-memory rate limiter is no-op in serverless |
+| NEW-L3 | LOW | `AddCustomVehicle.tsx:64` | No maxLength on brand/model inputs |
