@@ -73,3 +73,44 @@ input[type="range"]::-moz-range-track {
   border-radius: 5px;
   background: var(--color-surface-hover);
 }
+
+/* ─── Mobile-specific styles ──────────────────────────────── */
+
+/* Prevent overscroll bounce on iOS */
+@supports (-webkit-touch-callout: none) {
+  html, body {
+    overscroll-behavior: none;
+  }
+}
+
+/* Safe area padding for bottom sheet */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Larger slider thumb on touch devices */
+@media (pointer: coarse) {
+  input[type="range"]::-webkit-slider-thumb {
+    height: 28px;
+    width: 28px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    height: 28px;
+    width: 28px;
+  }
+}
+
+/* Smooth scrolling inside bottom sheet */
+.overscroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar on mobile for cleaner look */
+@media (max-width: 1023px) {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 3px;
+  }
+}

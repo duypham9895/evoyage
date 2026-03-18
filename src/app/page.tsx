@@ -4,13 +4,17 @@ import { useState, useCallback, useEffect } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { LocaleProvider } from '@/lib/locale';
+import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import Header from '@/components/Header';
 import TripInput from '@/components/TripInput';
 import BrandModelSelector from '@/components/BrandModelSelector';
 import AddCustomVehicle from '@/components/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/BatteryStatusPanel';
 import TripSummary from '@/components/TripSummary';
+import MobileBottomSheet from '@/components/MobileBottomSheet';
+import MobileTabBar, { type MobileTab } from '@/components/MobileTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
 import type { NominatimResult } from '@/lib/nominatim';
 import {
@@ -26,6 +30,11 @@ const MapboxMap = dynamic(() => import('@/components/MapboxMap'), { ssr: false }
 
 function HomeContent() {
   const { mode } = useMapMode();
+  const { t } = useLocale();
+  const isMobile = useIsMobile();
+
+  // Mobile tab state
+  const [activeTab, setActiveTab] = useState<MobileTab>('route');
 
   // Trip inputs
   const [start, setStart] = useState('');
@@ -170,6 +179,121 @@ function HomeContent() {
   const activeVehicle = selectedVehicle ?? customVehicle;
   const canPlan = Boolean(start && end && activeVehicle && !isPlanning);
 
+  // Shared controls content
+  const planButton = (
+    <button
+      onClick={handlePlanTrip}
+      disabled={!canPlan}
+      className={`w-full py-3.5 rounded-xl font-bold font-[family-name:var(--font-heading)] text-base transition-all ${
+        canPlan
+          ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
+          : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed'
+      }`}
+    >
+      {isPlanning ? (
+        <span className="flex items-center justify-center gap-2">
+          <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
+          {t('Đang tính...', 'Planning...')}
+        </span>
+      ) : (
+        t('LÊN KẾ HOẠCH ⚡', 'PLAN TRIP ⚡')
+      )}
+    </button>
+  );
+
+  const errorDisplay = error ? (
+    <div className="p-3 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-sm">
+      {error}
+    </div>
+  ) : null;
+
+  // Map component
+  const mapContent = (
+    <>
+      {mode === 'google' ? (
+        <GoogleMap tripPlan={tripPlan} />
+      ) : mode === 'mapbox' ? (
+        <MapboxMap tripPlan={tripPlan} />
+      ) : (
+        <LeafletMap tripPlan={tripPlan} />
+      )}
+    </>
+  );
+
+  // ─── Mobile Layout ─────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="h-[100dvh] flex flex-col relative">
+        <Header />
+
+        {/* Full-screen map — isolate stacking context so Leaflet z-indexes don't escape */}
+        <main className="flex-1 relative isolate z-0">
+          {mapContent}
+        </main>
+
+        {/* Bottom sheet with tabbed controls */}
+        <MobileBottomSheet initialSnap="half">
+          <MobileTabBar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            hasVehicle={Boolean(activeVehicle)}
+            hasRoute={Boolean(start && end)}
+          />
+
+          {/* Tab content */}
+          <div className="space-y-4">
+            {activeTab === 'route' && (
+              <>
+                <TripInput
+                  start={start}
+                  end={end}
+                  onStartChange={handleStartChange}
+                  onEndChange={handleEndChange}
+                  onStartSelect={handleStartSelect}
+                  onEndSelect={handleEndSelect}
+                  isLoaded={true}
+                />
+                {tripPlan && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />}
+              </>
+            )}
+
+            {activeTab === 'vehicle' && (
+              <BrandModelSelector
+                selectedVehicle={selectedVehicle}
+                onSelect={handleSelectVehicle}
+                onCustomCarClick={() => setShowCustomForm(true)}
+              />
+            )}
+
+            {activeTab === 'battery' && (
+              <BatteryStatusPanel
+                vehicle={activeVehicle}
+                currentBattery={currentBattery}
+                minArrival={minArrival}
+                rangeSafetyFactor={rangeSafetyFactor}
+                onCurrentBatteryChange={setCurrentBattery}
+                onMinArrivalChange={setMinArrival}
+                onRangeSafetyFactorChange={handleRSFChange}
+              />
+            )}
+
+            {/* Plan button always visible */}
+            {planButton}
+            {errorDisplay}
+          </div>
+        </MobileBottomSheet>
+
+        {/* Custom vehicle modal */}
+        <AddCustomVehicle
+          isOpen={showCustomForm}
+          onClose={() => setShowCustomForm(false)}
+          onSave={handleSaveCustomVehicle}
+        />
+      </div>
+    );
+  }
+
+  // ─── Desktop Layout (unchanged) ───────────────────────────
   return (
     <div className="h-screen flex flex-col">
       <Header />
@@ -203,32 +327,8 @@ function HomeContent() {
             onRangeSafetyFactorChange={handleRSFChange}
           />
 
-          {/* Plan trip button */}
-          <button
-            onClick={handlePlanTrip}
-            disabled={!canPlan}
-            className={`w-full py-3 rounded-lg font-bold font-[family-name:var(--font-heading)] text-lg transition-all ${
-              canPlan
-                ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
-                : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed'
-            }`}
-          >
-            {isPlanning ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
-                Planning...
-              </span>
-            ) : (
-              'LÊN KẾ HOẠCH ⚡'
-            )}
-          </button>
-
-          {/* Error display */}
-          {error && (
-            <div className="p-3 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-sm">
-              {error}
-            </div>
-          )}
+          {planButton}
+          {errorDisplay}
 
           {/* Trip results */}
           <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />
@@ -236,13 +336,7 @@ function HomeContent() {
 
         {/* Map pane */}
         <main className="flex-1 relative min-h-[300px]">
-          {mode === 'google' ? (
-            <GoogleMap tripPlan={tripPlan} />
-          ) : mode === 'mapbox' ? (
-            <MapboxMap tripPlan={tripPlan} />
-          ) : (
-            <LeafletMap tripPlan={tripPlan} />
-          )}
+          {mapContent}
         </main>
       </div>
 

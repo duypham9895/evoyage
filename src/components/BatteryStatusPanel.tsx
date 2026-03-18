@@ -128,12 +128,12 @@ export default function BatteryStatusPanel({
           className="w-full"
           style={sliderFillStyle(currentBattery, 10, 100)}
         />
-        <div className="flex gap-1 mt-2">
+        <div className="flex gap-1.5 mt-2">
           {BATTERY_QUICK_SELECT.map((val) => (
             <button
               key={val}
               onClick={() => onCurrentBatteryChange(val)}
-              className={`flex-1 py-1 text-xs rounded transition-colors ${
+              className={`flex-1 py-2 text-xs rounded-lg transition-colors ${
                 currentBattery === val
                   ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                   : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
@@ -222,12 +222,12 @@ export default function BatteryStatusPanel({
               style={sliderFillStyle(Math.round(rangeSafetyFactor * 100), 50, 100)}
             />
 
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               {RSF_QUICK_SELECT.map((val) => (
                 <button
                   key={val}
                   onClick={() => handleRSFChange(val)}
-                  className={`flex-1 py-1 text-xs rounded transition-colors ${
+                  className={`flex-1 py-2 text-xs rounded-lg transition-colors ${
                     rangeSafetyFactor === val
                       ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                       : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'

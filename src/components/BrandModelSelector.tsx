@@ -64,10 +64,10 @@ export default function BrandModelSelector({
       </h2>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 p-1 bg-[var(--color-background)] rounded-lg">
+      <div className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl">
         <button
           onClick={() => setVietnamOnly(true)}
-          className={`flex-1 px-3 py-1.5 text-xs rounded-md transition-colors ${
+          className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors ${
             vietnamOnly
               ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
@@ -77,7 +77,7 @@ export default function BrandModelSelector({
         </button>
         <button
           onClick={() => setVietnamOnly(false)}
-          className={`flex-1 px-3 py-1.5 text-xs rounded-md transition-colors ${
+          className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors ${
             !vietnamOnly
               ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
@@ -97,7 +97,7 @@ export default function BrandModelSelector({
       />
 
       {/* Vehicle list */}
-      <div className="max-h-48 overflow-y-auto space-y-1 scrollbar-thin">
+      <div className="max-h-56 overflow-y-auto space-y-1 scrollbar-thin">
         {isLoading ? (
           <div className="text-center py-4 text-sm text-[var(--color-muted)]">
             {t('Đang tải...', 'Loading...')}
@@ -116,7 +116,7 @@ export default function BrandModelSelector({
                 <button
                   key={v.id}
                   onClick={() => onSelect(v)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between transition-colors ${
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-colors ${
                     selectedVehicle?.id === v.id
                       ? 'bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)]'
                       : 'hover:bg-[var(--color-surface-hover)]'

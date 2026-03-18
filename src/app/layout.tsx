@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Be_Vietnam_Pro, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 
@@ -25,6 +25,13 @@ export const metadata: Metadata = {
   title: 'EVoyage — Plan your EV road trip',
   description:
     'Plan your EV road trip with accurate range calculations, smart charging stops, and the 80% real-world range rule.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

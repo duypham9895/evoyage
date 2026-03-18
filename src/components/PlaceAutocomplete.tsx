@@ -134,7 +134,7 @@ export default function PlaceAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full px-3 py-2.5 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
+          className="w-full px-3 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -150,7 +150,7 @@ export default function PlaceAutocomplete({
               <button
                 type="button"
                 onClick={() => handleSelectSuggestion(result)}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                className={`w-full text-left px-3 py-3 text-sm transition-colors ${
                   index === activeIndex
                     ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]'
                     : 'hover:bg-[var(--color-surface-hover)] text-[var(--color-text)]'
