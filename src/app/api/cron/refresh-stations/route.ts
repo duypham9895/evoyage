@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -65,9 +66,16 @@ export async function GET(request: NextRequest) {
 
   if (!cronSecret) {
     console.error('CRON_SECRET environment variable is not set');
-    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  if (authHeader !== `Bearer ${cronSecret}`) {
+
+  const expectedToken = `Bearer ${cronSecret}`;
+  const providedToken = authHeader ?? '';
+  const isValid =
+    expectedToken.length === providedToken.length &&
+    timingSafeEqual(Buffer.from(expectedToken), Buffer.from(providedToken));
+
+  if (!isValid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

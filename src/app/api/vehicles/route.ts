@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import type { EVVehicleData } from '@/types';
 
 /**
@@ -16,6 +17,16 @@ import type { EVVehicleData } from '@/types';
  *   minRange   - Filter by minimum official range (km)
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting: 30 requests per minute per IP
+  const ip = getClientIp(request);
+  const limit = checkRateLimit(`vehicles:${ip}`, 30, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
 
   const query = (searchParams.get('q') ?? '').slice(0, 200).toLowerCase();

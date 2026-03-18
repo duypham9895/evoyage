@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { fetchDirections } from '@/lib/osrm';
 import { fetchDirectionsGoogle } from '@/lib/google-directions';
 import { fetchDirectionsMapbox } from '@/lib/mapbox-directions';
@@ -25,11 +26,11 @@ const routeRequestSchema = z.object({
   startLng: z.number().optional(),
   endLat: z.number().optional(),
   endLng: z.number().optional(),
-  vehicleId: z.string().nullable(),
+  vehicleId: z.string().min(1).max(100).nullable(),
   customVehicle: z
     .object({
-      brand: z.string().min(1),
-      model: z.string().min(1),
+      brand: z.string().min(1).max(100),
+      model: z.string().min(1).max(100),
       batteryCapacityKwh: z.number().positive(),
       officialRangeKm: z.number().positive(),
       chargingTimeDC_10to80_min: z.number().positive().optional(),
@@ -47,6 +48,16 @@ const routeRequestSchema = z.object({
  * Supports both OSRM and Google Directions providers.
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting: 10 requests per minute per IP
+  const ip = getClientIp(request);
+  const limit = checkRateLimit(`route:${ip}`, 10, 60_000);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.resetAt - Date.now()) / 1000)) } },
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();
