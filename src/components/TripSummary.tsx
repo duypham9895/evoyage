@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useLocale } from '@/lib/locale';
-import type { TripPlan, ChargingStop, RankedStation } from '@/types';
+import type { TripPlan, RankedStation } from '@/types';
 import StationInfoChips from './StationInfoChips';
 import StationDetailExpander from './StationDetailExpander';
 
