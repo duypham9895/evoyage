@@ -107,7 +107,13 @@ export default function BrandModelSelector({
             {t('no_vehicles_found')}
           </div>
         ) : (
-          Object.entries(grouped).map(([brand, models]) => (
+          Object.entries(grouped)
+            .sort(([a], [b]) => {
+              if (a === 'VinFast') return -1;
+              if (b === 'VinFast') return 1;
+              return a.localeCompare(b);
+            })
+            .map(([brand, models]) => (
             <div key={brand}>
               <div className="text-xs font-semibold text-[var(--color-muted)] px-2 py-1 sticky top-0 bg-[var(--color-surface)]">
                 {brand}
