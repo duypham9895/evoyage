@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "src/app/api/stations/[id]/vinfast-detail/route.ts": {
+      "memory": 512
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/refresh-stations",
