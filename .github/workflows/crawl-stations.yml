@@ -1,15 +1,15 @@
-name: Crawl Charging Stations
+name: Crawl VinFast Stations
 
 on:
   schedule:
-    # Run daily at 00:00 UTC (7:00 AM Vietnam)
-    - cron: '0 0 * * *'
+    # Run daily at 01:00 UTC (08:00 AM Vietnam)
+    - cron: '0 1 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -22,29 +22,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Chromium
-        run: npx playwright install chromium --with-deps
-
       - name: Generate Prisma client
         run: npx prisma generate
-
-      - name: Crawl Google Maps stations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: npx tsx scripts/crawl-gmaps-stations.ts
-
-      - name: Clean non-Vietnam stations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: npx tsx scripts/clean-non-vn.ts
-
-      - name: Enrich station data
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: npx tsx scripts/enrich-stations.ts
 
       - name: Crawl VinFast stations
         env:
