@@ -120,26 +120,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 6. Fire-and-forget email notification
-    sendFeedbackEmail({
-      feedbackId: feedback.id,
-      category: data.category as FeedbackCategory,
-      description: data.description,
-      email: data.email || undefined,
-      name: data.name || undefined,
-      phone: data.phone || undefined,
-      stationId: data.stationId || undefined,
-      stationName: data.stationName || undefined,
-      stepsToReproduce: data.stepsToReproduce || undefined,
-      useCase: data.useCase || undefined,
-      correctInfo: data.correctInfo || undefined,
-      rating: data.rating,
-      pageUrl: data.pageUrl || undefined,
-      userAgent: data.userAgent || undefined,
-      viewport: data.viewport || undefined,
-    }).catch((err) => {
+    // 6. Send email notification (must await — Vercel kills the function after response)
+    try {
+      await sendFeedbackEmail({
+        feedbackId: feedback.id,
+        category: data.category as FeedbackCategory,
+        description: data.description,
+        email: data.email || undefined,
+        name: data.name || undefined,
+        phone: data.phone || undefined,
+        stationId: data.stationId || undefined,
+        stationName: data.stationName || undefined,
+        stepsToReproduce: data.stepsToReproduce || undefined,
+        useCase: data.useCase || undefined,
+        correctInfo: data.correctInfo || undefined,
+        rating: data.rating,
+        pageUrl: data.pageUrl || undefined,
+        userAgent: data.userAgent || undefined,
+        viewport: data.viewport || undefined,
+      });
+    } catch (err) {
       console.error('[feedback] Email notification error:', err);
-    });
+    }
 
     return NextResponse.json(
       { success: true, id: feedback.id },
