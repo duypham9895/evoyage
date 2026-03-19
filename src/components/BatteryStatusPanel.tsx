@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
+import { hapticTick } from '@/lib/haptics';
 import { calculateUsableRange, getRangeSafetyWarning } from '@/lib/range-calculator';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,
@@ -49,6 +50,8 @@ export default function BatteryStatusPanel({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingRSF, setPendingRSF] = useState<number | null>(null);
+  const [isDraggingSlider, setIsDraggingSlider] = useState(false);
+  const sliderRef = useRef<HTMLInputElement>(null);
 
   const vehicleForCalc = vehicle
     ? {
@@ -95,6 +98,12 @@ export default function BatteryStatusPanel({
     setPendingRSF(null);
   };
 
+  const getSliderLabelPosition = useCallback((value: number, min: number, max: number): string => {
+    const pct = ((value - min) / (max - min)) * 100;
+    // Offset to center the label over the thumb, accounting for thumb width
+    return `calc(${pct}% - ${(pct - 50) * 0.3}px)`;
+  }, []);
+
   const warningBorderColor =
     warning.level === 'danger'
       ? 'border-[var(--color-danger)]'
@@ -118,21 +127,36 @@ export default function BatteryStatusPanel({
             {currentBattery}%
           </span>
         </div>
-        <input
-          type="range"
-          min={10}
-          max={100}
-          step={5}
-          value={currentBattery}
-          onChange={(e) => onCurrentBatteryChange(parseInt(e.target.value, 10))}
-          className="w-full"
-          style={sliderFillStyle(currentBattery, 10, 100)}
-        />
+        <div className="relative">
+          {isDraggingSlider && (
+            <div
+              className="absolute -top-8 transform -translate-x-1/2 px-2 py-0.5 rounded-md bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-bold pointer-events-none transition-opacity"
+              style={{ left: getSliderLabelPosition(currentBattery, 10, 100) }}
+            >
+              {currentBattery}%
+            </div>
+          )}
+          <input
+            ref={sliderRef}
+            type="range"
+            min={10}
+            max={100}
+            step={5}
+            value={currentBattery}
+            onChange={(e) => onCurrentBatteryChange(parseInt(e.target.value, 10))}
+            onPointerDown={() => setIsDraggingSlider(true)}
+            onPointerUp={() => setIsDraggingSlider(false)}
+            onPointerLeave={() => setIsDraggingSlider(false)}
+            onPointerCancel={() => setIsDraggingSlider(false)}
+            className="w-full"
+            style={sliderFillStyle(currentBattery, 10, 100)}
+          />
+        </div>
         <div className="flex gap-1.5 mt-2">
           {BATTERY_QUICK_SELECT.map((val) => (
             <button
               key={val}
-              onClick={() => onCurrentBatteryChange(val)}
+              onClick={() => { hapticTick(); onCurrentBatteryChange(val); }}
               className={`flex-1 py-2 text-xs rounded-lg transition-colors ${
                 currentBattery === val
                   ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
@@ -181,6 +205,34 @@ export default function BatteryStatusPanel({
           </div>
         </div>
       )}
+
+      {/* Driving style presets */}
+      <div>
+        <label className="text-xs text-[var(--color-muted)] mb-2 block">{t('driving_style' as Parameters<typeof t>[0])}</label>
+        <div className="flex gap-1.5">
+          {([
+            { label: 'driving_style_eco', value: 0.70, icon: '🌿' },
+            { label: 'driving_style_normal', value: 0.80, icon: '🚗' },
+            { label: 'driving_style_sport', value: 0.90, icon: '⚡' },
+          ] as const).map(({ label: lbl, value, icon }) => {
+            const isSelected = Math.abs(rangeSafetyFactor - value) < 0.05;
+            return (
+              <button
+                key={lbl}
+                onClick={() => { hapticTick(); onRangeSafetyFactorChange(value); }}
+                className={`flex-1 py-2.5 text-xs rounded-lg transition-colors flex flex-col items-center gap-0.5 ${
+                  isSelected
+                    ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
+                    : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+              >
+                <span className="text-base">{icon}</span>
+                <span>{t(lbl as Parameters<typeof t>[0])}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Advanced: Range Safety Factor */}
       <div>

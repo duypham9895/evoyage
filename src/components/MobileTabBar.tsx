@@ -1,6 +1,7 @@
 'use client';
 
 import { useLocale } from '@/lib/locale';
+import { hapticLight } from '@/lib/haptics';
 
 export type MobileTab = 'route' | 'vehicle' | 'battery';
 
@@ -26,7 +27,7 @@ export default function MobileTabBar({
   const { t } = useLocale();
 
   return (
-    <div className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl mb-3">
+    <div className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl mb-3" role="tablist" aria-label="Trip planner tabs">
       {TABS.map(({ id, icon, labelKey }) => {
         const isActive = activeTab === id;
         const showDot =
@@ -36,8 +37,10 @@ export default function MobileTabBar({
         return (
           <button
             key={id}
-            onClick={() => onTabChange(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => { hapticLight(); onTabChange(id); }}
+            className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap overflow-hidden ${
               isActive
                 ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold shadow-sm'
                 : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'

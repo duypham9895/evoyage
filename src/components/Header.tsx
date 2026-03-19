@@ -19,11 +19,11 @@ export default function Header() {
   return (
     <header className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 bg-[var(--color-surface)] border-b border-[var(--color-surface-hover)] z-50 relative">
       {/* Logo */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      <a href="/" className="flex items-center gap-1.5 shrink-0">
         <span className="text-lg sm:text-xl font-bold font-[family-name:var(--font-heading)] text-[var(--color-accent)]">
           ⚡ EVoyage
         </span>
-      </div>
+      </a>
 
       {/* Controls */}
       <div className="flex items-center gap-2 sm:gap-3">

@@ -42,11 +42,20 @@ export async function searchPlaces(
 
   const data: readonly Record<string, unknown>[] = await response.json();
 
-  return data.map((item) => ({
+  const results = data.map((item) => ({
     placeId: Number(item.place_id),
     displayName: String(item.display_name),
     lat: parseFloat(String(item.lat)),
     lng: parseFloat(String(item.lon)),
     type: String(item.type),
   }));
+
+  // Deduplicate by short name (first 3 parts of display name)
+  const seen = new Set<string>();
+  return results.filter((r) => {
+    const short = r.displayName.split(', ').slice(0, 3).join(', ');
+    if (seen.has(short)) return false;
+    seen.add(short);
+    return true;
+  });
 }

@@ -25,6 +25,15 @@ interface TripInputProps {
   readonly onToggleLoop?: () => void;
 }
 
+/** Shorten Nominatim display name to first 2-3 meaningful parts */
+function shortenDisplayName(name: string): string {
+  const parts = name.split(', ');
+  // Remove country (last part) and zip code-like parts
+  const meaningful = parts.filter(p => !/^\d{4,}$/.test(p.trim()) && p.trim() !== 'Việt Nam' && p.trim() !== 'Vietnam');
+  // Keep first 2-3 parts for a concise display
+  return meaningful.slice(0, Math.min(meaningful.length, 3)).join(', ');
+}
+
 export default function TripInput({
   start,
   end,
@@ -44,7 +53,7 @@ export default function TripInput({
 
   const handleStartSelect = useCallback(
     (result: NominatimResult) => {
-      onStartChange(result.displayName);
+      onStartChange(shortenDisplayName(result.displayName));
       onStartSelect?.(result);
     },
     [onStartChange, onStartSelect],
@@ -52,7 +61,7 @@ export default function TripInput({
 
   const handleEndSelect = useCallback(
     (result: NominatimResult) => {
-      onEndChange(result.displayName);
+      onEndChange(shortenDisplayName(result.displayName));
       onEndSelect?.(result);
     },
     [onEndChange, onEndSelect],
@@ -74,6 +83,7 @@ export default function TripInput({
           onSelect={handleStartSelect}
           label={t('starting_point')}
           placeholder={t('starting_point_placeholder')}
+          showGpsButton
         />
 
         <div className="flex justify-center">

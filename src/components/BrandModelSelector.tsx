@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocale } from '@/lib/locale';
+import { hapticLight } from '@/lib/haptics';
 import type { EVVehicleData } from '@/types';
 
 interface BrandModelSelectorProps {
@@ -20,6 +21,7 @@ export default function BrandModelSelector({
   const [vietnamOnly, setVietnamOnly] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const fetchVehicles = useCallback(async () => {
     setIsLoading(true);
@@ -45,6 +47,15 @@ export default function BrandModelSelector({
     const timer = setTimeout(fetchVehicles, 300);
     return () => clearTimeout(timer);
   }, [fetchVehicles]);
+
+  useEffect(() => {
+    if (selectedVehicle && detailRef.current) {
+      const timer = setTimeout(() => {
+        detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedVehicle]);
 
   // Group vehicles by brand
   const grouped = vehicles.reduce<Record<string, EVVehicleData[]>>((acc, v) => {
@@ -121,7 +132,7 @@ export default function BrandModelSelector({
               {models.map((v) => (
                 <button
                   key={v.id}
-                  onClick={() => onSelect(v)}
+                  onClick={() => { hapticLight(); onSelect(v); }}
                   className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-colors ${
                     selectedVehicle?.id === v.id
                       ? 'bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)]'
@@ -156,7 +167,7 @@ export default function BrandModelSelector({
 
       {/* Selected vehicle summary */}
       {selectedVehicle && (
-        <div className="p-3 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)]">
+        <div ref={detailRef} className="p-3 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)]">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-semibold">
               {selectedVehicle.brand} {displayName(selectedVehicle)}

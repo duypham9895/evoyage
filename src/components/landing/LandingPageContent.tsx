@@ -208,7 +208,7 @@ function LandingContent() {
             {/* Left: text */}
             <div className="flex-1 max-w-xl">
               {/* Badge */}
-              <span className="inline-block px-4 py-1.5 bg-[#00D26A]/10 text-[#00D26A] text-xs font-medium rounded-full border border-[#00D26A]/20 mb-6">
+              <span className="inline-block px-4 py-1.5 bg-[#00D26A]/10 text-[#00D26A] text-sm font-medium rounded-full border border-[#00D26A]/20 mb-6">
                 {t('landing_hero_badge')}
               </span>
 
@@ -253,7 +253,7 @@ function LandingContent() {
       </section>
 
       {/* ─── How It Works ───────────────────────────────── */}
-      <section className="py-20 md:py-32 bg-[#0A0A0B]">
+      <section className="py-12 md:py-32 bg-[#0A0A0B]">
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollAnimator>
             <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[#F5F5F7] text-center mb-16">
@@ -292,7 +292,7 @@ function LandingContent() {
       </section>
 
       {/* ─── Key Features ───────────────────────────────── */}
-      <section className="py-20 md:py-32 bg-[#111114]">
+      <section className="py-12 md:py-32 bg-[#111114]">
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollAnimator>
             <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[#F5F5F7] text-center mb-16">
@@ -324,7 +324,7 @@ function LandingContent() {
       </section>
 
       {/* ─── Supported Vehicles ─────────────────────────── */}
-      <section className="py-20 md:py-32 bg-[#0A0A0B]">
+      <section className="py-12 md:py-32 bg-[#0A0A0B]">
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollAnimator>
             <div className="text-center mb-12">
@@ -340,17 +340,7 @@ function LandingContent() {
             {VINFAST_MODELS.map((car) => (
               <ScrollAnimator key={car.model} className="snap-start">
                 <div className="min-w-[180px] bg-[#1C1C1E] rounded-2xl p-5 border border-[#2C2C2E] hover:border-[#2C2C2E] transition-all">
-                  {/* Car silhouette placeholder */}
-                  <div className="h-20 mb-4 flex items-center justify-center">
-                    <div className="w-24 h-12 rounded-lg bg-gradient-to-br from-[#2C2C2E] to-[#1C1C1E] flex items-center justify-center">
-                      <svg width="48" height="24" viewBox="0 0 48 24" fill="none">
-                        <rect x="4" y="8" width="40" height="12" rx="4" fill="#2C2C2E" />
-                        <rect x="8" y="4" width="24" height="10" rx="3" fill="#3C3C3E" />
-                        <circle cx="12" cy="20" r="3" fill="#4C4C4E" />
-                        <circle cx="36" cy="20" r="3" fill="#4C4C4E" />
-                      </svg>
-                    </div>
-                  </div>
+                  <div className="h-4" />
 
                   {/* VinFast badge */}
                   <span className="inline-block px-2 py-0.5 bg-[#00D26A]/10 text-[#00D26A] text-[11px] font-medium rounded-full mb-2">
@@ -397,7 +387,7 @@ function LandingContent() {
       </section>
 
       {/* ─── Stats / Coverage ───────────────────────────── */}
-      <section className="py-20 md:py-32 bg-[#0D1B3E]">
+      <section className="py-12 md:py-32 bg-[#0D1B3E]">
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollAnimator>
             <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[#F5F5F7] text-center mb-16">
@@ -420,7 +410,7 @@ function LandingContent() {
       </section>
 
       {/* ─── FAQ ────────────────────────────────────────── */}
-      <section className="py-20 md:py-32 bg-[#0A0A0B]">
+      <section className="py-12 md:py-32 bg-[#0A0A0B]">
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollAnimator>
             <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[#F5F5F7] text-center mb-16">
@@ -435,7 +425,7 @@ function LandingContent() {
       </section>
 
       {/* ─── Final CTA ──────────────────────────────────── */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-[#0D1B3E] to-[#0A0A0B]">
+      <section className="py-12 md:py-32 bg-gradient-to-b from-[#0D1B3E] to-[#0A0A0B]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
           <ScrollAnimator>
             <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[#F5F5F7] mb-4">

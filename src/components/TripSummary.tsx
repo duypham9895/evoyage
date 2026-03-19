@@ -54,6 +54,31 @@ function isStatusKey(val: string): val is StatusKey {
   return val in STATUS_DOT_COLOR;
 }
 
+/** Build a Google Maps directions URL with all charging stops as waypoints */
+function buildGoogleMapsUrl(plan: TripPlan): string {
+  const origin = `${plan.startAddress}`;
+  const destination = `${plan.endAddress}`;
+
+  // Add charging stops as waypoints
+  const waypoints = plan.chargingStops.map((stop) => {
+    const station = 'selected' in stop ? stop.selected.station : stop.station;
+    return `${station.latitude},${station.longitude}`;
+  }).join('|');
+
+  const params = new URLSearchParams({
+    api: '1',
+    origin,
+    destination,
+    travelmode: 'driving',
+  });
+
+  if (waypoints) {
+    params.set('waypoints', waypoints);
+  }
+
+  return `https://www.google.com/maps/dir/?${params}`;
+}
+
 // ── BatteryGauge ──
 
 function BatteryGauge({
@@ -177,10 +202,29 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
 
   if (isLoading) {
     return (
-      <div className="p-4 bg-[var(--color-surface)] rounded-lg animate-pulse">
-        <div className="h-4 bg-[var(--color-surface-hover)] rounded w-3/4 mb-3" />
-        <div className="h-8 bg-[var(--color-surface-hover)] rounded w-1/2 mb-2" />
-        <div className="h-4 bg-[var(--color-surface-hover)] rounded w-full" />
+      <div className="space-y-3">
+        <div className="h-4 bg-[var(--color-surface-hover)] rounded w-1/3 animate-pulse" />
+        <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
+          {/* Route text */}
+          <div className="h-3 bg-[var(--color-surface-hover)] rounded w-full animate-pulse" />
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 mb-1 animate-pulse" />
+              <div className="h-6 bg-[var(--color-surface-hover)] rounded w-24 animate-pulse" />
+            </div>
+            <div>
+              <div className="h-3 bg-[var(--color-surface-hover)] rounded w-20 mb-1 animate-pulse" />
+              <div className="h-6 bg-[var(--color-surface-hover)] rounded w-20 animate-pulse" />
+            </div>
+          </div>
+          {/* Battery bar */}
+          <div className="h-7 bg-[var(--color-surface-hover)] rounded-full animate-pulse" />
+          <div className="flex justify-between">
+            <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 animate-pulse" />
+            <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -259,9 +303,11 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
               );
             })}
           </div>
-          <div className="flex justify-between text-[10px] text-[var(--color-muted)] mt-1">
+          <div className="flex justify-between text-xs text-[var(--color-muted)] mt-1">
             <span>{t('start')} {tripPlan.batterySegments[0]?.startBatteryPercent}%</span>
-            <span>{t('arrive')} {tripPlan.arrivalBatteryPercent}%</span>
+            <span className={tripPlan.arrivalBatteryPercent < 25 ? 'font-bold text-[var(--color-warn)]' : ''}>
+              {t('arrive')} {Math.round(tripPlan.arrivalBatteryPercent)}%
+            </span>
           </div>
         </div>
 
@@ -327,7 +373,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                       <span className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-bold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
-                      <span className="text-sm font-semibold truncate">{station.name}</span>
+                      <span className="text-sm font-semibold line-clamp-2">{station.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {rankLabel && (
@@ -477,6 +523,21 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
       <div className="text-[10px] text-[var(--color-muted)] leading-relaxed p-2">
         {t('disclaimer')}
       </div>
+
+      {/* Open in Google Maps */}
+      <a
+        href={buildGoogleMapsUrl(tripPlan)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold bg-[var(--color-surface-hover)] text-[var(--color-foreground)] hover:opacity-80 transition-opacity"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+          <polyline points="15 3 21 3 21 9" />
+          <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
+        {t('open_in_google_maps')}
+      </a>
     </div>
   );
 }

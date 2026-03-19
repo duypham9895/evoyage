@@ -386,12 +386,23 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
         </div>
       </div>
 
-      {/* Floating share button */}
+      {/* Mobile: inline share button */}
+      {visible && (
+        <button
+          onClick={handleOpenModal}
+          aria-label={t('share_button')}
+          className="w-full py-3 rounded-xl font-semibold text-sm border border-[var(--color-accent)]/30 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 transition-all lg:hidden"
+        >
+          {t('share_button')}
+        </button>
+      )}
+
+      {/* Desktop: floating share button */}
       <button
         onClick={handleOpenModal}
         aria-label={t('share_button')}
         className={`
-          fixed z-50 right-4 bottom-20 lg:bottom-6
+          hidden lg:fixed lg:block z-50 right-4 lg:bottom-6
           px-4 py-2.5 rounded-full
           bg-[var(--color-accent)] text-[var(--color-background)]
           font-semibold text-sm

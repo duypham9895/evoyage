@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
+import { hapticLight } from '@/lib/haptics';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
@@ -241,6 +242,17 @@ function HomeContent() {
     });
   }, [start, startCoords]);
 
+  // Swipe gesture handlers for mobile tab switching
+  const handleSwipeLeft = useCallback(() => {
+    hapticLight();
+    setActiveTab(prev => prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev);
+  }, []);
+
+  const handleSwipeRight = useCallback(() => {
+    hapticLight();
+    setActiveTab(prev => prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev);
+  }, []);
+
   // Plan trip — POST to /api/route
   const handlePlanTrip = useCallback(async () => {
     if (!start || !end) {
@@ -295,7 +307,7 @@ function HomeContent() {
     } finally {
       setIsPlanning(false);
     }
-  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip]);
 
   // Handle alternative station selection: swap selected ↔ clicked alternative immutably
   const handleSelectAlternativeStation = useCallback(
@@ -330,25 +342,36 @@ function HomeContent() {
   const canPlan = Boolean(start && end && activeVehicle && !isPlanning);
 
   // Shared controls content
+  const disabledReason = !start || !end
+    ? t('plan_disabled_route')
+    : !activeVehicle
+      ? t('plan_disabled_vehicle')
+      : null;
+
   const planButton = (
-    <button
-      onClick={handlePlanTrip}
-      disabled={!canPlan}
-      className={`w-full py-3.5 rounded-xl font-bold font-[family-name:var(--font-heading)] text-base transition-all ${
-        canPlan
-          ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
-          : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed'
-      }`}
-    >
-      {isPlanning ? (
-        <span className="flex items-center justify-center gap-2">
-          <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
-          {t('planning')}
-        </span>
-      ) : (
-        t('plan_trip_button')
+    <div>
+      <button
+        onClick={handlePlanTrip}
+        disabled={!canPlan}
+        className={`w-full py-3.5 rounded-xl font-bold font-[family-name:var(--font-heading)] text-base transition-all ${
+          canPlan
+            ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'
+            : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed opacity-60'
+        }`}
+      >
+        {isPlanning ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
+            {t('planning')}
+          </span>
+        ) : (
+          t('plan_trip_button')
+        )}
+      </button>
+      {!canPlan && !isPlanning && disabledReason && (
+        <p className="text-xs text-[var(--color-muted)] text-center mt-1.5">{disabledReason}</p>
       )}
-    </button>
+    </div>
   );
 
   const errorDisplay = error ? (
@@ -391,7 +414,11 @@ function HomeContent() {
         </main>
 
         {/* Bottom sheet with tabbed controls */}
-        <MobileBottomSheet initialSnap="half">
+        <MobileBottomSheet
+          initialSnap="half"
+          onSwipeLeft={handleSwipeLeft}
+          onSwipeRight={handleSwipeRight}
+        >
           <MobileTabBar
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -420,6 +447,12 @@ function HomeContent() {
                   onToggleLoop={handleToggleLoop}
                 />
                 {tripPlan && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />}
+                {/* Inline share button for mobile — replaces floating FAB */}
+                {tripPlan && (
+                  <div className="pt-2">
+                    <ShareButton tripPlan={tripPlan} />
+                  </div>
+                )}
               </>
             )}
 
@@ -448,9 +481,6 @@ function HomeContent() {
             {errorDisplay}
           </div>
         </MobileBottomSheet>
-
-        {/* Share button */}
-        <ShareButton tripPlan={tripPlan} />
 
         {/* Feedback FAB */}
         <FeedbackFAB />

@@ -7,12 +7,11 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import { useLocale } from '@/lib/locale';
 
 type SnapPoint = 'peek' | 'half' | 'full';
 
 const SNAP_HEIGHTS: Record<SnapPoint, number> = {
-  peek: 72,   // Just handle + "Plan your trip"
+  peek: 120,  // Handle + tab bar + context hint
   half: 55,   // Percentage of viewport
   full: 92,   // Almost full screen
 };
@@ -20,13 +19,16 @@ const SNAP_HEIGHTS: Record<SnapPoint, number> = {
 interface MobileBottomSheetProps {
   readonly children: ReactNode;
   readonly initialSnap?: SnapPoint;
+  readonly onSwipeLeft?: () => void;
+  readonly onSwipeRight?: () => void;
 }
 
 export default function MobileBottomSheet({
   children,
   initialSnap = 'half',
+  onSwipeLeft,
+  onSwipeRight,
 }: MobileBottomSheetProps) {
-  const { t } = useLocale();
   const [snap, setSnap] = useState<SnapPoint>(initialSnap);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -112,6 +114,34 @@ export default function MobileBottomSheet({
     [snap, getHeightPx],
   );
 
+  // ─── Horizontal swipe detection for tab switching ───
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleContentTouchStart = useCallback((e: React.TouchEvent) => {
+    swipeStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  }, []);
+
+  const handleContentTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!swipeStartRef.current) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - swipeStartRef.current.x;
+    const deltaY = endY - swipeStartRef.current.y;
+    swipeStartRef.current = null;
+
+    // Only trigger if horizontal swipe is dominant and exceeds threshold
+    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (deltaX < 0 && onSwipeLeft) {
+        onSwipeLeft();
+      } else if (deltaX > 0 && onSwipeRight) {
+        onSwipeRight();
+      }
+    }
+  }, [onSwipeLeft, onSwipeRight]);
+
   return (
     <div
       ref={sheetRef}
@@ -131,20 +161,17 @@ export default function MobileBottomSheet({
         onMouseDown={handleMouseDown}
       >
         <div className="w-12 h-1.5 rounded-full bg-[var(--color-muted)]/50" />
-        {snap === 'peek' && (
-          <button
-            onClick={() => setSnap('half')}
-            className="mt-2 text-sm font-semibold text-[var(--color-accent)] font-[family-name:var(--font-heading)]"
-          >
-            {t('plan_your_trip')}
-          </button>
-        )}
       </div>
 
       {/* Scrollable content */}
       <div
-        className="overflow-y-auto overscroll-contain px-4 pb-6 pb-safe"
-        style={{ height: `calc(100% - ${snap === 'peek' ? '56' : '20'}px)` }}
+        className="overflow-y-auto overscroll-contain px-4 pb-safe"
+        onTouchStart={handleContentTouchStart}
+        onTouchEnd={handleContentTouchEnd}
+        style={{
+          height: `calc(100% - ${snap === 'peek' ? '56' : '20'}px)`,
+          paddingBottom: `max(env(safe-area-inset-bottom, 0px), 24px)`,
+        }}
       >
         {children}
       </div>

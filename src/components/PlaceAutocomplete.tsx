@@ -9,6 +9,7 @@ interface PlaceAutocompleteProps {
   readonly onSelect: (result: NominatimResult) => void;
   readonly placeholder: string;
   readonly label: string;
+  readonly showGpsButton?: boolean;
 }
 
 const DEBOUNCE_MS = 400;
@@ -19,6 +20,7 @@ export default function PlaceAutocomplete({
   onSelect,
   placeholder,
   label,
+  showGpsButton = false,
 }: PlaceAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<readonly NominatimResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +29,44 @@ export default function PlaceAutocomplete({
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleUseMyLocation = useCallback(async () => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        });
+      });
+      const { latitude, longitude } = position.coords;
+
+      // Reverse geocode to get place name
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=vi,en`,
+        { headers: { 'User-Agent': 'EVoyage/1.0 (https://evoyagevn.vercel.app)' } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const parts = String(data.display_name || '').split(', ');
+        const shortName = parts.slice(0, 3).join(', ');
+        onChange(shortName);
+        onSelect({
+          placeId: Number(data.place_id) || 0,
+          displayName: String(data.display_name || ''),
+          lat: latitude,
+          lng: longitude,
+          type: String(data.type || 'place'),
+        });
+      }
+    } catch {
+      // Silently fail — user can type manually
+    } finally {
+      setIsLocating(false);
+    }
+  }, [onChange, onSelect]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -37,6 +77,14 @@ export default function PlaceAutocomplete({
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Cleanup timer and abort on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      abortRef.current?.abort();
+    };
   }, []);
 
   // Debounced search
@@ -142,16 +190,37 @@ export default function PlaceAutocomplete({
             <div className="w-4 h-4 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
+        {showGpsButton && !value && !isLoading && (
+          <button
+            type="button"
+            onClick={handleUseMyLocation}
+            disabled={isLocating}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+            aria-label="Use my current location"
+          >
+            {isLocating ? (
+              <div className="w-4 h-4 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="4" />
+                <line x1="12" y1="2" x2="12" y2="6" />
+                <line x1="12" y1="18" x2="12" y2="22" />
+                <line x1="2" y1="12" x2="6" y2="12" />
+                <line x1="18" y1="12" x2="22" y2="12" />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[200px] overflow-y-auto">
+        <ul className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto">
           {suggestions.map((result, index) => (
             <li key={result.placeId}>
               <button
                 type="button"
                 onClick={() => handleSelectSuggestion(result)}
-                className={`w-full text-left px-3 py-3 text-sm transition-colors ${
+                className={`w-full text-left px-3 py-3.5 text-sm transition-colors ${
                   index === activeIndex
                     ? 'bg-[var(--color-accent)]/20 text-[var(--color-accent)]'
                     : 'hover:bg-[var(--color-surface-hover)] text-[var(--color-text)]'

@@ -171,33 +171,59 @@ export function StatCounter({
   const hasAnimated = useRef(false);
 
   useEffect(() => {
+    // Respect prefers-reduced-motion: skip animation entirely
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      hasAnimated.current = true;
+      setDisplayed(value);
+      return;
+    }
+
     const el = ref.current;
     if (!el) return;
+
+    const runAnimation = () => {
+      if (hasAnimated.current) return;
+      hasAnimated.current = true;
+      const duration = 2000;
+      const start = performance.now();
+
+      const animate = (now: number) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setDisplayed(Math.round(eased * value));
+        if (progress < 1) requestAnimationFrame(animate);
+      };
+
+      requestAnimationFrame(animate);
+    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasAnimated.current) {
-          hasAnimated.current = true;
-          const duration = 2000;
-          const start = performance.now();
-
-          const animate = (now: number) => {
-            const elapsed = now - start;
-            const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setDisplayed(Math.round(eased * value));
-            if (progress < 1) requestAnimationFrame(animate);
-          };
-
-          requestAnimationFrame(animate);
+          runAnimation();
           observer.unobserve(el);
         }
       },
-      { threshold: 0.3 },
+      { threshold: 0.1 },
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
+
+    // Fallback: if animation hasn't started within 3s, snap to final value
+    const fallbackTimer = setTimeout(() => {
+      if (!hasAnimated.current) {
+        hasAnimated.current = true;
+        setDisplayed(value);
+        observer.disconnect();
+      }
+    }, 3000);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallbackTimer);
+    };
   }, [value]);
 
   return (
