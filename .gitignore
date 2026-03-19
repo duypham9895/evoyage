@@ -42,3 +42,13 @@ next-env.d.ts
 
 /src/generated/prisma
 .env*.local
+
+# test screenshots
+*.png
+
+# tool configs
+.playwright-mcp/
+.superpowers/
+
+# data artifacts
+/data/
