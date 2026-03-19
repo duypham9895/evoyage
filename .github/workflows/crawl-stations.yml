@@ -25,6 +25,9 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
       - name: Crawl VinFast stations
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

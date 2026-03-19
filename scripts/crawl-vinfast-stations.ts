@@ -1,19 +1,20 @@
 /**
- * Crawl VinFast charging stations from vinfastauto.com using impit.
+ * Crawl VinFast charging stations from vinfastauto.com using Playwright.
  *
- * Uses impit for Chrome TLS fingerprint impersonation to bypass Cloudflare.
+ * Uses a real Chromium browser to navigate the locator page (solving any
+ * Cloudflare JS challenges), then calls the get-locators API from the
+ * browser context with valid CF cookies.
+ *
  * Designed to run on GitHub Actions (ubuntu-latest, free tier).
- *
- * Flow: visit locator page → collect CF cookies → call get-locators API → upsert DB.
  *
  * Run: npx tsx scripts/crawl-vinfast-stations.ts
  */
 import { PrismaClient } from '@prisma/client';
+import { chromium } from 'playwright';
 
 const prisma = new PrismaClient();
 
 const LOCATOR_PAGE = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
-const LOCATORS_API = 'https://vinfastauto.com/vn_vi/get-locators';
 const BATCH_SIZE = 500;
 
 interface VinFastLocatorStation {
@@ -59,48 +60,58 @@ function inferProvince(lat: number): string {
 }
 
 async function fetchVinFastLocators(): Promise<VinFastLocatorStation[]> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Impit } = require('impit');
-  const client = new Impit({ browser: 'chrome' });
-
-  console.log('  Visiting locator page for CF cookies...');
-  const pageResp = await client.fetch(LOCATOR_PAGE, {
-    headers: {
-      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'accept-language': 'en-US,en;q=0.9',
-    },
+  console.log('  Launching Chromium browser...');
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    userAgent:
+      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    viewport: { width: 1280, height: 720 },
   });
 
-  if (!pageResp.ok) {
-    throw new Error(`Cloudflare cookie collection failed: ${pageResp.status}`);
-  }
-  await pageResp.text();
-
-  console.log('  Calling get-locators API...');
-  const apiResp = await client.fetch(LOCATORS_API, {
-    headers: {
-      accept: 'application/json, text/javascript, */*; q=0.01',
-      'accept-language': 'en-US,en;q=0.9',
-      referer: LOCATOR_PAGE,
-      'sec-fetch-dest': 'empty',
-      'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-origin',
-      'x-requested-with': 'XMLHttpRequest',
-    },
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
   });
 
-  if (!apiResp.ok) {
-    throw new Error(`VinFast locators API failed: ${apiResp.status}`);
+  try {
+    const page = await context.newPage();
+
+    console.log('  Navigating to locator page (solving CF challenge)...');
+    await page.goto(LOCATOR_PAGE, { waitUntil: 'networkidle', timeout: 30_000 });
+    console.log('  Page loaded:', await page.title());
+
+    console.log('  Calling get-locators API from browser context...');
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/vn_vi/get-locators', {
+        headers: {
+          Accept: 'application/json, text/javascript, */*; q=0.01',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      });
+
+      if (!res.ok) return { error: true, status: res.status };
+
+      const text = await res.text();
+      if (text.includes('IM_UNDER_ATTACK') || text.includes('challenge-platform')) {
+        return { error: true, status: -1 };
+      }
+
+      return JSON.parse(text);
+    });
+
+    if ('error' in result) {
+      throw new Error(`VinFast API call failed with status: ${(result as { status: number }).status}`);
+    }
+
+    const json = result as { data: VinFastLocatorStation[] };
+    if (!json.data || !Array.isArray(json.data)) {
+      throw new Error('Unexpected response format from VinFast API');
+    }
+
+    return json.data;
+  } finally {
+    await browser.close();
   }
-
-  const text = await apiResp.text();
-
-  if (text.includes('::IM_UNDER_ATTACK_BOX::') || text.includes('challenge-platform')) {
-    throw new Error('Blocked by Cloudflare challenge');
-  }
-
-  const json = JSON.parse(text) as { data: VinFastLocatorStation[] };
-  return json.data;
 }
 
 function buildStationData(s: VinFastLocatorStation) {
