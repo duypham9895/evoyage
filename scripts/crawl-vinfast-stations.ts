@@ -150,6 +150,100 @@ function buildStationData(s: VinFastLocatorStation) {
   };
 }
 
+/**
+ * Bulk upsert stations using raw SQL INSERT ... ON CONFLICT.
+ * ~100x faster than individual Prisma operations over network.
+ */
+async function bulkUpsertStations(
+  stations: VinFastLocatorStation[],
+  existingByOcmId: Map<string, string>,
+  existingByEntityId: Map<string, string>,
+): Promise<{ created: number; updated: number }> {
+  let created = 0;
+  let updated = 0;
+
+  for (let i = 0; i < stations.length; i += BATCH_SIZE) {
+    const batch = stations.slice(i, i + BATCH_SIZE);
+
+    const values: string[] = [];
+    const params: unknown[] = [];
+    let paramIdx = 1;
+
+    for (const s of batch) {
+      const data = buildStationData(s);
+      const existingId =
+        existingByOcmId.get(data.ocmId) ?? existingByEntityId.get(s.entity_id);
+
+      if (existingId) {
+        updated++;
+      } else {
+        created++;
+      }
+
+      const id = existingId ?? `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
+      values.push(`($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}::double precision, $${paramIdx++}::double precision, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}::int, $${paramIdx++}::double precision, $${paramIdx++}, $${paramIdx++}::boolean, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}::timestamptz, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}::boolean, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}::boolean, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`);
+
+      params.push(
+        id, data.ocmId, data.name, data.address, data.province,
+        data.latitude, data.longitude, data.chargerTypes, data.connectorTypes,
+        data.portCount, data.maxPowerKw, data.stationType, data.isVinFastOnly,
+        data.provider, data.operatingHours, data.scrapedAt,
+        data.entityId, data.stationCode, data.storeId, data.hotline,
+        data.hotlineService, data.chargingStatus, data.parkingFee,
+        data.accessType, data.partyId, data.hasLink,
+        data.categoryName, data.categorySlug, data.markerIcon, data.rawData,
+      );
+    }
+
+    const sql = `
+      INSERT INTO "ChargingStation" (
+        "id", "ocmId", "name", "address", "province",
+        "latitude", "longitude", "chargerTypes", "connectorTypes",
+        "portCount", "maxPowerKw", "stationType", "isVinFastOnly",
+        "provider", "operatingHours", "scrapedAt",
+        "entityId", "stationCode", "storeId", "hotline",
+        "hotlineService", "chargingStatus", "parkingFee",
+        "accessType", "partyId", "hasLink",
+        "categoryName", "categorySlug", "markerIcon", "rawData"
+      ) VALUES ${values.join(', ')}
+      ON CONFLICT ("ocmId") DO UPDATE SET
+        "name" = EXCLUDED."name",
+        "address" = EXCLUDED."address",
+        "province" = EXCLUDED."province",
+        "latitude" = EXCLUDED."latitude",
+        "longitude" = EXCLUDED."longitude",
+        "chargerTypes" = EXCLUDED."chargerTypes",
+        "connectorTypes" = EXCLUDED."connectorTypes",
+        "portCount" = EXCLUDED."portCount",
+        "maxPowerKw" = EXCLUDED."maxPowerKw",
+        "stationType" = EXCLUDED."stationType",
+        "operatingHours" = EXCLUDED."operatingHours",
+        "scrapedAt" = EXCLUDED."scrapedAt",
+        "entityId" = EXCLUDED."entityId",
+        "stationCode" = EXCLUDED."stationCode",
+        "storeId" = EXCLUDED."storeId",
+        "hotline" = EXCLUDED."hotline",
+        "hotlineService" = EXCLUDED."hotlineService",
+        "chargingStatus" = EXCLUDED."chargingStatus",
+        "parkingFee" = EXCLUDED."parkingFee",
+        "accessType" = EXCLUDED."accessType",
+        "partyId" = EXCLUDED."partyId",
+        "hasLink" = EXCLUDED."hasLink",
+        "categoryName" = EXCLUDED."categoryName",
+        "categorySlug" = EXCLUDED."categorySlug",
+        "markerIcon" = EXCLUDED."markerIcon",
+        "rawData" = EXCLUDED."rawData"
+    `;
+
+    await prisma.$executeRawUnsafe(sql, ...params);
+    const processed = Math.min(i + BATCH_SIZE, stations.length);
+    console.log(`  ${processed}/${stations.length} stations processed`);
+  }
+
+  return { created, updated };
+}
+
 async function main() {
   console.log('=== VinFast Station Crawl ===\n');
 
@@ -167,26 +261,8 @@ async function main() {
     if (isNaN(lat) || isNaN(lng)) return false;
     return isInVietnam(lat, lng);
   });
-  console.log(`  Car charging stations in Vietnam: ${valid.length}`);
 
-  // Step 3: Load existing for dedup
-  console.log('\n[2/3] Syncing stations to database...');
-  const existing = await prisma.chargingStation.findMany({
-    where: { provider: 'VinFast' },
-    select: { id: true, ocmId: true, entityId: true },
-  });
-
-  const existingByOcmId = new Map(
-    existing.filter((e) => e.ocmId).map((e) => [e.ocmId!, { id: e.id }]),
-  );
-  const existingByEntityId = new Map(
-    existing.filter((e) => e.entityId).map((e) => [e.entityId!, { id: e.id }]),
-  );
-
-  let created = 0;
-  let updated = 0;
   let skippedOutOfService = 0;
-
   const toProcess = valid.filter((s) => {
     if (s.charging_status === 'OUTOFSERVICE') {
       skippedOutOfService++;
@@ -194,30 +270,25 @@ async function main() {
     }
     return true;
   });
+  console.log(`  Car charging stations in Vietnam: ${valid.length} (${skippedOutOfService} out of service)`);
 
-  for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
-    const batch = toProcess.slice(i, i + BATCH_SIZE);
+  // Step 3: Bulk upsert stations
+  console.log('\n[2/3] Syncing stations to database (bulk upsert)...');
+  const existing = await prisma.chargingStation.findMany({
+    where: { provider: 'VinFast' },
+    select: { id: true, ocmId: true, entityId: true },
+  });
 
-    const ops = batch.map((s) => {
-      const data = buildStationData(s);
-      const existingEntry =
-        existingByOcmId.get(data.ocmId) ?? existingByEntityId.get(s.entity_id);
+  const existingByOcmId = new Map(
+    existing.filter((e) => e.ocmId).map((e) => [e.ocmId!, e.id]),
+  );
+  const existingByEntityId = new Map(
+    existing.filter((e) => e.entityId).map((e) => [e.entityId!, e.id]),
+  );
 
-      if (existingEntry) {
-        updated++;
-        return prisma.chargingStation.update({ where: { id: existingEntry.id }, data });
-      } else {
-        created++;
-        return prisma.chargingStation.create({ data });
-      }
-    });
+  const { created, updated } = await bulkUpsertStations(toProcess, existingByOcmId, existingByEntityId);
 
-    await prisma.$transaction(ops);
-    const processed = Math.min(i + BATCH_SIZE, toProcess.length);
-    console.log(`  ${processed}/${toProcess.length} stations processed`);
-  }
-
-  // Step 4: Sync entity_id → store_id mappings
+  // Step 4: Sync entity_id → store_id mappings (bulk)
   console.log('\n[3/3] Syncing entity mappings...');
   const withIds = valid.filter((s) => s.entity_id && s.store_id);
   let mappingsSaved = 0;
@@ -225,20 +296,21 @@ async function main() {
   for (let i = 0; i < withIds.length; i += BATCH_SIZE) {
     const batch = withIds.slice(i, i + BATCH_SIZE);
 
-    const ops = batch.map((s) =>
-      prisma.vinFastStationDetail.upsert({
-        where: { entityId: s.entity_id },
-        update: { storeId: s.store_id },
-        create: {
-          entityId: s.entity_id,
-          storeId: s.store_id,
-          detail: '{}',
-          fetchedAt: new Date(0),
-        },
-      }),
-    );
+    const mValues: string[] = [];
+    const mParams: unknown[] = [];
+    let mIdx = 1;
 
-    await prisma.$transaction(ops);
+    for (const s of batch) {
+      mValues.push(`($${mIdx++}, $${mIdx++}, $${mIdx++}, $${mIdx++}::timestamptz)`);
+      mParams.push(s.entity_id, s.store_id, '{}', new Date(0));
+    }
+
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "VinFastStationDetail" ("entityId", "storeId", "detail", "fetchedAt")
+      VALUES ${mValues.join(', ')}
+      ON CONFLICT ("entityId") DO UPDATE SET "storeId" = EXCLUDED."storeId"
+    `, ...mParams);
+
     mappingsSaved += batch.length;
   }
 
