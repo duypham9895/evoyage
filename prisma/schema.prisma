@@ -10,26 +10,26 @@ datasource db {
 }
 
 model EVVehicle {
-  id                        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Identity
-  brand                     String
-  model                     String
-  variant                   String?
-  modelYear                 Int?
+  brand     String
+  model     String
+  variant   String?
+  modelYear Int?
 
   // Body & Category
-  bodyType                  String
-  segment                   String?
-  seats                     Int
-  doors                     Int?
+  bodyType String
+  segment  String?
+  seats    Int
+  doors    Int?
 
   // Battery & Range (CORE for trip planning)
-  batteryCapacityKwh        Float
-  usableBatteryKwh          Float?
-  officialRangeKm           Float
-  rangeStandard             String?
-  efficiencyWhPerKm         Float?
+  batteryCapacityKwh Float
+  usableBatteryKwh   Float?
+  officialRangeKm    Float
+  rangeStandard      String?
+  efficiencyWhPerKm  Float?
 
   // Charging (CORE for trip planning)
   dcMaxChargingPowerKw      Float?
@@ -38,29 +38,29 @@ model EVVehicle {
   chargingPortType          String?
 
   // Performance
-  powerKw                   Float?
-  torqueNm                  Float?
-  driveType                 String?
-  acceleration0to100        Float?
-  topSpeedKmh               Float?
+  powerKw            Float?
+  torqueNm           Float?
+  driveType          String?
+  acceleration0to100 Float?
+  topSpeedKmh        Float?
 
   // Dimensions & Weight
-  lengthMm                  Int?
-  widthMm                   Int?
-  heightMm                  Int?
-  wheelbaseMm               Int?
-  weightKg                  Int?
-  cargoVolumeLiters         Int?
+  lengthMm          Int?
+  widthMm           Int?
+  heightMm          Int?
+  wheelbaseMm       Int?
+  weightKg          Int?
+  cargoVolumeLiters Int?
 
   // Availability
-  availableInVietnam        Boolean  @default(false)
-  priceVndMillions          Float?
+  availableInVietnam Boolean @default(false)
+  priceVndMillions   Float?
 
   // Data Source
-  source                    String   @default("crawled")
-  sourceUrl                 String?
-  isUserAdded               Boolean  @default(false)
-  lastUpdated               DateTime @default(now())
+  source      String   @default("crawled")
+  sourceUrl   String?
+  isUserAdded Boolean  @default(false)
+  lastUpdated DateTime @default(now())
 
   @@unique([brand, model, variant])
   @@index([brand])
@@ -88,20 +88,20 @@ model ChargingStation {
   scrapedAt      DateTime @default(now())
 
   // VinFast-specific fields (from finaldivision API)
-  entityId        String?  // VinFast entity_id for detail API lookup
-  stationCode     String?  // e.g., "vfc_C.HNO0009"
-  storeId         String?  // e.g., "C.HNO0009"
-  hotline         String?  // Customer hotline
-  hotlineService  String?  // Service hotline (hotline_xdv)
-  chargingStatus  String?  // ACTIVE, BUSY, INACTIVE, UNAVAILABLE, OUTOFSERVICE
-  parkingFee      Boolean? // Whether parking fee is required
-  accessType      String?  // Public, Restricted
-  partyId         String?  // VFC (car), VFS (scooter)
-  hasLink         Boolean? // Whether station has linked detail
-  categoryName    String?  // e.g., "Trạm sạc ô tô điện"
-  categorySlug    String?  // e.g., "car_charging_station"
-  markerIcon      String?  // Icon URL for map display
-  rawData         String?  // Complete original JSON from source API
+  entityId       String? // VinFast entity_id for detail API lookup
+  stationCode    String? // e.g., "vfc_C.HNO0009"
+  storeId        String? // e.g., "C.HNO0009"
+  hotline        String? // Customer hotline
+  hotlineService String? // Service hotline (hotline_xdv)
+  chargingStatus String? // ACTIVE, BUSY, INACTIVE, UNAVAILABLE, OUTOFSERVICE
+  parkingFee     Boolean? // Whether parking fee is required
+  accessType     String? // Public, Restricted
+  partyId        String? // VFC (car), VFS (scooter)
+  hasLink        Boolean? // Whether station has linked detail
+  categoryName   String? // e.g., "Trạm sạc ô tô điện"
+  categorySlug   String? // e.g., "car_charging_station"
+  markerIcon     String? // Icon URL for map display
+  rawData        String? // Complete original JSON from source API
 
   @@index([latitude, longitude])
   @@index([province])
@@ -115,10 +115,21 @@ model VinFastStationDetail {
   id        String   @id @default(cuid())
   entityId  String   @unique
   storeId   String
-  detail    String   // JSON blob of VinFastStationDetail
+  detail    String // JSON blob of VinFastStationDetail
   fetchedAt DateTime @default(now())
 
   @@index([fetchedAt])
+}
+
+model ShortUrl {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  params      String    // URL search params string
+  accessCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime? // reserved for future use
+
+  @@index([createdAt])
 }
 
 model RouteCache {
@@ -131,5 +142,35 @@ model RouteCache {
   createdAt       DateTime @default(now())
 
   @@unique([startPlaceId, endPlaceId])
+  @@index([createdAt])
+}
+
+model Feedback {
+  id               String    @id @default(cuid())
+  category         String // REPORT_ISSUE, REQUEST_FEATURE, CONTACT_SUPPORT, STATION_DATA_ERROR, ROUTE_FEEDBACK, GENERAL_FEEDBACK
+  description      String
+  email            String?
+  name             String?
+  phone            String?
+  stepsToReproduce String? // for REPORT_ISSUE
+  useCase          String? // for REQUEST_FEATURE
+  correctInfo      String? // for STATION_DATA_ERROR
+  rating           Int? // 1-5 for ROUTE_FEEDBACK
+  stationId        String? // for STATION_DATA_ERROR
+  stationName      String? // for STATION_DATA_ERROR
+  imageUrl         String? // Phase 2
+  pageUrl          String?
+  userAgent        String?
+  viewport         String?
+  routeParams      String?
+  ipHash           String? // hashed IP for rate limiting
+  emailSent        Boolean   @default(false)
+  status           String    @default("NEW") // NEW, IN_REVIEW, RESOLVED, CLOSED
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([category])
+  @@index([status])
   @@index([createdAt])
 }

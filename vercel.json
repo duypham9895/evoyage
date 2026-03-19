@@ -2,6 +2,16 @@
   "functions": {
     "src/app/api/stations/[id]/vinfast-detail/route.ts": {
       "memory": 512
+    },
+    "src/app/api/cron/refresh-vinfast/route.ts": {
+      "memory": 1024,
+      "maxDuration": 300
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/refresh-vinfast",
+      "schedule": "0 1 * * *"
+    }
+  ]
 }
