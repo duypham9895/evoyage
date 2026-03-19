@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useUrlState, parseUrlState } from '@/hooks/useUrlState';
 import Header from '@/components/Header';
 import TripInput from '@/components/TripInput';
 import BrandModelSelector from '@/components/BrandModelSelector';
@@ -66,34 +67,102 @@ function HomeContent() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load persisted state from localStorage
+  // URL state sync
+  const { syncToUrl } = useUrlState();
+  const urlInitialized = useRef(false);
+
+  // Load state: URL params take priority, then localStorage fallback
   useEffect(() => {
-    const savedRSF = localStorage.getItem('ev-planner-rsf');
-    if (savedRSF) {
-      const val = parseFloat(savedRSF);
-      if (!isNaN(val) && val >= 0.5 && val <= 1.0) {
-        setRangeSafetyFactor(val);
+    const urlState = parseUrlState();
+    const hasUrlParams = Object.keys(urlState).length > 0;
+
+    // Restore from URL if present
+    if (hasUrlParams) {
+      if (urlState.start) setStart(urlState.start);
+      if (urlState.end) setEnd(urlState.end);
+      if (urlState.startLat != null && urlState.startLng != null) {
+        setStartCoords({ lat: urlState.startLat, lng: urlState.startLng });
+      }
+      if (urlState.endLat != null && urlState.endLng != null) {
+        setEndCoords({ lat: urlState.endLat, lng: urlState.endLng });
+      }
+      if (urlState.waypoints) setWaypoints([...urlState.waypoints]);
+      if (urlState.isLoopTrip) setIsLoopTrip(true);
+      if (urlState.currentBattery != null) setCurrentBattery(urlState.currentBattery);
+      if (urlState.minArrival != null) setMinArrival(urlState.minArrival);
+      if (urlState.rangeSafetyFactor != null) setRangeSafetyFactor(urlState.rangeSafetyFactor);
+      if (urlState.customVehicle) {
+        setCustomVehicle(urlState.customVehicle);
+        setSelectedVehicle(null);
+      }
+
+      // Fetch vehicle by ID from URL
+      if (urlState.vehicleId) {
+        fetch(`/api/vehicles?id=${encodeURIComponent(urlState.vehicleId)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data) {
+              setSelectedVehicle(data);
+              setCustomVehicle(null);
+            }
+          })
+          .catch(() => { /* vehicle not found, user can pick manually */ });
       }
     }
 
-    const savedCustom = localStorage.getItem('ev-planner-custom-vehicle');
-    if (savedCustom) {
-      const customSchema = z.object({
-        brand: z.string().min(1).max(100),
-        model: z.string().min(1).max(100),
-        batteryCapacityKwh: z.number().positive().max(300),
-        officialRangeKm: z.number().positive().max(2000),
-        chargingTimeDC_10to80_min: z.number().positive().optional(),
-        chargingPortType: z.string().optional(),
-      });
-      try {
-        const result = customSchema.safeParse(JSON.parse(savedCustom));
-        if (result.success) {
-          setCustomVehicle(result.data);
+    // localStorage fallback (only if URL didn't provide these)
+    if (!hasUrlParams || urlState.rangeSafetyFactor == null) {
+      const savedRSF = localStorage.getItem('ev-planner-rsf');
+      if (savedRSF) {
+        const val = parseFloat(savedRSF);
+        if (!isNaN(val) && val >= 0.5 && val <= 1.0) {
+          setRangeSafetyFactor(val);
         }
-      } catch { /* ignore invalid JSON */ }
+      }
     }
-  }, []);
+
+    if (!hasUrlParams) {
+      const savedCustom = localStorage.getItem('ev-planner-custom-vehicle');
+      if (savedCustom) {
+        const customSchema = z.object({
+          brand: z.string().min(1).max(100),
+          model: z.string().min(1).max(100),
+          batteryCapacityKwh: z.number().positive().max(300),
+          officialRangeKm: z.number().positive().max(2000),
+          chargingTimeDC_10to80_min: z.number().positive().optional(),
+          chargingPortType: z.string().optional(),
+        });
+        try {
+          const result = customSchema.safeParse(JSON.parse(savedCustom));
+          if (result.success) {
+            setCustomVehicle(result.data);
+          }
+        } catch { /* ignore invalid JSON */ }
+      }
+    }
+
+    urlInitialized.current = true;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync state → URL whenever inputs change
+  useEffect(() => {
+    if (!urlInitialized.current) return;
+    syncToUrl({
+      start,
+      end,
+      startLat: startCoords?.lat ?? null,
+      startLng: startCoords?.lng ?? null,
+      endLat: endCoords?.lat ?? null,
+      endLng: endCoords?.lng ?? null,
+      waypoints,
+      isLoopTrip,
+      vehicleId: selectedVehicle?.id ?? null,
+      customVehicle,
+      currentBattery,
+      minArrival,
+      rangeSafetyFactor,
+    });
+  }, [start, end, startCoords, endCoords, waypoints, isLoopTrip, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, syncToUrl]);
 
   // Persist RSF to localStorage
   const handleRSFChange = useCallback((val: number) => {

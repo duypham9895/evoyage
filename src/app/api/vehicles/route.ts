@@ -30,6 +30,40 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
 
+  // Lookup single vehicle by ID (for URL sharing)
+  const idParam = searchParams.get('id')?.slice(0, 100);
+  if (idParam) {
+    try {
+      const { prisma } = await import('@/lib/prisma');
+      const vehicle = await prisma.eVVehicle.findUnique({ where: { id: idParam } });
+      if (vehicle) {
+        const mapped: EVVehicleData = {
+          id: vehicle.id, brand: vehicle.brand, model: vehicle.model,
+          variant: vehicle.variant, modelYear: vehicle.modelYear, bodyType: vehicle.bodyType,
+          segment: vehicle.segment, seats: vehicle.seats, doors: vehicle.doors,
+          batteryCapacityKwh: vehicle.batteryCapacityKwh, usableBatteryKwh: vehicle.usableBatteryKwh,
+          officialRangeKm: vehicle.officialRangeKm, rangeStandard: vehicle.rangeStandard,
+          efficiencyWhPerKm: vehicle.efficiencyWhPerKm, dcMaxChargingPowerKw: vehicle.dcMaxChargingPowerKw,
+          acChargingPowerKw: vehicle.acChargingPowerKw, chargingTimeDC_10to80_min: vehicle.chargingTimeDC_10to80_min,
+          chargingPortType: vehicle.chargingPortType, powerKw: vehicle.powerKw, torqueNm: vehicle.torqueNm,
+          driveType: vehicle.driveType, acceleration0to100: vehicle.acceleration0to100,
+          topSpeedKmh: vehicle.topSpeedKmh, lengthMm: vehicle.lengthMm, widthMm: vehicle.widthMm,
+          heightMm: vehicle.heightMm, wheelbaseMm: vehicle.wheelbaseMm, weightKg: vehicle.weightKg,
+          cargoVolumeLiters: vehicle.cargoVolumeLiters, availableInVietnam: vehicle.availableInVietnam,
+          priceVndMillions: vehicle.priceVndMillions, source: vehicle.source ?? 'crawled',
+          isUserAdded: vehicle.isUserAdded,
+        };
+        return NextResponse.json(mapped);
+      }
+    } catch { /* fall through */ }
+
+    // Fallback: search hardcoded models
+    const fallback = VIETNAM_MODELS.find(v => v.id === idParam);
+    if (fallback) return NextResponse.json(fallback);
+
+    return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
+  }
+
   const query = (searchParams.get('q') ?? '').slice(0, 200).toLowerCase();
   const vietnamOnly = searchParams.get('vietnamOnly') !== 'false';
   const bodyType = searchParams.get('bodyType')?.slice(0, 50) ?? null;

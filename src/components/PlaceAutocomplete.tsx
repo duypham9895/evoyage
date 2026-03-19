@@ -134,6 +134,7 @@ export default function PlaceAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
+          autoComplete="off"
           className="w-full px-3 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
         />
         {isLoading && (
