@@ -127,25 +127,41 @@ export async function GET(
             });
           } else {
             // Last resort: build minimal detail from station DB fields
+            const statusMap: Record<string, string> = {
+              ACTIVE: 'Available',
+              BUSY: 'Busy',
+              UNAVAILABLE: 'Unavailable',
+              INACTIVE: 'Inactive',
+              OUTOFSERVICE: 'Out of service',
+            };
+
+            const connectorSummary = (() => {
+              try {
+                return station.connectorTypes ? JSON.parse(station.connectorTypes) as string[] : [];
+              } catch {
+                return [];
+              }
+            })();
+
             const basicDetail = {
               entityId: entityId,
               storeId: storeId,
               name: station.name,
               address: station.address,
-              province: station.province,
+              province: '',
               district: '',
               commune: '',
               latitude: station.latitude,
               longitude: station.longitude,
               evses: [],
               images: [],
-              depotStatus: station.chargingStatus ?? 'unknown',
+              depotStatus: statusMap[station.chargingStatus ?? ''] ?? 'unknown',
               is24h: false,
               chargingWhenClosed: false,
               parkingFee: station.parkingFee ?? false,
               accessType: station.accessType ?? 'Public',
               hardwareStations: [],
-              connectorSummary: station.connectorTypes ? JSON.parse(station.connectorTypes) : [],
+              connectorSummary,
               maxPowerKw: station.maxPowerKw,
               portCount: station.portCount,
               fetchedAt: new Date().toISOString(),

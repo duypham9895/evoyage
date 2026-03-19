@@ -32,6 +32,37 @@ function formatStaleAge(ms: number): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
+function BasicConnectorInfo({ detail }: { detail: VinFastStationDetail }) {
+  const { t } = useLocale();
+
+  if (detail.evses.length > 0 || detail.connectorSummary.length === 0) return null;
+
+  return (
+    <div className="space-y-1 animate-fadeIn">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)] font-semibold">
+        {t('station_section_connectors')}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {detail.connectorSummary.map((type, i) => (
+          <span key={i} className="text-xs px-2 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-foreground)]">
+            {type}
+          </span>
+        ))}
+        {detail.maxPowerKw > 0 && (
+          <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-accent)]">
+            ⚡ {detail.maxPowerKw} kW
+          </span>
+        )}
+        {detail.portCount > 0 && (
+          <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-muted)]">
+            {detail.portCount} {t('station_ports', { count: String(detail.portCount) }).replace(/^\d+\s*/, '')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConnectorSection({ evses }: { evses: VinFastStationDetail['evses'] }) {
   const { t } = useLocale();
   if (evses.length === 0) return null;
@@ -149,6 +180,7 @@ function DetailContent({
         </div>
       )}
       <ConnectorSection evses={detail.evses} />
+      <BasicConnectorInfo detail={detail} />
       <HardwareSection hardwareStations={detail.hardwareStations} />
       <ImagesSection images={detail.images} />
       <LastUpdatedRow fetchedAt={detail.fetchedAt} />
