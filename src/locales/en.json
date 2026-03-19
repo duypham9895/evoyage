@@ -109,6 +109,7 @@
   "station_detail_parsing": "Processing data...",
   "station_detail_stale": "Old data (updated {{time}})",
   "station_detail_retry_after": "Try again in {{seconds}}s",
+  "station_detail_basic_info": "Basic info only — detailed data unavailable",
   "station_connector": "{{type}} · {{power}}kW",
   "station_hardware": "Hardware: {{vendor}} {{model}}",
   "station_section_connectors": "Connector details",

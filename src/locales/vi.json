@@ -109,6 +109,7 @@
   "station_detail_parsing": "Đang xử lý dữ liệu...",
   "station_detail_stale": "Dữ liệu cũ (cập nhật {{time}})",
   "station_detail_retry_after": "Thử lại sau {{seconds}}s",
+  "station_detail_basic_info": "Chỉ có thông tin cơ bản — dữ liệu chi tiết chưa khả dụng",
   "station_connector": "{{type}} · {{power}}kW",
   "station_hardware": "Thiết bị: {{vendor}} {{model}}",
   "station_section_connectors": "Chi tiết các cổng sạc",

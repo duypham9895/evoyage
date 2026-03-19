@@ -126,10 +126,12 @@ function LastUpdatedRow({ fetchedAt }: { fetchedAt: string }) {
 function DetailContent({
   detail,
   isStale,
+  isBasic,
   staleAge,
 }: {
   detail: VinFastStationDetail;
   isStale: boolean;
+  isBasic: boolean;
   staleAge: number;
 }) {
   const { t } = useLocale();
@@ -139,6 +141,11 @@ function DetailContent({
       {isStale && (
         <div className="text-[10px] px-2 py-0.5 bg-yellow-500/10 text-yellow-600 rounded inline-block">
           {t('station_detail_stale', { time: formatStaleAge(staleAge) })}
+        </div>
+      )}
+      {isBasic && (
+        <div className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded inline-block">
+          {t('station_detail_basic_info')}
         </div>
       )}
       <ConnectorSection evses={detail.evses} />
@@ -159,6 +166,7 @@ export default function StationDetailExpander({
   const [message, setMessage] = useState('');
   const [detail, setDetail] = useState<VinFastStationDetail | null>(null);
   const [isStale, setIsStale] = useState(false);
+  const [isBasic, setIsBasic] = useState(false);
   const [staleAge, setStaleAge] = useState(0);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -241,6 +249,7 @@ export default function StationDetailExpander({
             if (event.detail) {
               setDetail(event.detail as VinFastStationDetail);
               setIsStale(!!event.stale);
+              setIsBasic(!!event.basic);
               setStaleAge(event.staleAgeMs ?? 0);
             }
 
@@ -296,7 +305,7 @@ export default function StationDetailExpander({
             />
           )}
           {stage === 'done' && detail !== null && (
-            <DetailContent detail={detail} isStale={isStale} staleAge={staleAge} />
+            <DetailContent detail={detail} isStale={isStale} isBasic={isBasic} staleAge={staleAge} />
           )}
           {stage === 'error' && !detail && (
             <div className="text-[10px] text-[var(--color-danger)]/60 italic p-2">

@@ -126,7 +126,36 @@ export async function GET(
               staleAgeMs,
             });
           } else {
-            emit({ stage: 'error', code: 'CF_BLOCKED' });
+            // Last resort: build minimal detail from station DB fields
+            const basicDetail = {
+              entityId: entityId,
+              storeId: storeId,
+              name: station.name,
+              address: station.address,
+              province: station.province,
+              district: '',
+              commune: '',
+              latitude: station.latitude,
+              longitude: station.longitude,
+              evses: [],
+              images: [],
+              depotStatus: station.chargingStatus ?? 'unknown',
+              is24h: false,
+              chargingWhenClosed: false,
+              parkingFee: station.parkingFee ?? false,
+              accessType: station.accessType ?? 'Public',
+              hardwareStations: [],
+              connectorSummary: station.connectorTypes ? JSON.parse(station.connectorTypes) : [],
+              maxPowerKw: station.maxPowerKw,
+              portCount: station.portCount,
+              fetchedAt: new Date().toISOString(),
+            };
+            emit({
+              stage: 'done',
+              detail: basicDetail,
+              cached: false,
+              basic: true,
+            });
           }
         }
       } catch (err) {
