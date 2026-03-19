@@ -301,12 +301,13 @@ async function main() {
     let mIdx = 1;
 
     for (const s of batch) {
-      mValues.push(`($${mIdx++}, $${mIdx++}, $${mIdx++}, $${mIdx++}::timestamptz)`);
-      mParams.push(s.entity_id, s.store_id, '{}', new Date(0));
+      const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+      mValues.push(`($${mIdx++}, $${mIdx++}, $${mIdx++}, $${mIdx++}, $${mIdx++}::timestamptz)`);
+      mParams.push(id, s.entity_id, s.store_id, '{}', new Date(0));
     }
 
     await prisma.$executeRawUnsafe(`
-      INSERT INTO "VinFastStationDetail" ("entityId", "storeId", "detail", "fetchedAt")
+      INSERT INTO "VinFastStationDetail" ("id", "entityId", "storeId", "detail", "fetchedAt")
       VALUES ${mValues.join(', ')}
       ON CONFLICT ("entityId") DO UPDATE SET "storeId" = EXCLUDED."storeId"
     `, ...mParams);
