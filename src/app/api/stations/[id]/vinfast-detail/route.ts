@@ -1,20 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { fetchVinFastDetail } from '@/lib/vinfast-client';
-import { safeJsonArray } from '@/lib/safe-json';
+import { fetchVinFastDetailWithProgress } from '@/lib/vinfast-client';
+import { resolveEntityId } from '@/lib/vinfast-entity-resolver';
 
-/**
- * GET /api/stations/[id]/vinfast-detail
- *
- * On-demand VinFast station detail with Cloudflare bypass.
- * Returns OCPI-level data: per-port connectors, real-time depot status,
- * images, operating hours, hardware specs.
- *
- * Cache: 6 hours in DB. Fallback: basic ChargingStation data.
- */
+export const maxDuration = 25;
+export const dynamic = 'force-dynamic';
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+function sseEvent(data: Record<string, unknown>): string {
+  return `data: ${JSON.stringify(data)}\n\n`;
+}
+
+function sseHeaders(): Record<string, string> {
+  return {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  };
+}
 
 export async function GET(
   request: NextRequest,
@@ -22,149 +26,117 @@ export async function GET(
 ) {
   const { id: stationId } = await params;
 
-  // Validate stationId format (CUID)
   if (!/^[a-z0-9]{20,36}$/.test(stationId)) {
-    return NextResponse.json({ error: 'Invalid station ID' }, { status: 400 });
+    return new Response(sseEvent({ stage: 'error', code: 'INVALID_ID' }), {
+      status: 400,
+      headers: sseHeaders(),
+    });
   }
 
-  // Rate limit: 20 req/min per IP
   const ip = getClientIp(request);
   const limit = await checkRateLimit(`vinfast-detail:${ip}`, 20, 60_000);
   if (!limit.allowed) {
-    return NextResponse.json(
-      { error: 'Too many requests' },
-      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
+    return new Response(
+      sseEvent({ stage: 'error', code: 'RATE_LIMITED' }),
+      { status: 429, headers: { ...sseHeaders(), 'Retry-After': String(limit.retryAfterSec) } },
     );
   }
 
-  // Find the station in our DB
   const station = await prisma.chargingStation.findUnique({
     where: { id: stationId },
   });
 
   if (!station) {
-    return NextResponse.json({ error: 'Station not found' }, { status: 404 });
+    return new Response(sseEvent({ stage: 'error', code: 'NOT_FOUND' }), {
+      status: 404,
+      headers: sseHeaders(),
+    });
   }
 
-  // Only VinFast stations have detail
   if (!station.isVinFastOnly) {
-    return NextResponse.json(
-      { error: 'Detail only available for VinFast stations' },
-      { status: 400 },
+    return new Response(
+      sseEvent({ stage: 'error', code: 'NOT_VINFAST' }),
+      { status: 400, headers: sseHeaders() },
     );
   }
 
-  // Extract store_id: try vinfast- prefix first, then osm- prefix
-  const storeId = station.ocmId?.startsWith('vinfast-')
-    ? station.ocmId.replace('vinfast-', '')
-    : station.ocmId?.replace('osm-', '') ?? station.id;
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      const emit = (data: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(sseEvent(data)));
+      };
 
-  // Check cache first
-  const cached = await prisma.vinFastStationDetail.findFirst({
-    where: { storeId },
-  });
+      try {
+        emit({ stage: 'connecting' });
 
-  if (cached && Date.now() - cached.fetchedAt.getTime() < CACHE_TTL_MS) {
-    return NextResponse.json({
-      detail: JSON.parse(cached.detail),
-      cached: true,
-      station: {
-        id: station.id,
-        name: station.name,
-        provider: station.provider,
-      },
-    });
-  }
+        const { entityId } = await resolveEntityId(stationId);
 
-  // Find entity_id by matching storeId in VinFast API
-  const entityId = await findEntityId(storeId);
+        if (!entityId) {
+          emit({ stage: 'error', code: 'NO_ENTITY_ID' });
+          controller.close();
+          return;
+        }
 
-  if (!entityId) {
-    // Fallback: return basic station data
-    return NextResponse.json({
-      detail: null,
-      cached: false,
-      fallback: true,
-      station: {
-        id: station.id,
-        name: station.name,
-        address: station.address,
-        provider: station.provider,
-        maxPowerKw: station.maxPowerKw,
-        connectorTypes: safeJsonArray(station.connectorTypes),
-        portCount: station.portCount,
-      },
-    });
-  }
+        if (!/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
+          emit({ stage: 'error', code: 'INVALID_ENTITY_ID' });
+          controller.close();
+          return;
+        }
 
-  // Validate entityId format before passing to external API (prevent SSRF)
-  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
-    return NextResponse.json({ detail: null, cached: false, fallback: true, station: { id: station.id, name: station.name, provider: station.provider } });
-  }
+        const detail = await fetchVinFastDetailWithProgress(
+          entityId,
+          (stage, _message, method) => emit({ stage, method }),
+          request.signal,
+        );
 
-  // Fetch fresh detail from VinFast
-  const detail = await fetchVinFastDetail(entityId);
+        if (detail) {
+          emit({ stage: 'parsing' });
 
-  if (!detail) {
-    // Cloudflare blocked or API failed — return basic data
-    return NextResponse.json({
-      detail: cached ? JSON.parse(cached.detail) : null,
-      cached: !!cached,
-      fallback: !cached,
-      station: {
-        id: station.id,
-        name: station.name,
-        address: station.address,
-        provider: station.provider,
-        maxPowerKw: station.maxPowerKw,
-        connectorTypes: safeJsonArray(station.connectorTypes),
-        portCount: station.portCount,
-      },
-    });
-  }
+          const serialized = JSON.stringify(detail);
+          if (serialized.length <= 100_000) {
+            const storeId = station.ocmId?.startsWith('vinfast-')
+              ? station.ocmId.replace('vinfast-', '')
+              : station.storeId ?? station.id;
 
-  // Guard against pathologically large responses
-  const serialized = JSON.stringify(detail);
-  if (serialized.length > 100_000) {
-    return NextResponse.json({ detail, cached: false, station: { id: station.id, name: station.name, provider: station.provider } });
-  }
+            prisma.vinFastStationDetail.upsert({
+              where: { entityId },
+              update: { storeId, detail: serialized, fetchedAt: new Date() },
+              create: { entityId, storeId, detail: serialized, fetchedAt: new Date() },
+            }).catch(() => {});
+          }
 
-  // Cache the result
-  await prisma.vinFastStationDetail.upsert({
-    where: { entityId },
-    update: {
-      storeId,
-      detail: JSON.stringify(detail),
-      fetchedAt: new Date(),
-    },
-    create: {
-      entityId,
-      storeId,
-      detail: JSON.stringify(detail),
-      fetchedAt: new Date(),
+          emit({ stage: 'done', detail, cached: false });
+        } else {
+          const storeId = station.ocmId?.startsWith('vinfast-')
+            ? station.ocmId.replace('vinfast-', '')
+            : station.storeId ?? station.id;
+
+          const cached = await prisma.vinFastStationDetail.findFirst({
+            where: { storeId },
+          });
+
+          if (cached && cached.detail !== '{}') {
+            const staleAgeMs = Date.now() - cached.fetchedAt.getTime();
+            emit({
+              stage: 'done',
+              detail: JSON.parse(cached.detail),
+              cached: true,
+              stale: true,
+              staleAgeMs,
+            });
+          } else {
+            emit({ stage: 'error', code: 'CF_BLOCKED' });
+          }
+        }
+      } catch (err) {
+        console.error('VinFast SSE stream error:', err);
+        emit({ stage: 'error', code: 'INTERNAL_ERROR' });
+      } finally {
+        controller.close();
+      }
     },
   });
 
-  return NextResponse.json({
-    detail,
-    cached: false,
-    station: {
-      id: station.id,
-      name: station.name,
-      provider: station.provider,
-    },
-  });
+  return new Response(stream, { headers: sseHeaders() });
 }
-
-/**
- * Look up VinFast entity_id from store_id via local DB mapping
- * (populated by the refresh-vinfast cron job).
- */
-async function findEntityId(storeId: string): Promise<string | null> {
-  const mapping = await prisma.vinFastStationDetail.findFirst({
-    where: { storeId },
-    select: { entityId: true },
-  });
-  return mapping?.entityId ?? null;
-}
-
