@@ -15,7 +15,7 @@ import { chromium } from 'playwright';
 const prisma = new PrismaClient();
 
 const LOCATOR_PAGE = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
-const BATCH_SIZE = 2000;
+const BATCH_SIZE = 1000;
 
 interface VinFastLocatorStation {
   readonly entity_id: string;
