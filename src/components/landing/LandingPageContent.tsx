@@ -195,6 +195,9 @@ function LandingContent() {
   return (
     <div className="min-h-screen bg-[#0A0A0B]">
       {/* ─── Navbar ─────────────────────────────────────── */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:bg-[#00D4AA] focus:text-[#0A0A0B] focus:px-4 focus:py-2">
+        Skip to main content
+      </a>
       <LandingNavbar
         locale={locale}
         onLocaleChangeAction={toggleLocale}
@@ -202,6 +205,7 @@ function LandingContent() {
       />
 
       {/* ─── Hero Section ───────────────────────────────── */}
+      <main id="main-content">
       <section className="min-h-screen flex items-center pt-16 relative overflow-hidden bg-gradient-to-b from-[#0D1B3E] via-[#081428] to-[#0A0A0B]">
         <div className="max-w-[1200px] mx-auto px-6 w-full">
           <div className="flex flex-col md:flex-row items-center gap-12 md:gap-16">
@@ -445,6 +449,8 @@ function LandingContent() {
       </section>
 
       {/* ─── Footer ─────────────────────────────────────── */}
+      </main>
+
       <footer className="bg-[#08080A] border-t border-[#1C1C1E]">
         <div className="max-w-[1200px] mx-auto px-6 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

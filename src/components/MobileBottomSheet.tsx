@@ -19,7 +19,8 @@ const SNAP_HEIGHTS: Record<SnapPoint, number> = {
 interface MobileBottomSheetProps {
   readonly children: ReactNode;
   readonly initialSnap?: SnapPoint;
-  readonly snapTo?: SnapPoint;
+  /** Set snap + increment trigger to force re-snap even to the same point */
+  readonly snapTo?: { point: SnapPoint; trigger: number };
   readonly onSwipeLeft?: () => void;
   readonly onSwipeRight?: () => void;
 }
@@ -40,10 +41,10 @@ export default function MobileBottomSheet({
 
   // Allow parent to control snap point (e.g., auto-expand on results)
   useEffect(() => {
-    if (snapTo && snapTo !== snap) {
-      setSnap(snapTo);
+    if (snapTo) {
+      setSnap(snapTo.point);
     }
-  }, [snapTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [snapTo]);
 
   const getHeightPx = useCallback((point: SnapPoint): number => {
     if (typeof window === 'undefined') return 400;

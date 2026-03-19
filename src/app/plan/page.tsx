@@ -70,7 +70,7 @@ function HomeContent() {
   const [error, setError] = useState<string | null>(null);
 
   // Auto-snap bottom sheet to half when results load
-  const [bottomSheetSnap, setBottomSheetSnap] = useState<'peek' | 'half' | 'full' | undefined>(undefined);
+  const [bottomSheetSnap, setBottomSheetSnap] = useState<{ point: 'peek' | 'half' | 'full'; trigger: number } | undefined>(undefined);
 
   // URL state sync
   const { syncToUrl } = useUrlState();
@@ -307,7 +307,7 @@ function HomeContent() {
       setTripPlan(data as TripPlan);
       // Auto-expand bottom sheet and switch to route tab to show results
       setActiveTab('route');
-      setBottomSheetSnap('half');
+      setBottomSheetSnap({ point: 'half', trigger: Date.now() });
       // Save to recent trips
       try {
         const recentTrip = {

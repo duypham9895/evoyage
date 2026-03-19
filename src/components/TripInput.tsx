@@ -139,10 +139,15 @@ function RecentTrips({ onSelect }: { readonly onSelect: (start: string, end: str
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('ev-recent-trips') ?? '[]');
-      if (Array.isArray(saved) && saved.length > 0) {
-        setTrips(saved.slice(0, 3));
+      if (!Array.isArray(saved)) return;
+      const valid = saved.filter(
+        (t: unknown): t is { start: string; end: string; vehicleName?: string | null; timestamp: number } =>
+          typeof t === 'object' && t !== null && typeof (t as Record<string, unknown>).start === 'string' && typeof (t as Record<string, unknown>).end === 'string'
+      );
+      if (valid.length > 0) {
+        setTrips(valid.slice(0, 3));
       }
-    } catch { /* ignore */ }
+    } catch { /* ignore corrupted localStorage */ }
   }, []);
 
   if (trips.length === 0) return null;

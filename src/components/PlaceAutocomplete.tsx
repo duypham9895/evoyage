@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { searchPlaces, type NominatimResult } from '@/lib/nominatim';
 
 interface PlaceAutocompleteProps {
@@ -22,6 +22,7 @@ export default function PlaceAutocomplete({
   label,
   showGpsButton = false,
 }: PlaceAutocompleteProps) {
+  const listboxId = useId();
   const [suggestions, setSuggestions] = useState<readonly NominatimResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -186,7 +187,7 @@ export default function PlaceAutocomplete({
           role="combobox"
           aria-expanded={isOpen}
           aria-autocomplete="list"
-          aria-controls="autocomplete-list"
+          aria-controls={listboxId}
           className="w-full px-3 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
         />
         {isLoading && (
@@ -199,7 +200,7 @@ export default function PlaceAutocomplete({
             type="button"
             onClick={handleUseMyLocation}
             disabled={isLocating}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors rounded-lg"
             aria-label="Use my current location"
           >
             {isLocating ? (
@@ -218,7 +219,7 @@ export default function PlaceAutocomplete({
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul id="autocomplete-list" role="listbox" className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto">
+        <ul id={listboxId} role="listbox" className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto">
           {suggestions.map((result, index) => (
             <li key={result.placeId} role="option" aria-selected={index === activeIndex}>
               <button

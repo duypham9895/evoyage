@@ -304,6 +304,11 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
   // Escape key closes modal + focus trap
   useEffect(() => {
     if (modalState === 'closed') return;
+    // Move focus into modal on open
+    requestAnimationFrame(() => {
+      const firstBtn = modalContentRef.current?.querySelector<HTMLElement>('button');
+      firstBtn?.focus();
+    });
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { handleCloseModal(); return; }
       if (e.key === 'Tab' && modalContentRef.current) {
