@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useLocale } from '@/lib/locale';
-import type { TripPlan, RankedStation } from '@/types';
-import StationInfoChips from './StationInfoChips';
+import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import StationDetailExpander from './StationDetailExpander';
 
 interface TripSummaryProps {
@@ -11,6 +10,154 @@ interface TripSummaryProps {
   readonly isLoading: boolean;
   readonly onSelectAlternativeStation?: (stopIndex: number, station: RankedStation) => void;
 }
+
+// ── Battery color helpers ──
+
+function getBatteryColor(percent: number): string {
+  if (percent > 40) return 'text-[var(--color-safe)]';
+  if (percent > 20) return 'text-[var(--color-warn)]';
+  return 'text-[var(--color-danger)]';
+}
+
+function getGaugeGradient(arrivalPercent: number): string {
+  if (arrivalPercent > 40) return 'from-[var(--color-safe)]/70 to-[var(--color-safe)]';
+  if (arrivalPercent > 20) return 'from-[var(--color-warn)] to-[var(--color-safe)]';
+  return 'from-[var(--color-danger)] to-[var(--color-safe)]';
+}
+
+// ── Status helpers ──
+
+type StatusKey = 'ACTIVE' | 'BUSY' | 'UNAVAILABLE' | 'INACTIVE';
+
+const STATUS_DOT_COLOR: Record<StatusKey, string> = {
+  ACTIVE: 'bg-[var(--color-safe)]',
+  BUSY: 'bg-[var(--color-warn)]',
+  UNAVAILABLE: 'bg-[var(--color-danger)]',
+  INACTIVE: 'bg-[var(--color-muted)]',
+};
+
+const STATUS_TEXT_COLOR: Record<StatusKey, string> = {
+  ACTIVE: 'text-[var(--color-safe)]',
+  BUSY: 'text-[var(--color-warn)]',
+  UNAVAILABLE: 'text-[var(--color-danger)]',
+  INACTIVE: 'text-[var(--color-muted)]',
+};
+
+const STATUS_LOCALE_KEY: Record<StatusKey, string> = {
+  ACTIVE: 'station_status_active',
+  BUSY: 'station_status_busy',
+  UNAVAILABLE: 'station_status_unavailable',
+  INACTIVE: 'station_status_inactive',
+};
+
+function isStatusKey(val: string): val is StatusKey {
+  return val in STATUS_DOT_COLOR;
+}
+
+// ── BatteryGauge ──
+
+function BatteryGauge({
+  arrivalPercent,
+  departurePercent,
+  chargeTimeMin,
+}: {
+  readonly arrivalPercent: number;
+  readonly departurePercent: number;
+  readonly chargeTimeMin: number;
+}) {
+  const arrival = Math.round(arrivalPercent);
+  const departure = Math.round(departurePercent);
+  const gradient = getGaugeGradient(arrival);
+
+  return (
+    <div className="flex items-center gap-3 mt-2">
+      {/* Progress bar */}
+      <div
+        className="flex-1 h-2 rounded-full bg-[var(--color-surface-hover)] overflow-hidden relative"
+        role="meter"
+        aria-valuenow={arrival}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Battery: ${arrival}% to ${departure}%`}
+      >
+        <div
+          className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${gradient}`}
+          style={{ width: `${departure}%` }}
+        />
+        <div
+          className="absolute inset-y-0 w-0.5 bg-[var(--color-foreground)]/40"
+          style={{ left: `${arrival}%` }}
+        />
+      </div>
+      {/* Battery text */}
+      <div className="flex items-center gap-1.5 text-sm font-bold font-[family-name:var(--font-mono)] shrink-0">
+        <span className={getBatteryColor(arrival)}>{arrival}%</span>
+        <span className="text-[var(--color-muted)] text-xs font-normal">→</span>
+        <span className="text-[var(--color-safe)]">{departure}%</span>
+      </div>
+      {/* Charge time */}
+      <span className="text-sm font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)] shrink-0">
+        ~{Math.round(chargeTimeMin)}m
+      </span>
+    </div>
+  );
+}
+
+// ── QuickStats (replaces StationInfoChips in card context) ──
+
+function QuickStats({
+  station,
+  navigateUrl,
+  navigateLabel,
+}: {
+  readonly station: ChargingStationData;
+  readonly navigateUrl: string;
+  readonly navigateLabel: string;
+}) {
+  const { t } = useLocale();
+  const normalizedStatus = station.chargingStatus?.toUpperCase() ?? null;
+  const statusKey = normalizedStatus && isStatusKey(normalizedStatus) ? normalizedStatus : null;
+
+  return (
+    <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center gap-1.5 text-xs">
+        {/* Power */}
+        <span className="font-semibold font-[family-name:var(--font-mono)] text-[var(--color-accent)]">
+          {station.maxPowerKw} kW
+        </span>
+        <span className="text-[var(--color-muted)]">·</span>
+        {/* Connector */}
+        <span className="text-[var(--color-muted)]">
+          {station.connectorTypes[0] ?? 'DC'}
+        </span>
+        {/* Status dot */}
+        {statusKey && (
+          <>
+            <span className="text-[var(--color-muted)]">·</span>
+            <span className="inline-flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${STATUS_DOT_COLOR[statusKey]}`} aria-hidden="true" />
+              <span className={`${STATUS_TEXT_COLOR[statusKey]}`}>
+                {t(STATUS_LOCALE_KEY[statusKey] as Parameters<typeof t>[0])}
+              </span>
+            </span>
+          </>
+        )}
+      </div>
+      {/* Navigate CTA */}
+      <a
+        href={navigateUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`${navigateLabel} ${station.name}`}
+        className="text-xs px-3 py-1 min-h-[32px] flex items-center rounded-full bg-[var(--color-accent)] text-[var(--color-background)] font-semibold hover:opacity-90 transition-opacity"
+      >
+        {navigateLabel}
+      </a>
+    </div>
+  );
+}
+
+// ── Main Component ──
 
 export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeStation }: TripSummaryProps) {
   const { t, tBi } = useLocale();
@@ -61,49 +208,37 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
         {/* Key stats */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <div className="text-xs text-[var(--color-muted)]">
-              {t('distance')}
-            </div>
+            <div className="text-xs text-[var(--color-muted)]">{t('distance')}</div>
             <div className="text-xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
               {tripPlan.totalDistanceKm} km
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--color-muted)]">
-              {t('total_time')}
-            </div>
+            <div className="text-xs text-[var(--color-muted)]">{t('total_time')}</div>
             <div className="text-xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
               {hours}h{minutes > 0 ? `${minutes}m` : ''}
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--color-muted)]">
-              {t('driving')}
-            </div>
+            <div className="text-xs text-[var(--color-muted)]">{t('driving')}</div>
             <div className="text-sm font-[family-name:var(--font-mono)]">
               {driveHours}h{driveMinutes > 0 ? `${driveMinutes}m` : ''}
             </div>
           </div>
           <div>
-            <div className="text-xs text-[var(--color-muted)]">
-              {t('charging')}
-            </div>
+            <div className="text-xs text-[var(--color-muted)]">{t('charging')}</div>
             <div className="text-sm font-[family-name:var(--font-mono)]">
-              {tripPlan.totalChargingTimeMin}m ({tripPlan.chargingStops.length}{' '}
-              {t('stops')})
+              {tripPlan.totalChargingTimeMin}m ({tripPlan.chargingStops.length} {t('stops')})
             </div>
           </div>
         </div>
 
         {/* Battery journey bar */}
         <div>
-          <div className="text-xs text-[var(--color-muted)] mb-2">
-            {t('battery_journey')}
-          </div>
+          <div className="text-xs text-[var(--color-muted)] mb-2">{t('battery_journey')}</div>
           <div className="flex h-7 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
             {tripPlan.batterySegments.map((seg, i) => {
-              const widthPercent =
-                ((seg.endKm - seg.startKm) / tripPlan.totalDistanceKm) * 100;
+              const widthPercent = ((seg.endKm - seg.startKm) / tripPlan.totalDistanceKm) * 100;
               const avgBattery = (seg.startBatteryPercent + seg.endBatteryPercent) / 2;
               const color =
                 avgBattery > 50
@@ -125,13 +260,8 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
             })}
           </div>
           <div className="flex justify-between text-[10px] text-[var(--color-muted)] mt-1">
-            <span>
-              {t('start')}{' '}
-              {tripPlan.batterySegments[0]?.startBatteryPercent}%
-            </span>
-            <span>
-              {t('arrive')} {tripPlan.arrivalBatteryPercent}%
-            </span>
+            <span>{t('start')} {tripPlan.batterySegments[0]?.startBatteryPercent}%</span>
+            <span>{t('arrive')} {tripPlan.arrivalBatteryPercent}%</span>
           </div>
         </div>
 
@@ -144,10 +274,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
 
         {/* Warnings */}
         {tripPlan.warnings.map((w, i) => (
-          <div
-            key={i}
-            className="p-3 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-lg text-sm"
-          >
+          <div key={i} className="p-3 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-lg text-sm">
             {tBi(w)}
           </div>
         ))}
@@ -160,7 +287,6 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
             {t('charging_stops')}
           </h3>
           {tripPlan.chargingStops.map((stop, i) => {
-            // Support both old ChargingStop and new ChargingStopWithAlternatives
             const hasAlternatives = 'selected' in stop;
             const station = hasAlternatives ? stop.selected.station : stop.station;
             const arrivalBattery = hasAlternatives ? stop.batteryPercentAtArrival : stop.arrivalBatteryPercent;
@@ -181,112 +307,167 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
               : rank === 'slow' ? 'text-[var(--color-danger)] bg-[var(--color-danger)]/10'
               : '';
 
+            const navigateUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
+
             return (
-              <div key={i} className="bg-[var(--color-surface)] rounded-lg border border-[var(--color-surface-hover)] overflow-hidden">
-                <div className="p-3">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-bold flex items-center justify-center">
+              <article
+                key={i}
+                aria-label={`${t('charging_stops')} ${i + 1}: ${station.name}`}
+                className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-surface-hover)] overflow-hidden transition-colors hover:border-[var(--color-accent-dim)]/40"
+              >
+                {/* Collapsed card body — tappable to expand */}
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(i)}
+                  className="w-full p-3 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] rounded-t-xl"
+                >
+                  {/* Header: number + name + rank + distance */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-bold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
-                      <span className="text-sm font-semibold">{station.name}</span>
+                      <span className="text-sm font-semibold truncate">{station.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {rankLabel && (
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${rankColor}`}>
+                        <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${rankColor}`}>
                           {rankLabel}
                         </span>
                       )}
-                      <span className="text-xs text-[var(--color-muted)]">
+                      <span className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
                         {Math.round(distanceKm)} km
                       </span>
                     </div>
                   </div>
-                  <div className="ml-8 space-y-1">
-                    <div className="text-xs text-[var(--color-muted)]">
-                      {station.address}
+
+                  {/* Address */}
+                  <div className="text-xs text-[var(--color-muted)] truncate mt-1 ml-8">
+                    {station.address}
+                  </div>
+
+                  {/* Battery gauge */}
+                  <div className="ml-8">
+                    <BatteryGauge
+                      arrivalPercent={arrivalBattery}
+                      departurePercent={departureBattery}
+                      chargeTimeMin={chargeTime}
+                    />
+                  </div>
+                </button>
+
+                {/* QuickStats row — always visible, not inside the expand button */}
+                <div className="px-3 pb-3 ml-8">
+                  <QuickStats
+                    station={station}
+                    navigateUrl={navigateUrl}
+                    navigateLabel={t('navigate')}
+                  />
+                </div>
+
+                {/* Expanded section */}
+                <div
+                  className={`overflow-hidden transition-all duration-200 ease-out ${
+                    isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="border-t border-[var(--color-surface-hover)] p-3 space-y-2">
+                    {/* Detail stats: detour, total, ports, hours, parking */}
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-muted)]">
+                      {hasAlternatives && stop.selected.detourDriveTimeSec > 0 && (
+                        <span>
+                          {t('stations_detour', { time: String(Math.round(stop.selected.detourDriveTimeSec * 2 / 60)) })}
+                        </span>
+                      )}
+                      {hasAlternatives && (
+                        <span>
+                          {t('stations_total_time', { time: String(Math.round(stop.selected.totalStopTimeMin)) })}
+                        </span>
+                      )}
+                      <span>{t('station_ports', { count: String(station.portCount) })}</span>
+                      {station.operatingHours !== null && (
+                        <span>{station.operatingHours === '24/7' ? t('station_hours_24h') : station.operatingHours}</span>
+                      )}
+                      {station.parkingFee !== null && (
+                        <span className={station.parkingFee ? 'text-[var(--color-warn)]' : 'text-[var(--color-safe)]'}>
+                          {station.parkingFee ? t('station_parking_paid') : t('station_parking_free')}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="font-[family-name:var(--font-mono)] text-[var(--color-danger)]">
-                        {Math.round(arrivalBattery)}%
-                      </span>
-                      <span className="text-[var(--color-muted)]">→</span>
-                      <span className="font-[family-name:var(--font-mono)] text-[var(--color-safe)]">
-                        {Math.round(departureBattery)}%
-                      </span>
-                      <span className="text-[var(--color-muted)]">
-                        ~{Math.round(chargeTime)}min
-                      </span>
-                    </div>
-                    {hasAlternatives && stop.selected.detourDriveTimeSec > 0 && (
-                      <div className="text-xs text-[var(--color-muted)]">
-                        {t('stations_detour', { time: String(Math.round(stop.selected.detourDriveTimeSec * 2 / 60)) })}
-                        {' · '}
-                        {t('stations_total_time', { time: String(Math.round(stop.selected.totalStopTimeMin)) })}
+
+                    {/* Station detail expander */}
+                    <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
+
+                    {/* Alternatives */}
+                    {alternatives.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                          {t('stations_view_alternatives', { count: String(alternatives.length) })}
+                        </div>
+                        <div className="rounded-lg overflow-hidden border border-[var(--color-surface-hover)]" role="listbox">
+                          {alternatives.map((alt, j) => {
+                            const altRankLabel = alt.rank === 'best' ? t('stations_best')
+                              : alt.rank === 'ok' ? t('stations_ok')
+                              : t('stations_slow');
+                            const altRankColor = alt.rank === 'best'
+                              ? 'text-[var(--color-safe)] bg-[var(--color-safe)]/10'
+                              : alt.rank === 'ok'
+                                ? 'text-[var(--color-warn)] bg-[var(--color-warn)]/10'
+                                : 'text-[var(--color-danger)] bg-[var(--color-danger)]/10';
+
+                            const detourMin = Math.round(alt.detourDriveTimeSec * 2 / 60);
+
+                            return (
+                              <button
+                                key={j}
+                                role="option"
+                                aria-selected={false}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSelectAlternativeStation?.(i, alt);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2.5 min-h-[48px] hover:bg-[var(--color-surface-hover)] transition-colors border-b border-[var(--color-surface-hover)] last:border-b-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-accent)]"
+                              >
+                                <span className="text-xs font-medium truncate min-w-0 flex-1 text-left">
+                                  {alt.station.name}
+                                </span>
+                                <div className="flex items-center gap-3 shrink-0 text-xs ml-2">
+                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${altRankColor}`}>
+                                    {altRankLabel}
+                                  </span>
+                                  {detourMin > 0 && (
+                                    <span className="text-[var(--color-warn)] font-[family-name:var(--font-mono)] w-10 text-right">
+                                      +{detourMin}m
+                                    </span>
+                                  )}
+                                  <span className="text-[var(--color-muted)] font-[family-name:var(--font-mono)] w-12 text-right">
+                                    {alt.station.maxPowerKw}kW
+                                  </span>
+                                  <span className="text-[var(--color-muted)] font-[family-name:var(--font-mono)] w-10 text-right">
+                                    {Math.round(alt.estimatedChargeTimeMin)}m
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
-                    <StationInfoChips station={station} />
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-accent)] text-[var(--color-background)] font-semibold hover:opacity-90 transition-opacity shrink-0"
-                      >
-                        {t('navigate')}
-                      </a>
-                      <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
-                    </div>
                   </div>
                 </div>
 
-                {/* Expandable alternatives */}
-                {alternatives.length > 0 && (
-                  <>
-                    <button
-                      onClick={() => toggleExpanded(i)}
-                      className="w-full px-3 py-2 text-xs text-[var(--color-accent)] hover:bg-[var(--color-surface-hover)] transition-colors border-t border-[var(--color-surface-hover)] flex items-center justify-center gap-1"
-                    >
-                      <span>{isExpanded ? '▲' : '▼'}</span>
-                      <span>{t('stations_view_alternatives', { count: String(alternatives.length) })}</span>
-                    </button>
-                    {isExpanded && (
-                      <div className="border-t border-[var(--color-surface-hover)]">
-                        {alternatives.map((alt, j) => {
-                          const altRankLabel = alt.rank === 'ok' ? t('stations_ok') : t('stations_slow');
-                          const altRankColor = alt.rank === 'ok'
-                            ? 'text-[var(--color-warn)] bg-[var(--color-warn)]/10'
-                            : 'text-[var(--color-danger)] bg-[var(--color-danger)]/10';
-
-                          return (
-                            <button
-                              key={j}
-                              onClick={() => onSelectAlternativeStation?.(i, alt)}
-                              className="w-full p-3 text-left hover:bg-[var(--color-surface-hover)] transition-colors border-b border-[var(--color-surface-hover)] last:border-b-0"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm">{alt.station.name}</span>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${altRankColor}`}>
-                                  {altRankLabel}
-                                </span>
-                              </div>
-                              <div className="text-xs text-[var(--color-muted)] mt-1">
-                                {t('stations_detour', { time: String(Math.round(alt.detourDriveTimeSec * 2 / 60)) })}
-                                {' · '}
-                                {alt.station.connectorTypes.join(', ')}
-                                {' · '}
-                                {alt.station.maxPowerKw}kW
-                                {' · '}
-                                {t('stations_total_time', { time: String(Math.round(alt.totalStopTimeMin)) })}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+                {/* Expand indicator */}
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(i)}
+                  className="w-full py-1.5 text-center border-t border-[var(--color-surface-hover)]"
+                  aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
+                >
+                  <span className="text-[10px] text-[var(--color-muted)]">
+                    {isExpanded ? '▲' : '▼'}
+                  </span>
+                </button>
+              </article>
             );
           })}
         </div>

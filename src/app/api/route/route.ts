@@ -300,6 +300,13 @@ export async function POST(request: NextRequest) {
       parkingFee: s.parkingFee ?? null,
     }));
 
+    // Filter out stations that are unavailable or inactive
+    const EXCLUDED_STATUSES = new Set(['UNAVAILABLE', 'INACTIVE']);
+    const availableStations = stations.filter((s) => {
+      const status = s.chargingStatus?.toUpperCase();
+      return !status || !EXCLUDED_STATUSES.has(status);
+    });
+
     // Smart station ranking: corridor scoring + Matrix API fallback
     let rankedStationsPerStop: ReadonlyMap<number, readonly RankedStation[]> | undefined;
     const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
@@ -311,11 +318,11 @@ export async function POST(request: NextRequest) {
       currentBatteryPercent,
       minArrivalPercent,
       rangeSafetyFactor,
-      stations,
+      stations: availableStations,
     };
 
     // Pre-compute decision points once (shared between ranking and planning)
-    const decisionPoints = stations.length > 0
+    const decisionPoints = availableStations.length > 0
       ? findChargingDecisionPoints(planInput)
       : [];
 
@@ -396,7 +403,7 @@ export async function POST(request: NextRequest) {
       currentBatteryPercent,
       minArrivalPercent,
       rangeSafetyFactor,
-      stations,
+      stations: availableStations,
       rankedStationsPerStop,
       precomputedDecisionPoints: decisionPoints,
     });

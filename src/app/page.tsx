@@ -17,6 +17,7 @@ import ShareButton from '@/components/ShareButton';
 import MobileBottomSheet from '@/components/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/MobileTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
+import type { RankedStation, ChargingStopWithAlternatives } from '@/types';
 import type { NominatimResult } from '@/lib/nominatim';
 import type { WaypointData } from '@/components/WaypointInput';
 import {
@@ -226,6 +227,35 @@ function HomeContent() {
     }
   }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode]);
 
+  // Handle alternative station selection: swap selected ↔ clicked alternative immutably
+  const handleSelectAlternativeStation = useCallback(
+    (stopIndex: number, station: RankedStation) => {
+      setTripPlan((prev) => {
+        if (!prev) return prev;
+        const stop = prev.chargingStops[stopIndex] as ChargingStopWithAlternatives | undefined;
+        if (!stop || !('selected' in stop)) return prev;
+
+        const updatedStop: ChargingStopWithAlternatives = {
+          selected: station,
+          alternatives: [
+            ...stop.alternatives.filter((alt) => alt.station.id !== station.station.id),
+            stop.selected,
+          ],
+          distanceAlongRouteKm: stop.distanceAlongRouteKm,
+          batteryPercentAtArrival: stop.batteryPercentAtArrival,
+          batteryPercentAfterCharge: stop.batteryPercentAfterCharge,
+        };
+
+        const updatedStops = prev.chargingStops.map((s, i) =>
+          i === stopIndex ? updatedStop : s,
+        );
+
+        return { ...prev, chargingStops: updatedStops };
+      });
+    },
+    [],
+  );
+
   const activeVehicle = selectedVehicle ?? customVehicle;
   const canPlan = Boolean(start && end && activeVehicle && !isPlanning);
 
@@ -319,7 +349,7 @@ function HomeContent() {
                   isLoopTrip={isLoopTrip}
                   onToggleLoop={handleToggleLoop}
                 />
-                {tripPlan && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />}
+                {tripPlan && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />}
               </>
             )}
 
@@ -407,7 +437,7 @@ function HomeContent() {
           {errorDisplay}
 
           {/* Trip results */}
-          <TripSummary tripPlan={tripPlan} isLoading={isPlanning} />
+          <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
         </aside>
 
         {/* Map pane */}
