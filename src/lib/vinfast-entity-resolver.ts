@@ -3,9 +3,16 @@ import { prisma } from '@/lib/prisma';
 const FINALDIVISION_URL = 'https://api.service.finaldivision.com/stations/charging-stations';
 const FINALDIVISION_CACHE_TTL_MS = 60 * 60 * 1000;
 
-interface FinalDivisionStation {
+export interface FinalDivisionStation {
   readonly entity_id: string;
   readonly store_id: string;
+  readonly name: string;
+  readonly address: string;
+  readonly lat: string;
+  readonly lng: string;
+  readonly charging_status: string;
+  readonly access_type: string;
+  readonly parking_fee: boolean;
 }
 
 let cachedStations: readonly FinalDivisionStation[] | null = null;
@@ -29,6 +36,21 @@ async function fetchFinalDivisionList(): Promise<readonly FinalDivisionStation[]
   cachedStations = data;
   cachedAt = Date.now();
   return data;
+}
+
+/**
+ * Find a station from the finaldivision list by store_id.
+ * Returns real-time metadata (charging_status, access_type, etc.).
+ */
+export async function findFinalDivisionStation(
+  storeId: string,
+): Promise<FinalDivisionStation | null> {
+  try {
+    const stations = await fetchFinalDivisionList();
+    return stations.find((s) => s.store_id === storeId) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function resolveEntityId(stationId: string): Promise<{

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { fetchVinFastDetailWithProgress } from '@/lib/vinfast-client';
-import { resolveEntityId } from '@/lib/vinfast-entity-resolver';
+import { resolveEntityId, findFinalDivisionStation } from '@/lib/vinfast-entity-resolver';
 
 export const maxDuration = 25;
 export const dynamic = 'force-dynamic';
@@ -60,6 +60,10 @@ export async function GET(
     );
   }
 
+  const storeId = station.ocmId?.startsWith('vinfast-')
+    ? station.ocmId.replace('vinfast-', '')
+    : station.storeId ?? station.id;
+
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
@@ -84,6 +88,22 @@ export async function GET(
           return;
         }
 
+        // Tier 0: Check DB cache first — skip scraping if fresh enough
+        const CACHE_FRESH_MS = 24 * 60 * 60 * 1000; // 24 hours
+        const cached = await prisma.vinFastStationDetail.findFirst({
+          where: { storeId },
+        });
+
+        if (cached && cached.detail !== '{}') {
+          const ageMs = Date.now() - cached.fetchedAt.getTime();
+          if (ageMs < CACHE_FRESH_MS) {
+            emit({ stage: 'done', detail: JSON.parse(cached.detail), cached: true });
+            controller.close();
+            return;
+          }
+        }
+
+        // Tier 1–2: Try scraping (impit → Playwright)
         const detail = await fetchVinFastDetailWithProgress(
           entityId,
           (stage, _message, method) => emit({ stage, method }),
@@ -95,10 +115,6 @@ export async function GET(
 
           const serialized = JSON.stringify(detail);
           if (serialized.length <= 100_000) {
-            const storeId = station.ocmId?.startsWith('vinfast-')
-              ? station.ocmId.replace('vinfast-', '')
-              : station.storeId ?? station.id;
-
             prisma.vinFastStationDetail.upsert({
               where: { entityId },
               update: { storeId, detail: serialized, fetchedAt: new Date() },
@@ -107,73 +123,73 @@ export async function GET(
           }
 
           emit({ stage: 'done', detail, cached: false });
-        } else {
-          const storeId = station.ocmId?.startsWith('vinfast-')
-            ? station.ocmId.replace('vinfast-', '')
-            : station.storeId ?? station.id;
-
-          const cached = await prisma.vinFastStationDetail.findFirst({
-            where: { storeId },
-          });
-
-          if (cached && cached.detail !== '{}') {
-            const staleAgeMs = Date.now() - cached.fetchedAt.getTime();
-            emit({
-              stage: 'done',
-              detail: JSON.parse(cached.detail),
-              cached: true,
-              stale: true,
-              staleAgeMs,
-            });
-          } else {
-            // Last resort: build minimal detail from station DB fields
-            const statusMap: Record<string, string> = {
-              ACTIVE: 'Available',
-              BUSY: 'Busy',
-              UNAVAILABLE: 'Unavailable',
-              INACTIVE: 'Inactive',
-              OUTOFSERVICE: 'Out of service',
-            };
-
-            const connectorSummary = (() => {
-              try {
-                return station.connectorTypes ? JSON.parse(station.connectorTypes) as string[] : [];
-              } catch {
-                return [];
-              }
-            })();
-
-            const basicDetail = {
-              entityId: entityId,
-              storeId: storeId,
-              name: station.name,
-              address: station.address,
-              province: '',
-              district: '',
-              commune: '',
-              latitude: station.latitude,
-              longitude: station.longitude,
-              evses: [],
-              images: [],
-              depotStatus: statusMap[station.chargingStatus ?? ''] ?? 'unknown',
-              is24h: false,
-              chargingWhenClosed: false,
-              parkingFee: station.parkingFee ?? false,
-              accessType: station.accessType ?? 'Public',
-              hardwareStations: [],
-              connectorSummary,
-              maxPowerKw: station.maxPowerKw,
-              portCount: station.portCount,
-              fetchedAt: new Date().toISOString(),
-            };
-            emit({
-              stage: 'done',
-              detail: basicDetail,
-              cached: false,
-              basic: true,
-            });
-          }
+          return;
         }
+
+        // Tier 3: Merge stale cache with real-time finaldivision data
+        emit({ stage: 'enriching', method: 'finaldivision' });
+        const fdStation = await findFinalDivisionStation(storeId);
+
+        const STATUS_MAP: Record<string, string> = {
+          ACTIVE: 'Available',
+          BUSY: 'Busy',
+          UNAVAILABLE: 'Unavailable',
+          INACTIVE: 'Inactive',
+          OUTOFSERVICE: 'Out of service',
+        };
+
+        if (cached && cached.detail !== '{}') {
+          // Stale cache exists — overlay real-time status from finaldivision
+          const cachedDetail = JSON.parse(cached.detail) as Record<string, unknown>;
+          if (fdStation) {
+            cachedDetail.depotStatus = STATUS_MAP[fdStation.charging_status] ?? cachedDetail.depotStatus;
+            cachedDetail.parkingFee = fdStation.parking_fee;
+            cachedDetail.accessType = fdStation.access_type ?? cachedDetail.accessType;
+          }
+          cachedDetail.fetchedAt = new Date().toISOString();
+
+          const staleAgeMs = Date.now() - cached.fetchedAt.getTime();
+          emit({ stage: 'done', detail: cachedDetail, cached: true, stale: true, staleAgeMs });
+          return;
+        }
+
+        // Tier 4: Build from DB + finaldivision metadata
+        const connectorSummary = (() => {
+          try {
+            return station.connectorTypes ? JSON.parse(station.connectorTypes) as string[] : [];
+          } catch {
+            return [];
+          }
+        })();
+
+        const liveStatus = fdStation
+          ? STATUS_MAP[fdStation.charging_status] ?? 'unknown'
+          : STATUS_MAP[station.chargingStatus ?? ''] ?? 'unknown';
+
+        const basicDetail = {
+          entityId,
+          storeId,
+          name: fdStation?.name ?? station.name,
+          address: fdStation?.address ?? station.address,
+          province: '',
+          district: '',
+          commune: '',
+          latitude: fdStation ? parseFloat(fdStation.lat) : station.latitude,
+          longitude: fdStation ? parseFloat(fdStation.lng) : station.longitude,
+          evses: [],
+          images: [],
+          depotStatus: liveStatus,
+          is24h: false,
+          chargingWhenClosed: false,
+          parkingFee: fdStation?.parking_fee ?? station.parkingFee ?? false,
+          accessType: fdStation?.access_type ?? station.accessType ?? 'Public',
+          hardwareStations: [],
+          connectorSummary,
+          maxPowerKw: station.maxPowerKw,
+          portCount: station.portCount,
+          fetchedAt: new Date().toISOString(),
+        };
+        emit({ stage: 'done', detail: basicDetail, cached: false, basic: true });
       } catch (err) {
         console.error('VinFast SSE stream error:', err);
         emit({ stage: 'error', code: 'INTERNAL_ERROR' });
