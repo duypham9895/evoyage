@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useLocale } from '@/lib/locale';
 import PlaceAutocomplete from './PlaceAutocomplete';
 import WaypointInput from './WaypointInput';
@@ -123,6 +123,48 @@ export default function TripInput({
             placeholder={t('destination_placeholder')}
           />
         )}
+      </div>
+
+      {/* Recent trips — show when both inputs are empty */}
+      {!start && !end && <RecentTrips onSelect={(s, e) => { onStartChange(s); onEndChange(e); }} />}
+    </div>
+  );
+}
+
+/** Recent trips saved in localStorage */
+function RecentTrips({ onSelect }: { readonly onSelect: (start: string, end: string) => void }) {
+  const { t } = useLocale();
+  const [trips, setTrips] = useState<readonly { start: string; end: string; vehicleName?: string | null; timestamp: number }[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('ev-recent-trips') ?? '[]');
+      if (Array.isArray(saved) && saved.length > 0) {
+        setTrips(saved.slice(0, 3));
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  if (trips.length === 0) return null;
+
+  return (
+    <div className="mt-3">
+      <div className="text-xs text-[var(--color-muted)] mb-2">{t('recent_trips' as Parameters<typeof t>[0])}</div>
+      <div className="space-y-1.5">
+        {trips.map((trip, i) => (
+          <button
+            key={i}
+            onClick={() => onSelect(trip.start, trip.end)}
+            className="w-full text-left px-3 py-2.5 rounded-lg bg-[var(--color-background)] border border-[var(--color-surface-hover)] hover:border-[var(--color-accent)]/30 transition-colors"
+          >
+            <div className="text-sm truncate">
+              {trip.start.split(',')[0]} → {trip.end.split(',')[0]}
+            </div>
+            {trip.vehicleName && (
+              <div className="text-xs text-[var(--color-muted)] mt-0.5">{trip.vehicleName}</div>
+            )}
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -65,6 +65,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const lastParamsRef = useRef<string>('');
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
 
   // Show button after trip plan loads
   useEffect(() => {
@@ -300,10 +301,27 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
     setImageUrl(null);
   }, [imageUrl]);
 
-  // Escape key closes modal
+  // Escape key closes modal + focus trap
   useEffect(() => {
     if (modalState === 'closed') return;
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') handleCloseModal(); };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { handleCloseModal(); return; }
+      if (e.key === 'Tab' && modalContentRef.current) {
+        const focusable = modalContentRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [modalState, handleCloseModal]);
@@ -422,7 +440,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
           onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal(); }}
           role="dialog" aria-modal="true" aria-label="Share trip"
         >
-          <div className="bg-[var(--color-surface)] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div ref={modalContentRef} className="bg-[var(--color-surface)] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
             {/* Close button */}
             <button
               onClick={handleCloseModal}

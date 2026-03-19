@@ -25,6 +25,12 @@ export const metadata: Metadata = {
   title: 'EVoyage — Plan your EV road trip',
   description:
     'Plan your EV road trip with accurate range calculations, smart charging stops, and the 80% real-world range rule.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'eVoyage',
+  },
 };
 
 export const viewport: Viewport = {

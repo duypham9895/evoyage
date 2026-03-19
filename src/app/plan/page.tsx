@@ -69,6 +69,9 @@ function HomeContent() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Auto-snap bottom sheet to half when results load
+  const [bottomSheetSnap, setBottomSheetSnap] = useState<'peek' | 'half' | 'full' | undefined>(undefined);
+
   // URL state sync
   const { syncToUrl } = useUrlState();
   const urlInitialized = useRef(false);
@@ -302,6 +305,21 @@ function HomeContent() {
       }
 
       setTripPlan(data as TripPlan);
+      // Auto-expand bottom sheet and switch to route tab to show results
+      setActiveTab('route');
+      setBottomSheetSnap('half');
+      // Save to recent trips
+      try {
+        const recentTrip = {
+          start, end, startCoords, endCoords,
+          vehicleId: selectedVehicle?.id ?? null,
+          vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : null,
+          timestamp: Date.now(),
+        };
+        const saved = JSON.parse(localStorage.getItem('ev-recent-trips') ?? '[]');
+        const updated = [recentTrip, ...saved.filter((t: { start: string; end: string }) => t.start !== start || t.end !== end)].slice(0, 5);
+        localStorage.setItem('ev-recent-trips', JSON.stringify(updated));
+      } catch { /* localStorage unavailable */ }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
@@ -416,6 +434,7 @@ function HomeContent() {
         {/* Bottom sheet with tabbed controls */}
         <MobileBottomSheet
           initialSnap="half"
+          snapTo={bottomSheetSnap}
           onSwipeLeft={handleSwipeLeft}
           onSwipeRight={handleSwipeRight}
         >

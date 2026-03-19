@@ -183,6 +183,10 @@ export default function PlaceAutocomplete({
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-autocomplete="list"
+          aria-controls="autocomplete-list"
           className="w-full px-3 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
         />
         {isLoading && (
@@ -214,9 +218,9 @@ export default function PlaceAutocomplete({
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto">
+        <ul id="autocomplete-list" role="listbox" className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto">
           {suggestions.map((result, index) => (
-            <li key={result.placeId}>
+            <li key={result.placeId} role="option" aria-selected={index === activeIndex}>
               <button
                 type="button"
                 onClick={() => handleSelectSuggestion(result)}

@@ -19,6 +19,7 @@ const SNAP_HEIGHTS: Record<SnapPoint, number> = {
 interface MobileBottomSheetProps {
   readonly children: ReactNode;
   readonly initialSnap?: SnapPoint;
+  readonly snapTo?: SnapPoint;
   readonly onSwipeLeft?: () => void;
   readonly onSwipeRight?: () => void;
 }
@@ -26,6 +27,7 @@ interface MobileBottomSheetProps {
 export default function MobileBottomSheet({
   children,
   initialSnap = 'half',
+  snapTo,
   onSwipeLeft,
   onSwipeRight,
 }: MobileBottomSheetProps) {
@@ -35,6 +37,13 @@ export default function MobileBottomSheet({
   const startYRef = useRef(0);
   const startHeightRef = useRef(0);
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Allow parent to control snap point (e.g., auto-expand on results)
+  useEffect(() => {
+    if (snapTo && snapTo !== snap) {
+      setSnap(snapTo);
+    }
+  }, [snapTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getHeightPx = useCallback((point: SnapPoint): number => {
     if (typeof window === 'undefined') return 400;
