@@ -203,8 +203,6 @@ export default function StationDetailExpander({
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
-  if (stationProvider !== 'VinFast') return null;
-
   useEffect(() => {
     return () => { abortRef.current?.abort(); };
   }, []);
@@ -219,6 +217,8 @@ export default function StationDetailExpander({
     }, 1000);
     return () => clearInterval(timer);
   }, [cooldownRemaining]);
+
+  if (stationProvider !== 'VinFast') return null;
 
   const isStreaming = stage === 'connecting' || stage === 'fetching' || stage === 'retrying' || stage === 'parsing';
 
