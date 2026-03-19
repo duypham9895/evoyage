@@ -186,60 +186,6 @@ export function getStopDistance(stop: ChargingStop | ChargingStopWithAlternative
   return 'selected' in stop ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
 }
 
-// ── VinFast Station Detail (OCPI) ──
-export interface VinFastDetailResponse {
-  readonly detail: VinFastStationDetailData | null;
-  readonly cached: boolean;
-  readonly fallback?: boolean;
-  readonly station: {
-    readonly id: string;
-    readonly name: string;
-    readonly provider: string;
-    readonly address?: string;
-    readonly maxPowerKw?: number;
-    readonly connectorTypes?: readonly string[];
-    readonly portCount?: number;
-  };
-}
-
-export interface VinFastStationDetailData {
-  readonly entityId: string;
-  readonly storeId: string;
-  readonly name: string;
-  readonly address: string;
-  readonly province: string;
-  readonly district: string;
-  readonly commune: string;
-  readonly latitude: number;
-  readonly longitude: number;
-  readonly evses: ReadonlyArray<{
-    readonly connectors: ReadonlyArray<{
-      readonly standard: string;
-      readonly format: string;
-      readonly power_type: string;
-      readonly max_electric_power: number;
-    }>;
-    readonly physical_reference: string;
-    readonly last_updated: string;
-  }>;
-  readonly images: ReadonlyArray<{ readonly url: string; readonly category: string }>;
-  readonly depotStatus: string;
-  readonly is24h: boolean;
-  readonly chargingWhenClosed: boolean;
-  readonly parkingFee: boolean;
-  readonly accessType: string;
-  readonly hardwareStations: ReadonlyArray<{
-    readonly code: string;
-    readonly vendor: string;
-    readonly maxPower: number;
-    readonly modelCode: string;
-  }>;
-  readonly connectorSummary: readonly string[];
-  readonly maxPowerKw: number;
-  readonly portCount: number;
-  readonly fetchedAt: string;
-}
-
 export interface ScoredStation {
   readonly station: ChargingStationData;
   readonly detourDriveTimeSec: number;
@@ -247,3 +193,26 @@ export interface ScoredStation {
   readonly totalStopTimeMin: number;
   readonly score: number;
 }
+
+// ── SSE Event Types ──
+export type SSEStage = 'connecting' | 'fetching' | 'retrying' | 'parsing' | 'done' | 'error';
+
+export interface SSEStageEvent {
+  readonly stage: 'connecting' | 'fetching' | 'retrying' | 'parsing';
+  readonly method?: string;
+}
+
+export interface SSEDoneEvent {
+  readonly stage: 'done';
+  readonly detail: Record<string, unknown>;
+  readonly cached: boolean;
+  readonly stale?: boolean;
+  readonly staleAgeMs?: number;
+}
+
+export interface SSEErrorEvent {
+  readonly stage: 'error';
+  readonly code: string;
+}
+
+export type SSEEvent = SSEStageEvent | SSEDoneEvent | SSEErrorEvent;
