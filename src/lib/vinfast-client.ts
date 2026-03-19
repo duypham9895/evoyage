@@ -164,22 +164,62 @@ async function tryLoadImpit(): Promise<any | null> {
   }
 }
 
+export type StageCallback = (stage: string, message: string, method?: string) => void;
+
 /**
- * Fetch VinFast station detail.
- * Attempts impit for Cloudflare TLS bypass, falls back to standard fetch.
+ * Fetch VinFast station detail with progress callbacks for SSE streaming.
+ * Chain: impit (5s) → Playwright (12s) → null.
  */
-export async function fetchVinFastDetail(entityId: string): Promise<VinFastStationDetail | null> {
+export async function fetchVinFastDetailWithProgress(
+  entityId: string,
+  onStage: StageCallback,
+  signal?: AbortSignal,
+): Promise<VinFastStationDetail | null> {
+  // Try impit first
+  onStage('fetching', 'Fetching via impit', 'impit');
   const impit = await tryLoadImpit();
 
   if (impit) {
-    return fetchWithImpit(impit, entityId);
+    const result = await fetchWithImpitTimed(impit, entityId);
+    if (result) return result;
   }
 
-  // Fallback: standard fetch (may be blocked by Cloudflare)
-  return fetchWithStandardFetch(entityId);
+  if (signal?.aborted) return null;
+
+  // Fallback: Playwright
+  onStage('retrying', 'Retrying via Playwright', 'playwright');
+  const { fetchWithPlaywright } = await import('./vinfast-browser');
+  const raw = await fetchWithPlaywright(entityId, signal);
+
+  if (!raw) return null;
+
+  return parseDetailResponse(raw);
 }
 
-async function fetchWithImpit(
+/**
+ * Backward-compatible wrapper (used by cron jobs).
+ */
+export async function fetchVinFastDetail(entityId: string): Promise<VinFastStationDetail | null> {
+  return fetchVinFastDetailWithProgress(entityId, () => {});
+}
+
+async function fetchWithImpitTimed(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  impit: any,
+  entityId: string,
+): Promise<VinFastStationDetail | null> {
+  try {
+    const result = await Promise.race([
+      fetchWithImpitInner(impit, entityId),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5_000)),
+    ]);
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWithImpitInner(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   impit: any,
   entityId: string,
@@ -215,28 +255,6 @@ async function fetchWithImpit(
     return parseResponse(await detailResponse.text());
   } catch (err) {
     console.error('VinFast impit fetch error:', err);
-    return null;
-  }
-}
-
-async function fetchWithStandardFetch(entityId: string): Promise<VinFastStationDetail | null> {
-  try {
-    const detailResponse = await fetch(`${DETAIL_URL_PREFIX}${entityId}`, {
-      headers: {
-        ...DETAIL_HEADERS,
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-
-    if (!detailResponse.ok) {
-      console.error(`VinFast detail API failed (standard fetch): ${detailResponse.status}`);
-      return null;
-    }
-
-    return parseResponse(await detailResponse.text());
-  } catch (err) {
-    console.error('VinFast standard fetch error:', err);
     return null;
   }
 }
