@@ -102,6 +102,7 @@
   "station_detail_collapse": "Thu gọn ▴",
   "station_detail_loading": "Đang tải...",
   "station_detail_temp_unavailable": "Tạm thời không khả dụng",
+  "station_detail_no_data": "Chưa có dữ liệu chi tiết",
   "station_connector": "{{type}} · {{power}}kW",
   "station_hardware": "Thiết bị: {{vendor}} {{model}}",
   "station_section_connectors": "Chi tiết các cổng sạc",

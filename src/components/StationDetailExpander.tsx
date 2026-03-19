@@ -9,7 +9,7 @@ interface StationDetailExpanderProps {
   readonly stationProvider: string;
 }
 
-type FetchState = 'idle' | 'loading' | 'done' | 'error';
+type FetchState = 'idle' | 'loading' | 'done' | 'no-data' | 'error';
 
 function ConnectorSection({ evses }: { evses: VinFastStationDetailData['evses'] }) {
   const { t } = useLocale();
@@ -138,6 +138,11 @@ export default function StationDetailExpander({
       return;
     }
 
+    // Don't retry if we already know there's no data
+    if (fetchState === 'no-data' || fetchState === 'error') {
+      return;
+    }
+
     setFetchState('loading');
 
     try {
@@ -150,7 +155,8 @@ export default function StationDetailExpander({
       const data: VinFastDetailResponse = await res.json();
 
       if (!data.detail) {
-        setFetchState('error');
+        // API returned 200 but no detail (fallback) — not a real error
+        setFetchState('no-data');
         return;
       }
 
@@ -163,6 +169,7 @@ export default function StationDetailExpander({
   };
 
   const isLoading = fetchState === 'loading';
+  const isNoData = fetchState === 'no-data';
   const isError = fetchState === 'error';
 
   const buttonLabel = isLoading
@@ -173,19 +180,27 @@ export default function StationDetailExpander({
 
   return (
     <div>
-      <button
-        onClick={handleToggle}
-        disabled={isLoading}
-        className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-surface-hover)] text-[var(--color-accent)] disabled:opacity-50"
-      >
-        {buttonLabel}
-      </button>
+      <div className="inline-flex items-center gap-2">
+        <button
+          onClick={handleToggle}
+          disabled={isLoading || isNoData || isError}
+          className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-surface-hover)] text-[var(--color-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+        >
+          {buttonLabel}
+        </button>
 
-      {isError && !expanded && (
-        <div className="mt-1 text-[10px] text-[var(--color-muted)]">
-          {t('station_detail_temp_unavailable')}
-        </div>
-      )}
+        {isNoData && (
+          <span className="text-[10px] text-[var(--color-muted)] italic">
+            {t('station_detail_no_data')}
+          </span>
+        )}
+
+        {isError && (
+          <span className="text-[10px] text-[var(--color-danger)]/60 italic">
+            {t('station_detail_temp_unavailable')}
+          </span>
+        )}
+      </div>
 
       {expanded && detail !== null && (
         <div className="mt-2 p-2 bg-[var(--color-surface-hover)]/50 rounded">

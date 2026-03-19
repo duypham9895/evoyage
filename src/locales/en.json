@@ -102,6 +102,7 @@
   "station_detail_collapse": "Collapse ▴",
   "station_detail_loading": "Loading...",
   "station_detail_temp_unavailable": "Temporarily unavailable",
+  "station_detail_no_data": "No detailed data available",
   "station_connector": "{{type}} · {{power}}kW",
   "station_hardware": "Hardware: {{vendor}} {{model}}",
   "station_section_connectors": "Connector details",

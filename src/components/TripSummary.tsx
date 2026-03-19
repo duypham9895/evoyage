@@ -226,17 +226,17 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                       </div>
                     )}
                     <StationInfoChips station={station} />
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1.5">
                       <a
                         href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block px-3 py-1 text-xs bg-[var(--color-accent)] text-[var(--color-background)] rounded-md font-semibold hover:opacity-90 transition-opacity"
+                        className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-accent)] text-[var(--color-background)] font-semibold hover:opacity-90 transition-opacity shrink-0"
                       >
                         {t('navigate')}
                       </a>
+                      <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
                     </div>
-                    <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
                   </div>
                 </div>
 
