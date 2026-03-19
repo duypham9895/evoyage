@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { fetchVinFastDetailWithProgress } from '@/lib/vinfast-client';
-import { resolveEntityId, findFinalDivisionStation } from '@/lib/vinfast-entity-resolver';
+import { resolveEntityId } from '@/lib/vinfast-entity-resolver';
 
 export const maxDuration = 25;
 export const dynamic = 'force-dynamic';
@@ -126,10 +126,6 @@ export async function GET(
           return;
         }
 
-        // Tier 3: Merge stale cache with real-time finaldivision data
-        emit({ stage: 'enriching', method: 'finaldivision' });
-        const fdStation = await findFinalDivisionStation(storeId);
-
         const STATUS_MAP: Record<string, string> = {
           ACTIVE: 'Available',
           BUSY: 'Busy',
@@ -138,14 +134,10 @@ export async function GET(
           OUTOFSERVICE: 'Out of service',
         };
 
+        // Tier 3: Serve stale cache with DB status overlay
         if (cached && cached.detail !== '{}') {
-          // Stale cache exists — overlay real-time status from finaldivision
           const cachedDetail = JSON.parse(cached.detail) as Record<string, unknown>;
-          if (fdStation) {
-            cachedDetail.depotStatus = STATUS_MAP[fdStation.charging_status] ?? cachedDetail.depotStatus;
-            cachedDetail.parkingFee = fdStation.parking_fee;
-            cachedDetail.accessType = fdStation.access_type ?? cachedDetail.accessType;
-          }
+          cachedDetail.depotStatus = STATUS_MAP[station.chargingStatus ?? ''] ?? cachedDetail.depotStatus;
           cachedDetail.fetchedAt = new Date().toISOString();
 
           const staleAgeMs = Date.now() - cached.fetchedAt.getTime();
@@ -153,7 +145,7 @@ export async function GET(
           return;
         }
 
-        // Tier 4: Build from DB + finaldivision metadata
+        // Tier 4: Build from DB station fields (kept fresh by daily cron)
         const connectorSummary = (() => {
           try {
             return station.connectorTypes ? JSON.parse(station.connectorTypes) as string[] : [];
@@ -162,27 +154,23 @@ export async function GET(
           }
         })();
 
-        const liveStatus = fdStation
-          ? STATUS_MAP[fdStation.charging_status] ?? 'unknown'
-          : STATUS_MAP[station.chargingStatus ?? ''] ?? 'unknown';
-
         const basicDetail = {
           entityId,
           storeId,
-          name: fdStation?.name ?? station.name,
-          address: fdStation?.address ?? station.address,
+          name: station.name,
+          address: station.address,
           province: '',
           district: '',
           commune: '',
-          latitude: fdStation ? parseFloat(fdStation.lat) : station.latitude,
-          longitude: fdStation ? parseFloat(fdStation.lng) : station.longitude,
+          latitude: station.latitude,
+          longitude: station.longitude,
           evses: [],
           images: [],
-          depotStatus: liveStatus,
+          depotStatus: STATUS_MAP[station.chargingStatus ?? ''] ?? 'unknown',
           is24h: false,
           chargingWhenClosed: false,
-          parkingFee: fdStation?.parking_fee ?? station.parkingFee ?? false,
-          accessType: fdStation?.access_type ?? station.accessType ?? 'Public',
+          parkingFee: station.parkingFee ?? false,
+          accessType: station.accessType ?? 'Public',
           hardwareStations: [],
           connectorSummary,
           maxPowerKw: station.maxPowerKw,
