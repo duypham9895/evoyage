@@ -227,8 +227,15 @@ export default function StationDetailExpander({
 
             if (event.stage) {
               setStage(event.stage as Stage);
-              const stageKey = `station_detail_${event.stage}`;
-              setMessage(t(stageKey));
+              const stageMessages: Record<string, string> = {
+                connecting: t('station_detail_connecting'),
+                fetching: t('station_detail_fetching'),
+                retrying: t('station_detail_retrying'),
+                parsing: t('station_detail_parsing'),
+                error: t('station_detail_temp_unavailable'),
+              };
+              const msg = stageMessages[event.stage as string];
+              if (msg) setMessage(msg);
             }
 
             if (event.detail) {
