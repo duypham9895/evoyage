@@ -40,13 +40,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { message, history, userLocation, previousVehicleId } = parsed.data;
+  const { message, history, userLocation, previousVehicleId, accumulatedParams } = parsed.data;
   const followUpCount = Math.floor(history.length / 2);
 
   // Call Minimax
   let extraction;
   try {
-    extraction = await parseTrip({ message, history, vehicleListText });
+    extraction = await parseTrip({ message, history, vehicleListText, accumulatedParams: accumulatedParams ?? null });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     const errorType = errorMessage.includes('abort') ? 'timeout'

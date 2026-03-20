@@ -52,11 +52,23 @@ export function useSpeechRecognition(locale: string = 'vi'): UseSpeechRecognitio
     setIsSupported(getSpeechRecognitionConstructor() !== null);
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const Ctor = getSpeechRecognitionConstructor();
     if (!Ctor) return;
     setError(null);
     setTranscript('');
+
+    // Explicitly request microphone permission first — this reliably
+    // triggers the browser's native permission dialog, unlike
+    // SpeechRecognition.start() which may silently fail on mobile.
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Release the stream immediately — we only needed it for the permission prompt
+      stream.getTracks().forEach((track) => track.stop());
+    } catch {
+      setError('not_allowed');
+      return;
+    }
 
     const recognition = new Ctor();
     recognition.lang = LOCALE_TO_SPEECH_LANG[locale] ?? 'vi-VN';
@@ -95,6 +107,13 @@ export function useSpeechRecognition(locale: string = 'vi'): UseSpeechRecognitio
     recognitionRef.current?.stop();
     setIsListening(false);
   }, []);
+
+  // Auto-clear speech errors after 5 seconds so they don't persist forever
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => {
     return () => { recognitionRef.current?.abort(); };

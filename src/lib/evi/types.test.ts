@@ -151,10 +151,10 @@ describe('EViParseRequest', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects history with more than 4 items', () => {
+  it('rejects history with more than 10 items', () => {
     const result = EViParseRequest.safeParse({
       ...validRequest,
-      history: Array.from({ length: 5 }, () => ({
+      history: Array.from({ length: 11 }, () => ({
         role: 'user',
         content: 'msg',
       })),

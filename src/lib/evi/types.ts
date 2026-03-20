@@ -25,12 +25,19 @@ export const EViParseRequest = z.object({
   history: z.array(z.object({
     role: z.enum(['user', 'assistant']),
     content: z.string().max(500),
-  })).max(4).default([]),
+  })).max(10).default([]),
   userLocation: z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
   }).nullable().default(null),
   previousVehicleId: z.string().nullable().default(null),
+  accumulatedParams: z.object({
+    start: z.string().nullable().default(null),
+    end: z.string().nullable().default(null),
+    vehicleBrand: z.string().nullable().default(null),
+    vehicleModel: z.string().nullable().default(null),
+    currentBattery: z.number().nullable().default(null),
+  }).nullable().default(null),
 });
 
 export type EViParseRequestData = z.infer<typeof EViParseRequest>;

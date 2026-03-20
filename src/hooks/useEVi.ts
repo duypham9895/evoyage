@@ -36,7 +36,7 @@ interface UseEViReturn {
 const FIRST_VISIT_KEY = 'evi-first-visit';
 const FIRST_VISIT_DONE = 'done';
 const RECENT_TRIPS_KEY = 'ev-recent-trips';
-const MAX_HISTORY = 4;
+const MAX_HISTORY = 10;
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/reverse';
 const USER_AGENT = 'EVoyage/1.0 (https://evoyagevn.vercel.app)';
 
@@ -172,6 +172,20 @@ export function useEVi(): UseEViReturn {
       ? { lat: userLocationRef.current.lat, lng: userLocationRef.current.lng }
       : null;
 
+    // Build accumulated params from the last successful response
+    const prevParams = lastResponseRef.current?.tripParams;
+    const accumulatedParams = prevParams
+      ? {
+          start: prevParams.start,
+          end: prevParams.end,
+          vehicleBrand: prevParams.vehicleData?.brand ?? null,
+          vehicleModel: prevParams.vehicleData
+            ? `${prevParams.vehicleData.model}${prevParams.vehicleData.variant ? ` ${prevParams.vehicleData.variant}` : ''}`
+            : null,
+          currentBattery: prevParams.currentBattery,
+        }
+      : null;
+
     try {
       const res = await fetch('/api/evi/parse', {
         method: 'POST',
@@ -181,6 +195,7 @@ export function useEVi(): UseEViReturn {
           history: buildHistoryPayload(messagesRef.current),
           userLocation: locationPayload,
           previousVehicleId: lastResponseRef.current?.tripParams?.vehicleId ?? null,
+          accumulatedParams,
         }),
       });
 

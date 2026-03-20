@@ -16,17 +16,26 @@ function getClient(): OpenAI {
   });
 }
 
+interface AccumulatedParams {
+  readonly start: string | null;
+  readonly end: string | null;
+  readonly vehicleBrand: string | null;
+  readonly vehicleModel: string | null;
+  readonly currentBattery: number | null;
+}
+
 interface ParseInput {
   readonly message: string;
   readonly history: readonly { role: 'user' | 'assistant'; content: string }[];
   readonly vehicleListText: string;
+  readonly accumulatedParams: AccumulatedParams | null;
 }
 
 const MAX_RETRIES = 2;
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractionResult> {
-  const systemPrompt = buildSystemPrompt(input.vehicleListText);
+  const systemPrompt = buildSystemPrompt(input.vehicleListText, input.accumulatedParams);
 
   const messages: OpenAI.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
@@ -50,7 +59,7 @@ export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractio
           messages,
           response_format: { type: 'json_object' },
           temperature: 0.1,
-          max_tokens: 500,
+          max_tokens: 16384,
         },
         { signal: controller.signal },
       );
