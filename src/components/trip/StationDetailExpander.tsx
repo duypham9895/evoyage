@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
-import type { VinFastStationDetail } from '@/lib/vinfast-client';
+import type { VinFastStationDetail } from '@/lib/vinfast/vinfast-client';
 import StationDetailSkeleton from './StationDetailSkeleton';
 
 interface StationDetailExpanderProps {

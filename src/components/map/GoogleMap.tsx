@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { APIProvider, Map, useMap } from '@vis.gl/react-google-maps';
 import type { TripPlan } from '@/types';
 import { getStopStation } from '@/types';
-import { decodePolyline } from '@/lib/polyline';
+import { decodePolyline } from '@/lib/geo/polyline';
 import {
   VIETNAM_CENTER,
   VIETNAM_ZOOM,
@@ -13,7 +13,7 @@ import {
   buildStopPopupHtml,
   escapeHtml,
   createSvgMarkerUrl,
-} from '@/lib/map-utils';
+} from '@/lib/geo/map-utils';
 
 interface WaypointMarkerData {
   readonly lat: number;

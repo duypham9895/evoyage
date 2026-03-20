@@ -6,14 +6,14 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { TripPlan, ChargingStop, ChargingStopWithAlternatives } from '@/types';
 import { getStopStation } from '@/types';
-import { decodePolyline } from '@/lib/polyline';
+import { decodePolyline } from '@/lib/geo/polyline';
 import {
   VIETNAM_CENTER,
   VIETNAM_ZOOM,
   PROVIDER_COLORS,
   DEFAULT_MARKER_COLOR,
   escapeHtml,
-} from '@/lib/map-utils';
+} from '@/lib/geo/map-utils';
 
 export interface WaypointMarkerData {
   readonly lat: number;

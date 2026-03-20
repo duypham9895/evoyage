@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchMatrixDurations } from '../matrix-api';
+import { fetchMatrixDurations } from './matrix-api';
 
 const mockFetch = vi.fn();
 

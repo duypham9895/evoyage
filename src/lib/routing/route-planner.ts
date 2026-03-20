@@ -20,7 +20,7 @@ import {
   findStationsAlongRoute,
   type StationWithRouteInfo,
 } from './station-finder';
-import { decodePolyline, cumulativeDistances } from './polyline';
+import { decodePolyline, cumulativeDistances } from '../geo/polyline';
 
 // ── Corridor Search Constants ──
 const SEARCH_TRIGGER_KM = 80;       // Start looking when range < 80km

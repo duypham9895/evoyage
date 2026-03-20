@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
-import { fetchVinFastDetailWithProgress } from '@/lib/vinfast-client';
-import { resolveEntityId } from '@/lib/vinfast-entity-resolver';
+import { fetchVinFastDetailWithProgress } from '@/lib/vinfast/vinfast-client';
+import { resolveEntityId } from '@/lib/vinfast/vinfast-entity-resolver';
 
 export const maxDuration = 25;
 export const dynamic = 'force-dynamic';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getClientIp } from '../rate-limit';
+import { getClientIp } from './rate-limit';
 
 describe('getClientIp', () => {
   it('prefers x-vercel-forwarded-for (unspoofable)', () => {

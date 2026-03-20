@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildStaticMapUrl } from '../static-map';
-import type { StaticMapMarker } from '../static-map';
+import { buildStaticMapUrl } from './static-map';
+import type { StaticMapMarker } from './static-map';
 
 const BASE_OPTIONS = {
   polyline: '_p~iF~ps|U_ulLnnqC_mqNvxq`@',

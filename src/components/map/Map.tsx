@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import type { TripPlan } from '@/types';
 import { getStopStation } from '@/types';
-import { decodePolyline } from '@/lib/polyline';
+import { decodePolyline } from '@/lib/geo/polyline';
 import {
   VIETNAM_CENTER,
   VIETNAM_ZOOM,
@@ -11,7 +11,7 @@ import {
   DEFAULT_MARKER_COLOR,
   buildStopPopupHtml,
   escapeHtml,
-} from '@/lib/map-utils';
+} from '@/lib/geo/map-utils';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 

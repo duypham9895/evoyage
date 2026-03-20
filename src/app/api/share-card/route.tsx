@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
   const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
   if (mapboxToken && d.polyline) {
     try {
-      const { simplifyPolyline } = await import('@/lib/polyline-simplify');
-      const { decodePolyline } = await import('@/lib/polyline');
+      const { simplifyPolyline } = await import('@/lib/geo/polyline-simplify');
+      const { decodePolyline } = await import('@/lib/geo/polyline');
       const simplified = simplifyPolyline(d.polyline, 3500);
       const pts = decodePolyline(d.polyline);
       const s = pts[0], e = pts[pts.length - 1];

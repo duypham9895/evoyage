@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { rdpSimplify, simplifyPolyline } from '../polyline-simplify';
-import { decodePolyline, encodePolyline } from '../polyline';
+import { rdpSimplify, simplifyPolyline } from './polyline-simplify';
+import { decodePolyline, encodePolyline } from './polyline';
 
 // A zigzag polyline with many points that can be simplified
 function makeZigzagPoints(count: number) {

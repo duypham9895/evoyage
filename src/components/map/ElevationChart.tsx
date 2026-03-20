@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import type { ElevationProfile } from '@/lib/elevation';
+import type { ElevationProfile } from '@/lib/geo/elevation';
 
 interface ElevationChartProps {
   readonly profile: ElevationProfile;

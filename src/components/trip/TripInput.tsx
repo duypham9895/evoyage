@@ -5,7 +5,7 @@ import { useLocale } from '@/lib/locale';
 import PlaceAutocomplete from './PlaceAutocomplete';
 import WaypointInput from './WaypointInput';
 import type { WaypointData } from './WaypointInput';
-import type { NominatimResult } from '@/lib/nominatim';
+import type { NominatimResult } from '@/lib/geo/nominatim';
 
 interface TripInputProps {
   readonly start: string;

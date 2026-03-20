@@ -4,7 +4,7 @@ import type { ChargingStationData } from '@/types';
 
 // A simple encoded polyline for testing (straight line ~200km)
 // We'll generate a synthetic one for controllable tests
-import { decodePolyline } from './polyline';
+import { decodePolyline } from '../geo/polyline';
 
 const VF8_ECO = {
   brand: 'VinFast',

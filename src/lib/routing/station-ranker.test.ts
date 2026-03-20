@@ -6,7 +6,7 @@ import {
   calculateChargeTimeMin,
   scoreStation,
   rankStations,
-} from '../station-ranker';
+} from './station-ranker';
 
 // ── Test Helpers ──
 

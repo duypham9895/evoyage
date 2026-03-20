@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
 import { hapticTick } from '@/lib/haptics';
-import { calculateUsableRange, getRangeSafetyWarning } from '@/lib/range-calculator';
+import { calculateUsableRange, getRangeSafetyWarning } from '@/lib/routing/range-calculator';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,
   CONFIRMATION_THRESHOLD,

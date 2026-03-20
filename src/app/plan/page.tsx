@@ -21,7 +21,7 @@ import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/layout/MobileTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
 import type { RankedStation, ChargingStopWithAlternatives } from '@/types';
-import type { NominatimResult } from '@/lib/nominatim';
+import type { NominatimResult } from '@/lib/geo/nominatim';
 import type { WaypointData } from '@/components/trip/WaypointInput';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,

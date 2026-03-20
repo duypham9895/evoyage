@@ -1,5 +1,5 @@
 import type { LatLng } from '@/types';
-import { decodePolyline, encodePolyline } from '@/lib/polyline';
+import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 
 /**
  * Perpendicular distance from a point to the line segment (start, end).

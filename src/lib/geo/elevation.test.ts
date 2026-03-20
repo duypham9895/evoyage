@@ -3,8 +3,8 @@ import {
   samplePolylinePoints,
   calculateElevationProfile,
   smoothElevations,
-} from '../elevation';
-import { encodePolyline } from '../polyline';
+} from './elevation';
+import { encodePolyline } from './polyline';
 import type { LatLng } from '@/types';
 
 // Helper: create a straight polyline from HCM roughly north

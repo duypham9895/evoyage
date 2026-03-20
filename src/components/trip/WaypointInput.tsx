@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
 import PlaceAutocomplete from './PlaceAutocomplete';
-import type { NominatimResult } from '@/lib/nominatim';
+import type { NominatimResult } from '@/lib/geo/nominatim';
 
 export interface WaypointData {
   readonly name: string;

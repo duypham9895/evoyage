@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isValidCoordinate } from '../coordinate-validation';
+import { isValidCoordinate } from './coordinate-validation';
 
 describe('isValidCoordinate', () => {
   it('accepts Ho Chi Minh City', () => {

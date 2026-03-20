@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, useId } from 'react';
-import { searchPlaces, type NominatimResult } from '@/lib/nominatim';
+import { searchPlaces, type NominatimResult } from '@/lib/geo/nominatim';
 
 interface PlaceAutocompleteProps {
   readonly value: string;
