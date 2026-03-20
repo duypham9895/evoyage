@@ -3,7 +3,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import StationInfoChips from '../StationInfoChips';
+import StationInfoChips from '@/components/trip/StationInfoChips';
 import type { ChargingStationData } from '@/types';
 
 vi.mock('@/lib/locale', () => ({

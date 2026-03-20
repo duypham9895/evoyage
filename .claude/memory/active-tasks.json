@@ -1,0 +1,13 @@
+{
+  "tasks": [],
+  "schema": {
+    "id": "string (uuid)",
+    "description": "string",
+    "status": "todo | in_progress | blocked | done",
+    "priority": "high | medium | low",
+    "createdAt": "ISO date",
+    "updatedAt": "ISO date",
+    "dependencies": ["task ids"],
+    "session": "session identifier"
+  }
+}

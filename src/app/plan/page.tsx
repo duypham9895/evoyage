@@ -9,20 +9,20 @@ import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useUrlState, parseUrlState } from '@/hooks/useUrlState';
-import Header from '@/components/Header';
-import TripInput from '@/components/TripInput';
-import BrandModelSelector from '@/components/BrandModelSelector';
-import AddCustomVehicle from '@/components/AddCustomVehicle';
-import BatteryStatusPanel from '@/components/BatteryStatusPanel';
-import TripSummary from '@/components/TripSummary';
-import ShareButton from '@/components/ShareButton';
-import FeedbackFAB from '@/components/FeedbackFAB';
-import MobileBottomSheet from '@/components/MobileBottomSheet';
-import MobileTabBar, { type MobileTab } from '@/components/MobileTabBar';
+import Header from '@/components/layout/Header';
+import TripInput from '@/components/trip/TripInput';
+import BrandModelSelector from '@/components/trip/BrandModelSelector';
+import AddCustomVehicle from '@/components/trip/AddCustomVehicle';
+import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
+import TripSummary from '@/components/trip/TripSummary';
+import ShareButton from '@/components/trip/ShareButton';
+import FeedbackFAB from '@/components/feedback/FeedbackFAB';
+import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
+import MobileTabBar, { type MobileTab } from '@/components/layout/MobileTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
 import type { RankedStation, ChargingStopWithAlternatives } from '@/types';
 import type { NominatimResult } from '@/lib/nominatim';
-import type { WaypointData } from '@/components/WaypointInput';
+import type { WaypointData } from '@/components/trip/WaypointInput';
 import {
   DEFAULT_RANGE_SAFETY_FACTOR,
   DEFAULT_CURRENT_BATTERY,
@@ -30,9 +30,9 @@ import {
 } from '@/types';
 
 // Both map components must be loaded client-side only (use window/document)
-const LeafletMap = dynamic(() => import('@/components/Map'), { ssr: false });
-const GoogleMap = dynamic(() => import('@/components/GoogleMap'), { ssr: false });
-const MapboxMap = dynamic(() => import('@/components/MapboxMap'), { ssr: false });
+const LeafletMap = dynamic(() => import('@/components/map/Map'), { ssr: false });
+const GoogleMap = dynamic(() => import('@/components/map/GoogleMap'), { ssr: false });
+const MapboxMap = dynamic(() => import('@/components/map/MapboxMap'), { ssr: false });
 
 function HomeContent() {
   const { mode } = useMapMode();

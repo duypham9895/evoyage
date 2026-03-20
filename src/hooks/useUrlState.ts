@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import type { WaypointData } from '@/components/WaypointInput';
+import type { WaypointData } from '@/components/trip/WaypointInput';
 
 /**
  * Shareable trip state encoded in URL search params.
