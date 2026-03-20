@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-19
 **Status:** Approved
-**Author:** Edward + Claude
+**Author:** Duy + Claude
 
 ## Problem
 

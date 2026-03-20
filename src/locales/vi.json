@@ -191,6 +191,15 @@
   "landing_faq6_q": "Dùng được khi không có mạng không?",
   "landing_faq6_a": "Hiện tại eVoyage cần internet để tính tuyến đường và truy vấn trạm sạc. Tính năng dùng offline đang được phát triển.",
 
+  "landing_built_with_ai_title": "Code bởi AI, dẫn dắt bởi con người",
+  "landing_built_with_ai_desc": "eVoyage được code hoàn toàn bởi Claude Code (AI coding agent của Anthropic). Duy đóng vai trò quản lý sản phẩm — định hướng tính năng, quyết định thiết kế, và đảm bảo chất lượng. Duy muốn minh bạch về điều này vì tin rằng phát triển phần mềm cùng AI là tương lai, và bạn xứng đáng biết công cụ bạn dùng được tạo ra như thế nào.",
+  "landing_built_with_ai_role_pm": "Sản phẩm & Thiết kế",
+  "landing_built_with_ai_role_pm_desc": "Duy Phạm",
+  "landing_built_with_ai_role_dev": "Phát triển",
+  "landing_built_with_ai_role_dev_desc": "Claude Code",
+  "landing_built_with_ai_role_infra": "Mã nguồn mở",
+  "landing_built_with_ai_role_infra_desc": "GitHub",
+
   "landing_cta_h2": "Sẵn sàng lên đường?",
   "landing_cta_subtitle": "Miễn phí, không cần đăng ký.",
   "landing_cta_button": "Bắt đầu ngay",

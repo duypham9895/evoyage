@@ -191,6 +191,15 @@
   "landing_faq6_q": "Does it work offline?",
   "landing_faq6_a": "Not yet — eVoyage needs an internet connection for route calculation and station data. Offline support is on the roadmap.",
 
+  "landing_built_with_ai_title": "Built with AI, guided by a human",
+  "landing_built_with_ai_desc": "eVoyage was entirely coded by Claude Code (Anthropic's AI coding agent). Duy's role is product manager — defining what to build, making design decisions, and ensuring quality. Duy is transparent about this because he believes AI-assisted development is the future, and you deserve to know how your tools are made.",
+  "landing_built_with_ai_role_pm": "Product & Design",
+  "landing_built_with_ai_role_pm_desc": "Duy Phạm",
+  "landing_built_with_ai_role_dev": "Development",
+  "landing_built_with_ai_role_dev_desc": "Claude Code",
+  "landing_built_with_ai_role_infra": "Open Source",
+  "landing_built_with_ai_role_infra_desc": "GitHub",
+
   "landing_cta_h2": "Ready to go?",
   "landing_cta_subtitle": "Free, no sign-up required.",
   "landing_cta_button": "Plan your trip",

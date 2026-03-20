@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '@/lib/locale';
 import StarRating from './StarRating';
 import type { FeedbackCategory } from '@/lib/feedback/constants';
@@ -15,48 +15,6 @@ interface FeedbackModalProps {
 }
 
 type ModalStep = 'category' | 'form' | 'success' | 'error';
-
-// Category icon SVGs
-const CATEGORY_ICONS: Record<FeedbackCategory, ReactNode> = {
-  REPORT_ISSUE: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" />
-      <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  ),
-  REQUEST_FEATURE: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="9" y1="18" x2="15" y2="18" />
-      <line x1="10" y1="22" x2="14" y2="22" />
-      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
-    </svg>
-  ),
-  CONTACT_SUPPORT: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  ),
-  STATION_DATA_ERROR: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <line x1="15" y1="7" x2="9" y2="13" />
-      <line x1="9" y1="7" x2="15" y2="13" />
-    </svg>
-  ),
-  ROUTE_FEEDBACK: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="16 12 12 8 8 12" />
-      <line x1="12" y1="16" x2="12" y2="8" />
-    </svg>
-  ),
-  GENERAL_FEEDBACK: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  ),
-};
 
 const CATEGORIES: readonly FeedbackCategory[] = [
   'REPORT_ISSUE',
@@ -328,19 +286,15 @@ export default function FeedbackModal({
                     key={cat}
                     onClick={() => handleSelectCategory(cat)}
                     className="
-                      flex flex-col items-center justify-center gap-2
-                      p-4 rounded-xl
+                      flex items-center justify-center
+                      px-4 py-3.5 rounded-xl
                       bg-[var(--color-background)] border border-[var(--color-surface-hover)]
                       hover:border-[var(--color-accent)] hover:bg-[var(--color-surface-hover)]
                       transition-all duration-150
                       text-[var(--color-foreground)]
-                      min-h-[90px]
                     "
                   >
-                    <span className="text-[var(--color-accent)]">
-                      {CATEGORY_ICONS[cat]}
-                    </span>
-                    <span className="text-xs font-medium text-center leading-tight">
+                    <span className="text-sm font-medium text-center leading-tight">
                       {t(`feedback_cat_${cat.toLowerCase()}` as Parameters<typeof t>[0])}
                     </span>
                   </button>
@@ -583,12 +537,7 @@ export default function FeedbackModal({
           {/* ─── Success ─── */}
           {step === 'success' && (
             <div className="py-12 text-center space-y-3">
-              <div className="w-16 h-16 mx-auto rounded-full bg-[var(--color-accent)]/20 flex items-center justify-center animate-[successPop_300ms_ease-out]">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-[var(--color-foreground)]">
+              <h3 className="text-lg font-semibold text-[var(--color-accent)] animate-[successPop_300ms_ease-out]">
                 {t('feedback_success_title')}
               </h3>
               <p className="text-sm text-[var(--color-muted)]">
@@ -605,12 +554,6 @@ export default function FeedbackModal({
           {/* ─── Error ─── */}
           {step === 'error' && (
             <div className="py-12 text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full bg-[var(--color-danger)]/20 flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </div>
               <p className="text-sm text-[var(--color-muted)]">
                 {t('feedback_error_message')}
               </p>

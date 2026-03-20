@@ -89,82 +89,9 @@ function RouteVisualization() {
   );
 }
 
-/* ─── Step Card Icons (inline SVG) ──────────────────────── */
+/* ─── Feature section config ─────────────────────────────── */
 
-function CarIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1464F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2" />
-      <circle cx="6.5" cy="16.5" r="2.5" />
-      <circle cx="16.5" cy="16.5" r="2.5" />
-    </svg>
-  );
-}
-
-function MapPinIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00D4AA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
-
-function ZapIcon({ color = '#00D26A' }: { readonly color?: string }) {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-    </svg>
-  );
-}
-
-/* ─── Feature Card Icons ────────────────────────────────── */
-
-function RouteIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1464F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="6" cy="19" r="3" /><circle cx="18" cy="5" r="3" />
-      <path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12" />
-    </svg>
-  );
-}
-
-function MountainIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1464F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-    </svg>
-  );
-}
-
-function BatteryIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1464F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="16" height="10" x="2" y="7" rx="2" ry="2" /><line x1="22" x2="22" y1="11" y2="13" />
-      <line x1="6" x2="6" y1="11" y2="13" /><line x1="10" x2="10" y1="11" y2="13" />
-    </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1464F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-      <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
-    </svg>
-  );
-}
-
-function GlobeIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1464F4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" /><line x1="2" x2="22" y1="12" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  );
-}
-
-const FEATURE_ICONS = [RouteIcon, ZapIcon, MountainIcon, BatteryIcon, ShareIcon, GlobeIcon] as const;
+const FEATURE_COLORS = ['#1464F4', '#00D26A', '#00D4AA', '#1464F4', '#00D26A', '#00D4AA'] as const;
 
 /* ─── Vehicle Data ──────────────────────────────────────── */
 
@@ -267,21 +194,21 @@ function LandingContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {([
-              { icon: <CarIcon />, color: '#1464F4', step: 1, title: t('landing_step1_title'), desc: t('landing_step1_desc') },
-              { icon: <MapPinIcon />, color: '#00D4AA', step: 2, title: t('landing_step2_title'), desc: t('landing_step2_desc') },
-              { icon: <ZapIcon />, color: '#00D26A', step: 3, title: t('landing_step3_title'), desc: t('landing_step3_desc') },
+              { color: '#1464F4', step: 1, title: t('landing_step1_title'), desc: t('landing_step1_desc') },
+              { color: '#00D4AA', step: 2, title: t('landing_step2_title'), desc: t('landing_step2_desc') },
+              { color: '#00D26A', step: 3, title: t('landing_step3_title'), desc: t('landing_step3_desc') },
             ] as const).map((item) => (
               <ScrollAnimator key={item.step}>
                 <div
                   className="relative bg-[#1C1C1E] rounded-2xl p-6 border border-[#2C2C2E] hover:border-[#2C2C2E] transition-all"
                   style={{ borderTopColor: item.color, borderTopWidth: '3px' }}
                 >
-                  {/* Step number */}
-                  <span className="absolute top-4 right-4 font-[family-name:var(--font-heading)] text-[64px] font-bold leading-none text-[#1464F4] opacity-[0.08]">
+                  <span
+                    className="font-[family-name:var(--font-heading)] text-[40px] font-bold leading-none mb-3 block"
+                    style={{ color: item.color, opacity: 0.25 }}
+                  >
                     {item.step}
                   </span>
-
-                  <div className="mb-4">{item.icon}</div>
                   <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg md:text-[22px] text-[#F5F5F7] mb-3">
                     {item.title}
                   </h3>
@@ -305,24 +232,24 @@ function LandingContent() {
           </ScrollAnimator>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((n) => {
-              const IconComponent = FEATURE_ICONS[n - 1];
-              return (
-                <ScrollAnimator key={n}>
-                  <div className="bg-[#1C1C1E] rounded-2xl p-6 border border-[#2C2C2E] hover:border-[#1464F4]/40 hover:-translate-y-1 transition-all duration-200">
-                    <div className="w-12 h-12 rounded-full bg-[#1464F4]/10 flex items-center justify-center mb-4">
-                      <IconComponent color="#1464F4" />
-                    </div>
-                    <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg text-[#F5F5F7] mb-2">
-                      {t(`landing_feat${n}_title`)}
-                    </h3>
-                    <p className="text-[#8E8E93] text-sm leading-relaxed">
-                      {t(`landing_feat${n}_desc`)}
-                    </p>
-                  </div>
-                </ScrollAnimator>
-              );
-            })}
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <ScrollAnimator key={n}>
+                <div className="bg-[#1C1C1E] rounded-2xl p-6 border border-[#2C2C2E] hover:border-[#1464F4]/40 hover:-translate-y-1 transition-all duration-200">
+                  <span
+                    className="inline-block text-xs font-bold font-[family-name:var(--font-mono)] uppercase tracking-widest mb-3"
+                    style={{ color: FEATURE_COLORS[n - 1] }}
+                  >
+                    0{n}
+                  </span>
+                  <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg text-[#F5F5F7] mb-2">
+                    {t(`landing_feat${n}_title`)}
+                  </h3>
+                  <p className="text-[#8E8E93] text-sm leading-relaxed">
+                    {t(`landing_feat${n}_desc`)}
+                  </p>
+                </div>
+              </ScrollAnimator>
+            ))}
           </div>
         </div>
       </section>
@@ -428,6 +355,47 @@ function LandingContent() {
         </div>
       </section>
 
+      {/* ─── Built with AI ───────────────────────────────── */}
+      <section className="py-12 md:py-32 bg-[#111114]">
+        <div className="max-w-[800px] mx-auto px-6">
+          <ScrollAnimator>
+            <div className="text-center mb-10">
+              <span className="inline-block px-4 py-1.5 bg-[#1464F4]/10 text-[#1464F4] text-sm font-medium rounded-full border border-[#1464F4]/20 mb-6">
+                Transparency
+              </span>
+              <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[#F5F5F7] mb-4">
+                {t('landing_built_with_ai_title')}
+              </h2>
+              <p className="text-[#8E8E93] text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
+                {t('landing_built_with_ai_desc')}
+              </p>
+            </div>
+          </ScrollAnimator>
+
+          <ScrollAnimator>
+            <div className="grid grid-cols-3 gap-4 md:gap-6">
+              {([
+                { role: t('landing_built_with_ai_role_pm'), name: t('landing_built_with_ai_role_pm_desc'), color: '#00D4AA' },
+                { role: t('landing_built_with_ai_role_dev'), name: t('landing_built_with_ai_role_dev_desc'), color: '#1464F4' },
+                { role: t('landing_built_with_ai_role_infra'), name: t('landing_built_with_ai_role_infra_desc'), color: '#8E8E93' },
+              ] as const).map((item) => (
+                <div
+                  key={item.role}
+                  className="bg-[#1C1C1E] rounded-2xl p-4 md:p-6 border border-[#2C2C2E] text-center"
+                >
+                  <div className="text-[#8E8E93] text-xs uppercase tracking-wider mb-2">
+                    {item.role}
+                  </div>
+                  <div className="font-semibold text-sm md:text-base" style={{ color: item.color }}>
+                    {item.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollAnimator>
+        </div>
+      </section>
+
       {/* ─── Final CTA ──────────────────────────────────── */}
       <section className="py-12 md:py-32 bg-gradient-to-b from-[#0D1B3E] to-[#0A0A0B]">
         <div className="max-w-[1200px] mx-auto px-6 text-center">
@@ -489,6 +457,7 @@ function LandingContent() {
                 {t('landing_footer_built')}
               </h4>
               <div className="flex flex-col gap-2 text-sm text-[#8E8E93]">
+                <span>Claude Code</span>
                 <span>Next.js</span>
                 <span>Mapbox</span>
                 <span>VinFast API</span>
