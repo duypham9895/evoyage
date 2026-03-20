@@ -55,6 +55,7 @@ export const routeMultiWaypointLimiter = hasRedis ? createRedisRatelimiter(5, 60
 export const stationsLimiter = hasRedis ? createRedisRatelimiter(30, 60) : null;
 export const vehiclesLimiter = hasRedis ? createRedisRatelimiter(30, 60) : null;
 export const shareCardLimiter = hasRedis ? createRedisRatelimiter(3, 60) : null;
+export const eviLimiter = hasRedis ? createRedisRatelimiter(20, 60) : null;
 
 export interface RateLimitResult {
   readonly allowed: boolean;

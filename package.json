@@ -30,6 +30,7 @@
     "mapbox-gl": "^3.20.0",
     "nanoid": "^3.3.11",
     "next": "16.1.7",
+    "openai": "^6.32.0",
     "playwright-core": "^1.58.2",
     "prisma": "^6.19.2",
     "qrcode": "^1.5.4",
