@@ -350,7 +350,7 @@ describe('EVi component', () => {
       setHookState({
         isFirstVisit: false,
         recentTrips: [
-          { start: 'Hồ Chí Minh, Vietnam', end: 'Đà Lạt, Vietnam', vehicleName: 'VinFast VF8' },
+          { start: 'Hồ Chí Minh, Vietnam', end: 'Đà Lạt, Vietnam', vehicleName: 'VinFast VF 8' },
           { start: 'Hà Nội, Vietnam', end: 'Hải Phòng, Vietnam', vehicleName: null },
         ],
       });
@@ -358,7 +358,7 @@ describe('EVi component', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 
       // Personalized chips from history (shortened format)
-      expect(screen.getByText('Hồ Chí Minh → Đà Lạt, VF8')).toBeInTheDocument();
+      expect(screen.getByText('Hồ Chí Minh → Đà Lạt, VF 8')).toBeInTheDocument();
       expect(screen.getByText('Hà Nội → Hải Phòng')).toBeInTheDocument();
 
       // Plus find stations chip

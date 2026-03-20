@@ -72,7 +72,7 @@ function buildSuggestionChips(
   for (const trip of recentTrips.slice(0, 2)) {
     const startShort = trip.start.split(',')[0];
     const endShort = trip.end.split(',')[0];
-    const vehicle = trip.vehicleName ? `, ${trip.vehicleName.split(' ').pop()}` : '';
+    const vehicle = trip.vehicleName ? `, ${trip.vehicleName.replace(/^VinFast\s+/i, '')}` : '';
     chips.push({ label: `${startShort} → ${endShort}${vehicle}`, action: 'message' });
   }
 
