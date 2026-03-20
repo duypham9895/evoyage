@@ -7,6 +7,8 @@ import { resolveVehicle } from '@/lib/evi/vehicle-resolver';
 import { searchPlaces } from '@/lib/geo/nominatim';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
 
+export const maxDuration = 30;
+
 const MAX_FOLLOW_UPS = 2;
 
 const DEFAULT_BATTERY = 80;
@@ -46,7 +48,12 @@ export async function POST(request: NextRequest) {
   try {
     extraction = await parseTrip({ message, history, vehicleListText });
   } catch (err) {
-    console.error('[eVi] Minimax call failed:', err instanceof Error ? err.message : err);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorType = errorMessage.includes('abort') ? 'timeout'
+      : errorMessage.includes('API_KEY') ? 'config'
+      : errorMessage.includes('401') || errorMessage.includes('403') ? 'auth'
+      : 'api_error';
+    console.error(`[eVi] Minimax call failed (${errorType}):`, errorMessage);
     return NextResponse.json(
       buildErrorResponse('service_unavailable', followUpCount),
       { status: 503 },
