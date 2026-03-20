@@ -53,14 +53,14 @@ export default function BatteryStatusPanel({
   const [isDraggingSlider, setIsDraggingSlider] = useState(false);
   const sliderRef = useRef<HTMLInputElement>(null);
 
-  const vehicleForCalc = vehicle
+  const vehicleForCalc = useMemo(() => vehicle
     ? {
         brand: vehicle.brand,
         model: vehicle.model,
         variant: vehicle.variant ?? null,
         officialRangeKm: vehicle.officialRangeKm,
       }
-    : null;
+    : null, [vehicle?.brand, vehicle?.model, vehicle?.variant, vehicle?.officialRangeKm]);
 
   const rangeResult = useMemo(() => {
     if (!vehicleForCalc) return null;

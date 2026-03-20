@@ -38,7 +38,9 @@ export default function MobileTabBar({
           <button
             key={id}
             role="tab"
+            id={`tab-${id}`}
             aria-selected={isActive}
+            aria-controls={`tabpanel-${id}`}
             onClick={() => { hapticLight(); onTabChange(id); }}
             className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap overflow-hidden ${
               isActive

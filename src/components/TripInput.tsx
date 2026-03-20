@@ -14,7 +14,6 @@ interface TripInputProps {
   readonly onEndChange: (value: string) => void;
   readonly onStartSelect?: (result: NominatimResult) => void;
   readonly onEndSelect?: (result: NominatimResult) => void;
-  readonly isLoaded: boolean;
   // Waypoint props (optional for backward compatibility)
   readonly waypoints?: readonly WaypointData[];
   readonly onAddWaypoint?: (afterIndex: number) => void;

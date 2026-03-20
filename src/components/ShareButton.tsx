@@ -74,8 +74,13 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
     return () => clearTimeout(timer);
   }, [tripPlan]);
 
-  // Cleanup image URL on unmount
+  // Revoke previous image URL when it changes, and on unmount
+  const prevImageUrlRef = useRef<string | null>(null);
   useEffect(() => {
+    if (prevImageUrlRef.current && prevImageUrlRef.current !== imageUrl) {
+      URL.revokeObjectURL(prevImageUrlRef.current);
+    }
+    prevImageUrlRef.current = imageUrl;
     return () => { if (imageUrl) URL.revokeObjectURL(imageUrl); };
   }, [imageUrl]);
 

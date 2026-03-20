@@ -31,10 +31,12 @@ export default function PlaceAutocomplete({
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [gpsError, setGpsError] = useState(false);
 
   const handleUseMyLocation = useCallback(async () => {
     if (!navigator.geolocation) return;
     setIsLocating(true);
+    setGpsError(false);
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -61,9 +63,13 @@ export default function PlaceAutocomplete({
           lng: longitude,
           type: String(data.type || 'place'),
         });
+      } else {
+        setGpsError(true);
+        setTimeout(() => setGpsError(false), 3000);
       }
     } catch {
-      // Silently fail — user can type manually
+      setGpsError(true);
+      setTimeout(() => setGpsError(false), 3000);
     } finally {
       setIsLocating(false);
     }
@@ -200,7 +206,9 @@ export default function PlaceAutocomplete({
             type="button"
             onClick={handleUseMyLocation}
             disabled={isLocating}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors rounded-lg"
+            className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-colors rounded-lg ${
+              gpsError ? 'text-[var(--color-danger)]' : 'text-[var(--color-muted)] hover:text-[var(--color-accent)]'
+            }`}
             aria-label="Use my current location"
           >
             {isLocating ? (

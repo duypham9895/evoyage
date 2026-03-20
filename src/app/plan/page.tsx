@@ -446,7 +446,7 @@ function HomeContent() {
           />
 
           {/* Tab content */}
-          <div className="space-y-4">
+          <div className="space-y-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'route' && (
               <>
                 <TripInput
@@ -456,7 +456,7 @@ function HomeContent() {
                   onEndChange={handleEndChange}
                   onStartSelect={handleStartSelect}
                   onEndSelect={handleEndSelect}
-                  isLoaded={true}
+
                   waypoints={waypoints}
                   onAddWaypoint={handleAddWaypoint}
                   onRemoveWaypoint={handleRemoveWaypoint}
@@ -529,7 +529,6 @@ function HomeContent() {
             onEndChange={handleEndChange}
             onStartSelect={handleStartSelect}
             onEndSelect={handleEndSelect}
-            isLoaded={true}
             waypoints={waypoints}
             onAddWaypoint={handleAddWaypoint}
             onRemoveWaypoint={handleRemoveWaypoint}
