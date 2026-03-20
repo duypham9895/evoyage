@@ -274,5 +274,7 @@
   "evi_or_type": "hoặc gõ",
   "evi_speak": "Bấm để nói",
   "evi_error_generic": "Xin lỗi, mình đang gặp sự cố. Bạn có thể nhập thủ công nhé!",
-  "evi_not_trip": "Chào bạn! Mình là eVi, trợ lý hành trình. Cho mình biết bạn muốn đi đâu nhé!"
+  "evi_not_trip": "Chào bạn! Mình là eVi, trợ lý hành trình. Cho mình biết bạn muốn đi đâu nhé!",
+  "evi_retry": "Thử lại",
+  "evi_start_over": "Bắt đầu lại"
 }

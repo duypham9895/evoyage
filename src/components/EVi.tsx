@@ -80,6 +80,7 @@ export default function EVi({ onTripParsed }: EViProps) {
     userLocation,
     isFirstVisit,
     sendMessage,
+    reset,
   } = useEVi();
   const {
     isSupported,
@@ -156,6 +157,20 @@ export default function EVi({ onTripParsed }: EViProps) {
       onTripParsed(lastResponse.tripParams);
     }
   }, [lastResponse, onTripParsed]);
+
+  const handleRetry = useCallback(() => {
+    hapticLight();
+    // Resend the last user message
+    const lastUserMsg = messages.findLast((m) => m.role === 'user');
+    if (lastUserMsg) {
+      sendMessage(lastUserMsg.content);
+    }
+  }, [messages, sendMessage]);
+
+  const handleStartOver = useCallback(() => {
+    hapticLight();
+    reset();
+  }, [reset]);
 
   const handleFollowUpOption = useCallback(
     (label: string) => {
@@ -255,6 +270,26 @@ export default function EVi({ onTripParsed }: EViProps) {
 
         {/* Typing indicator */}
         {state === 'processing' && <TypingIndicator />}
+
+        {/* Error recovery */}
+        {state === 'error' && (
+          <div className="pl-10">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleRetry}
+                className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)] transition-colors min-h-[44px]"
+              >
+                {t('evi_retry' as Parameters<typeof t>[0])}
+              </button>
+              <button
+                onClick={handleStartOver}
+                className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-muted)]/30 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors min-h-[44px]"
+              >
+                {t('evi_start_over' as Parameters<typeof t>[0])}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Follow-up UI */}
         {state === 'follow_up' && lastResponse && (

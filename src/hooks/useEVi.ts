@@ -83,10 +83,10 @@ export function useEVi(): UseEViReturn {
         const permissionStatus = await navigator.permissions.query({
           name: 'geolocation',
         });
-        if (permissionStatus.state !== 'granted') return;
+        if (permissionStatus.state === 'denied') return;
+        // 'granted' → proceed silently; 'prompt' → browser will ask user
       } catch {
-        // permissions API not supported — skip
-        return;
+        // permissions API not supported — still try geolocation
       }
 
       try {
@@ -153,10 +153,18 @@ export function useEVi(): UseEViReturn {
       });
 
       if (!res.ok) {
-        const errorText = await res.text().catch(() => 'Unknown error');
+        let friendlyMessage = 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.';
+        try {
+          const errorJson = await res.json();
+          if (errorJson.displayMessage) {
+            friendlyMessage = errorJson.displayMessage;
+          }
+        } catch {
+          // Response wasn't JSON — use default message
+        }
         const errorMsg: ChatMessage = {
           role: 'assistant',
-          content: `Error: ${errorText}`,
+          content: friendlyMessage,
         };
         setMessages([...updatedMessages, errorMsg]);
         setState('error');
@@ -185,7 +193,7 @@ export function useEVi(): UseEViReturn {
     } catch {
       const errorMsg: ChatMessage = {
         role: 'assistant',
-        content: 'Network error. Please try again.',
+        content: 'Không thể kết nối mạng. Vui lòng kiểm tra kết nối và thử lại.',
       };
       setMessages([...updatedMessages, errorMsg]);
       setState('error');
