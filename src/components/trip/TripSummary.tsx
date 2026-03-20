@@ -9,6 +9,7 @@ interface TripSummaryProps {
   readonly tripPlan: TripPlan | null;
   readonly isLoading: boolean;
   readonly onSelectAlternativeStation?: (stopIndex: number, station: RankedStation) => void;
+  readonly onBackToChat?: () => void;
 }
 
 // ── Battery color helpers ──
@@ -184,7 +185,7 @@ function QuickStats({
 
 // ── Main Component ──
 
-export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeStation }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
   const { t, tBi } = useLocale();
   const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
 
@@ -202,29 +203,45 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        <div className="h-4 bg-[var(--color-surface-hover)] rounded w-1/3 animate-pulse" />
-        <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
-          {/* Route text */}
-          <div className="h-3 bg-[var(--color-surface-hover)] rounded w-full animate-pulse" />
-          {/* Stats grid */}
+      <div className="space-y-4">
+        {/* Status message */}
+        <div className="flex items-center gap-3 px-1">
+          <span className="flex gap-1">
+            <span className="w-2 h-2 bg-[var(--color-accent)] rounded-full animate-bounce [animation-delay:0ms]" />
+            <span className="w-2 h-2 bg-[var(--color-accent)] rounded-full animate-bounce [animation-delay:150ms]" />
+            <span className="w-2 h-2 bg-[var(--color-accent)] rounded-full animate-bounce [animation-delay:300ms]" />
+          </span>
+          <span className="text-sm text-[var(--color-muted)]">{t('planning')}</span>
+        </div>
+
+        {/* Skeleton: trip overview card */}
+        <div className="p-4 bg-[var(--color-surface)] rounded-2xl space-y-4">
+          <div className="h-3 bg-[var(--color-surface-hover)] rounded w-3/4 animate-pulse" />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 mb-1 animate-pulse" />
-              <div className="h-6 bg-[var(--color-surface-hover)] rounded w-24 animate-pulse" />
+              <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 mb-1.5 animate-pulse" />
+              <div className="h-5 bg-[var(--color-surface-hover)] rounded w-24 animate-pulse" />
             </div>
             <div>
-              <div className="h-3 bg-[var(--color-surface-hover)] rounded w-20 mb-1 animate-pulse" />
-              <div className="h-6 bg-[var(--color-surface-hover)] rounded w-20 animate-pulse" />
+              <div className="h-3 bg-[var(--color-surface-hover)] rounded w-20 mb-1.5 animate-pulse" />
+              <div className="h-5 bg-[var(--color-surface-hover)] rounded w-20 animate-pulse" />
             </div>
           </div>
-          {/* Battery bar */}
+          {/* Battery bar skeleton */}
           <div className="h-7 bg-[var(--color-surface-hover)] rounded-full animate-pulse" />
-          <div className="flex justify-between">
-            <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 animate-pulse" />
-            <div className="h-3 bg-[var(--color-surface-hover)] rounded w-16 animate-pulse" />
-          </div>
         </div>
+
+        {/* Skeleton: charging stop cards */}
+        {[0, 1].map(i => (
+          <div key={i} className="p-4 bg-[var(--color-surface)] rounded-2xl space-y-3" style={{ opacity: 1 - i * 0.3 }}>
+            <div className="h-4 bg-[var(--color-surface-hover)] rounded w-2/3 animate-pulse" />
+            <div className="h-3 bg-[var(--color-surface-hover)] rounded w-1/2 animate-pulse" />
+            <div className="flex gap-3">
+              <div className="h-8 bg-[var(--color-surface-hover)] rounded-full w-20 animate-pulse" />
+              <div className="h-8 bg-[var(--color-surface-hover)] rounded-full w-16 animate-pulse" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -239,9 +256,19 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
-        {t('trip_summary')}
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
+          {t('trip_summary')}
+        </h2>
+        {onBackToChat && (
+          <button
+            onClick={onBackToChat}
+            className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+          >
+            ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
+          </button>
+        )}
+      </div>
 
       <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
         {/* Route */}

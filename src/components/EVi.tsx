@@ -450,8 +450,12 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                   className={`flex-1 py-2.5 rounded-xl text-sm font-medium bg-[var(--color-accent)] text-white min-h-[44px] transition-opacity ${isPlanning ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}`}
                 >
                   {isPlanning ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span className="flex items-center justify-center gap-1.5">
+                      <span className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0ms]" />
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:150ms]" />
+                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:300ms]" />
+                      </span>
                       {t('planning')}
                     </span>
                   ) : (

@@ -234,7 +234,7 @@ function HomeContent() {
   const handleEViPlanTrip = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    setBottomSheetSnap({ point: 'peek', trigger: Date.now() });
+    setBottomSheetSnap({ point: 'half', trigger: Date.now() });
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
 
@@ -242,6 +242,12 @@ function HomeContent() {
   const handleEnterManually = useCallback(() => {
     setActiveTab('route');
     setShowManualForm(true);
+  }, []);
+
+  // "Back to eVi" — return to chat from trip detail view
+  const handleBackToChat = useCallback(() => {
+    setActiveTab('evi');
+    setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, []);
 
   // "Find nearby stations" — collapse bottom sheet to reveal map
@@ -358,9 +364,9 @@ function HomeContent() {
       }
 
       setTripPlan(data as TripPlan);
-      // Auto-expand bottom sheet and switch to route tab to show results
+      // Auto-expand bottom sheet fully and switch to route tab to show charging details
       setActiveTab('route');
-      setBottomSheetSnap({ point: 'half', trigger: Date.now() });
+      setBottomSheetSnap({ point: 'full', trigger: Date.now() });
       // Save to recent trips
       try {
         const recentTrip = {
@@ -528,9 +534,9 @@ function HomeContent() {
                   isLoopTrip={isLoopTrip}
                   onToggleLoop={handleToggleLoop}
                 />
-                {tripPlan && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />}
+                {(tripPlan || isPlanning) && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} />}
                 {/* Inline share button for mobile — replaces floating FAB */}
-                {tripPlan && (
+                {tripPlan && !isPlanning && (
                   <div className="pt-2">
                     <ShareButton tripPlan={tripPlan} />
                   </div>
