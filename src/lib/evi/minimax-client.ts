@@ -31,8 +31,8 @@ interface ParseInput {
   readonly accumulatedParams: AccumulatedParams | null;
 }
 
-const MAX_RETRIES = 2;
-const REQUEST_TIMEOUT_MS = 15_000;
+const MAX_RETRIES = 1;
+const REQUEST_TIMEOUT_MS = 25000;
 
 export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractionResult> {
   const systemPrompt = buildSystemPrompt(input.vehicleListText, input.accumulatedParams);

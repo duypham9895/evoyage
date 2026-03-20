@@ -37,6 +37,8 @@ const FIRST_VISIT_KEY = 'evi-first-visit';
 const FIRST_VISIT_DONE = 'done';
 const RECENT_TRIPS_KEY = 'ev-recent-trips';
 const MAX_HISTORY = 10;
+const MAX_CLIENT_RETRIES = 2;
+const CLIENT_RETRY_DELAY_MS = 1000;
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/reverse';
 const USER_AGENT = 'EVoyage/1.0 (https://evoyagevn.vercel.app)';
 
@@ -186,23 +188,48 @@ export function useEVi(): UseEViReturn {
         }
       : null;
 
-    try {
-      const res = await fetch('/api/evi/parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          history: buildHistoryPayload(messagesRef.current),
-          userLocation: locationPayload,
-          previousVehicleId: lastResponseRef.current?.tripParams?.vehicleId ?? null,
-          accumulatedParams,
-        }),
-      });
+    const requestBody = JSON.stringify({
+      message: text,
+      history: buildHistoryPayload(messagesRef.current),
+      userLocation: locationPayload,
+      previousVehicleId: lastResponseRef.current?.tripParams?.vehicleId ?? null,
+      accumulatedParams,
+    });
 
-      if (!res.ok) {
+    // Auto-retry on transient failures (503, network errors)
+    let lastRes: Response | null = null;
+    for (let attempt = 0; attempt <= MAX_CLIENT_RETRIES; attempt++) {
+      try {
+        lastRes = await fetch('/api/evi/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: requestBody,
+        });
+
+        // Success or non-retryable error (400, 429) — stop retrying
+        if (lastRes.ok || (lastRes.status !== 503 && lastRes.status !== 502)) {
+          break;
+        }
+      } catch {
+        // Network error — retry
+        lastRes = null;
+      }
+
+      // Wait before retrying
+      if (attempt < MAX_CLIENT_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, CLIENT_RETRY_DELAY_MS * (attempt + 1)));
+      }
+    }
+
+    try {
+      if (!lastRes) {
+        throw new Error('Network error after retries');
+      }
+
+      if (!lastRes.ok) {
         let friendlyMessage = 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.';
         try {
-          const errorJson = await res.json();
+          const errorJson = await lastRes.json();
           if (errorJson.displayMessage) {
             friendlyMessage = errorJson.displayMessage;
           }
@@ -218,7 +245,7 @@ export function useEVi(): UseEViReturn {
         return;
       }
 
-      const response: EViParseResponse = await res.json();
+      const response: EViParseResponse = await lastRes.json();
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: extractAssistantContent(response),

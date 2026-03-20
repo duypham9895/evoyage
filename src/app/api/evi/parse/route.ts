@@ -7,7 +7,7 @@ import { resolveVehicle } from '@/lib/evi/vehicle-resolver';
 import { searchPlaces } from '@/lib/geo/nominatim';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const MAX_FOLLOW_UPS = 2;
 
