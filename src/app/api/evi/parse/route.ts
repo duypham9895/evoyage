@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
   let extraction;
   try {
     extraction = await parseTrip({ message, history, vehicleListText });
-  } catch {
+  } catch (err) {
+    console.error('[eVi] Minimax call failed:', err instanceof Error ? err.message : err);
     return NextResponse.json(
       buildErrorResponse('service_unavailable', followUpCount),
       { status: 503 },
