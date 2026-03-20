@@ -8,6 +8,7 @@ import {
   LandingWrapper,
   useLandingLocale,
 } from './LandingClient';
+import VietnamMap from './VietnamMap';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
 
@@ -19,75 +20,7 @@ function useT() {
   return (key: string) => dict[key] ?? key;
 }
 
-/* ─── Route Visualization SVG ───────────────────────────── */
-
-function RouteVisualization() {
-  return (
-    <div
-      className="relative w-full max-w-[400px] mx-auto aspect-[2/3]"
-      aria-hidden="true"
-    >
-      {/* Background glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(20,100,244,0.1)_0%,transparent_70%)]" />
-
-      <svg
-        viewBox="0 0 400 600"
-        className="w-full h-full"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Simplified Vietnam outline */}
-        <path
-          d="M200 40 C220 60, 250 80, 260 120 C270 160, 240 200, 250 240 C260 280, 280 300, 270 340 C260 380, 230 400, 220 440 C210 480, 200 500, 180 520 C160 540, 150 550, 160 560"
-          stroke="#2C2C2E"
-          strokeWidth="2"
-          fill="none"
-        />
-        {/* Western border hint */}
-        <path
-          d="M200 40 C180 60, 160 100, 170 140 C180 180, 160 220, 170 260 C180 300, 160 340, 170 380 C180 420, 160 460, 160 500 C160 530, 155 545, 160 560"
-          stroke="#2C2C2E"
-          strokeWidth="1.5"
-          fill="none"
-          opacity="0.5"
-        />
-
-        {/* Animated route from Ho Chi Minh to Ha Noi */}
-        <path
-          className="route-path"
-          d="M190 530 C195 500, 210 470, 220 440 C230 410, 245 380, 250 350 C255 320, 260 290, 255 260 C250 230, 240 200, 245 170 C250 140, 240 110, 220 80 C210 60, 205 50, 200 45"
-          stroke="#00D4AA"
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-        />
-
-        {/* Charging station dots */}
-        <g>
-          <circle className="charge-dot" cx="220" cy="440" r="6" fill="#00D26A" />
-          <circle className="charge-dot" cx="250" cy="350" r="6" fill="#00D26A" />
-          <circle className="charge-dot" cx="255" cy="260" r="6" fill="#1464F4" />
-          <circle className="charge-dot" cx="245" cy="170" r="6" fill="#1464F4" />
-          <circle className="charge-dot" cx="200" cy="45" r="6" fill="#1464F4" />
-        </g>
-
-        {/* City labels */}
-        <text x="170" y="548" fill="#8E8E93" fontSize="11" fontFamily="var(--font-sans)">
-          TP.HCM
-        </text>
-        <text x="175" y="38" fill="#8E8E93" fontSize="11" fontFamily="var(--font-sans)">
-          Ha Noi
-        </text>
-
-        {/* Start/End markers */}
-        <circle cx="190" cy="530" r="8" fill="#00D26A" opacity="0.3" />
-        <circle cx="190" cy="530" r="4" fill="#00D26A" />
-        <circle cx="200" cy="45" r="8" fill="#1464F4" opacity="0.3" />
-        <circle cx="200" cy="45" r="4" fill="#1464F4" />
-      </svg>
-    </div>
-  );
-}
+/* ─── Vietnam Map (GADM geographic data) ───────────────── */
 
 /* ─── Feature section config ─────────────────────────────── */
 
@@ -175,9 +108,9 @@ function LandingContent() {
               </div>
             </div>
 
-            {/* Right: animated visualization */}
-            <div className="flex-shrink-0 w-full md:w-[40%] max-w-[320px] md:max-w-[400px]">
-              <RouteVisualization />
+            {/* Right: interactive Vietnam map */}
+            <div className="flex-shrink-0 w-full md:w-[45%] max-w-[400px] md:max-w-[500px]">
+              <VietnamMap />
             </div>
           </div>
         </div>

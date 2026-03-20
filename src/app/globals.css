@@ -129,29 +129,70 @@ input[type="range"]::-moz-range-track {
   animation: fadeIn 150ms ease-out forwards;
 }
 
+/* ─── Vietnam map styles ──────────────────────────────────── */
+
+.province path {
+  fill: url(#landFill);
+  stroke: #1C1C1E;
+  stroke-width: 0.3;
+  stroke-linejoin: round;
+  transition: fill 0.2s, stroke 0.2s;
+  cursor: pointer;
+  filter: drop-shadow(0 0 2px rgba(20, 100, 244, 0.15));
+}
+
+.province:hover path {
+  fill: rgba(0, 212, 170, 0.22);
+  stroke: rgba(0, 212, 170, 0.4);
+  stroke-width: 0.6;
+  filter: drop-shadow(0 0 4px rgba(0, 212, 170, 0.2));
+}
+
+.named-island path {
+  transition: fill 0.2s, stroke 0.2s;
+  cursor: pointer;
+}
+
+.named-island:hover path {
+  fill: rgba(0, 212, 170, 0.4);
+  stroke: #00D4AA;
+  stroke-width: 1.2;
+}
+
+.archipelago {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.archipelago:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 212, 170, 0.3));
+}
+
+@media (max-width: 767px) {
+  .island-label-sm {
+    display: none;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+@keyframes ringExpand {
+  0% { r: 15; opacity: 0.25; }
+  100% { r: 30; opacity: 0; }
+}
+
+.ring-expand {
+  animation: ringExpand 3s ease-out infinite;
+}
+
 /* ─── Landing page animations ──────────────────────────────── */
-
-@keyframes drawRoute {
-  0%   { stroke-dashoffset: 1200; }
-  70%  { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: 0; }
-}
-
-.route-path {
-  stroke-dasharray: 1200;
-  animation: drawRoute 6s ease-in-out infinite;
-}
-
-@keyframes chargePulse {
-  0%, 100% { transform: scale(1); opacity: 0.6; }
-  50%      { transform: scale(1.4); opacity: 1; }
-}
-
-.charge-dot:nth-child(1) { animation: chargePulse 2s ease-in-out 0.8s infinite; }
-.charge-dot:nth-child(2) { animation: chargePulse 2s ease-in-out 1.6s infinite; }
-.charge-dot:nth-child(3) { animation: chargePulse 2s ease-in-out 2.4s infinite; }
-.charge-dot:nth-child(4) { animation: chargePulse 2s ease-in-out 3.2s infinite; }
-.charge-dot:nth-child(5) { animation: chargePulse 2s ease-in-out 4.0s infinite; }
 
 @keyframes fadeInUp {
   from {
@@ -215,5 +256,13 @@ input[type="range"]::-moz-range-track {
   }
   .section-animate {
     opacity: 1;
+  }
+  .breathe,
+  .ring-expand {
+    animation: none !important;
+  }
+  svg animate,
+  svg animateMotion {
+    display: none;
   }
 }
