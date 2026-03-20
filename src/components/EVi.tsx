@@ -19,6 +19,7 @@ interface EViProps {
   readonly onPlanTrip?: (params: EViTripParams) => void;
   readonly onEnterManually?: () => void;
   readonly onFindNearbyStations?: () => void;
+  readonly isPlanning?: boolean;
 }
 
 // ── Constants ──
@@ -128,7 +129,7 @@ function LocationBadge({ address }: { readonly address: string }) {
 
 // ── Main Component ──
 
-export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindNearbyStations }: EViProps) {
+export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindNearbyStations, isPlanning = false }: EViProps) {
   const { t, locale } = useLocale();
   const {
     state,
@@ -445,13 +446,22 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
               <div className="flex gap-2">
                 <button
                   onClick={handlePlan}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-[var(--color-accent)] text-white min-h-[44px] transition-opacity hover:opacity-90"
+                  disabled={isPlanning}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium bg-[var(--color-accent)] text-white min-h-[44px] transition-opacity ${isPlanning ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}`}
                 >
-                  {t('evi_plan_button')}
+                  {isPlanning ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      {t('planning')}
+                    </span>
+                  ) : (
+                    t('evi_plan_button')
+                  )}
                 </button>
                 <button
                   onClick={handleEdit}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--color-muted)]/30 text-[var(--color-foreground)] min-h-[44px] transition-opacity hover:opacity-80"
+                  disabled={isPlanning}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--color-muted)]/30 text-[var(--color-foreground)] min-h-[44px] transition-opacity hover:opacity-80 disabled:opacity-40"
                 >
                   {t('evi_edit_button')}
                 </button>

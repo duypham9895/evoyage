@@ -223,11 +223,11 @@ function HomeContent() {
     if (params.rangeSafetyFactor != null) setRangeSafetyFactor(params.rangeSafetyFactor);
   }, []);
 
-  // "Edit" — fill form and reveal editing UI
+  // "Edit" — fill form and expand sheet so user can see & modify inputs
   const handleTripParsed = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    setBottomSheetSnap({ point: 'peek', trigger: Date.now() });
+    setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, [fillFormFromEVi]);
 
   // "Plan Trip" — fill form and auto-trigger route planning
@@ -507,7 +507,7 @@ function HomeContent() {
           {/* Tab content */}
           <div className="space-y-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'evi' && (
-              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} />
+              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
             )}
 
             {activeTab === 'route' && (
@@ -632,7 +632,7 @@ function HomeContent() {
               <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
             </div>
           ) : (
-            <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} />
+            <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
           )}
         </aside>
 

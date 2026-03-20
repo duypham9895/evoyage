@@ -14,6 +14,7 @@ import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/routing/s
 import { estimateDetourTimeSec, type StationWithRouteInfo } from '@/lib/routing/station-finder';
 import { cacheTripPlan } from '@/lib/routing/trip-cache';
 import { safeJsonArray } from '@/lib/safe-json';
+import { VIETNAM_MODELS } from '@/lib/vietnam-models';
 import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
 
 const routeRequestSchema = z.object({
@@ -104,19 +105,24 @@ export async function POST(request: NextRequest) {
   };
 
   if (vehicleId) {
+    // Try database first, then fall back to hardcoded Vietnam models
     const dbVehicle = await prisma.eVVehicle.findUnique({
       where: { id: vehicleId },
     });
-    if (!dbVehicle) {
+    const hardcodedVehicle = !dbVehicle
+      ? VIETNAM_MODELS.find((m) => m.id === vehicleId)
+      : null;
+    const resolved = dbVehicle ?? hardcodedVehicle;
+    if (!resolved) {
       return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
     }
     vehicle = {
-      brand: dbVehicle.brand,
-      model: dbVehicle.model,
-      variant: dbVehicle.variant,
-      officialRangeKm: dbVehicle.officialRangeKm,
-      batteryCapacityKwh: dbVehicle.batteryCapacityKwh,
-      chargingTimeDC_10to80_min: dbVehicle.chargingTimeDC_10to80_min,
+      brand: resolved.brand,
+      model: resolved.model,
+      variant: resolved.variant,
+      officialRangeKm: resolved.officialRangeKm,
+      batteryCapacityKwh: resolved.batteryCapacityKwh,
+      chargingTimeDC_10to80_min: resolved.chargingTimeDC_10to80_min,
     };
   } else if (customVehicle) {
     vehicle = {
