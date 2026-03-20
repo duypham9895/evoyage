@@ -6,7 +6,7 @@ import { buildSystemPrompt } from './prompt';
 const MODEL = 'MiniMax-M2.7';
 
 function getClient(): OpenAI {
-  const apiKey = process.env.MINIMAX_API_KEY;
+  const apiKey = process.env.MINIMAX_API_KEY?.trim();
   if (!apiKey) {
     throw new Error('MINIMAX_API_KEY is not set');
   }
