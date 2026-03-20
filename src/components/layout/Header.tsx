@@ -10,7 +10,7 @@ const MAP_MODES: readonly { readonly mode: MapMode; readonly label: string }[] =
 ];
 
 export default function Header() {
-  const { locale, toggleLocale, t } = useLocale();
+  const { locale, toggleLocale } = useLocale();
   const { mode, setMode } = useMapMode();
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
@@ -52,16 +52,13 @@ export default function Header() {
           })}
         </div>
 
-        {/* Language toggle — compact on mobile */}
-        <span className="hidden sm:inline text-xs text-[var(--color-muted)]">
-          {t('language')}
-        </span>
+        {/* Language toggle */}
         <button
           onClick={toggleLocale}
-          className="px-2 py-1.5 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-lg bg-[var(--color-background)] border border-[var(--color-surface-hover)] hover:border-[var(--color-accent)] transition-colors whitespace-nowrap"
+          className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
           aria-label="Toggle language"
         >
-          {locale === 'vi' ? '🇻🇳 → 🇬🇧' : '🇬🇧 → 🇻🇳'}
+          {locale === 'vi' ? 'EN' : 'VI'}
         </button>
       </div>
     </header>
