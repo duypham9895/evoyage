@@ -16,6 +16,8 @@ import AddCustomVehicle from '@/components/trip/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
 import TripSummary from '@/components/trip/TripSummary';
 import ShareButton from '@/components/trip/ShareButton';
+import EVi from '@/components/EVi';
+import type { EViTripParams } from '@/lib/evi/types';
 import FeedbackFAB from '@/components/feedback/FeedbackFAB';
 import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/layout/MobileTabBar';
@@ -31,16 +33,15 @@ import {
 
 // Both map components must be loaded client-side only (use window/document)
 const LeafletMap = dynamic(() => import('@/components/map/Map'), { ssr: false });
-const GoogleMap = dynamic(() => import('@/components/map/GoogleMap'), { ssr: false });
 const MapboxMap = dynamic(() => import('@/components/map/MapboxMap'), { ssr: false });
 
 function HomeContent() {
   const { mode } = useMapMode();
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const isMobile = useIsMobile();
 
   // Mobile tab state
-  const [activeTab, setActiveTab] = useState<MobileTab>('route');
+  const [activeTab, setActiveTab] = useState<MobileTab>('evi');
 
   // Trip inputs
   const [start, setStart] = useState('');
@@ -197,6 +198,26 @@ function HomeContent() {
     setEndCoords({ lat: result.lat, lng: result.lng });
   }, []);
 
+  // eVi: AI fills form state from parsed trip
+  const handleTripParsed = useCallback((params: EViTripParams) => {
+    if (params.start) setStart(params.start);
+    if (params.startLat != null && params.startLng != null) {
+      setStartCoords({ lat: params.startLat, lng: params.startLng });
+    }
+    if (params.end) setEnd(params.end);
+    if (params.endLat != null && params.endLng != null) {
+      setEndCoords({ lat: params.endLat, lng: params.endLng });
+    }
+    if (params.vehicleData) {
+      setSelectedVehicle(params.vehicleData);
+      setCustomVehicle(null);
+    }
+    if (params.currentBattery != null) setCurrentBattery(params.currentBattery);
+    if (params.minArrival != null) setMinArrival(params.minArrival);
+    if (params.rangeSafetyFactor != null) setRangeSafetyFactor(params.rangeSafetyFactor);
+    setActiveTab('route');
+  }, []);
+
   // Clear coords when text input changes manually
   const handleStartChange = useCallback((value: string) => {
     setStart(value);
@@ -248,12 +269,12 @@ function HomeContent() {
   // Swipe gesture handlers for mobile tab switching
   const handleSwipeLeft = useCallback(() => {
     hapticLight();
-    setActiveTab(prev => prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev);
+    setActiveTab(prev => prev === 'evi' ? 'route' : prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev);
   }, []);
 
   const handleSwipeRight = useCallback(() => {
     hapticLight();
-    setActiveTab(prev => prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev);
+    setActiveTab(prev => prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev === 'route' ? 'evi' : prev);
   }, []);
 
   // Plan trip — POST to /api/route
@@ -287,7 +308,7 @@ function HomeContent() {
           currentBatteryPercent: currentBattery,
           minArrivalPercent: minArrival,
           rangeSafetyFactor,
-          provider: mode === 'google' ? 'google' : mode === 'mapbox' ? 'mapbox' : 'osrm',
+          provider: mode === 'mapbox' ? 'mapbox' : 'osrm',
           waypoints: waypoints
             .filter(wp => wp.coords)
             .map(wp => ({
@@ -410,9 +431,7 @@ function HomeContent() {
   // Map component
   const mapContent = (
     <>
-      {mode === 'google' ? (
-        <GoogleMap tripPlan={tripPlan} waypoints={waypointMarkers} />
-      ) : mode === 'mapbox' ? (
+      {mode === 'mapbox' ? (
         <MapboxMap tripPlan={tripPlan} waypoints={waypointMarkers} />
       ) : (
         <LeafletMap tripPlan={tripPlan} waypoints={waypointMarkers} />
@@ -447,6 +466,10 @@ function HomeContent() {
 
           {/* Tab content */}
           <div className="space-y-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+            {activeTab === 'evi' && (
+              <EVi onTripParsed={handleTripParsed} />
+            )}
+
             {activeTab === 'route' && (
               <>
                 <TripInput
@@ -522,43 +545,52 @@ function HomeContent() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Sidebar — inputs + summary */}
         <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
-          <TripInput
-            start={start}
-            end={end}
-            onStartChange={handleStartChange}
-            onEndChange={handleEndChange}
-            onStartSelect={handleStartSelect}
-            onEndSelect={handleEndSelect}
-            waypoints={waypoints}
-            onAddWaypoint={handleAddWaypoint}
-            onRemoveWaypoint={handleRemoveWaypoint}
-            onUpdateWaypoint={handleUpdateWaypoint}
-            onReorderWaypoints={handleReorderWaypoints}
-            isLoopTrip={isLoopTrip}
-            onToggleLoop={handleToggleLoop}
-          />
+          <EVi onTripParsed={handleTripParsed} />
 
-          <BrandModelSelector
-            selectedVehicle={selectedVehicle}
-            onSelect={handleSelectVehicle}
-            onCustomCarClick={() => setShowCustomForm(true)}
-          />
+          <details>
+            <summary className="text-sm text-[var(--color-muted)] cursor-pointer py-2 hover:text-[var(--color-foreground)] transition-colors">
+              {t('evi_manual_link')}
+            </summary>
+            <div className="space-y-4 pt-2">
+              <TripInput
+                start={start}
+                end={end}
+                onStartChange={handleStartChange}
+                onEndChange={handleEndChange}
+                onStartSelect={handleStartSelect}
+                onEndSelect={handleEndSelect}
+                waypoints={waypoints}
+                onAddWaypoint={handleAddWaypoint}
+                onRemoveWaypoint={handleRemoveWaypoint}
+                onUpdateWaypoint={handleUpdateWaypoint}
+                onReorderWaypoints={handleReorderWaypoints}
+                isLoopTrip={isLoopTrip}
+                onToggleLoop={handleToggleLoop}
+              />
 
-          <BatteryStatusPanel
-            vehicle={activeVehicle}
-            currentBattery={currentBattery}
-            minArrival={minArrival}
-            rangeSafetyFactor={rangeSafetyFactor}
-            onCurrentBatteryChange={setCurrentBattery}
-            onMinArrivalChange={setMinArrival}
-            onRangeSafetyFactorChange={handleRSFChange}
-          />
+              <BrandModelSelector
+                selectedVehicle={selectedVehicle}
+                onSelect={handleSelectVehicle}
+                onCustomCarClick={() => setShowCustomForm(true)}
+              />
 
-          {planButton}
-          {errorDisplay}
+              <BatteryStatusPanel
+                vehicle={activeVehicle}
+                currentBattery={currentBattery}
+                minArrival={minArrival}
+                rangeSafetyFactor={rangeSafetyFactor}
+                onCurrentBatteryChange={setCurrentBattery}
+                onMinArrivalChange={setMinArrival}
+                onRangeSafetyFactorChange={handleRSFChange}
+              />
 
-          {/* Trip results */}
-          <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
+              {planButton}
+              {errorDisplay}
+
+              {/* Trip results */}
+              <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
+            </div>
+          </details>
         </aside>
 
         {/* Map pane */}
