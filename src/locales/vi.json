@@ -278,5 +278,9 @@
   "evi_not_trip": "Chào bạn! Mình là eVi, trợ lý hành trình. Cho mình biết bạn muốn đi đâu nhé!",
   "evi_retry": "Thử lại",
   "evi_start_over": "Bắt đầu lại",
-  "evi_find_stations": "Tìm trạm sạc gần đây"
+  "evi_find_stations": "Tìm trạm sạc gần đây",
+  "evi_mic_denied": "Trình duyệt chưa cấp quyền micro. Vui lòng cho phép trong cài đặt.",
+  "evi_no_speech": "Không nghe thấy giọng nói. Bấm mic và thử lại nhé.",
+  "evi_speech_network_error": "Lỗi mạng khi nhận diện giọng nói. Kiểm tra kết nối của bạn.",
+  "evi_speech_error": "Nhập giọng nói thất bại. Thử lại hoặc gõ hành trình nhé."
 }

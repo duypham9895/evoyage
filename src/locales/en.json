@@ -278,5 +278,9 @@
   "evi_not_trip": "Hi! I'm eVi, your trip assistant. Tell me where you'd like to go!",
   "evi_retry": "Try again",
   "evi_start_over": "Start over",
-  "evi_find_stations": "Find stations nearby"
+  "evi_find_stations": "Find stations nearby",
+  "evi_mic_denied": "Microphone access denied. Please allow mic in browser settings.",
+  "evi_no_speech": "No speech detected. Tap the mic and try again.",
+  "evi_speech_network_error": "Network error during voice recognition. Check your connection.",
+  "evi_speech_error": "Voice input failed. Try again or type your trip."
 }

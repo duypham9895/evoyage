@@ -129,7 +129,7 @@ function LocationBadge({ address }: { readonly address: string }) {
 // ── Main Component ──
 
 export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindNearbyStations }: EViProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const {
     state,
     messages,
@@ -144,9 +144,10 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
     isSupported,
     isListening,
     transcript,
+    error: speechError,
     startListening,
     stopListening,
-  } = useSpeechRecognition();
+  } = useSpeechRecognition(locale);
 
   const [inputValue, setInputValue] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -256,7 +257,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
   );
 
   const handleFollowUpLocationSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
+    (e: React.SyntheticEvent<HTMLFormElement>) => {
       e.preventDefault();
       handleSend();
     },
@@ -474,6 +475,19 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
 
       {/* Input area */}
       <div className="sticky bottom-0 px-4 pb-4 pt-2 bg-[var(--color-background)] border-t border-[var(--color-muted)]/10">
+        {/* Speech error feedback */}
+        {speechError && !isListening && (
+          <p className="text-xs text-red-400 text-center mb-2">
+            {speechError === 'not_allowed'
+              ? t('evi_mic_denied' as Parameters<typeof t>[0])
+              : speechError === 'no_speech'
+                ? t('evi_no_speech' as Parameters<typeof t>[0])
+                : speechError === 'network'
+                  ? t('evi_speech_network_error' as Parameters<typeof t>[0])
+                  : t('evi_speech_error' as Parameters<typeof t>[0])}
+          </p>
+        )}
+
         {/* Listening status */}
         {isListening && (
           <p className="text-xs text-[var(--color-accent)] text-center mb-2 animate-pulse">

@@ -11,32 +11,36 @@ Element.prototype.scrollTo = vi.fn();
 
 // ── Mocks ──
 
+const translations: Record<string, string> = {
+  evi_greeting_first: 'Hi! Tell me where you want to go!',
+  evi_placeholder: 'E.g., Go to Da Lat, VF8, battery 85%',
+  evi_from: 'From',
+  evi_to: 'To',
+  evi_vehicle: 'Vehicle',
+  evi_battery: 'Battery',
+  evi_plan_button: 'Plan Trip',
+  evi_edit_button: 'Edit',
+  evi_manual_link: 'Enter manually',
+  evi_speak: 'Speak',
+  evi_voice_beta: 'Beta',
+  evi_listening: 'Listening...',
+  evi_retry: 'Retry',
+  evi_start_over: 'Start over',
+  evi_location_prompt: 'Enter location',
+  evi_greeting_morning: 'Good morning!',
+  evi_greeting_evening: 'Good evening!',
+  evi_greeting_return: 'Welcome back!',
+  evi_find_stations: 'Find stations nearby',
+  evi_mic_denied: 'Microphone access denied.',
+  evi_no_speech: 'No speech detected.',
+  evi_speech_network_error: 'Network error during voice recognition.',
+  evi_speech_error: 'Voice input failed.',
+};
+
 vi.mock('@/lib/locale', () => ({
   useLocale: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        evi_greeting_first: 'Hi! Tell me where you want to go!',
-        evi_placeholder: 'E.g., Go to Da Lat, VF8, battery 85%',
-        evi_from: 'From',
-        evi_to: 'To',
-        evi_vehicle: 'Vehicle',
-        evi_battery: 'Battery',
-        evi_plan_button: 'Plan Trip',
-        evi_edit_button: 'Edit',
-        evi_manual_link: 'Enter manually',
-        evi_speak: 'Speak',
-        evi_voice_beta: 'Beta',
-        evi_listening: 'Listening...',
-        evi_retry: 'Retry',
-        evi_start_over: 'Start over',
-        evi_location_prompt: 'Enter location',
-        evi_greeting_morning: 'Good morning!',
-        evi_greeting_evening: 'Good evening!',
-        evi_greeting_return: 'Welcome back!',
-        evi_find_stations: 'Find stations nearby',
-      };
-      return translations[key] ?? key;
-    },
+    locale: 'vi',
+    t: (key: string) => translations[key] ?? key,
   }),
 }));
 
@@ -44,15 +48,25 @@ vi.mock('@/lib/haptics', () => ({
   hapticLight: vi.fn(),
 }));
 
+const mockStartListening = vi.fn();
+const mockStopListening = vi.fn();
+
+let mockSpeechReturn = {
+  isSupported: false,
+  isListening: false,
+  transcript: '',
+  error: null as string | null,
+  startListening: mockStartListening,
+  stopListening: mockStopListening,
+};
+
 vi.mock('@/hooks/useSpeechRecognition', () => ({
-  useSpeechRecognition: () => ({
-    isSupported: false,
-    isListening: false,
-    transcript: '',
-    startListening: vi.fn(),
-    stopListening: vi.fn(),
-  }),
+  useSpeechRecognition: () => mockSpeechReturn,
 }));
+
+function setSpeechState(overrides: Partial<typeof mockSpeechReturn>) {
+  mockSpeechReturn = { ...mockSpeechReturn, ...overrides };
+}
 
 // ── Shared test data ──
 
@@ -125,6 +139,8 @@ function setHookState(overrides: Partial<typeof mockUseEViReturn>) {
 beforeEach(() => {
   mockSendMessage.mockReset();
   mockReset.mockReset();
+  mockStartListening.mockReset();
+  mockStopListening.mockReset();
   setHookState({
     state: 'idle',
     messages: [],
@@ -132,6 +148,12 @@ beforeEach(() => {
     userLocation: null,
     isFirstVisit: true,
     recentTrips: [],
+  });
+  setSpeechState({
+    isSupported: false,
+    isListening: false,
+    transcript: '',
+    error: null,
   });
 });
 
@@ -511,6 +533,143 @@ describe('EVi component', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 
       expect(screen.queryByText('📍')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('voice input — mic button', () => {
+    it('shows mic button when speech recognition is supported', () => {
+      setSpeechState({ isSupported: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByLabelText('Speak')).toBeInTheDocument();
+    });
+
+    it('hides mic button when speech recognition is not supported', () => {
+      setSpeechState({ isSupported: false });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByLabelText('Speak')).not.toBeInTheDocument();
+    });
+
+    it('calls startListening when mic button is clicked', () => {
+      setSpeechState({ isSupported: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+      fireEvent.click(screen.getByLabelText('Speak'));
+
+      expect(mockStartListening).toHaveBeenCalledOnce();
+    });
+
+    it('calls stopListening when mic button is clicked while listening', () => {
+      setSpeechState({ isSupported: true, isListening: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+      fireEvent.click(screen.getByLabelText('Speak'));
+
+      expect(mockStopListening).toHaveBeenCalledOnce();
+    });
+
+    it('shows pulsing animation while listening', () => {
+      setSpeechState({ isSupported: true, isListening: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      const micButton = screen.getByLabelText('Speak');
+      expect(micButton.className).toContain('animate-pulse');
+      expect(micButton.className).toContain('bg-red-500');
+    });
+
+    it('shows "Listening..." status text while recording', () => {
+      setSpeechState({ isSupported: true, isListening: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Listening...')).toBeInTheDocument();
+    });
+
+    it('shows Beta badge on mic button', () => {
+      setSpeechState({ isSupported: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Beta')).toBeInTheDocument();
+    });
+  });
+
+  describe('voice input — live transcript', () => {
+    it('displays live transcript while listening', () => {
+      setSpeechState({ isSupported: true, isListening: true, transcript: 'Đi Đà Lạt' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Đi Đà Lạt')).toBeInTheDocument();
+    });
+
+    it('does not display transcript when not listening', () => {
+      setSpeechState({ isSupported: true, isListening: false, transcript: 'Đi Đà Lạt' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      // The transcript bubble only shows when isListening is true
+      // When not listening, it should not be in the live transcript area
+      // (it may have been sent as a message already)
+      const italicElements = document.querySelectorAll('.italic');
+      expect(italicElements.length).toBe(0);
+    });
+  });
+
+  describe('voice input — error feedback', () => {
+    it('shows mic permission denied error message', () => {
+      setSpeechState({ isSupported: true, error: 'not_allowed' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Microphone access denied.')).toBeInTheDocument();
+    });
+
+    it('shows no speech detected error message', () => {
+      setSpeechState({ isSupported: true, error: 'no_speech' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('No speech detected.')).toBeInTheDocument();
+    });
+
+    it('shows network error message', () => {
+      setSpeechState({ isSupported: true, error: 'network' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Network error during voice recognition.')).toBeInTheDocument();
+    });
+
+    it('shows generic speech error for unknown errors', () => {
+      setSpeechState({ isSupported: true, error: 'recognition_failed' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Voice input failed.')).toBeInTheDocument();
+    });
+
+    it('does not show error while actively listening', () => {
+      setSpeechState({ isSupported: true, isListening: true, error: 'no_speech' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByText('No speech detected.')).not.toBeInTheDocument();
+    });
+
+    it('does not show error when there is no error', () => {
+      setSpeechState({ isSupported: true, error: null });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByText('Microphone access denied.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No speech detected.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Network error during voice recognition.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Voice input failed.')).not.toBeInTheDocument();
     });
   });
 });
