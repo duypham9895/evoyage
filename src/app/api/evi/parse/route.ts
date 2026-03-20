@@ -46,9 +46,12 @@ export async function POST(request: NextRequest) {
   try {
     extraction = await parseTrip({ message, history, vehicleListText });
   } catch (err) {
-    console.error('[eVi] Minimax call failed:', err instanceof Error ? err.message : err);
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const hasKey = !!process.env.MINIMAX_API_KEY;
+    const keyPrefix = process.env.MINIMAX_API_KEY?.slice(0, 10) ?? 'MISSING';
+    console.error('[eVi] Minimax call failed:', errMsg, '| hasKey:', hasKey, '| keyPrefix:', keyPrefix);
     return NextResponse.json(
-      buildErrorResponse('service_unavailable', followUpCount),
+      { ...buildErrorResponse('service_unavailable', followUpCount), _debug: { errMsg, hasKey, keyPrefix } },
       { status: 503 },
     );
   }
