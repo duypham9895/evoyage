@@ -4,10 +4,9 @@ import { useLocale } from '@/lib/locale';
 import { useMapMode } from '@/lib/map-mode';
 import type { MapMode } from '@/types';
 
-const MAP_MODES: readonly { readonly mode: MapMode; readonly label: string; readonly hidden?: boolean }[] = [
+const MAP_MODES: readonly { readonly mode: MapMode; readonly label: string }[] = [
   { mode: 'osm', label: 'OSM' },
   { mode: 'mapbox', label: 'Mapbox' },
-  { mode: 'google', label: 'Google', hidden: true },
 ];
 
 export default function Header() {
@@ -30,7 +29,7 @@ export default function Header() {
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Map mode toggle */}
         <div className="flex items-center gap-0.5 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)] p-0.5">
-          {MAP_MODES.filter(({ hidden }) => !hidden).map(({ mode: m, label }) => {
+          {MAP_MODES.map(({ mode: m, label }) => {
             const isDisabled = m === 'mapbox' && !mapboxToken;
             return (
               <button

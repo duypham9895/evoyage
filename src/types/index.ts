@@ -134,7 +134,7 @@ export interface TripPlan {
   readonly tripId?: string;
 }
 
-export type MapMode = 'osm' | 'mapbox' | 'google';
+export type MapMode = 'osm' | 'mapbox';
 
 // ── Vehicle Search/Filter Types ──
 export interface VehicleSearchParams {

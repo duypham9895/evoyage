@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
 import { isValidCoordinate, COORDINATE_ERROR_EN } from '@/lib/geo/coordinate-validation';
 import { fetchDirections, fetchDirectionsWithWaypoints } from '@/lib/routing/osrm';
-import { fetchDirectionsGoogle } from '@/lib/routing/google-directions';
 import { fetchDirectionsMapbox } from '@/lib/routing/mapbox-directions';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/routing/route-planner';
 import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
@@ -38,7 +37,7 @@ const routeRequestSchema = z.object({
   currentBatteryPercent: z.number().min(10).max(100),
   minArrivalPercent: z.number().min(5).max(30),
   rangeSafetyFactor: z.number().min(0.5).max(1.0),
-  provider: z.enum(['osrm', 'mapbox', 'google']).default('osrm'),
+  provider: z.enum(['osrm', 'mapbox']).default('osrm'),
   waypoints: z.array(z.object({
     lat: z.number().min(0).max(30),
     lng: z.number().min(95).max(115),
@@ -48,7 +47,7 @@ const routeRequestSchema = z.object({
 
 /**
  * POST /api/route — Calculate a trip plan with charging stops.
- * Supports both OSRM and Google Directions providers.
+ * Supports OSRM (default) and Mapbox Directions providers.
  */
 export async function POST(request: NextRequest) {
   // Rate limiting: 10 requests per minute per IP
@@ -136,11 +135,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Shared coordinate validation for Google and Mapbox
+    // Coordinate validation for Mapbox
     if (provider !== 'osrm') {
       if (startLat == null || startLng == null || endLat == null || endLng == null) {
         return NextResponse.json(
-          { error: `${provider === 'google' ? 'Google' : 'Mapbox'} mode requires coordinates — select locations from the autocomplete dropdown` },
+          { error: 'Mapbox mode requires coordinates — select locations from the autocomplete dropdown' },
           { status: 400 },
         );
       }
@@ -156,38 +155,7 @@ export async function POST(request: NextRequest) {
     // Get route from selected provider
     let directions;
     const hasWaypoints = waypoints && waypoints.length > 0;
-    if (provider === 'google') {
-      const cached = hasWaypoints ? null : await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google');
-      if (cached) {
-        directions = {
-          polyline: cached.polyline,
-          distanceMeters: cached.distanceMeters,
-          durationSeconds: cached.durationSeconds,
-          startAddress: start,
-          endAddress: end,
-        };
-      } else {
-        const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
-        if (!googleApiKey) {
-          return NextResponse.json(
-            { error: 'Google Maps API key not configured on server' },
-            { status: 500 },
-          );
-        }
-        directions = await fetchDirectionsGoogle(
-          startLat!, startLng!, endLat!, endLng!,
-          googleApiKey,
-          waypoints,
-        );
-        if (!hasWaypoints) {
-          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'google', {
-            polyline: directions.polyline,
-            distanceMeters: directions.distanceMeters,
-            durationSeconds: directions.durationSeconds,
-          });
-        }
-      }
-    } else if (provider === 'mapbox') {
+    if (provider === 'mapbox') {
       const cached = hasWaypoints ? null : await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox');
       if (cached) {
         directions = {

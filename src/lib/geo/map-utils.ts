@@ -23,7 +23,7 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/** Build sanitized popup HTML for a charging stop. Shared between Leaflet and Google Maps. */
+/** Build sanitized popup HTML for a charging stop. Shared between Leaflet and Mapbox. */
 export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternatives): string {
   const station = getStopStation(stop);
   const name = escapeHtml(station.name);
