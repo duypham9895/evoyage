@@ -1,9 +1,9 @@
 /** Shared constants and sub-components for VietnamMap */
 
 export const CITY_COLORS: Record<string, string> = {
-  'Hà Nội': '#1464F4',
-  'TP.HCM': '#00D26A',
-  'Đà Lạt': '#00D4AA',
+  'Hà Nội': '#5ab8b8',
+  'TP.HCM': '#5ab8b8',
+  'Đà Lạt': '#4a9e9e',
 };
 
 export const LABEL_OFFSETS: Record<string, { dx: number; dy: number }> = {
@@ -18,7 +18,7 @@ export const LABEL_OFFSETS: Record<string, { dx: number; dy: number }> = {
 };
 
 export function getCityColor(name: string, index: number): string {
-  return CITY_COLORS[name] ?? (index % 2 === 0 ? '#1464F4' : '#00D26A');
+  return CITY_COLORS[name] ?? (index % 2 === 0 ? '#4a9e9e' : '#3d8a8a');
 }
 
 export function ArchipelagoGroup({
@@ -45,13 +45,13 @@ export function ArchipelagoGroup({
         cy={cy}
         r={15}
         fill="none"
-        stroke="#00D4AA"
+        stroke="#3d8a8a"
         strokeWidth={0.8}
         style={{ animationDelay }}
       />
       <g className="breathe" style={{ animationDelay }}>
         {data.dots.map(([dx, dy], i) => (
-          <circle key={i} cx={dx} cy={dy} r={3.5} fill="#00D4AA" />
+          <circle key={i} cx={dx} cy={dy} r={3.5} fill="#3d8a8a" />
         ))}
       </g>
       <rect
@@ -74,7 +74,7 @@ export function ArchipelagoGroup({
         y1={connector.from[1]}
         x2={connector.to[0]}
         y2={connector.to[1]}
-        stroke="#00D4AA"
+        stroke="#3d8a8a"
         strokeWidth={0.6}
         strokeDasharray="4 3"
         opacity={0.3}

@@ -90,17 +90,17 @@ export default function VietnamMap() {
       >
         <defs>
           <linearGradient id="landFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="25%" stopColor="#1464F4" />
-            <stop offset="85%" stopColor="#00D4AA" />
-            <stop offset="100%" stopColor="#00D26A" />
+            <stop offset="0%" stopColor="#1a3a4a" />
+            <stop offset="50%" stopColor="#1f4f55" />
+            <stop offset="100%" stopColor="#2d6b6b" />
           </linearGradient>
           <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#1464F4" stopOpacity={0.08} />
+            <stop offset="0%" stopColor="#1f4f55" stopOpacity={0.06} />
             <stop offset="100%" stopColor="#0A0A0B" stopOpacity={0} />
           </radialGradient>
           <radialGradient id="archipelagoHalo" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#00D4AA" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="#00D4AA" stopOpacity={0} />
+            <stop offset="0%" stopColor="#3d8a8a" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#3d8a8a" stopOpacity={0} />
           </radialGradient>
           <filter id="routeGlow">
             <feGaussianBlur stdDeviation={3} />
@@ -124,7 +124,7 @@ export default function VietnamMap() {
           if (island.path !== null) {
             return (
               <g key={island.name} className="named-island" data-name={island.name}>
-                <path d={island.path} fill="rgba(0,212,170,0.2)" stroke="#00D4AA" strokeWidth={0.8} />
+                <path d={island.path} fill="rgba(45,107,107,0.3)" stroke="#3d8a8a" strokeWidth={0.8} />
                 <text className="island-label-sm" x={island.center[0]} y={island.center[1] - 8} textAnchor="middle" fill="#8E8E93" fontSize={8}>
                   {island.name}
                 </text>
@@ -133,8 +133,8 @@ export default function VietnamMap() {
           }
           return (
             <g key={island.name} className="named-island" data-name={island.name}>
-              <circle cx={island.center[0]} cy={island.center[1]} r={8} fill="#00D4AA" opacity={0.1} />
-              <circle cx={island.center[0]} cy={island.center[1]} r={3.5} fill="#00D4AA" />
+              <circle cx={island.center[0]} cy={island.center[1]} r={8} fill="#3d8a8a" opacity={0.1} />
+              <circle cx={island.center[0]} cy={island.center[1]} r={3.5} fill="#3d8a8a" />
               <text className="island-label-sm" x={island.center[0]} y={island.center[1] - 12} textAnchor="middle" fill="#8E8E93" fontSize={8}>
                 {island.name}
               </text>
@@ -162,9 +162,9 @@ export default function VietnamMap() {
 
         {/* 6. Route */}
         <g pointerEvents="none">
-          <path d={VIETNAM_MAP.route} fill="none" stroke="#00D26A" strokeWidth={2.5} opacity={0.3} filter="url(#routeGlow)" />
-          <path d={VIETNAM_MAP.route} fill="none" stroke="#00D26A" strokeWidth={1} opacity={0.55} />
-          <circle r={3} fill="#00D26A" opacity={0.9}>
+          <path d={VIETNAM_MAP.route} fill="none" stroke="#00D4AA" strokeWidth={2.5} opacity={0.15} filter="url(#routeGlow)" />
+          <path d={VIETNAM_MAP.route} fill="none" stroke="#00D4AA" strokeWidth={1} opacity={0.4} />
+          <circle r={3} fill="#00D4AA" opacity={0.7}>
             <animateMotion dur="5s" repeatCount="indefinite" path={VIETNAM_MAP.route} />
           </circle>
         </g>

@@ -133,19 +133,18 @@ input[type="range"]::-moz-range-track {
 
 .province path {
   fill: url(#landFill);
-  stroke: #1C1C1E;
-  stroke-width: 0.3;
+  stroke: rgba(90, 184, 184, 0.18);
+  stroke-width: 0.5;
   stroke-linejoin: round;
   transition: fill 0.2s, stroke 0.2s;
   cursor: pointer;
-  filter: drop-shadow(0 0 2px rgba(20, 100, 244, 0.15));
 }
 
 .province:hover path {
-  fill: rgba(0, 212, 170, 0.22);
-  stroke: rgba(0, 212, 170, 0.4);
-  stroke-width: 0.6;
-  filter: drop-shadow(0 0 4px rgba(0, 212, 170, 0.2));
+  fill: rgba(61, 138, 138, 0.5);
+  stroke: rgba(90, 184, 184, 0.35);
+  stroke-width: 0.7;
+  filter: drop-shadow(0 0 3px rgba(61, 138, 138, 0.15));
 }
 
 .named-island path {
@@ -154,8 +153,8 @@ input[type="range"]::-moz-range-track {
 }
 
 .named-island:hover path {
-  fill: rgba(0, 212, 170, 0.4);
-  stroke: #00D4AA;
+  fill: rgba(61, 138, 138, 0.4);
+  stroke: #5ab8b8;
   stroke-width: 1.2;
 }
 
