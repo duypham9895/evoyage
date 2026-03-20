@@ -304,12 +304,26 @@ describe('EVi component', () => {
       expect(screen.getByText('SG ra Vũng Tàu, VF5')).toBeInTheDocument();
     });
 
-    it('hides suggestion chips when not first visit', () => {
+    it('shows return-visit suggestion chips for returning users', () => {
       setHookState({ isFirstVisit: false });
 
       render(<EVi onTripParsed={vi.fn()} />);
 
+      // First-visit chips should NOT appear
       expect(screen.queryByText('Đi Đà Lạt cuối tuần')).not.toBeInTheDocument();
+
+      // Return-visit chips should appear
+      expect(screen.getByText('Đi Nha Trang, VF8')).toBeInTheDocument();
+      expect(screen.getByText('SG đi Phan Thiết')).toBeInTheDocument();
+      expect(screen.getByText('Hà Nội ra Hạ Long')).toBeInTheDocument();
+    });
+
+    it('sends message when a suggestion chip is clicked', () => {
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      fireEvent.click(screen.getByText('Đi Đà Lạt cuối tuần'));
+
+      expect(mockSendMessage).toHaveBeenCalledWith('Đi Đà Lạt cuối tuần');
     });
   });
 

@@ -22,6 +22,12 @@ const FIRST_VISIT_CHIPS = [
   'Hà Nội đi Đà Nẵng',
 ];
 
+const RETURN_VISIT_CHIPS = [
+  'Đi Nha Trang, VF8',
+  'SG đi Phan Thiết',
+  'Hà Nội ra Hạ Long',
+];
+
 // ── Helpers ──
 
 function getGreetingKey(isFirstVisit: boolean): string {
@@ -235,10 +241,10 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
         </div>
 
         {/* Suggestion chips (idle, no messages) */}
-        {isIdle && isFirstVisit && (
+        {isIdle && (
           <div className="pl-10" role="listbox" aria-label="Suggested trips">
             <div className="flex flex-wrap gap-2">
-              {FIRST_VISIT_CHIPS.map((chip) => (
+              {(isFirstVisit ? FIRST_VISIT_CHIPS : RETURN_VISIT_CHIPS).map((chip) => (
                 <button
                   key={chip}
                   role="option"
