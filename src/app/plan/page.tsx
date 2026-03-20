@@ -227,6 +227,7 @@ function HomeContent() {
   const handleTripParsed = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
+    setShowManualForm(true); // Desktop: switch sidebar to form view so user can edit inputs
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, [fillFormFromEVi]);
 
@@ -234,6 +235,7 @@ function HomeContent() {
   const handleEViPlanTrip = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
+    setShowManualForm(true); // Desktop: switch sidebar to form view so TripSummary is visible
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
@@ -246,7 +248,8 @@ function HomeContent() {
 
   // "Back to eVi" — return to chat from trip detail view
   const handleBackToChat = useCallback(() => {
-    setActiveTab('evi');
+    setActiveTab('evi'); // Mobile: switch tab
+    setShowManualForm(false); // Desktop: switch sidebar back to EVi chat
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, []);
 
