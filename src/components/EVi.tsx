@@ -11,6 +11,7 @@ import type { EViTripParams } from '@/lib/evi/types';
 
 interface EViProps {
   readonly onTripParsed: (params: EViTripParams) => void;
+  readonly onPlanTrip?: (params: EViTripParams) => void;
 }
 
 // ── Constants ──
@@ -71,7 +72,7 @@ function LocationBadge({ address }: { readonly address: string }) {
 
 // ── Main Component ──
 
-export default function EVi({ onTripParsed }: EViProps) {
+export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
   const { t } = useLocale();
   const {
     state,
@@ -150,9 +151,14 @@ export default function EVi({ onTripParsed }: EViProps) {
   const handlePlan = useCallback(() => {
     if (lastResponse?.tripParams) {
       hapticLight();
-      onTripParsed(lastResponse.tripParams);
+      // Fill form AND auto-trigger planning
+      if (onPlanTrip) {
+        onPlanTrip(lastResponse.tripParams);
+      } else {
+        onTripParsed(lastResponse.tripParams);
+      }
     }
-  }, [lastResponse, onTripParsed]);
+  }, [lastResponse, onTripParsed, onPlanTrip]);
 
   const handleEdit = useCallback(() => {
     if (lastResponse?.tripParams) {

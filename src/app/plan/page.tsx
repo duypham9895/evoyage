@@ -198,8 +198,14 @@ function HomeContent() {
     setEndCoords({ lat: result.lat, lng: result.lng });
   }, []);
 
+  // Ref for details element (desktop) to programmatically expand
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+
+  // Flag to auto-trigger planning after eVi fills the form
+  const [autoPlanPending, setAutoPlanPending] = useState(false);
+
   // eVi: AI fills form state from parsed trip
-  const handleTripParsed = useCallback((params: EViTripParams) => {
+  const fillFormFromEVi = useCallback((params: EViTripParams) => {
     if (params.start) setStart(params.start);
     if (params.startLat != null && params.startLng != null) {
       setStartCoords({ lat: params.startLat, lng: params.startLng });
@@ -215,8 +221,27 @@ function HomeContent() {
     if (params.currentBattery != null) setCurrentBattery(params.currentBattery);
     if (params.minArrival != null) setMinArrival(params.minArrival);
     if (params.rangeSafetyFactor != null) setRangeSafetyFactor(params.rangeSafetyFactor);
-    setActiveTab('route');
   }, []);
+
+  // "Edit" — fill form and reveal editing UI
+  const handleTripParsed = useCallback((params: EViTripParams) => {
+    fillFormFromEVi(params);
+    setActiveTab('route');
+    // Expand details on desktop
+    if (detailsRef.current) {
+      detailsRef.current.open = true;
+    }
+  }, [fillFormFromEVi]);
+
+  // "Plan Trip" — fill form and auto-trigger route planning
+  const handleEViPlanTrip = useCallback((params: EViTripParams) => {
+    fillFormFromEVi(params);
+    setActiveTab('route');
+    if (detailsRef.current) {
+      detailsRef.current.open = true;
+    }
+    setAutoPlanPending(true);
+  }, [fillFormFromEVi]);
 
   // Clear coords when text input changes manually
   const handleStartChange = useCallback((value: string) => {
@@ -348,6 +373,14 @@ function HomeContent() {
     }
   }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip]);
 
+  // Auto-plan after eVi fills form (state updates need a render cycle)
+  useEffect(() => {
+    if (autoPlanPending) {
+      setAutoPlanPending(false);
+      handlePlanTrip();
+    }
+  }, [autoPlanPending, handlePlanTrip]);
+
   // Handle alternative station selection: swap selected ↔ clicked alternative immutably
   const handleSelectAlternativeStation = useCallback(
     (stopIndex: number, station: RankedStation) => {
@@ -467,7 +500,7 @@ function HomeContent() {
           {/* Tab content */}
           <div className="space-y-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'evi' && (
-              <EVi onTripParsed={handleTripParsed} />
+              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} />
             )}
 
             {activeTab === 'route' && (
@@ -545,9 +578,9 @@ function HomeContent() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Sidebar — inputs + summary */}
         <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
-          <EVi onTripParsed={handleTripParsed} />
+          <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} />
 
-          <details>
+          <details ref={detailsRef}>
             <summary className="text-sm text-[var(--color-muted)] cursor-pointer py-2 hover:text-[var(--color-foreground)] transition-colors">
               {t('evi_manual_link')}
             </summary>
