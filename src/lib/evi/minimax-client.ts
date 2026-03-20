@@ -42,9 +42,15 @@ export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractio
     max_tokens: 500,
   });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  const rawContent = response.choices[0]?.message?.content;
+  if (!rawContent) {
     throw new Error('Minimax returned empty response');
+  }
+
+  // MiniMax-M2.7 wraps responses in <think>...</think> tags — strip them
+  const content = rawContent.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+  if (!content) {
+    throw new Error('Minimax returned only thinking tags, no JSON content');
   }
 
   const parsed = JSON.parse(content);
