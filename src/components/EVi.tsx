@@ -91,13 +91,16 @@ export default function EVi({ onTripParsed }: EViProps) {
   } = useSpeechRecognition();
 
   const [inputValue, setInputValue] = useState('');
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevListeningRef = useRef(false);
 
-  // ── Auto-scroll on new messages ──
+  // ── Auto-scroll on new messages (within chat area only) ──
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = chatContainerRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
   }, [messages, state]);
 
   // ── Send transcript when listening stops ──
@@ -205,6 +208,7 @@ export default function EVi({ onTripParsed }: EViProps) {
 
       {/* Chat messages area */}
       <div
+        ref={chatContainerRef}
         className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
         role="log"
         aria-live="polite"
@@ -390,7 +394,6 @@ export default function EVi({ onTripParsed }: EViProps) {
           </div>
         )}
 
-        <div ref={chatEndRef} />
       </div>
 
       {/* Input area */}
