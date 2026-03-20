@@ -7,6 +7,11 @@ export type VehicleResolution =
   | { readonly type: 'multiple'; readonly options: readonly EVVehicleData[] }
   | { readonly type: 'not_found' };
 
+/** Normalize for fuzzy comparison: lowercase, collapse whitespace, strip non-alphanumeric */
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/[\s\-_]+/g, '');
+}
+
 export async function resolveVehicle(
   brand: string | null,
   model: string | null,
@@ -32,10 +37,16 @@ export async function resolveVehicle(
     // DB failed — fallback to hardcoded models
   }
 
-  // Fallback: search VIETNAM_MODELS
+  // Fallback: search VIETNAM_MODELS with normalized matching (handles "VF7" vs "VF 7")
+  const normBrand = brand ? normalize(brand) : null;
+  const normModel = model ? normalize(model) : null;
+
   const fallbackMatches = VIETNAM_MODELS.filter(v => {
-    const brandMatch = !brand || v.brand.toLowerCase().includes(brand.toLowerCase());
-    const modelMatch = !model || v.model.toLowerCase().includes(model.toLowerCase());
+    const brandMatch = !normBrand || normalize(v.brand).includes(normBrand);
+    const modelNorm = normalize(v.model);
+    const variantNorm = v.variant ? normalize(v.variant) : '';
+    const fullModelNorm = modelNorm + variantNorm;
+    const modelMatch = !normModel || modelNorm.includes(normModel) || fullModelNorm.includes(normModel);
     return brandMatch && modelMatch;
   });
 

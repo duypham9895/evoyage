@@ -72,6 +72,9 @@ export function useEVi(): UseEViReturn {
   const userLocationRef = useRef(userLocation);
   userLocationRef.current = userLocation;
 
+  const lastResponseRef = useRef(lastResponse);
+  lastResponseRef.current = lastResponse;
+
   // ── Geolocation (mount only) ──
   useEffect(() => {
     let cancelled = false;
@@ -149,6 +152,7 @@ export function useEVi(): UseEViReturn {
           message: text,
           history: buildHistoryPayload(messagesRef.current),
           userLocation: locationPayload,
+          previousVehicleId: lastResponseRef.current?.tripParams?.vehicleId ?? null,
         }),
       });
 

@@ -30,6 +30,7 @@ export const EViParseRequest = z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
   }).nullable().default(null),
+  previousVehicleId: z.string().nullable().default(null),
 });
 
 export type EViParseRequestData = z.infer<typeof EViParseRequest>;

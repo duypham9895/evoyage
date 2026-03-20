@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { message, history, userLocation } = parsed.data;
+  const { message, history, userLocation, previousVehicleId } = parsed.data;
   const followUpCount = Math.floor(history.length / 2);
 
   // Call Minimax
@@ -75,11 +75,18 @@ export async function POST(request: NextRequest) {
     }));
   }
 
-  // Resolve vehicle
-  const vehicleResolution = await resolveVehicle(
+  // Resolve vehicle — try AI extraction first, fall back to previous turn's vehicle
+  let vehicleResolution = await resolveVehicle(
     extraction.vehicleBrand,
     extraction.vehicleModel,
   );
+
+  if (vehicleResolution.type === 'not_found' && previousVehicleId) {
+    const previousVehicle = VIETNAM_MODELS.find(v => v.id === previousVehicleId);
+    if (previousVehicle) {
+      vehicleResolution = { type: 'match', vehicle: previousVehicle };
+    }
+  }
 
   // Geocode end location
   let endLat: number | null = null;
