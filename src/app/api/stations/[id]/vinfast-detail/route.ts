@@ -74,17 +74,54 @@ export async function GET(
       try {
         emit({ stage: 'connecting' });
 
+        const STATUS_MAP: Record<string, string> = {
+          ACTIVE: 'Available',
+          BUSY: 'Busy',
+          UNAVAILABLE: 'Unavailable',
+          INACTIVE: 'Inactive',
+          OUTOFSERVICE: 'Out of service',
+        };
+
+        // Build Tier 4 basic detail from DB (used as final fallback)
+        const buildBasicDetail = () => {
+          const connectorSummary = (() => {
+            try {
+              return station.connectorTypes ? JSON.parse(station.connectorTypes) as string[] : [];
+            } catch {
+              return [];
+            }
+          })();
+
+          return {
+            entityId: entityId ?? null,
+            storeId,
+            name: station.name,
+            address: station.address,
+            province: '',
+            district: '',
+            commune: '',
+            latitude: station.latitude,
+            longitude: station.longitude,
+            evses: [],
+            images: [],
+            depotStatus: STATUS_MAP[station.chargingStatus ?? ''] ?? 'unknown',
+            is24h: false,
+            chargingWhenClosed: false,
+            parkingFee: station.parkingFee ?? false,
+            accessType: station.accessType ?? 'Public',
+            hardwareStations: [],
+            connectorSummary,
+            maxPowerKw: station.maxPowerKw,
+            portCount: station.portCount,
+            fetchedAt: new Date().toISOString(),
+          };
+        };
+
         const { entityId } = await resolveEntityId(stationId);
 
-        if (!entityId) {
-          emit({ stage: 'error', code: 'NO_ENTITY_ID' });
-          controller.close();
-          return;
-        }
-
-        if (!/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
-          emit({ stage: 'error', code: 'INVALID_ENTITY_ID' });
-          controller.close();
+        // No entity mapping — return basic DB data instead of erroring
+        if (!entityId || !/^[a-zA-Z0-9_-]{1,64}$/.test(entityId)) {
+          emit({ stage: 'done', detail: buildBasicDetail(), cached: false, basic: true });
           return;
         }
 
@@ -126,14 +163,6 @@ export async function GET(
           return;
         }
 
-        const STATUS_MAP: Record<string, string> = {
-          ACTIVE: 'Available',
-          BUSY: 'Busy',
-          UNAVAILABLE: 'Unavailable',
-          INACTIVE: 'Inactive',
-          OUTOFSERVICE: 'Out of service',
-        };
-
         // Tier 3: Serve stale cache with DB status overlay
         if (cached && cached.detail !== '{}') {
           const cachedDetail = JSON.parse(cached.detail) as Record<string, unknown>;
@@ -146,38 +175,7 @@ export async function GET(
         }
 
         // Tier 4: Build from DB station fields (kept fresh by daily cron)
-        const connectorSummary = (() => {
-          try {
-            return station.connectorTypes ? JSON.parse(station.connectorTypes) as string[] : [];
-          } catch {
-            return [];
-          }
-        })();
-
-        const basicDetail = {
-          entityId,
-          storeId,
-          name: station.name,
-          address: station.address,
-          province: '',
-          district: '',
-          commune: '',
-          latitude: station.latitude,
-          longitude: station.longitude,
-          evses: [],
-          images: [],
-          depotStatus: STATUS_MAP[station.chargingStatus ?? ''] ?? 'unknown',
-          is24h: false,
-          chargingWhenClosed: false,
-          parkingFee: station.parkingFee ?? false,
-          accessType: station.accessType ?? 'Public',
-          hardwareStations: [],
-          connectorSummary,
-          maxPowerKw: station.maxPowerKw,
-          portCount: station.portCount,
-          fetchedAt: new Date().toISOString(),
-        };
-        emit({ stage: 'done', detail: basicDetail, cached: false, basic: true });
+        emit({ stage: 'done', detail: buildBasicDetail(), cached: false, basic: true });
       } catch (err) {
         console.error('VinFast SSE stream error:', err);
         emit({ stage: 'error', code: 'INTERNAL_ERROR' });
