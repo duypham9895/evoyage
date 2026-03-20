@@ -198,8 +198,8 @@ function HomeContent() {
     setEndCoords({ lat: result.lat, lng: result.lng });
   }, []);
 
-  // Ref for details element (desktop) to programmatically expand
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+  // Desktop: toggle between eVi chat and manual form
+  const [showManualForm, setShowManualForm] = useState(false);
 
   // Flag to auto-trigger planning after eVi fills the form
   const [autoPlanPending, setAutoPlanPending] = useState(false);
@@ -227,21 +227,28 @@ function HomeContent() {
   const handleTripParsed = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    // Expand details on desktop
-    if (detailsRef.current) {
-      detailsRef.current.open = true;
-    }
+    setBottomSheetSnap({ point: 'peek', trigger: Date.now() });
   }, [fillFormFromEVi]);
 
   // "Plan Trip" — fill form and auto-trigger route planning
   const handleEViPlanTrip = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    if (detailsRef.current) {
-      detailsRef.current.open = true;
-    }
+    setBottomSheetSnap({ point: 'peek', trigger: Date.now() });
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
+
+  // "Enter manually" — switch to manual form (mobile: route tab, desktop: toggle)
+  const handleEnterManually = useCallback(() => {
+    setActiveTab('route');
+    setShowManualForm(true);
+  }, []);
+
+  // "Find nearby stations" — collapse bottom sheet to reveal map
+  const handleFindNearbyStations = useCallback(() => {
+    setActiveTab('route');
+    setBottomSheetSnap({ point: 'peek', trigger: Date.now() });
+  }, []);
 
   // Clear coords when text input changes manually
   const handleStartChange = useCallback((value: string) => {
@@ -500,7 +507,7 @@ function HomeContent() {
           {/* Tab content */}
           <div className="space-y-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'evi' && (
-              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} />
+              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} />
             )}
 
             {activeTab === 'route' && (
@@ -578,13 +585,15 @@ function HomeContent() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Sidebar — inputs + summary */}
         <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
-          <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} />
+          {showManualForm ? (
+            <div className="space-y-4">
+              <button
+                onClick={() => setShowManualForm(false)}
+                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+              >
+                ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
+              </button>
 
-          <details ref={detailsRef}>
-            <summary className="text-sm text-[var(--color-muted)] cursor-pointer py-2 hover:text-[var(--color-foreground)] transition-colors">
-              {t('evi_manual_link')}
-            </summary>
-            <div className="space-y-4 pt-2">
               <TripInput
                 start={start}
                 end={end}
@@ -620,10 +629,11 @@ function HomeContent() {
               {planButton}
               {errorDisplay}
 
-              {/* Trip results */}
               <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
             </div>
-          </details>
+          ) : (
+            <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} />
+          )}
         </aside>
 
         {/* Map pane */}

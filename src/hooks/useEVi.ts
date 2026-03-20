@@ -13,6 +13,13 @@ interface UserLocation {
   readonly address: string;
 }
 
+// ── Recent Trip (from localStorage) ──
+interface RecentTrip {
+  readonly start: string;
+  readonly end: string;
+  readonly vehicleName?: string | null;
+}
+
 // ── Hook Return Type ──
 interface UseEViReturn {
   readonly state: EViState;
@@ -20,6 +27,7 @@ interface UseEViReturn {
   readonly lastResponse: EViParseResponse | null;
   readonly userLocation: UserLocation | null;
   readonly isFirstVisit: boolean;
+  readonly recentTrips: readonly RecentTrip[];
   readonly sendMessage: (text: string) => Promise<void>;
   readonly reset: () => void;
 }
@@ -27,6 +35,7 @@ interface UseEViReturn {
 // ── Constants ──
 const FIRST_VISIT_KEY = 'evi-first-visit';
 const FIRST_VISIT_DONE = 'done';
+const RECENT_TRIPS_KEY = 'ev-recent-trips';
 const MAX_HISTORY = 4;
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/reverse';
 const USER_AGENT = 'EVoyage/1.0 (https://evoyagevn.vercel.app)';
@@ -63,6 +72,25 @@ export function useEVi(): UseEViReturn {
   const [isFirstVisit] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     return localStorage.getItem(FIRST_VISIT_KEY) !== FIRST_VISIT_DONE;
+  });
+
+  const [recentTrips] = useState<readonly RecentTrip[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = JSON.parse(localStorage.getItem(RECENT_TRIPS_KEY) ?? '[]');
+      if (!Array.isArray(saved)) return [];
+      return saved
+        .filter(
+          (t: unknown): t is RecentTrip =>
+            typeof t === 'object' &&
+            t !== null &&
+            typeof (t as Record<string, unknown>).start === 'string' &&
+            typeof (t as Record<string, unknown>).end === 'string',
+        )
+        .slice(0, 3);
+    } catch {
+      return [];
+    }
   });
 
   // Ref to avoid stale closures in sendMessage
@@ -217,6 +245,7 @@ export function useEVi(): UseEViReturn {
     lastResponse,
     userLocation,
     isFirstVisit,
+    recentTrips,
     sendMessage,
     reset,
   };

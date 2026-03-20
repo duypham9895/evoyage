@@ -264,6 +264,7 @@
   "evi_plan_button": "Plan Trip",
   "evi_edit_button": "Edit",
   "evi_manual_link": "Enter manually",
+  "evi_back_to_chat": "Back to eVi",
   "evi_voice_beta": "Beta",
   "evi_current_location": "current location",
   "evi_from": "From",
@@ -276,5 +277,6 @@
   "evi_error_generic": "Sorry, something went wrong. You can enter manually!",
   "evi_not_trip": "Hi! I'm eVi, your trip assistant. Tell me where you'd like to go!",
   "evi_retry": "Try again",
-  "evi_start_over": "Start over"
+  "evi_start_over": "Start over",
+  "evi_find_stations": "Find stations nearby"
 }

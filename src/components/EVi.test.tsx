@@ -33,6 +33,7 @@ vi.mock('@/lib/locale', () => ({
         evi_greeting_morning: 'Good morning!',
         evi_greeting_evening: 'Good evening!',
         evi_greeting_return: 'Welcome back!',
+        evi_find_stations: 'Find stations nearby',
       };
       return translations[key] ?? key;
     },
@@ -106,6 +107,7 @@ let mockUseEViReturn = {
   lastResponse: null as typeof completeResponse | typeof followUpResponse | null,
   userLocation: null as { lat: number; lng: number; address: string } | null,
   isFirstVisit: true,
+  recentTrips: [] as { start: string; end: string; vehicleName?: string | null }[],
   sendMessage: mockSendMessage,
   reset: mockReset,
 };
@@ -129,6 +131,7 @@ beforeEach(() => {
     lastResponse: null,
     userLocation: null,
     isFirstVisit: true,
+    recentTrips: [],
   });
 });
 
@@ -224,7 +227,6 @@ describe('EVi component', () => {
 
       render(<EVi onTripParsed={onTripParsed} onPlanTrip={onPlanTrip} />);
 
-      // The "Edit" button inside the result card (not the manual link)
       const editButtons = screen.getAllByText('Edit');
       fireEvent.click(editButtons[0]);
 
@@ -272,11 +274,8 @@ describe('EVi component', () => {
 
       render(<EVi onTripParsed={vi.fn()} />);
 
-      // "From" label should not appear since start is null
       expect(screen.queryByText('From')).not.toBeInTheDocument();
-      // "To" label should still appear
       expect(screen.getByText('Đà Lạt')).toBeInTheDocument();
-      // Vehicle and battery labels should not appear
       expect(screen.queryByText('Vehicle')).not.toBeInTheDocument();
       expect(screen.queryByText('Battery')).not.toBeInTheDocument();
     });
@@ -286,7 +285,6 @@ describe('EVi component', () => {
     it('renders greeting message', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 
-      // Should show one of the greeting messages (depends on time of day)
       const greetings = [
         'Hi! Tell me where you want to go!',
         'Good morning!',
@@ -304,26 +302,117 @@ describe('EVi component', () => {
       expect(screen.getByText('SG ra Vũng Tàu, VF5')).toBeInTheDocument();
     });
 
-    it('shows return-visit suggestion chips for returning users', () => {
-      setHookState({ isFirstVisit: false });
+    it('shows contextual chips for returning users without trip history', () => {
+      setHookState({ isFirstVisit: false, recentTrips: [] });
 
       render(<EVi onTripParsed={vi.fn()} />);
 
       // First-visit chips should NOT appear
-      expect(screen.queryByText('Đi Đà Lạt cuối tuần')).not.toBeInTheDocument();
+      expect(screen.queryByText('SG ra Vũng Tàu, VF5')).not.toBeInTheDocument();
 
-      // Return-visit chips should appear
-      expect(screen.getByText('Đi Nha Trang, VF8')).toBeInTheDocument();
-      expect(screen.getByText('SG đi Phan Thiết')).toBeInTheDocument();
-      expect(screen.getByText('Hà Nội ra Hạ Long')).toBeInTheDocument();
+      // Should show some contextual chips (exact ones depend on time of day)
+      const allContextual = [
+        'Đi Đà Lạt cuối tuần', 'SG ra Vũng Tàu', 'Hà Nội đi Sa Pa',
+        'SG đi Phan Thiết hôm nay', 'Đi Nha Trang, VF8', 'Hà Nội ra Hạ Long',
+        'Kế hoạch đi Đà Lạt ngày mai', 'SG đi Cần Thơ', 'Đà Nẵng đi Huế',
+        'SG đi Phan Thiết',
+      ];
+      const foundContextual = allContextual.some((c) => screen.queryByText(c));
+      expect(foundContextual).toBe(true);
+
+      // Quick action chip should always appear for returning users
+      expect(screen.getByText('Find stations nearby')).toBeInTheDocument();
     });
 
-    it('sends message when a suggestion chip is clicked', () => {
+    it('shows personalized chips from trip history', () => {
+      setHookState({
+        isFirstVisit: false,
+        recentTrips: [
+          { start: 'Hồ Chí Minh, Vietnam', end: 'Đà Lạt, Vietnam', vehicleName: 'VinFast VF8' },
+          { start: 'Hà Nội, Vietnam', end: 'Hải Phòng, Vietnam', vehicleName: null },
+        ],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      // Personalized chips from history (shortened format)
+      expect(screen.getByText('Hồ Chí Minh → Đà Lạt, VF8')).toBeInTheDocument();
+      expect(screen.getByText('Hà Nội → Hải Phòng')).toBeInTheDocument();
+
+      // Plus find stations chip
+      expect(screen.getByText('Find stations nearby')).toBeInTheDocument();
+    });
+
+    it('sends message when a trip suggestion chip is clicked', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 
       fireEvent.click(screen.getByText('Đi Đà Lạt cuối tuần'));
 
       expect(mockSendMessage).toHaveBeenCalledWith('Đi Đà Lạt cuối tuần');
+    });
+
+    it('calls onFindNearbyStations when find-stations chip is clicked', () => {
+      const onFindNearbyStations = vi.fn();
+      setHookState({ isFirstVisit: false, recentTrips: [] });
+
+      render(<EVi onTripParsed={vi.fn()} onFindNearbyStations={onFindNearbyStations} />);
+
+      fireEvent.click(screen.getByText('Find stations nearby'));
+
+      expect(onFindNearbyStations).toHaveBeenCalledOnce();
+      expect(mockSendMessage).not.toHaveBeenCalled();
+    });
+
+    it('does not show find-stations chip for first-time visitors', () => {
+      setHookState({ isFirstVisit: true });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByText('Find stations nearby')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Enter manually link', () => {
+    it('shows "Enter manually" link when onEnterManually is provided', () => {
+      render(<EVi onTripParsed={vi.fn()} onEnterManually={vi.fn()} />);
+
+      expect(screen.getByText('Enter manually →')).toBeInTheDocument();
+    });
+
+    it('hides "Enter manually" link when onEnterManually is not provided', () => {
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByText('Enter manually →')).not.toBeInTheDocument();
+    });
+
+    it('calls onEnterManually when the link is clicked', () => {
+      const onEnterManually = vi.fn();
+
+      render(<EVi onTripParsed={vi.fn()} onEnterManually={onEnterManually} />);
+
+      fireEvent.click(screen.getByText('Enter manually →'));
+
+      expect(onEnterManually).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onTripParsed or onPlanTrip when Enter manually is clicked', () => {
+      const onTripParsed = vi.fn();
+      const onPlanTrip = vi.fn();
+      const onEnterManually = vi.fn();
+
+      render(
+        <EVi
+          onTripParsed={onTripParsed}
+          onPlanTrip={onPlanTrip}
+          onEnterManually={onEnterManually}
+        />,
+      );
+
+      fireEvent.click(screen.getByText('Enter manually →'));
+
+      expect(onEnterManually).toHaveBeenCalledOnce();
+      expect(onTripParsed).not.toHaveBeenCalled();
+      expect(onPlanTrip).not.toHaveBeenCalled();
     });
   });
 

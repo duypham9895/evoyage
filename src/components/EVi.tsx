@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useEVi } from '@/hooks/useEVi';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { hapticLight } from '@/lib/haptics';
 import type { EViTripParams } from '@/lib/evi/types';
 
-// ── Props ──
+// ── Types ──
+
+interface SuggestionChip {
+  readonly label: string;
+  readonly action: 'message' | 'find_stations';
+}
 
 interface EViProps {
   readonly onTripParsed: (params: EViTripParams) => void;
   readonly onPlanTrip?: (params: EViTripParams) => void;
+  readonly onEnterManually?: () => void;
+  readonly onFindNearbyStations?: () => void;
 }
 
 // ── Constants ──
@@ -22,11 +29,13 @@ const FIRST_VISIT_CHIPS = [
   'Hà Nội đi Đà Nẵng',
 ];
 
-const RETURN_VISIT_CHIPS = [
-  'Đi Nha Trang, VF8',
-  'SG đi Phan Thiết',
-  'Hà Nội ra Hạ Long',
-];
+/** Contextual trip suggestions based on time of day and day of week */
+const CONTEXTUAL_CHIPS: Record<string, readonly string[]> = {
+  weekend: ['Đi Đà Lạt cuối tuần', 'SG ra Vũng Tàu', 'Hà Nội đi Sa Pa'],
+  morning: ['SG đi Phan Thiết hôm nay', 'Đi Nha Trang, VF8', 'Hà Nội ra Hạ Long'],
+  evening: ['Kế hoạch đi Đà Lạt ngày mai', 'SG đi Cần Thơ', 'Đà Nẵng đi Huế'],
+  default: ['SG đi Phan Thiết', 'Hà Nội ra Hạ Long', 'Đi Nha Trang, VF8'],
+};
 
 // ── Helpers ──
 
@@ -36,6 +45,48 @@ function getGreetingKey(isFirstVisit: boolean): string {
   if (hour < 12) return 'evi_greeting_morning';
   if (hour >= 18) return 'evi_greeting_evening';
   return 'evi_greeting_return';
+}
+
+function getContextualTimeKey(): string {
+  const day = new Date().getDay();
+  if (day === 0 || day === 6) return 'weekend';
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour >= 17) return 'evening';
+  return 'default';
+}
+
+function buildSuggestionChips(
+  isFirstVisit: boolean,
+  recentTrips: readonly { start: string; end: string; vehicleName?: string | null }[],
+  findStationsLabel: string,
+): readonly SuggestionChip[] {
+  if (isFirstVisit) {
+    return FIRST_VISIT_CHIPS.map((label) => ({ label, action: 'message' as const }));
+  }
+
+  const chips: SuggestionChip[] = [];
+
+  // 1. Personalized — from trip history (max 2)
+  for (const trip of recentTrips.slice(0, 2)) {
+    const startShort = trip.start.split(',')[0];
+    const endShort = trip.end.split(',')[0];
+    const vehicle = trip.vehicleName ? `, ${trip.vehicleName.split(' ').pop()}` : '';
+    chips.push({ label: `${startShort} → ${endShort}${vehicle}`, action: 'message' });
+  }
+
+  // 2. Contextual — fill remaining trip slots (up to 3 total trip chips)
+  const contextKey = getContextualTimeKey();
+  const contextual = CONTEXTUAL_CHIPS[contextKey] ?? CONTEXTUAL_CHIPS.default;
+  const remaining = 3 - chips.length;
+  for (const label of contextual.slice(0, remaining)) {
+    chips.push({ label, action: 'message' });
+  }
+
+  // 3. Quick action — find nearby stations
+  chips.push({ label: findStationsLabel, action: 'find_stations' });
+
+  return chips;
 }
 
 // ── Sub-components ──
@@ -64,7 +115,6 @@ function TypingIndicator() {
 }
 
 function LocationBadge({ address }: { readonly address: string }) {
-  // Extract a short location label (e.g. "Quận 1, HCM") from the full address
   const parts = address.split(',').map((p) => p.trim());
   const shortLabel = parts.length >= 2 ? `${parts[0]}, ${parts[1]}` : parts[0] ?? address;
 
@@ -78,7 +128,7 @@ function LocationBadge({ address }: { readonly address: string }) {
 
 // ── Main Component ──
 
-export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
+export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindNearbyStations }: EViProps) {
   const { t } = useLocale();
   const {
     state,
@@ -86,6 +136,7 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
     lastResponse,
     userLocation,
     isFirstVisit,
+    recentTrips,
     sendMessage,
     reset,
   } = useEVi();
@@ -101,6 +152,13 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevListeningRef = useRef(false);
+
+  // ── Build suggestion chips (memoized) ──
+  const findStationsLabel = t('evi_find_stations' as Parameters<typeof t>[0]);
+  const suggestionChips = useMemo(
+    () => buildSuggestionChips(isFirstVisit, recentTrips, findStationsLabel),
+    [isFirstVisit, recentTrips, findStationsLabel],
+  );
 
   // ── Auto-scroll on new messages (within chat area only) ──
   useEffect(() => {
@@ -138,11 +196,15 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
   );
 
   const handleChipClick = useCallback(
-    (text: string) => {
+    (chip: SuggestionChip) => {
       hapticLight();
-      sendMessage(text);
+      if (chip.action === 'find_stations') {
+        onFindNearbyStations?.();
+      } else {
+        sendMessage(chip.label);
+      }
     },
-    [sendMessage],
+    [sendMessage, onFindNearbyStations],
   );
 
   const handleMicPress = useCallback(() => {
@@ -157,7 +219,6 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
   const handlePlan = useCallback(() => {
     if (lastResponse?.tripParams) {
       hapticLight();
-      // Fill form AND auto-trigger planning
       if (onPlanTrip) {
         onPlanTrip(lastResponse.tripParams);
       } else {
@@ -175,7 +236,6 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
 
   const handleRetry = useCallback(() => {
     hapticLight();
-    // Resend the last user message
     const lastUserMsg = messages.findLast((m) => m.role === 'user');
     if (lastUserMsg) {
       sendMessage(lastUserMsg.content);
@@ -244,15 +304,19 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
         {isIdle && (
           <div className="pl-10" role="listbox" aria-label="Suggested trips">
             <div className="flex flex-wrap gap-2">
-              {(isFirstVisit ? FIRST_VISIT_CHIPS : RETURN_VISIT_CHIPS).map((chip) => (
+              {suggestionChips.map((chip) => (
                 <button
-                  key={chip}
+                  key={chip.label}
                   role="option"
                   aria-selected={false}
                   onClick={() => handleChipClick(chip)}
-                  className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)] transition-colors min-h-[44px] min-w-[44px]"
+                  className={`px-3 py-1.5 rounded-full text-xs border transition-colors min-h-[44px] min-w-[44px] ${
+                    chip.action === 'find_stations'
+                      ? 'border-[var(--color-muted)]/30 text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)]'
+                      : 'border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)]'
+                  }`}
                 >
-                  {chip}
+                  {chip.label}
                 </button>
               ))}
             </div>
@@ -460,14 +524,16 @@ export default function EVi({ onTripParsed, onPlanTrip }: EViProps) {
         </div>
 
         {/* Manual entry link */}
-        <div className="text-center mt-2">
-          <button
-            onClick={handleEdit}
-            className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
-          >
-            {t('evi_manual_link')} →
-          </button>
-        </div>
+        {onEnterManually && (
+          <div className="text-center mt-2">
+            <button
+              onClick={onEnterManually}
+              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+            >
+              {t('evi_manual_link')} →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
