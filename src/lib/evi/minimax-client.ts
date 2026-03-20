@@ -3,12 +3,18 @@ import { MinimaxTripExtraction } from './types';
 import type { MinimaxTripExtractionResult } from './types';
 import { buildSystemPrompt } from './prompt';
 
-const client = new OpenAI({
-  apiKey: process.env.MINIMAX_API_KEY ?? '',
-  baseURL: 'https://api.minimax.io/v1',
-});
-
 const MODEL = 'MiniMax-M2.7';
+
+function getClient(): OpenAI {
+  const apiKey = process.env.MINIMAX_API_KEY;
+  if (!apiKey) {
+    throw new Error('MINIMAX_API_KEY is not set');
+  }
+  return new OpenAI({
+    apiKey,
+    baseURL: 'https://api.minimax.io/v1',
+  });
+}
 
 interface ParseInput {
   readonly message: string;
@@ -28,7 +34,7 @@ export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractio
     { role: 'user', content: input.message },
   ];
 
-  const response = await client.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: MODEL,
     messages,
     response_format: { type: 'json_object' },
