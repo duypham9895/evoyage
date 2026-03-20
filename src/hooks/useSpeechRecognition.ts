@@ -2,6 +2,16 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SpeechRecognitionInstance = any;
+
+function getSpeechRecognitionConstructor(): (new () => SpeechRecognitionInstance) | null {
+  if (typeof window === 'undefined') return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any;
+  return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+}
+
 interface UseSpeechRecognitionReturn {
   readonly isSupported: boolean;
   readonly isListening: boolean;
@@ -15,30 +25,29 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
-  const isSupported = typeof window !== 'undefined' &&
-    !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const isSupported = getSpeechRecognitionConstructor() !== null;
 
   const startListening = useCallback(() => {
-    if (!isSupported) return;
+    const Ctor = getSpeechRecognitionConstructor();
+    if (!Ctor) return;
     setError(null);
     setTranscript('');
 
-    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognitionAPI();
+    const recognition = new Ctor();
     recognition.lang = 'vi-VN';
     recognition.continuous = false;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: { results: Iterable<{ 0: { transcript: string } }> }) => {
       const current = Array.from(event.results)
-        .map(r => r[0].transcript)
+        .map((r: { 0: { transcript: string } }) => r[0].transcript)
         .join('');
       setTranscript(current);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: { error: string }) => {
       setError(event.error === 'no-speech' ? 'no_speech' : 'recognition_failed');
       setIsListening(false);
     };
@@ -50,7 +59,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
-  }, [isSupported]);
+  }, []);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
