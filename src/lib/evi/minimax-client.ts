@@ -5,7 +5,7 @@ import { buildSystemPrompt } from './prompt';
 
 const client = new OpenAI({
   apiKey: process.env.MINIMAX_API_KEY ?? '',
-  baseURL: 'https://api.minimax.chat/v1',
+  baseURL: 'https://api.minimax.io/v1',
 });
 
 const MODEL = 'MiniMax-M2.7';
