@@ -596,10 +596,10 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
 
         {/* Manual entry link */}
         {onEnterManually && (
-          <div className="text-center mt-2">
+          <div className="text-center mt-1">
             <button
               onClick={onEnterManually}
-              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
+              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition-colors py-3 px-4 min-h-[44px] inline-flex items-center"
             >
               <span className="border-b border-dashed border-[var(--color-muted)]">{t('evi_manual_link')}</span> →
             </button>
