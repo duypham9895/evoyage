@@ -519,7 +519,7 @@ function HomeContent() {
           />
 
           {/* Tab content */}
-          <div className="space-y-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+          <div className={`flex-1 min-h-0 ${activeTab === 'evi' ? 'flex flex-col' : 'overflow-y-auto'}`} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'evi' && (
               <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
             )}

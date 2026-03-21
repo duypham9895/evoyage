@@ -285,7 +285,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
   const isIdle = state === 'idle' && messages.length === 0;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Location badge */}
       {userLocation && (
         <div className="px-4 pt-2 pb-1">
@@ -296,7 +296,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
       {/* Chat messages area */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
         role="log"
         aria-live="polite"
       >
@@ -524,8 +524,8 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
 
       </div>
 
-      {/* Input area */}
-      <div className="sticky bottom-0 px-4 pb-4 pt-2 bg-[var(--color-background)] border-t border-[var(--color-border)]">
+      {/* Input area — pinned at bottom via flex layout */}
+      <div className="shrink-0 px-4 pb-4 pt-2 border-t border-[var(--color-border)]">
         {/* Speech error feedback */}
         {speechError && !isListening && (
           <p className="text-xs text-[var(--color-danger)] text-center mb-2">

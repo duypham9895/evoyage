@@ -173,9 +173,9 @@ export default function MobileBottomSheet({
         <div className="w-12 h-1.5 rounded-full bg-[var(--color-muted)]/50" />
       </div>
 
-      {/* Scrollable content */}
+      {/* Content area — flex column so EVi can use flex-1 for its layout */}
       <div
-        className="overflow-y-auto overscroll-contain px-4 pb-safe"
+        className="flex flex-col overflow-hidden overscroll-contain px-4 pb-safe"
         onTouchStart={handleContentTouchStart}
         onTouchEnd={handleContentTouchEnd}
         style={{
