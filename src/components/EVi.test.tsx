@@ -418,49 +418,6 @@ describe('EVi component', () => {
     });
   });
 
-  describe('Enter manually link', () => {
-    it('shows "Enter manually" link when onEnterManually is provided', () => {
-      render(<EVi onTripParsed={vi.fn()} onEnterManually={vi.fn()} />);
-
-      expect(screen.getByText('Enter manually', { exact: false })).toBeInTheDocument();
-    });
-
-    it('hides "Enter manually" link when onEnterManually is not provided', () => {
-      render(<EVi onTripParsed={vi.fn()} />);
-
-      expect(screen.queryByText('Enter manually', { exact: false })).not.toBeInTheDocument();
-    });
-
-    it('calls onEnterManually when the link is clicked', () => {
-      const onEnterManually = vi.fn();
-
-      render(<EVi onTripParsed={vi.fn()} onEnterManually={onEnterManually} />);
-
-      fireEvent.click(screen.getByText('Enter manually', { exact: false }));
-
-      expect(onEnterManually).toHaveBeenCalledOnce();
-    });
-
-    it('does not call onTripParsed or onPlanTrip when Enter manually is clicked', () => {
-      const onTripParsed = vi.fn();
-      const onPlanTrip = vi.fn();
-      const onEnterManually = vi.fn();
-
-      render(
-        <EVi
-          onTripParsed={onTripParsed}
-          onPlanTrip={onPlanTrip}
-          onEnterManually={onEnterManually}
-        />,
-      );
-
-      fireEvent.click(screen.getByText('Enter manually', { exact: false }));
-
-      expect(onEnterManually).toHaveBeenCalledOnce();
-      expect(onTripParsed).not.toHaveBeenCalled();
-      expect(onPlanTrip).not.toHaveBeenCalled();
-    });
-  });
 
   describe('error recovery', () => {
     it('shows Retry and Start over buttons when state is error', () => {

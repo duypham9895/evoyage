@@ -140,7 +140,7 @@ const CHIP_SECONDARY = 'px-3.5 py-2 rounded-full text-[13px] font-medium bg-[var
 
 // ── Main Component ──
 
-export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindNearbyStations, isPlanning = false }: EViProps) {
+export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, isPlanning = false }: EViProps) {
   const { t, locale } = useLocale();
   const {
     state,
@@ -332,17 +332,6 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
               ))}
             </div>
 
-            {/* Manual entry — visible only when scrolling past chips */}
-            {onEnterManually && (
-              <div className="text-center mt-4">
-                <button
-                  onClick={onEnterManually}
-                  className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition-colors py-3 px-4 min-h-[44px] inline-flex items-center"
-                >
-                  <span className="border-b border-dashed border-[var(--color-muted)]">{t('evi_manual_link')}</span> →
-                </button>
-              </div>
-            )}
           </div>
         )}
 
