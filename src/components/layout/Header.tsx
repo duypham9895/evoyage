@@ -27,8 +27,8 @@ export default function Header() {
 
       {/* Controls */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Map mode toggle */}
-        <div className="flex items-center gap-0.5 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)] p-0.5">
+        {/* Map mode toggle — hidden on mobile, developer control */}
+        <div className="hidden sm:flex items-center gap-0.5 bg-[var(--color-background)] rounded-lg border border-[var(--color-surface-hover)] p-0.5">
           {MAP_MODES.map(({ mode: m, label }) => {
             const isDisabled = m === 'mapbox' && !mapboxToken;
             return (
