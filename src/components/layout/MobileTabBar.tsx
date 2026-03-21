@@ -64,7 +64,7 @@ export default function MobileTabBar({
             aria-selected={isActive}
             aria-controls={`tabpanel-${id}`}
             onClick={() => { hapticLight(); onTabChange(id); }}
-            className={`shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap ${
+            className={`shrink-0 flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap min-h-[44px] ${
               isActive
                 ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                 : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface)]'
