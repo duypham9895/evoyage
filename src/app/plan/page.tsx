@@ -8,6 +8,7 @@ import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useDesktopSidebarTab } from '@/hooks/useDesktopSidebarTab';
 import { useUrlState, parseUrlState } from '@/hooks/useUrlState';
 import Header from '@/components/layout/Header';
 import TripInput from '@/components/trip/TripInput';
@@ -200,22 +201,8 @@ function HomeContent() {
   }, []);
 
   // Desktop sidebar: tab switcher (eVi chat vs manual form) + stations overlay
-  type DesktopSidebarTab = 'evi' | 'planTrip';
-  const [desktopSidebarTab, setDesktopSidebarTab] = useState<DesktopSidebarTab>('evi');
+  const { activeTab: desktopSidebarTab, setTab: handleDesktopTabChange } = useDesktopSidebarTab();
   const [showStationsView, setShowStationsView] = useState(false);
-
-  // Restore desktop tab preference from localStorage (SSR-safe)
-  useEffect(() => {
-    const saved = localStorage.getItem('ev-desktop-tab');
-    if (saved === 'planTrip') setDesktopSidebarTab('planTrip');
-  }, []);
-
-  // Persist tab preference
-  const handleDesktopTabChange = useCallback((tab: DesktopSidebarTab) => {
-    hapticLight();
-    setDesktopSidebarTab(tab);
-    localStorage.setItem('ev-desktop-tab', tab);
-  }, []);
 
   // Flag to auto-trigger planning after eVi fills the form
   const [autoPlanPending, setAutoPlanPending] = useState(false);
@@ -243,7 +230,7 @@ function HomeContent() {
   const handleTripParsed = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    setDesktopSidebarTab('planTrip'); // Desktop: switch sidebar to form view so user can edit inputs
+    handleDesktopTabChange('planTrip'); // Desktop: switch sidebar to form view so user can edit inputs
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, [fillFormFromEVi]);
 
@@ -251,7 +238,7 @@ function HomeContent() {
   const handleEViPlanTrip = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    setDesktopSidebarTab('planTrip'); // Desktop: switch sidebar to form view so TripSummary is visible
+    handleDesktopTabChange('planTrip'); // Desktop: switch sidebar to form view so TripSummary is visible
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
@@ -259,7 +246,7 @@ function HomeContent() {
   // "Back to eVi" — return to chat from trip detail view
   const handleBackToChat = useCallback(() => {
     setActiveTab('evi'); // Mobile: switch tab
-    setDesktopSidebarTab('evi'); // Desktop: switch sidebar back to EVi chat
+    handleDesktopTabChange('evi'); // Desktop: switch sidebar back to EVi chat
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, []);
 
@@ -267,7 +254,7 @@ function HomeContent() {
   const handleFindNearbyStations = useCallback(() => {
     setActiveTab('stations');
     setShowStationsView(true);
-    setDesktopSidebarTab('evi');
+    handleDesktopTabChange('evi');
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, []);
 
