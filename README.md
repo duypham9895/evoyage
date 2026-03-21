@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# eVoyage
+
+Plan EV road trips across Vietnam with real charging station data. Know exactly where to charge, how long to wait, and whether you'll make it — before you leave.
+
+**Built entirely by Claude Code.** Duy Pham is the Product Manager — defining features, making design decisions, and ensuring quality. [Read about the transparency philosophy.](https://evoyage.vercel.app)
+
+## What it does
+
+- Plan routes between any two points in Vietnam with EV-specific constraints
+- See real-time charging station availability from VinFast's network (150+ stations, 63 provinces)
+- Get AI-powered trip planning via eVi — describe your trip in natural language and let AI fill in the details
+- Compare alternative charging stations ranked by speed, detour time, and cost
+- Support for 15+ EV models (VinFast, BYD, Tesla, and custom vehicles)
+- Bilingual interface (Vietnamese and English)
+- Works great on mobile — designed for drivers on the go
+
+## Tech Stack
+
+- **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS
+- **Maps:** Mapbox + OpenStreetMap via Leaflet
+- **AI:** MiniMax M2.7 for eVi trip assistant (route narratives, follow-up suggestions)
+- **Data:** VinFast API for real-time charging station data (SSE streaming)
+- **Testing:** Vitest (449 tests), Playwright for E2E
+- **Deployment:** Vercel
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Clone and install
+git clone https://github.com/phamduy-agilityio/evoyage.git
+cd evoyage
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Add your API keys: MINIMAX_API_KEY, MAPBOX_TOKEN (optional)
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Run tests (mandatory before every commit)
+npm test
 
-## Learn More
+# Build for production
+npx next build
 
-To learn more about Next.js, take a look at the following resources:
+# Check locale key sync
+npm test -- --run src/lib/__tests__/locale-keys.test.ts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See [CLAUDE.md](./CLAUDE.md) for full project instructions, testing rules, and coding standards.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

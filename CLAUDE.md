@@ -30,7 +30,8 @@ When writing Vietnamese copy, refer to the creator as "Duy" (not "Mình" or "Tô
 
 - Next.js (App Router), TypeScript, Tailwind CSS
 - Mapbox + OpenStreetMap for maps
-- VinFast API for charging station data
+- VinFast API for charging station data (SSE streaming for real-time detail)
+- MiniMax M2.7 AI for eVi trip assistant (via OpenAI-compatible API)
 - Bilingual: Vietnamese (vi) and English (en) via JSON locale files
 - Vitest for unit + integration tests
 - Playwright for E2E tests
@@ -81,50 +82,70 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **245 tests** across **20 files**
-- Covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding
-- Runtime: ~1.4 seconds
+- **449 tests** across **32 files**
+- Covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, eVi AI chat, speech recognition, suggestions client
+- Runtime: ~4.5 seconds
 - This count should only go UP — never delete tests unless the feature is removed
 
 ### Pre-Commit Checklist
 
 Before every commit, verify:
-- [ ] `npm test` passes (all 245+ tests green)
+- [ ] `npm test` passes (all 449+ tests green)
 - [ ] `npx next build` succeeds (no TypeScript errors)
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
 - [ ] Locale keys match between en.json and vi.json
 
-## gstack — AI Software Factory
+## gstack — Development Workflow (Mandatory)
 
-Use gstack skills for code review, shipping, QA, debugging, and browsing. These are slash commands available in Claude Code.
+This project follows the gstack development process. Every feature, bug fix, and refactor MUST go through this workflow. No exceptions.
 
-### Available Skills
+### Standard Workflow
 
-| Command | Purpose |
-|---------|---------|
-| `/review` | PR code review (two-pass: critical → informational) |
-| `/ship` | Automated shipping (tests, changelog, version bump, PR) |
-| `/qa` | QA testing with 6-phase methodology |
-| `/qa-only` | Report-only QA (no fixes) |
-| `/investigate` | Systematic debugging (root cause first, then fix) |
-| `/browse` | Headless browser for web interactions |
-| `/plan-eng-review` | Engineering architecture review |
-| `/plan-ceo-review` | Product review from CEO perspective |
-| `/plan-design-review` | Design audit |
-| `/design-consultation` | Design system builder |
-| `/design-review` | Design audit with fixes |
-| `/retro` | Weekly retrospective |
-| `/document-release` | Post-ship documentation updates |
-| `/freeze` | Lock edits to a specific scope (debug mode) |
-| `/unfreeze` | Remove edit lock |
-| `/careful` | Warnings before destructive commands |
-| `/guard` | careful + freeze combined |
-| `/gstack-upgrade` | Update gstack to latest version |
+```
+Think → Plan → Build → Review → Test → Ship → Reflect
+```
+
+| Phase | What to do | gstack skill |
+|-------|-----------|-------------|
+| **Think** | Brainstorm the idea, challenge assumptions | `/office-hours` |
+| **Plan** | Review architecture + design before coding | `/plan-eng-review`, `/plan-design-review` |
+| **Build** | Implement with TDD, use `/investigate` for bugs | `/investigate`, `/freeze` |
+| **Review** | Code review before merge — catches what tests miss | `/review` |
+| **Test** | QA the running app as a real user (mobile + desktop) | `/qa` |
+| **Ship** | Tests → changelog → version bump → PR | `/ship` |
+| **Reflect** | Update docs, run retrospective | `/document-release`, `/retro` |
+
+### When to use each skill
+
+| Situation | Skill |
+|-----------|-------|
+| New feature idea | `/office-hours` first, then `/plan-eng-review` |
+| Ready to code | `/freeze` to scope edits, then build |
+| Found a bug | `/investigate` — root cause first, no guessing |
+| Code done, ready for review | `/review` — two-pass: critical then informational |
+| Want to test the running app | `/qa` — browser-based testing on mobile + desktop |
+| Report bugs without fixing | `/qa-only` |
+| Visual polish needed | `/design-review` — finds and fixes UI inconsistencies |
+| Ready to deploy | `/ship` — automated tests, changelog, PR |
+| After shipping | `/document-release` — sync all docs |
+| End of week | `/retro` — commit analysis, trends |
+| Working with production | `/careful` or `/guard` for safety |
+| Want a second opinion | `/codex` — adversarial code review |
+
+### Rules
+
+1. **Never skip `/review` before merging.** Code review catches structural issues that tests don't — race conditions, SQL safety, LLM trust boundaries.
+2. **Never skip `/qa` on UI changes.** Always test on mobile (393x852) AND desktop (1440x900). Most drivers use phones.
+3. **Always run `npm test` before committing.** 449+ tests must pass. No exceptions.
+4. **Use `/investigate` for bugs, not guessing.** Iron Law: no fixes without root cause investigation first.
+5. **Use `/document-release` after shipping.** Keep README, CLAUDE.md, and test counts in sync.
 
 ### Troubleshooting
 
 If gstack skills aren't working:
 ```bash
 cd ~/.claude/skills/gstack && ./setup
+# Then in Claude Code:
+/reload-plugins
 ```
