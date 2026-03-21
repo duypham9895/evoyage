@@ -96,7 +96,7 @@
 - Border: `rgba(0, 212, 170, 0.2)` — subtle reinforcement
 - Hover: `var(--color-accent-chip-hover)`
 - Secondary chips (find stations): `var(--color-surface)` background, muted border
-- Min height: 44px for touch targets
+- Min height: 40px (compact mobile layout; tab bar and other interactive elements use 44px)
 - Pill shape (border-radius: full)
 
 ### eVi Avatar

@@ -17,7 +17,6 @@ interface SuggestionChip {
 interface EViProps {
   readonly onTripParsed: (params: EViTripParams) => void;
   readonly onPlanTrip?: (params: EViTripParams) => void;
-  readonly onEnterManually?: () => void;
   readonly onFindNearbyStations?: () => void;
   readonly isPlanning?: boolean;
 }

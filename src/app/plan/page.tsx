@@ -242,12 +242,6 @@ function HomeContent() {
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
 
-  // "Enter manually" — switch to manual form (mobile: route tab, desktop: toggle)
-  const handleEnterManually = useCallback(() => {
-    setActiveTab('route');
-    setShowManualForm(true);
-  }, []);
-
   // "Back to eVi" — return to chat from trip detail view
   const handleBackToChat = useCallback(() => {
     setActiveTab('evi'); // Mobile: switch tab
@@ -521,7 +515,7 @@ function HomeContent() {
           {/* Tab content */}
           <div className={`flex-1 min-h-0 ${activeTab === 'evi' ? 'flex flex-col' : 'overflow-y-auto'}`} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'evi' && (
-              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
+              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
             )}
 
             {activeTab === 'route' && (
@@ -660,7 +654,7 @@ function HomeContent() {
               <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
             </div>
           ) : (
-            <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onEnterManually={handleEnterManually} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
+            <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
           )}
         </aside>
 
