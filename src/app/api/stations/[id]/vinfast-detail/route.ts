@@ -74,6 +74,26 @@ export async function GET(
       try {
         emit({ stage: 'connecting' });
 
+        /** Check if cached detail has the expected VinFastStationDetail shape */
+        const isValidCachedDetail = (obj: unknown): boolean => {
+          if (!obj || typeof obj !== 'object') return false;
+          const d = obj as Record<string, unknown>;
+          return (
+            Array.isArray(d.evses) &&
+            Array.isArray(d.images) &&
+            Array.isArray(d.hardwareStations) &&
+            Array.isArray(d.connectorSummary) &&
+            typeof d.name === 'string' &&
+            typeof d.fetchedAt === 'string'
+          );
+        };
+
+        /** Safely parse JSON, returning null on failure */
+        const safeParse = (json: string): Record<string, unknown> | null => {
+          try { return JSON.parse(json); }
+          catch { return null; }
+        };
+
         const STATUS_MAP: Record<string, string> = {
           ACTIVE: 'Available',
           BUSY: 'Busy',
@@ -131,10 +151,12 @@ export async function GET(
           where: { storeId },
         });
 
-        if (cached && cached.detail !== '{}') {
+        const cachedObj = cached && cached.detail !== '{}' ? safeParse(cached.detail) : null;
+
+        if (cached && cachedObj) {
           const ageMs = Date.now() - cached.fetchedAt.getTime();
-          if (ageMs < CACHE_FRESH_MS) {
-            emit({ stage: 'done', detail: JSON.parse(cached.detail), cached: true });
+          if (ageMs < CACHE_FRESH_MS && isValidCachedDetail(cachedObj)) {
+            emit({ stage: 'done', detail: cachedObj, cached: true });
             controller.close();
             return;
           }
@@ -163,14 +185,15 @@ export async function GET(
           return;
         }
 
-        // Tier 3: Serve stale cache with DB status overlay
-        if (cached && cached.detail !== '{}') {
-          const cachedDetail = JSON.parse(cached.detail) as Record<string, unknown>;
-          cachedDetail.depotStatus = STATUS_MAP[station.chargingStatus ?? ''] ?? cachedDetail.depotStatus;
-          cachedDetail.fetchedAt = new Date().toISOString();
-
+        // Tier 3: Serve stale cache with DB status overlay (reuse cachedObj from Tier 0)
+        if (cached && cachedObj && isValidCachedDetail(cachedObj)) {
+          const staleDetail = {
+            ...cachedObj,
+            depotStatus: STATUS_MAP[station.chargingStatus ?? ''] ?? cachedObj.depotStatus,
+            fetchedAt: new Date().toISOString(),
+          };
           const staleAgeMs = Date.now() - cached.fetchedAt.getTime();
-          emit({ stage: 'done', detail: cachedDetail, cached: true, stale: true, staleAgeMs });
+          emit({ stage: 'done', detail: staleDetail, cached: true, stale: true, staleAgeMs });
           return;
         }
 

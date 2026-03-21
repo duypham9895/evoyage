@@ -61,7 +61,7 @@ function formatStaleAge(ms: number): string {
 function BasicConnectorInfo({ detail }: { detail: VinFastStationDetail }) {
   const { t } = useLocale();
 
-  if (detail.evses.length > 0 || detail.connectorSummary.length === 0) return null;
+  if (!detail.connectorSummary || detail.connectorSummary.length === 0 || (detail.evses && detail.evses.length > 0)) return null;
 
   return (
     <div className="space-y-1 animate-fadeIn">
@@ -91,7 +91,7 @@ function BasicConnectorInfo({ detail }: { detail: VinFastStationDetail }) {
 
 function ConnectorSection({ evses }: { evses: VinFastStationDetail['evses'] }) {
   const { t } = useLocale();
-  if (evses.length === 0) return null;
+  if (!evses || evses.length === 0) return null;
 
   return (
     <div className="space-y-1 animate-fadeIn">
@@ -129,7 +129,7 @@ function HardwareSection({
   hardwareStations: VinFastStationDetail['hardwareStations'];
 }) {
   const { t } = useLocale();
-  if (hardwareStations.length === 0) return null;
+  if (!hardwareStations || hardwareStations.length === 0) return null;
 
   return (
     <div className="text-[var(--color-muted)] animate-fadeIn">
@@ -144,7 +144,7 @@ function HardwareSection({
 
 function ImagesSection({ images }: { images: VinFastStationDetail['images'] }) {
   const { t } = useLocale();
-  if (images.length === 0) return null;
+  if (!images || images.length === 0) return null;
 
   return (
     <div className="space-y-1 animate-fadeIn" style={{ animationDelay: '100ms' }}>
@@ -377,8 +377,9 @@ function StationDetailExpanderInner({
 }
 
 export default function StationDetailExpander(props: StationDetailExpanderProps) {
+  const { t } = useLocale();
   return (
-    <StationDetailErrorBoundary fallbackMessage="Could not load station details">
+    <StationDetailErrorBoundary fallbackMessage={t('station_detail_temp_unavailable')}>
       <StationDetailExpanderInner {...props} />
     </StationDetailErrorBoundary>
   );
