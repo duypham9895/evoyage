@@ -1,0 +1,203 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
+
+// ── Mocks ──
+
+vi.mock('@/lib/rate-limit', () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, remaining: 9, retryAfterSec: 0 }),
+  getClientIp: vi.fn().mockReturnValue('127.0.0.1'),
+  routeLimiter: null,
+}));
+
+const mockCreate = vi.fn();
+vi.mock('openai', () => ({
+  default: class {
+    chat = { completions: { create: mockCreate } };
+  },
+}));
+
+// ── Imports (after mocks) ──
+import { POST } from './route';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+// ── Helpers ──
+
+function makeRequest(body: Record<string, unknown>): NextRequest {
+  return new NextRequest('http://localhost/api/route/narrative', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+const VALID_BODY = {
+  tripId: 'test-trip-123',
+  startAddress: 'Ho Chi Minh City',
+  endAddress: 'Da Lat',
+  totalDistanceKm: 310,
+  totalDurationMin: 360,
+  chargingStops: [
+    {
+      stationName: 'VinFast Bao Loc',
+      address: 'QL20, Bao Loc, Lam Dong',
+      distanceFromStartKm: 180,
+      chargingTimeMin: 25,
+      arrivalBattery: 18,
+      departureBattery: 80,
+    },
+  ],
+};
+
+const AI_RESPONSE = {
+  overview: 'Chuyến đi từ TP.HCM đến Đà Lạt dài 310km, mất khoảng 6 tiếng bao gồm 1 lần sạc.',
+  narrative: 'Bạn sẽ xuất phát từ TP.HCM, đi theo QL20 qua Đồng Nai, Bình Phước rồi lên Lâm Đồng. Khi đến Bảo Lộc (km 180), pin còn khoảng 18% — dừng sạc tại VinFast Bảo Lộc khoảng 25 phút để nạp pin lên 80%. Sau đó tiếp tục lên Đà Lạt, còn khoảng 130km nữa.',
+};
+
+// ── Tests ──
+
+describe('POST /api/route/narrative', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.MINIMAX_API_KEY = 'test-key';
+  });
+
+  it('returns narrative on success', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify(AI_RESPONSE) } }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.overview).toBe(AI_RESPONSE.overview);
+    expect(data.narrative).toBe(AI_RESPONSE.narrative);
+  });
+
+  it('strips MiniMax thinking tags from response', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: `<think>Let me think about this route...</think>\n${JSON.stringify(AI_RESPONSE)}`,
+        },
+      }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.overview).toBe(AI_RESPONSE.overview);
+    expect(data.narrative).toBe(AI_RESPONSE.narrative);
+  });
+
+  it('returns 429 when rate limited', async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      retryAfterSec: 30,
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(data.overview).toBeNull();
+    expect(data.narrative).toBeNull();
+    expect(data.error).toContain('Too many requests');
+  });
+
+  it('returns 400 for invalid JSON body', async () => {
+    const req = new NextRequest('http://localhost/api/route/narrative', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not-json{',
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.overview).toBeNull();
+    expect(data.error).toBe('Invalid JSON body');
+  });
+
+  it('returns 400 for missing required fields', async () => {
+    const res = await POST(makeRequest({ startAddress: 'HCM' }));
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data.overview).toBeNull();
+    expect(data.error).toContain('Validation failed');
+  });
+
+  it('returns 500 when AI returns empty response', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '' } }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.overview).toBeNull();
+    expect(data.error).toBe('Failed to generate route narrative');
+  });
+
+  it('returns 500 when AI response is malformed JSON', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"overview": "ok"}' } }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.overview).toBeNull();
+  });
+
+  it('returns 503 when MINIMAX_API_KEY is not set', async () => {
+    delete process.env.MINIMAX_API_KEY;
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(data.error).toBe('AI service not configured');
+  });
+
+  it('handles trip with no charging stops', async () => {
+    const noStopsBody = { ...VALID_BODY, chargingStops: [] };
+    const noStopsResponse = {
+      overview: 'Chuyến đi ngắn, không cần sạc.',
+      narrative: 'Bạn đủ pin cho toàn bộ chuyến đi.',
+    };
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify(noStopsResponse) } }],
+    });
+
+    const res = await POST(makeRequest(noStopsBody));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.overview).toBe(noStopsResponse.overview);
+  });
+
+  it('passes correct temperature and max_tokens to AI', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify(AI_RESPONSE) } }],
+    });
+
+    await POST(makeRequest(VALID_BODY));
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        temperature: 0.4,
+        max_tokens: 1024,
+        response_format: { type: 'json_object' },
+      }),
+      expect.any(Object),
+    );
+  });
+});
