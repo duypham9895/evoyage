@@ -134,9 +134,9 @@ function LocationBadge({ address }: { readonly address: string }) {
 
 // ── Chip class helpers ──
 
-const CHIP_TRIP = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.25)] hover:border-[var(--color-accent)]/40 transition-colors min-h-[44px] min-w-[44px]';
+const CHIP_TRIP = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.25)] hover:border-[var(--color-accent)]/40 transition-colors min-h-[44px] min-w-[44px] max-w-full truncate';
 
-const CHIP_SECONDARY = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] transition-colors min-h-[44px] min-w-[44px]';
+const CHIP_SECONDARY = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] transition-colors min-h-[44px] min-w-[44px] max-w-full truncate';
 
 // ── Main Component ──
 
