@@ -227,7 +227,7 @@ export default function PlaceAutocomplete({
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul id={listboxId} role="listbox" className="absolute z-50 w-full mt-1 bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto">
+        <ul id={listboxId} role="listbox" className="absolute z-50 w-full bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto bottom-full mb-1 sm:bottom-auto sm:top-full sm:mt-1 sm:mb-0">
           {suggestions.map((result, index) => (
             <li key={result.placeId} role="option" aria-selected={index === activeIndex}>
               <button
@@ -239,8 +239,8 @@ export default function PlaceAutocomplete({
                     : 'hover:bg-[var(--color-surface-hover)] text-[var(--color-text)]'
                 }`}
               >
-                <span className="block truncate">{shortenName(result.displayName)}</span>
-                <span className="block text-xs text-[var(--color-muted)] truncate">
+                <span className="block truncate" title={result.displayName}>{shortenName(result.displayName)}</span>
+                <span className="block text-xs text-[var(--color-muted)] truncate" title={result.displayName}>
                   {result.displayName}
                 </span>
               </button>

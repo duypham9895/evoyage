@@ -400,7 +400,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                       <span className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-bold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
-                      <span className="text-sm font-semibold line-clamp-2">{station.name}</span>
+                      <span className="text-sm font-semibold line-clamp-2" title={station.name}>{station.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {rankLabel && (
@@ -415,7 +415,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                   </div>
 
                   {/* Address */}
-                  <div className="text-xs text-[var(--color-muted)] truncate mt-1 ml-8">
+                  <div className="text-xs text-[var(--color-muted)] truncate mt-1 ml-8" title={station.address}>
                     {station.address}
                   </div>
 
@@ -440,8 +440,8 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
 
                 {/* Expanded section */}
                 <div
-                  className={`overflow-hidden transition-all duration-200 ease-out ${
-                    isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                  className={`transition-all duration-200 ease-out ${
+                    isExpanded ? 'max-h-[2000px] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'
                   }`}
                 >
                   <div className="border-t border-[var(--color-surface-hover)] p-3 space-y-2">
@@ -501,7 +501,7 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
                                 }}
                                 className="w-full flex items-center justify-between px-3 py-2.5 min-h-[48px] hover:bg-[var(--color-surface-hover)] transition-colors border-b border-[var(--color-surface-hover)] last:border-b-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-accent)]"
                               >
-                                <span className="text-xs font-medium truncate min-w-0 flex-1 text-left">
+                                <span className="text-xs font-medium truncate min-w-0 flex-1 text-left" title={alt.station.name}>
                                   {alt.station.name}
                                 </span>
                                 <div className="flex items-center gap-3 shrink-0 text-xs ml-2">

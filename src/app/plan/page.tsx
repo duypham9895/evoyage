@@ -441,6 +441,7 @@ function HomeContent() {
       <button
         onClick={handlePlanTrip}
         disabled={!canPlan}
+        title={disabledReason ?? undefined}
         className={`w-full py-3.5 rounded-xl font-bold font-[family-name:var(--font-heading)] text-base transition-all ${
           canPlan
             ? 'bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98]'

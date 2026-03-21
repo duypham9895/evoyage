@@ -139,7 +139,7 @@ export default function BrandModelSelector({
                       : 'hover:bg-[var(--color-surface-hover)]'
                   }`}
                 >
-                  <span>
+                  <span title={`${v.brand} ${displayName(v)} ${v.bodyType ?? ''}`}>
                     {displayName(v)}
                     {v.bodyType && (
                       <span className="text-xs text-[var(--color-muted)] ml-2">

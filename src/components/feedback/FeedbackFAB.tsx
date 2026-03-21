@@ -15,26 +15,22 @@ interface FeedbackFABProps {
   };
 }
 
-/** Check localStorage once on first render to decide pulse state */
-function getInitialPulse(): boolean {
-  if (typeof window === 'undefined') return false;
-  return !localStorage.getItem('evoyage-feedback-seen');
-}
-
 export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
   const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
-  const [showPulse, setShowPulse] = useState(getInitialPulse);
+  const [showPulse, setShowPulse] = useState(false);
 
-  // Auto-dismiss pulse after 5 seconds — runs only when pulse is active
+  // Check localStorage after mount to avoid hydration mismatch
   useEffect(() => {
-    if (!showPulse) return;
+    const shouldPulse = !localStorage.getItem('evoyage-feedback-seen');
+    if (!shouldPulse) return;
+    setShowPulse(true);
     const timer = setTimeout(() => {
       setShowPulse(false);
       localStorage.setItem('evoyage-feedback-seen', '1');
     }, 5000);
     return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleOpen = useCallback(() => {
     setShowPulse(false);

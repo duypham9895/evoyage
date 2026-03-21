@@ -1,9 +1,35 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Component, type ReactNode } from 'react';
 import { useLocale } from '@/lib/locale';
 import type { VinFastStationDetail } from '@/lib/vinfast/vinfast-client';
 import StationDetailSkeleton from './StationDetailSkeleton';
+
+/** Error boundary to prevent station detail crashes from taking down the page */
+class StationDetailErrorBoundary extends Component<
+  { readonly children: ReactNode; readonly fallbackMessage: string },
+  { hasError: boolean }
+> {
+  constructor(props: { readonly children: ReactNode; readonly fallbackMessage: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="text-[10px] text-[var(--color-danger)]/60 italic p-2">
+          {this.props.fallbackMessage}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface StationDetailExpanderProps {
   readonly stationId: string;
@@ -188,7 +214,7 @@ function DetailContent({
   );
 }
 
-export default function StationDetailExpander({
+function StationDetailExpanderInner({
   stationId,
   stationProvider,
 }: StationDetailExpanderProps) {
@@ -347,5 +373,13 @@ export default function StationDetailExpander({
         </div>
       )}
     </div>
+  );
+}
+
+export default function StationDetailExpander(props: StationDetailExpanderProps) {
+  return (
+    <StationDetailErrorBoundary fallbackMessage="Could not load station details">
+      <StationDetailExpanderInner {...props} />
+    </StationDetailErrorBoundary>
   );
 }

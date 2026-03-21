@@ -122,7 +122,7 @@ function LocationBadge({ address }: { readonly address: string }) {
   return (
     <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[rgba(0,212,170,0.12)] text-[var(--color-accent)]">
       <span>📍</span>
-      <span className="truncate max-w-[200px]">{shortLabel}</span>
+      <span className="truncate max-w-[200px]" title={address}>{shortLabel}</span>
     </div>
   );
 }
@@ -544,6 +544,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
           <button
             onClick={handleSend}
             disabled={!inputValue.trim() || state === 'processing'}
+            title={!inputValue.trim() ? t('evi_type_message' as Parameters<typeof t>[0]) : undefined}
             className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent)] text-white disabled:opacity-40 transition-opacity"
             aria-label="Send"
           >

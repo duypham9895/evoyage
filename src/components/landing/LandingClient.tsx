@@ -142,7 +142,7 @@ export function FAQAccordion({
           </button>
           <div
             className={`overflow-hidden transition-all duration-300 ${
-              openIndex === i ? 'max-h-80 pb-5' : 'max-h-0'
+              openIndex === i ? 'max-h-[500px] pb-5' : 'max-h-0'
             }`}
           >
             <p className="text-[#8E8E93] text-[15px] leading-relaxed">

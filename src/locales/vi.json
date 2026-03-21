@@ -282,5 +282,6 @@
   "evi_mic_denied": "Trình duyệt chưa cấp quyền micro. Vui lòng cho phép trong cài đặt.",
   "evi_no_speech": "Không nghe thấy giọng nói. Bấm mic và thử lại nhé.",
   "evi_speech_network_error": "Lỗi mạng khi nhận diện giọng nói. Kiểm tra kết nối của bạn.",
-  "evi_speech_error": "Nhập giọng nói thất bại. Thử lại hoặc gõ hành trình nhé."
+  "evi_speech_error": "Nhập giọng nói thất bại. Thử lại hoặc gõ hành trình nhé.",
+  "evi_type_message": "Nhập tin nhắn để gửi"
 }

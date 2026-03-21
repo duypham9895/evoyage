@@ -161,7 +161,7 @@ function RecentTrips({ onSelect }: { readonly onSelect: (start: string, end: str
             onClick={() => onSelect(trip.start, trip.end)}
             className="w-full text-left px-3 py-2.5 rounded-lg bg-[var(--color-background)] border border-[var(--color-surface-hover)] hover:border-[var(--color-accent)]/30 transition-colors"
           >
-            <div className="text-sm truncate">
+            <div className="text-sm truncate" title={`${trip.start} → ${trip.end}`}>
               {trip.start.split(',')[0]} → {trip.end.split(',')[0]}
             </div>
             {trip.vehicleName && (

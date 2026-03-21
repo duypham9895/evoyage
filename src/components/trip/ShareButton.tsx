@@ -472,6 +472,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
                   <button
                     onClick={handleCopyLink}
                     disabled={linkState === 'creating'}
+                    title={linkState === 'creating' ? t('share_creating_link') : undefined}
                     className={`
                       flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all
                       ${linkState === 'copied'
@@ -558,6 +559,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
                 <button
                   onClick={handleGenerateImage}
                   disabled={modalState === 'generating-image'}
+                  title={modalState === 'generating-image' ? t('share_generating') : undefined}
                   className="w-full py-2.5 rounded-xl bg-[var(--color-surface-hover)] text-[var(--color-foreground)] font-semibold text-sm hover:opacity-80 transition-opacity disabled:opacity-60"
                 >
                   {modalState === 'generating-image' ? (
