@@ -67,24 +67,27 @@ function buildSuggestionChips(
   }
 
   const chips: SuggestionChip[] = [];
+  const seen = new Set<string>();
 
-  // 1. Personalized — from trip history (max 2)
+  // 1. Personalized — from trip history (max 2, deduplicated)
   for (const trip of recentTrips.slice(0, 2)) {
     const startShort = trip.start.split(',')[0];
     const endShort = trip.end.split(',')[0];
     const vehicle = trip.vehicleName ? `, ${trip.vehicleName.replace(/^VinFast\s+/i, '')}` : '';
-    chips.push({ label: `${startShort} → ${endShort}${vehicle}`, action: 'message' });
+    const label = `${startShort} → ${endShort}${vehicle}`;
+    if (seen.has(label)) continue;
+    seen.add(label);
+    chips.push({ label, action: 'message' });
   }
 
   // 2. Contextual — fill remaining trip slots (up to 3 total trip chips)
   const contextKey = getContextualTimeKey();
   const contextual = CONTEXTUAL_CHIPS[contextKey] ?? CONTEXTUAL_CHIPS.default;
-  const existing = new Set(chips.map((c) => c.label));
   for (const label of contextual) {
     if (chips.length >= 3) break;
-    if (existing.has(label)) continue;
+    if (seen.has(label)) continue;
     chips.push({ label, action: 'message' });
-    existing.add(label);
+    seen.add(label);
   }
 
   // 3. Quick action — find nearby stations
