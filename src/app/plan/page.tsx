@@ -17,6 +17,7 @@ import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
 import TripSummary from '@/components/trip/TripSummary';
 import ShareButton from '@/components/trip/ShareButton';
 import EVi from '@/components/EVi';
+import NearbyStations from '@/components/NearbyStations';
 import type { EViTripParams } from '@/lib/evi/types';
 import FeedbackFAB from '@/components/feedback/FeedbackFAB';
 import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
@@ -198,8 +199,9 @@ function HomeContent() {
     setEndCoords({ lat: result.lat, lng: result.lng });
   }, []);
 
-  // Desktop: toggle between eVi chat and manual form
+  // Desktop: toggle between eVi chat, manual form, and stations view
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showStationsView, setShowStationsView] = useState(false);
 
   // Flag to auto-trigger planning after eVi fills the form
   const [autoPlanPending, setAutoPlanPending] = useState(false);
@@ -253,10 +255,12 @@ function HomeContent() {
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, []);
 
-  // "Find nearby stations" — collapse bottom sheet to reveal map
+  // "Find nearby stations" — switch to stations tab (mobile) or stations view (desktop)
   const handleFindNearbyStations = useCallback(() => {
-    setActiveTab('route');
-    setBottomSheetSnap({ point: 'peek', trigger: Date.now() });
+    setActiveTab('stations');
+    setShowStationsView(true);
+    setShowManualForm(false);
+    setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, []);
 
   // Clear coords when text input changes manually
@@ -310,12 +314,12 @@ function HomeContent() {
   // Swipe gesture handlers for mobile tab switching
   const handleSwipeLeft = useCallback(() => {
     hapticLight();
-    setActiveTab(prev => prev === 'evi' ? 'route' : prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev);
+    setActiveTab(prev => prev === 'evi' ? 'route' : prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev === 'battery' ? 'stations' : prev);
   }, []);
 
   const handleSwipeRight = useCallback(() => {
     hapticLight();
-    setActiveTab(prev => prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev === 'route' ? 'evi' : prev);
+    setActiveTab(prev => prev === 'stations' ? 'battery' : prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev === 'route' ? 'evi' : prev);
   }, []);
 
   // Plan trip — POST to /api/route
@@ -568,9 +572,13 @@ function HomeContent() {
               />
             )}
 
-            {/* Plan button always visible */}
-            {planButton}
-            {errorDisplay}
+            {activeTab === 'stations' && (
+              <NearbyStations />
+            )}
+
+            {/* Plan button always visible (except on stations tab) */}
+            {activeTab !== 'stations' && planButton}
+            {activeTab !== 'stations' && errorDisplay}
           </div>
         </MobileBottomSheet>
 
@@ -595,7 +603,17 @@ function HomeContent() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Sidebar — inputs + summary */}
         <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
-          {showManualForm ? (
+          {showStationsView ? (
+            <div className="space-y-4">
+              <button
+                onClick={() => { setShowStationsView(false); setShowManualForm(false); }}
+                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+              >
+                ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
+              </button>
+              <NearbyStations />
+            </div>
+          ) : showManualForm ? (
             <div className="space-y-4">
               <button
                 onClick={() => setShowManualForm(false)}

@@ -94,3 +94,37 @@ Before every commit, verify:
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
 - [ ] Locale keys match between en.json and vi.json
+
+## gstack — AI Software Factory
+
+Use gstack skills for code review, shipping, QA, debugging, and browsing. These are slash commands available in Claude Code.
+
+### Available Skills
+
+| Command | Purpose |
+|---------|---------|
+| `/review` | PR code review (two-pass: critical → informational) |
+| `/ship` | Automated shipping (tests, changelog, version bump, PR) |
+| `/qa` | QA testing with 6-phase methodology |
+| `/qa-only` | Report-only QA (no fixes) |
+| `/investigate` | Systematic debugging (root cause first, then fix) |
+| `/browse` | Headless browser for web interactions |
+| `/plan-eng-review` | Engineering architecture review |
+| `/plan-ceo-review` | Product review from CEO perspective |
+| `/plan-design-review` | Design audit |
+| `/design-consultation` | Design system builder |
+| `/design-review` | Design audit with fixes |
+| `/retro` | Weekly retrospective |
+| `/document-release` | Post-ship documentation updates |
+| `/freeze` | Lock edits to a specific scope (debug mode) |
+| `/unfreeze` | Remove edit lock |
+| `/careful` | Warnings before destructive commands |
+| `/guard` | careful + freeze combined |
+| `/gstack-upgrade` | Update gstack to latest version |
+
+### Troubleshooting
+
+If gstack skills aren't working:
+```bash
+cd ~/.claude/skills/gstack && ./setup
+```

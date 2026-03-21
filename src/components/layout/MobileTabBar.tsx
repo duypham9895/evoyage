@@ -3,7 +3,7 @@
 import { useLocale } from '@/lib/locale';
 import { hapticLight } from '@/lib/haptics';
 
-export type MobileTab = 'evi' | 'route' | 'vehicle' | 'battery';
+export type MobileTab = 'evi' | 'route' | 'vehicle' | 'battery' | 'stations';
 
 interface MobileTabBarProps {
   readonly activeTab: MobileTab;
@@ -17,6 +17,7 @@ const TABS = [
   { id: 'route' as const, icon: '📍', labelKey: 'tab_route' as const },
   { id: 'vehicle' as const, icon: '🚗', labelKey: 'tab_vehicle' as const },
   { id: 'battery' as const, icon: '🔋', labelKey: 'tab_battery' as const },
+  { id: 'stations' as const, icon: '⚡', labelKey: 'tab_stations' as const },
 ] as const;
 
 export default function MobileTabBar({

@@ -32,9 +32,13 @@ const translations: Record<string, string> = {
   evi_greeting_return: 'Welcome back!',
   evi_find_stations: 'Find stations nearby',
   evi_mic_denied: 'Microphone access denied.',
+  evi_mic_previously_denied: 'Microphone blocked. Change in browser settings.',
+  evi_mic_unsupported: 'Browser doesn\'t support microphone.',
   evi_no_speech: 'No speech detected.',
   evi_speech_network_error: 'Network error during voice recognition.',
   evi_speech_error: 'Voice input failed.',
+  evi_suggestions_loading: 'Loading suggestions...',
+  evi_suggestions_label: 'Suggested follow-up questions',
 };
 
 vi.mock('@/lib/locale', () => ({
@@ -122,6 +126,8 @@ let mockUseEViReturn = {
   userLocation: null as { lat: number; lng: number; address: string } | null,
   isFirstVisit: true,
   recentTrips: [] as { start: string; end: string; vehicleName?: string | null }[],
+  followUpSuggestions: [] as string[],
+  isSuggestionsLoading: false,
   sendMessage: mockSendMessage,
   reset: mockReset,
 };
@@ -148,6 +154,8 @@ beforeEach(() => {
     userLocation: null,
     isFirstVisit: true,
     recentTrips: [],
+    followUpSuggestions: [],
+    isSuggestionsLoading: false,
   });
   setSpeechState({
     isSupported: false,
@@ -645,6 +653,22 @@ describe('EVi component', () => {
       expect(screen.getByText('Network error during voice recognition.')).toBeInTheDocument();
     });
 
+    it('shows previously denied error with browser settings guidance', () => {
+      setSpeechState({ isSupported: true, error: 'previously_denied' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('Microphone blocked. Change in browser settings.')).toBeInTheDocument();
+    });
+
+    it('shows browser unsupported error message', () => {
+      setSpeechState({ isSupported: true, error: 'browser_unsupported' });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText("Browser doesn't support microphone.")).toBeInTheDocument();
+    });
+
     it('shows generic speech error for unknown errors', () => {
       setSpeechState({ isSupported: true, error: 'recognition_failed' });
 
@@ -670,6 +694,111 @@ describe('EVi component', () => {
       expect(screen.queryByText('No speech detected.')).not.toBeInTheDocument();
       expect(screen.queryByText('Network error during voice recognition.')).not.toBeInTheDocument();
       expect(screen.queryByText('Voice input failed.')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('AI follow-up suggestions', () => {
+    it('shows loading skeleton when suggestions are being fetched', () => {
+      setHookState({
+        state: 'follow_up',
+        lastResponse: followUpResponse,
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt' },
+          { role: 'assistant', content: 'Bạn đang lái xe gì?' },
+        ],
+        isSuggestionsLoading: true,
+        followUpSuggestions: [],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByLabelText('Loading suggestions...')).toBeInTheDocument();
+    });
+
+    it('shows AI-generated suggestion chips when loaded', () => {
+      setHookState({
+        state: 'follow_up',
+        lastResponse: followUpResponse,
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt' },
+          { role: 'assistant', content: 'Bạn đang lái xe gì?' },
+        ],
+        isSuggestionsLoading: false,
+        followUpSuggestions: ['VF 8 Plus', 'VF 5 Plus', 'VF e34'],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByText('VF 8 Plus')).toBeInTheDocument();
+      expect(screen.getByText('VF 5 Plus')).toBeInTheDocument();
+      expect(screen.getByText('VF e34')).toBeInTheDocument();
+    });
+
+    it('sends suggestion as message when clicked', () => {
+      setHookState({
+        state: 'follow_up',
+        lastResponse: followUpResponse,
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt' },
+          { role: 'assistant', content: 'Bạn đang lái xe gì?' },
+        ],
+        isSuggestionsLoading: false,
+        followUpSuggestions: ['VF 8 Plus', 'VF 5 Plus', 'VF e34'],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      fireEvent.click(screen.getByText('VF 8 Plus'));
+
+      expect(mockSendMessage).toHaveBeenCalledWith('VF 8 Plus');
+    });
+
+    it('does not show suggestions when state is complete', () => {
+      setHookState({
+        state: 'complete',
+        lastResponse: completeResponse,
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt VF8 pin 80' },
+          { role: 'assistant', content: 'Lên kế hoạch HCM → Đà Lạt' },
+        ],
+        followUpSuggestions: ['Some suggestion'],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByText('Some suggestion')).not.toBeInTheDocument();
+    });
+
+    it('does not show suggestions when state is processing', () => {
+      setHookState({
+        state: 'processing',
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt' },
+        ],
+        followUpSuggestions: ['Some suggestion'],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByText('Some suggestion')).not.toBeInTheDocument();
+    });
+
+    it('does not show suggestion chips when empty and not loading', () => {
+      setHookState({
+        state: 'follow_up',
+        lastResponse: followUpResponse,
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt' },
+          { role: 'assistant', content: 'Bạn đang lái xe gì?' },
+        ],
+        isSuggestionsLoading: false,
+        followUpSuggestions: [],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.queryByLabelText('Suggested follow-up questions')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Loading suggestions...')).not.toBeInTheDocument();
     });
   });
 });

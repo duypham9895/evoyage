@@ -28,6 +28,8 @@ interface UseEViReturn {
   readonly userLocation: UserLocation | null;
   readonly isFirstVisit: boolean;
   readonly recentTrips: readonly RecentTrip[];
+  readonly followUpSuggestions: readonly string[];
+  readonly isSuggestionsLoading: boolean;
   readonly sendMessage: (text: string) => Promise<void>;
   readonly reset: () => void;
 }
@@ -70,6 +72,11 @@ export function useEVi(): UseEViReturn {
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   const [lastResponse, setLastResponse] = useState<EViParseResponse | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [followUpSuggestions, setFollowUpSuggestions] = useState<readonly string[]>([]);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+
+  // Track active suggestions request to avoid stale updates
+  const suggestionsAbortRef = useRef<AbortController | null>(null);
 
   const [isFirstVisit] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -162,10 +169,71 @@ export function useEVi(): UseEViReturn {
     };
   }, []);
 
+  // ── fetchSuggestions (non-blocking, fire-and-forget) ──
+  const fetchSuggestions = useCallback((
+    allMessages: readonly ChatMessage[],
+    response: EViParseResponse,
+  ): void => {
+    // Cancel any in-flight suggestions request
+    suggestionsAbortRef.current?.abort();
+    const controller = new AbortController();
+    suggestionsAbortRef.current = controller;
+
+    setIsSuggestionsLoading(true);
+    setFollowUpSuggestions([]);
+
+    const tripContext = response.tripParams
+      ? {
+          start: response.tripParams.start,
+          end: response.tripParams.end,
+          vehicleName: response.tripParams.vehicleName,
+          currentBattery: response.tripParams.currentBattery,
+          isComplete: response.isComplete,
+        }
+      : null;
+
+    const payload = {
+      messages: allMessages.slice(-MAX_HISTORY).map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+      tripContext,
+    };
+
+    fetch('/api/evi/suggestions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+      .then(res => {
+        if (!res.ok) return { suggestions: [] };
+        return res.json();
+      })
+      .then(data => {
+        if (!controller.signal.aborted && Array.isArray(data.suggestions)) {
+          setFollowUpSuggestions(data.suggestions);
+        }
+      })
+      .catch(() => {
+        // Aborted or network error — silently ignore
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsSuggestionsLoading(false);
+        }
+      });
+  }, []);
+
   // ── sendMessage ──
   const sendMessage = useCallback(async (text: string): Promise<void> => {
     const userMsg: ChatMessage = { role: 'user', content: text };
     const updatedMessages = [...messagesRef.current, userMsg];
+
+    // Clear suggestions when user sends a new message
+    setFollowUpSuggestions([]);
+    setIsSuggestionsLoading(false);
+    suggestionsAbortRef.current?.abort();
 
     setMessages(updatedMessages);
     setState('processing');
@@ -251,7 +319,8 @@ export function useEVi(): UseEViReturn {
         content: extractAssistantContent(response),
       };
 
-      setMessages([...updatedMessages, assistantMsg]);
+      const finalMessages = [...updatedMessages, assistantMsg];
+      setMessages(finalMessages);
       setLastResponse(response);
 
       const nextState = deriveState(response);
@@ -264,6 +333,11 @@ export function useEVi(): UseEViReturn {
           // localStorage unavailable — ignore
         }
       }
+
+      // Fetch AI-powered follow-up suggestions for follow_up state
+      if (nextState === 'follow_up') {
+        fetchSuggestions(finalMessages, response);
+      }
     } catch {
       const errorMsg: ChatMessage = {
         role: 'assistant',
@@ -272,13 +346,16 @@ export function useEVi(): UseEViReturn {
       setMessages([...updatedMessages, errorMsg]);
       setState('error');
     }
-  }, []);
+  }, [fetchSuggestions]);
 
   // ── reset ──
   const reset = useCallback((): void => {
     setMessages([]);
     setState('idle');
     setLastResponse(null);
+    setFollowUpSuggestions([]);
+    setIsSuggestionsLoading(false);
+    suggestionsAbortRef.current?.abort();
   }, []);
 
   return {
@@ -288,6 +365,8 @@ export function useEVi(): UseEViReturn {
     userLocation,
     isFirstVisit,
     recentTrips,
+    followUpSuggestions,
+    isSuggestionsLoading,
     sendMessage,
     reset,
   };

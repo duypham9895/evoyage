@@ -138,6 +138,8 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
     userLocation,
     isFirstVisit,
     recentTrips,
+    followUpSuggestions,
+    isSuggestionsLoading,
     sendMessage,
     reset,
   } = useEVi();
@@ -410,6 +412,34 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                 </button>
               </form>
             )}
+
+            {/* AI-generated follow-up suggestions */}
+            {isSuggestionsLoading && (
+              <div className="flex gap-2 mt-2" aria-label={t('evi_suggestions_loading' as Parameters<typeof t>[0])}>
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-muted)]/10 animate-pulse"
+                    style={{ width: `${80 + i * 20}px` }}
+                  />
+                ))}
+              </div>
+            )}
+            {!isSuggestionsLoading && followUpSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2" role="listbox" aria-label={t('evi_suggestions_label' as Parameters<typeof t>[0])}>
+                {followUpSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => handleFollowUpOption(suggestion)}
+                    className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-accent)]/50 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)] transition-colors min-h-[44px] min-w-[44px]"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -492,13 +522,17 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
         {/* Speech error feedback */}
         {speechError && !isListening && (
           <p className="text-xs text-red-400 text-center mb-2">
-            {speechError === 'not_allowed'
-              ? t('evi_mic_denied' as Parameters<typeof t>[0])
-              : speechError === 'no_speech'
-                ? t('evi_no_speech' as Parameters<typeof t>[0])
-                : speechError === 'network'
-                  ? t('evi_speech_network_error' as Parameters<typeof t>[0])
-                  : t('evi_speech_error' as Parameters<typeof t>[0])}
+            {speechError === 'previously_denied'
+              ? t('evi_mic_previously_denied' as Parameters<typeof t>[0])
+              : speechError === 'not_allowed'
+                ? t('evi_mic_denied' as Parameters<typeof t>[0])
+                : speechError === 'browser_unsupported'
+                  ? t('evi_mic_unsupported' as Parameters<typeof t>[0])
+                  : speechError === 'no_speech'
+                    ? t('evi_no_speech' as Parameters<typeof t>[0])
+                    : speechError === 'network'
+                      ? t('evi_speech_network_error' as Parameters<typeof t>[0])
+                      : t('evi_speech_error' as Parameters<typeof t>[0])}
           </p>
         )}
 

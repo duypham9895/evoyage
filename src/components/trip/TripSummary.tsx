@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useLocale } from '@/lib/locale';
+import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import StationDetailExpander from './StationDetailExpander';
 
@@ -183,11 +184,76 @@ function QuickStats({
   );
 }
 
+// ── Route Briefing ──
+
+function RouteBriefingSkeleton() {
+  return (
+    <div className="p-4 bg-gradient-to-br from-[var(--color-accent)]/5 to-[var(--color-surface)] rounded-lg space-y-3">
+      <div className="h-3 bg-[var(--color-surface-hover)] rounded w-1/3 animate-pulse" />
+      <div className="space-y-2">
+        <div className="h-3 bg-[var(--color-surface-hover)] rounded w-full animate-pulse" />
+        <div className="h-3 bg-[var(--color-surface-hover)] rounded w-5/6 animate-pulse" />
+        <div className="h-3 bg-[var(--color-surface-hover)] rounded w-4/6 animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+function RouteBriefing({
+  overview,
+  narrative,
+  isLoading: loading,
+}: {
+  readonly overview: string | null;
+  readonly narrative: string | null;
+  readonly isLoading: boolean;
+}) {
+  const { t } = useLocale();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (loading) return <RouteBriefingSkeleton />;
+  if (!overview || !narrative) return null;
+
+  return (
+    <div className="p-4 bg-gradient-to-br from-[var(--color-accent)]/5 to-[var(--color-surface)] rounded-lg space-y-2">
+      <h3 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+        {t('route_briefing' as Parameters<typeof t>[0])}
+      </h3>
+
+      <p className="text-sm text-[var(--color-foreground)] leading-relaxed">
+        {overview}
+      </p>
+
+      {/* Expandable narrative */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-out ${
+          isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <p className="text-sm text-[var(--color-foreground)]/80 leading-relaxed pt-2 border-t border-[var(--color-surface-hover)]">
+          {narrative}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsExpanded(prev => !prev)}
+        className="text-xs font-medium text-[var(--color-accent)] hover:underline transition-colors"
+      >
+        {isExpanded
+          ? t('route_briefing_collapse' as Parameters<typeof t>[0])
+          : t('route_briefing_expand' as Parameters<typeof t>[0])}
+      </button>
+    </div>
+  );
+}
+
 // ── Main Component ──
 
 export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
   const { t, tBi } = useLocale();
   const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
+  const narrativeState = useRouteNarrative(tripPlan);
 
   const toggleExpanded = (index: number) => {
     setExpandedStops(prev => {
@@ -269,6 +335,13 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
           </button>
         )}
       </div>
+
+      {/* Route Briefing — loads asynchronously after trip plan */}
+      <RouteBriefing
+        overview={narrativeState.overview}
+        narrative={narrativeState.narrative}
+        isLoading={narrativeState.isLoading}
+      />
 
       <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
         {/* Route */}

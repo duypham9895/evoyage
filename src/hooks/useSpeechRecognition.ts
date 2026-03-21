@@ -18,7 +18,7 @@ function getSpeechRecognitionConstructor(): (new () => SpeechRecognitionInstance
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
 
-type SpeechError = 'no_speech' | 'not_allowed' | 'network' | 'recognition_failed' | null;
+type SpeechError = 'no_speech' | 'not_allowed' | 'previously_denied' | 'browser_unsupported' | 'network' | 'recognition_failed' | null;
 
 interface UseSpeechRecognitionReturn {
   readonly isSupported: boolean;
@@ -58,9 +58,28 @@ export function useSpeechRecognition(locale: string = 'vi'): UseSpeechRecognitio
     setError(null);
     setTranscript('');
 
-    // Explicitly request microphone permission first — this reliably
-    // triggers the browser's native permission dialog, unlike
-    // SpeechRecognition.start() which may silently fail on mobile.
+    // Guard: mediaDevices requires a secure context (HTTPS or localhost).
+    // On plain HTTP or unsupported browsers, navigator.mediaDevices is undefined.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('browser_unsupported');
+      return;
+    }
+
+    // Check if mic permission was previously denied (Permissions API where available)
+    // so we can give the user specific guidance to change browser settings.
+    try {
+      const permStatus = await navigator.permissions?.query({ name: 'microphone' as PermissionName });
+      if (permStatus?.state === 'denied') {
+        setError('previously_denied');
+        return;
+      }
+    } catch {
+      // Permissions API not supported for microphone in this browser — proceed normally
+    }
+
+    // Explicitly request microphone permission — this reliably triggers the
+    // browser's native permission dialog, unlike SpeechRecognition.start()
+    // which may silently fail on mobile.
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Release the stream immediately — we only needed it for the permission prompt

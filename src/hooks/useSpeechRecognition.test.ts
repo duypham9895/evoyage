@@ -137,6 +137,72 @@ describe('useSpeechRecognition', () => {
       expect(result.current.isListening).toBe(false);
     });
 
+    it('sets error to browser_unsupported when navigator.mediaDevices is undefined', async () => {
+      mockSpeechRecognition();
+      // Remove mediaDevices to simulate plain HTTP context
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
+
+      const { result } = renderHook(() => useSpeechRecognition());
+
+      await act(async () => {
+        await result.current.startListening();
+      });
+
+      expect(result.current.error).toBe('browser_unsupported');
+      expect(result.current.isListening).toBe(false);
+    });
+
+    it('sets error to previously_denied when Permissions API reports denied', async () => {
+      mockSpeechRecognition();
+      mockGetUserMedia();
+
+      // Mock Permissions API to report 'denied'
+      Object.defineProperty(navigator, 'permissions', {
+        value: {
+          query: vi.fn().mockResolvedValue({ state: 'denied' }),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const { result } = renderHook(() => useSpeechRecognition());
+
+      await act(async () => {
+        await result.current.startListening();
+      });
+
+      expect(result.current.error).toBe('previously_denied');
+      expect(result.current.isListening).toBe(false);
+    });
+
+    it('proceeds normally when Permissions API throws (unsupported)', async () => {
+      const { mock } = mockSpeechRecognition();
+      mockGetUserMedia();
+
+      // Mock Permissions API to throw (e.g., Firefox doesn't support 'microphone' name)
+      Object.defineProperty(navigator, 'permissions', {
+        value: {
+          query: vi.fn().mockRejectedValue(new TypeError('not supported')),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      const { result } = renderHook(() => useSpeechRecognition());
+
+      await act(async () => {
+        await result.current.startListening();
+      });
+
+      // Should still proceed to getUserMedia and start recognition
+      expect(mock.start).toHaveBeenCalledOnce();
+      expect(result.current.isListening).toBe(true);
+    });
+
     it('stopListening stops the recognition instance', async () => {
       const { mock } = mockSpeechRecognition();
       mockGetUserMedia();

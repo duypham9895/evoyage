@@ -19,6 +19,13 @@ Object.defineProperty(navigator, 'permissions', {
   writable: true,
 });
 
+function makeSuggestionsResponse(suggestions: string[] = []) {
+  return {
+    ok: true,
+    json: () => Promise.resolve({ suggestions, error: null }),
+  };
+}
+
 function makeSuccessResponse(overrides: Partial<{
   isComplete: boolean;
   followUpQuestion: string | null;
@@ -91,6 +98,16 @@ describe('useEVi', () => {
       const { result } = renderHook(() => useEVi());
       expect(result.current.isFirstVisit).toBe(false);
     });
+
+    it('followUpSuggestions is empty initially', () => {
+      const { result } = renderHook(() => useEVi());
+      expect(result.current.followUpSuggestions).toEqual([]);
+    });
+
+    it('isSuggestionsLoading is false initially', () => {
+      const { result } = renderHook(() => useEVi());
+      expect(result.current.isSuggestionsLoading).toBe(false);
+    });
   });
 
   describe('sendMessage', () => {
@@ -148,10 +165,12 @@ describe('useEVi', () => {
     });
 
     it('sets state to follow_up when response.isComplete is false', async () => {
-      mockFetch.mockResolvedValueOnce(makeSuccessResponse({
-        isComplete: false,
-        followUpQuestion: 'Bạn đi xe gì?',
-      }));
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+        }))
+        .mockResolvedValueOnce(makeSuggestionsResponse([]));
 
       const { result } = renderHook(() => useEVi());
 
@@ -163,11 +182,13 @@ describe('useEVi', () => {
     });
 
     it('uses followUpQuestion as assistant message content when present', async () => {
-      mockFetch.mockResolvedValueOnce(makeSuccessResponse({
-        isComplete: false,
-        followUpQuestion: 'Bạn đi xe gì?',
-        displayMessage: 'HCM → Đà Lạt',
-      }));
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+          displayMessage: 'HCM → Đà Lạt',
+        }))
+        .mockResolvedValueOnce(makeSuggestionsResponse([]));
 
       const { result } = renderHook(() => useEVi());
 
@@ -240,6 +261,164 @@ describe('useEVi', () => {
       });
 
       expect(result.current.lastResponse).toBeNull();
+    });
+
+    it('clears followUpSuggestions', async () => {
+      // Set up a follow_up response that triggers suggestions fetch
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+        }))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            suggestions: ['VF 8', 'VF 5', 'VF e34'],
+            error: null,
+          }),
+        });
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt');
+      });
+
+      // Wait for suggestions to load
+      await waitFor(() => {
+        expect(result.current.followUpSuggestions).toEqual(['VF 8', 'VF 5', 'VF e34']);
+      });
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.followUpSuggestions).toEqual([]);
+      expect(result.current.isSuggestionsLoading).toBe(false);
+    });
+  });
+
+  describe('followUpSuggestions', () => {
+    it('fetches suggestions after follow_up state', async () => {
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+        }))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            suggestions: ['VF 8 Plus', 'VF 5 Plus', 'VF e34'],
+            error: null,
+          }),
+        });
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt');
+      });
+
+      // Suggestions fetch is async/non-blocking, wait for it
+      await waitFor(() => {
+        expect(result.current.followUpSuggestions).toEqual(['VF 8 Plus', 'VF 5 Plus', 'VF e34']);
+      });
+    });
+
+    it('does not fetch suggestions after complete state', async () => {
+      mockFetch.mockResolvedValueOnce(makeSuccessResponse({ isComplete: true }));
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt VF8 pin 80');
+      });
+
+      expect(result.current.state).toBe('complete');
+      // Only the parse endpoint should have been called, not suggestions
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result.current.followUpSuggestions).toEqual([]);
+    });
+
+    it('clears suggestions when sending a new message', async () => {
+      // First message triggers follow_up with suggestions
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+        }))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({
+            suggestions: ['VF 8', 'VF 5', 'VF e34'],
+            error: null,
+          }),
+        });
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt');
+      });
+
+      await waitFor(() => {
+        expect(result.current.followUpSuggestions.length).toBeGreaterThan(0);
+      });
+
+      // Second message should clear suggestions
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({ isComplete: true }));
+
+      await act(async () => {
+        await result.current.sendMessage('VF 8 Plus');
+      });
+
+      expect(result.current.followUpSuggestions).toEqual([]);
+    });
+
+    it('handles suggestions fetch failure gracefully', async () => {
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+        }))
+        .mockRejectedValueOnce(new Error('Network error'));
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt');
+      });
+
+      // Should not throw; suggestions should remain empty
+      await waitFor(() => {
+        expect(result.current.isSuggestionsLoading).toBe(false);
+      });
+      expect(result.current.followUpSuggestions).toEqual([]);
+      expect(result.current.state).toBe('follow_up');
+    });
+
+    it('handles non-ok suggestions response gracefully', async () => {
+      mockFetch
+        .mockResolvedValueOnce(makeSuccessResponse({
+          isComplete: false,
+          followUpQuestion: 'Bạn đi xe gì?',
+        }))
+        .mockResolvedValueOnce({
+          ok: false,
+          json: () => Promise.resolve({ suggestions: [], error: 'rate limited' }),
+        });
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuggestionsLoading).toBe(false);
+      });
+      expect(result.current.followUpSuggestions).toEqual([]);
     });
   });
 });
