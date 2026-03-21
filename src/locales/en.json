@@ -264,6 +264,8 @@
   "evi_plan_button": "Plan Trip",
   "evi_edit_button": "Edit",
   "evi_back_to_chat": "Back to eVi",
+  "desktop_tab_evi": "eVi",
+  "desktop_tab_plan": "Plan Trip",
   "evi_current_location": "current location",
   "evi_from": "From",
   "evi_to": "To",

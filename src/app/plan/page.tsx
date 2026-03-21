@@ -199,9 +199,23 @@ function HomeContent() {
     setEndCoords({ lat: result.lat, lng: result.lng });
   }, []);
 
-  // Desktop: toggle between eVi chat, manual form, and stations view
-  const [showManualForm, setShowManualForm] = useState(false);
+  // Desktop sidebar: tab switcher (eVi chat vs manual form) + stations overlay
+  type DesktopSidebarTab = 'evi' | 'planTrip';
+  const [desktopSidebarTab, setDesktopSidebarTab] = useState<DesktopSidebarTab>('evi');
   const [showStationsView, setShowStationsView] = useState(false);
+
+  // Restore desktop tab preference from localStorage (SSR-safe)
+  useEffect(() => {
+    const saved = localStorage.getItem('ev-desktop-tab');
+    if (saved === 'planTrip') setDesktopSidebarTab('planTrip');
+  }, []);
+
+  // Persist tab preference
+  const handleDesktopTabChange = useCallback((tab: DesktopSidebarTab) => {
+    hapticLight();
+    setDesktopSidebarTab(tab);
+    localStorage.setItem('ev-desktop-tab', tab);
+  }, []);
 
   // Flag to auto-trigger planning after eVi fills the form
   const [autoPlanPending, setAutoPlanPending] = useState(false);
@@ -229,7 +243,7 @@ function HomeContent() {
   const handleTripParsed = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    setShowManualForm(true); // Desktop: switch sidebar to form view so user can edit inputs
+    setDesktopSidebarTab('planTrip'); // Desktop: switch sidebar to form view so user can edit inputs
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, [fillFormFromEVi]);
 
@@ -237,7 +251,7 @@ function HomeContent() {
   const handleEViPlanTrip = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
     setActiveTab('route');
-    setShowManualForm(true); // Desktop: switch sidebar to form view so TripSummary is visible
+    setDesktopSidebarTab('planTrip'); // Desktop: switch sidebar to form view so TripSummary is visible
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
@@ -245,7 +259,7 @@ function HomeContent() {
   // "Back to eVi" — return to chat from trip detail view
   const handleBackToChat = useCallback(() => {
     setActiveTab('evi'); // Mobile: switch tab
-    setShowManualForm(false); // Desktop: switch sidebar back to EVi chat
+    setDesktopSidebarTab('evi'); // Desktop: switch sidebar back to EVi chat
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, []);
 
@@ -253,7 +267,7 @@ function HomeContent() {
   const handleFindNearbyStations = useCallback(() => {
     setActiveTab('stations');
     setShowStationsView(true);
-    setShowManualForm(false);
+    setDesktopSidebarTab('evi');
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, []);
 
@@ -595,67 +609,99 @@ function HomeContent() {
       <Header />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Sidebar — inputs + summary */}
-        <aside className="w-full lg:w-[380px] lg:min-w-[380px] overflow-y-auto bg-[var(--color-surface)] p-4 space-y-4 border-r border-[var(--color-surface-hover)]">
-          {showStationsView ? (
-            <div className="space-y-4">
+        {/* Sidebar — tab switcher + content */}
+        <aside className="w-full lg:w-[380px] lg:min-w-[380px] flex flex-col overflow-hidden bg-[var(--color-surface)] border-r border-[var(--color-surface-hover)]">
+          {/* Desktop tab bar */}
+          {!showStationsView && (
+            <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-[var(--color-border)]" role="tablist" aria-label={t('desktop_tab_evi' as Parameters<typeof t>[0])}>
               <button
-                onClick={() => { setShowStationsView(false); setShowManualForm(false); }}
-                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+                role="tab"
+                aria-selected={desktopSidebarTab === 'evi'}
+                aria-controls="desktop-tabpanel-evi"
+                id="desktop-tab-evi"
+                onClick={() => handleDesktopTabChange('evi')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
+                  desktopSidebarTab === 'evi'
+                    ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
+                    : 'bg-transparent text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
+                }`}
               >
-                ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
+                {t('desktop_tab_evi' as Parameters<typeof t>[0])}
               </button>
-              <NearbyStations />
-            </div>
-          ) : showManualForm ? (
-            <div className="space-y-4">
               <button
-                onClick={() => setShowManualForm(false)}
-                className="text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+                role="tab"
+                aria-selected={desktopSidebarTab === 'planTrip'}
+                aria-controls="desktop-tabpanel-plan"
+                id="desktop-tab-plan"
+                onClick={() => handleDesktopTabChange('planTrip')}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
+                  desktopSidebarTab === 'planTrip'
+                    ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
+                    : 'bg-transparent text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
+                }`}
               >
-                ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
+                {t('desktop_tab_plan' as Parameters<typeof t>[0])}
               </button>
-
-              <TripInput
-                start={start}
-                end={end}
-                onStartChange={handleStartChange}
-                onEndChange={handleEndChange}
-                onStartSelect={handleStartSelect}
-                onEndSelect={handleEndSelect}
-                waypoints={waypoints}
-                onAddWaypoint={handleAddWaypoint}
-                onRemoveWaypoint={handleRemoveWaypoint}
-                onUpdateWaypoint={handleUpdateWaypoint}
-                onReorderWaypoints={handleReorderWaypoints}
-                isLoopTrip={isLoopTrip}
-                onToggleLoop={handleToggleLoop}
-              />
-
-              <BrandModelSelector
-                selectedVehicle={selectedVehicle}
-                onSelect={handleSelectVehicle}
-                onCustomCarClick={() => setShowCustomForm(true)}
-              />
-
-              <BatteryStatusPanel
-                vehicle={activeVehicle}
-                currentBattery={currentBattery}
-                minArrival={minArrival}
-                rangeSafetyFactor={rangeSafetyFactor}
-                onCurrentBatteryChange={setCurrentBattery}
-                onMinArrivalChange={setMinArrival}
-                onRangeSafetyFactorChange={handleRSFChange}
-              />
-
-              {planButton}
-              {errorDisplay}
-
-              <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
             </div>
-          ) : (
-            <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
           )}
+
+          {/* Sidebar content */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+            {showStationsView ? (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setShowStationsView(false)}
+                  className="text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+                >
+                  ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
+                </button>
+                <NearbyStations />
+              </div>
+            ) : desktopSidebarTab === 'planTrip' ? (
+              <div className="space-y-4" role="tabpanel" id="desktop-tabpanel-plan" aria-labelledby="desktop-tab-plan">
+                <TripInput
+                  start={start}
+                  end={end}
+                  onStartChange={handleStartChange}
+                  onEndChange={handleEndChange}
+                  onStartSelect={handleStartSelect}
+                  onEndSelect={handleEndSelect}
+                  waypoints={waypoints}
+                  onAddWaypoint={handleAddWaypoint}
+                  onRemoveWaypoint={handleRemoveWaypoint}
+                  onUpdateWaypoint={handleUpdateWaypoint}
+                  onReorderWaypoints={handleReorderWaypoints}
+                  isLoopTrip={isLoopTrip}
+                  onToggleLoop={handleToggleLoop}
+                />
+
+                <BrandModelSelector
+                  selectedVehicle={selectedVehicle}
+                  onSelect={handleSelectVehicle}
+                  onCustomCarClick={() => setShowCustomForm(true)}
+                />
+
+                <BatteryStatusPanel
+                  vehicle={activeVehicle}
+                  currentBattery={currentBattery}
+                  minArrival={minArrival}
+                  rangeSafetyFactor={rangeSafetyFactor}
+                  onCurrentBatteryChange={setCurrentBattery}
+                  onMinArrivalChange={setMinArrival}
+                  onRangeSafetyFactorChange={handleRSFChange}
+                />
+
+                {planButton}
+                {errorDisplay}
+
+                <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
+              </div>
+            ) : (
+              <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className="flex flex-col h-full -m-4">
+                <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
+              </div>
+            )}
+          </div>
         </aside>
 
         {/* Map pane */}
