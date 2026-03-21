@@ -3,6 +3,20 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-03-21
+
+### Added
+- **Desktop sidebar tab switcher** — users can switch between eVi chat and manual trip planning form via tabs, following the KAYAK AI Mode pattern
+- localStorage persistence for desktop tab preference (returning users land on their preferred mode)
+- ARIA tablist/tab/tabpanel accessibility roles with keyboard support
+- `useDesktopSidebarTab` custom hook with 6 unit tests
+- Bilingual tab labels (EN: "Plan Trip", VI: "Lên lộ trình")
+
+### Changed
+- Replaced `showManualForm` boolean with discriminated union type `DesktopSidebarTab`
+- eVi-to-form handoff now switches desktop tab instead of toggling boolean
+- Reorganized plan/spec docs into `docs/` directory structure
+
 ## [0.2.0] — 2026-03-21
 
 ### Added
