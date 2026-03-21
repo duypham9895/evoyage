@@ -108,6 +108,15 @@ input[type="range"]::-moz-range-track {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Hide scrollbar completely */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Hide scrollbar on mobile for cleaner look */
 @media (max-width: 1023px) {
   .scrollbar-thin::-webkit-scrollbar {
