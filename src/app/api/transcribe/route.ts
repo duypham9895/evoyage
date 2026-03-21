@@ -62,6 +62,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Validate MIME type — only accept audio formats
+  const allowedTypes = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm;codecs=opus'];
+  if (audioFile.type && !allowedTypes.some(t => audioFile.type.startsWith(t.split(';')[0]))) {
+    return NextResponse.json(
+      { error: 'invalid_audio_type', message: 'Audio file must be an audio format (webm, mp4, wav, mp3, ogg)' },
+      { status: 400 },
+    );
+  }
+
   if (audioFile.size > MAX_AUDIO_SIZE) {
     return NextResponse.json(
       { error: 'file_too_large', message: 'Audio file must be under 5MB' },
