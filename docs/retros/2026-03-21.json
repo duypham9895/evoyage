@@ -1,0 +1,53 @@
+{
+  "date": "2026-03-21",
+  "window": "7d",
+  "metrics": {
+    "commits": 162,
+    "contributors": 1,
+    "prs_merged": 0,
+    "insertions": 59670,
+    "deletions": 8226,
+    "net_loc": 51444,
+    "test_loc": 6576,
+    "test_ratio": 0.11,
+    "active_days": 5,
+    "sessions": 15,
+    "deep_sessions": 5,
+    "avg_session_minutes": 75,
+    "loc_per_session_hour": 3050,
+    "feat_pct": 0.33,
+    "fix_pct": 0.33,
+    "peak_hour": 12,
+    "ai_assisted_commits": 162
+  },
+  "authors": {
+    "Duy Pham": {
+      "commits": 162,
+      "insertions": 59670,
+      "deletions": 8226,
+      "test_ratio": 0.11,
+      "top_area": "src/components"
+    }
+  },
+  "version_range": ["0.0.0", "0.2.0"],
+  "streak_days": 5,
+  "tweetable": "Week of Mar 14: 162 commits, 59.7k LOC, 11% tests, 0→MVP in 5 days, peak: noon-1pm | Streak: 5d",
+  "test_health": {
+    "total_test_files": 32,
+    "tests_added_this_period": 44,
+    "regression_test_commits": 1,
+    "test_files_changed": 44
+  },
+  "skill_usage": {
+    "design-review": 10,
+    "review": 8,
+    "investigate": 7,
+    "document-release": 5,
+    "ship": 3,
+    "qa": 2,
+    "plan-design-review": 2,
+    "design-consultation": 2,
+    "office-hours": 1,
+    "retro": 1
+  }
+}
