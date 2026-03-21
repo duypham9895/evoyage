@@ -79,9 +79,12 @@ function buildSuggestionChips(
   // 2. Contextual — fill remaining trip slots (up to 3 total trip chips)
   const contextKey = getContextualTimeKey();
   const contextual = CONTEXTUAL_CHIPS[contextKey] ?? CONTEXTUAL_CHIPS.default;
-  const remaining = 3 - chips.length;
-  for (const label of contextual.slice(0, remaining)) {
+  const existing = new Set(chips.map((c) => c.label));
+  for (const label of contextual) {
+    if (chips.length >= 3) break;
+    if (existing.has(label)) continue;
     chips.push({ label, action: 'message' });
+    existing.add(label);
   }
 
   // 3. Quick action — find nearby stations
@@ -308,9 +311,9 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
         {isIdle && (
           <div className="pl-10" role="listbox" aria-label="Suggested trips">
             <div className="flex flex-wrap gap-2">
-              {suggestionChips.map((chip) => (
+              {suggestionChips.map((chip, idx) => (
                 <button
-                  key={chip.label}
+                  key={`${idx}-${chip.label}`}
                   role="option"
                   aria-selected={false}
                   onClick={() => handleChipClick(chip)}
