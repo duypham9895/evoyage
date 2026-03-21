@@ -285,6 +285,8 @@
   "evi_no_speech": "No speech detected. Tap the mic and try again.",
   "evi_speech_network_error": "Network error during voice recognition. Check your connection.",
   "evi_speech_error": "Voice input failed. Try again or type your trip.",
+  "evi_processing_voice": "Processing voice...",
+  "evi_voice_unavailable": "Voice unavailable. Please type your trip.",
   "evi_type_message": "Type a message to send",
   "evi_suggestions_loading": "Loading suggestions...",
   "evi_suggestions_label": "Suggested follow-up questions",

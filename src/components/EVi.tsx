@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useEVi } from '@/hooks/useEVi';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useSpeechInput } from '@/hooks/useSpeechInput';
 import { hapticLight } from '@/lib/haptics';
 import type { EViTripParams } from '@/lib/evi/types';
 
@@ -156,11 +156,12 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
   const {
     isSupported,
     isListening,
+    isProcessing,
     transcript,
     error: speechError,
     startListening,
     stopListening,
-  } = useSpeechRecognition(locale);
+  } = useSpeechInput(locale);
 
   const [inputValue, setInputValue] = useState('');
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -547,6 +548,13 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
         {isListening && (
           <p className="text-xs text-[var(--color-accent)] text-center mb-2 animate-pulse">
             {t('evi_listening')}
+          </p>
+        )}
+
+        {/* Processing status (Whisper engine: uploading/transcribing) */}
+        {isProcessing && !isListening && (
+          <p className="text-xs text-[var(--color-text-secondary)] text-center mb-2 animate-pulse">
+            {t('evi_processing_voice' as Parameters<typeof t>[0])}
           </p>
         )}
 

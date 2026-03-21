@@ -58,14 +58,15 @@ const mockStopListening = vi.fn();
 let mockSpeechReturn = {
   isSupported: false,
   isListening: false,
+  isProcessing: false,
   transcript: '',
   error: null as string | null,
   startListening: mockStartListening,
   stopListening: mockStopListening,
 };
 
-vi.mock('@/hooks/useSpeechRecognition', () => ({
-  useSpeechRecognition: () => mockSpeechReturn,
+vi.mock('@/hooks/useSpeechInput', () => ({
+  useSpeechInput: () => mockSpeechReturn,
 }));
 
 function setSpeechState(overrides: Partial<typeof mockSpeechReturn>) {
