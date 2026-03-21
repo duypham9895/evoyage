@@ -50,7 +50,7 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
         aria-label={t('feedback_title')}
         title={t('feedback_title')}
         className={`
-          fixed z-40 right-4 bottom-4 lg:bottom-6
+          fixed z-50 right-4 bottom-[calc(55vh+12px)] lg:bottom-6
           w-12 h-12
           rounded-full
           bg-[var(--color-surface)] border border-[var(--color-surface-hover)]

@@ -331,6 +331,18 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                 </button>
               ))}
             </div>
+
+            {/* Manual entry — visible only when scrolling past chips */}
+            {onEnterManually && (
+              <div className="text-center mt-4">
+                <button
+                  onClick={onEnterManually}
+                  className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition-colors py-3 px-4 min-h-[44px] inline-flex items-center"
+                >
+                  <span className="border-b border-dashed border-[var(--color-muted)]">{t('evi_manual_link')}</span> →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -525,7 +537,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
       </div>
 
       {/* Input area — pinned at bottom via flex layout */}
-      <div className="shrink-0 px-4 pb-4 pt-2 border-t border-[var(--color-border)]">
+      <div className="shrink-0 px-4 pb-2 pt-2 border-t border-[var(--color-border)]">
         {/* Speech error feedback */}
         {speechError && !isListening && (
           <p className="text-xs text-[var(--color-danger)] text-center mb-2">
@@ -594,17 +606,6 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
           </button>
         </div>
 
-        {/* Manual entry link */}
-        {onEnterManually && (
-          <div className="text-center mt-1">
-            <button
-              onClick={onEnterManually}
-              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition-colors py-3 px-4 min-h-[44px] inline-flex items-center"
-            >
-              <span className="border-b border-dashed border-[var(--color-muted)]">{t('evi_manual_link')}</span> →
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
