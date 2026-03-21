@@ -576,9 +576,9 @@ function HomeContent() {
               <NearbyStations />
             )}
 
-            {/* Plan button always visible (except on stations tab) */}
-            {activeTab !== 'stations' && planButton}
-            {activeTab !== 'stations' && errorDisplay}
+            {/* Plan button — only on route/vehicle/battery tabs (eVi has its own, stations doesn't need one) */}
+            {activeTab !== 'stations' && activeTab !== 'evi' && planButton}
+            {activeTab !== 'stations' && activeTab !== 'evi' && errorDisplay}
           </div>
         </MobileBottomSheet>
 
