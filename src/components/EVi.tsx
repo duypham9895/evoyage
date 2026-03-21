@@ -100,8 +100,8 @@ function buildSuggestionChips(
 
 function EViAvatar() {
   return (
-    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-[#00D4AA] to-[#00A888] flex items-center justify-center text-sm">
-      <span role="img" aria-label="eVi">🧭</span>
+    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--color-surface-hover)] border-[1.5px] border-[var(--color-accent)] flex items-center justify-center">
+      <span className="text-[var(--color-accent)] font-[family-name:var(--font-heading)] font-semibold text-[11px]">eVi</span>
     </div>
   );
 }
@@ -110,7 +110,7 @@ function TypingIndicator() {
   return (
     <div className="flex items-end gap-2">
       <EViAvatar />
-      <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-[rgba(0,212,170,0.08)] max-w-[80%]">
+      <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-[var(--color-surface)] max-w-[80%]">
         <div className="flex gap-1" aria-label="eVi is typing">
           <span className="w-2 h-2 rounded-full bg-[var(--color-muted)] animate-bounce" style={{ animationDelay: '0ms' }} />
           <span className="w-2 h-2 rounded-full bg-[var(--color-muted)] animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -126,12 +126,17 @@ function LocationBadge({ address }: { readonly address: string }) {
   const shortLabel = parts.length >= 2 ? `${parts[0]}, ${parts[1]}` : parts[0] ?? address;
 
   return (
-    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs bg-[rgba(0,212,170,0.12)] text-[var(--color-accent)]">
-      <span>📍</span>
+    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent)]/20">
       <span className="truncate max-w-[200px]" title={address}>{shortLabel}</span>
     </div>
   );
 }
+
+// ── Chip class helpers ──
+
+const CHIP_TRIP = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.25)] hover:border-[var(--color-accent)]/40 transition-colors min-h-[44px] min-w-[44px]';
+
+const CHIP_SECONDARY = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] transition-colors min-h-[44px] min-w-[44px]';
 
 // ── Main Component ──
 
@@ -298,7 +303,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
         {/* eVi greeting */}
         <div className="flex items-end gap-2">
           <EViAvatar />
-          <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-[rgba(0,212,170,0.08)] max-w-[80%]">
+          <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-[var(--color-surface)] max-w-[75%]">
             <p className="text-sm text-[var(--color-foreground)]">
               {greetingText}
             </p>
@@ -320,11 +325,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                   role="option"
                   aria-selected={false}
                   onClick={() => handleChipClick(chip)}
-                  className={`px-3 py-1.5 rounded-full text-xs border transition-colors min-h-[44px] min-w-[44px] ${
-                    chip.action === 'find_stations'
-                      ? 'border-[var(--color-muted)]/30 text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)]'
-                      : 'border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)]'
-                  }`}
+                  className={chip.action === 'find_stations' ? CHIP_SECONDARY : CHIP_TRIP}
                 >
                   {chip.label}
                 </button>
@@ -338,7 +339,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
           if (msg.role === 'user') {
             return (
               <div key={idx} className="flex justify-end">
-                <div className="rounded-2xl rounded-br-md px-4 py-3 bg-[var(--color-surface)] max-w-[80%]">
+                <div className="rounded-2xl rounded-br-sm px-4 py-3 bg-[var(--color-surface-hover)] max-w-[75%]">
                   <p className="text-sm text-[var(--color-foreground)]">
                     {msg.content}
                   </p>
@@ -349,7 +350,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
           return (
             <div key={idx} className="flex items-end gap-2">
               <EViAvatar />
-              <div className="rounded-2xl rounded-bl-md px-4 py-3 bg-[rgba(0,212,170,0.08)] max-w-[80%]">
+              <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-[var(--color-surface)] max-w-[75%]">
                 <p className="text-sm text-[var(--color-foreground)]">
                   {msg.content}
                 </p>
@@ -367,13 +368,13 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleRetry}
-                className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)] transition-colors min-h-[44px]"
+                className={CHIP_TRIP}
               >
                 {t('evi_retry' as Parameters<typeof t>[0])}
               </button>
               <button
                 onClick={handleStartOver}
-                className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-muted)]/30 text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors min-h-[44px]"
+                className={CHIP_SECONDARY}
               >
                 {t('evi_start_over' as Parameters<typeof t>[0])}
               </button>
@@ -393,7 +394,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                       role="option"
                       aria-selected={false}
                       onClick={() => handleFollowUpOption(opt.label)}
-                      className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)] transition-colors min-h-[44px] min-w-[44px]"
+                      className={CHIP_TRIP}
                     >
                       {opt.label}
                     </button>
@@ -407,12 +408,12 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={t('evi_location_prompt')}
-                  className="flex-1 rounded-xl px-3 py-2 text-sm bg-[var(--color-surface)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] border border-[var(--color-muted)]/20 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+                  className="flex-1 rounded-xl px-3 py-2 text-sm bg-[var(--color-surface)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/30 focus:border-[var(--color-accent)]/40"
                 />
                 <button
                   type="submit"
                   disabled={!inputValue.trim()}
-                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent)] text-white disabled:opacity-40 transition-opacity"
+                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent)] text-[var(--color-background)] disabled:opacity-40 transition-opacity font-medium"
                 >
                   →
                 </button>
@@ -425,7 +426,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                 {[0, 1, 2].map((i) => (
                   <div
                     key={i}
-                    className="h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-muted)]/10 animate-pulse"
+                    className="h-11 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] animate-pulse"
                     style={{ width: `${80 + i * 20}px` }}
                   />
                 ))}
@@ -439,7 +440,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                     role="option"
                     aria-selected={false}
                     onClick={() => handleFollowUpOption(suggestion)}
-                    className="px-3 py-1.5 rounded-full text-xs border border-[var(--color-accent)]/50 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.08)] transition-colors min-h-[44px] min-w-[44px]"
+                    className={CHIP_TRIP}
                   >
                     {suggestion}
                   </button>
@@ -452,7 +453,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
         {/* Parsed result card */}
         {state === 'complete' && lastResponse?.tripParams && (
           <div className="pl-10">
-            <div className="rounded-2xl p-4 bg-[var(--color-surface)] border border-[var(--color-muted)]/20 space-y-3">
+            <div className="rounded-2xl p-4 bg-[var(--color-surface)] border border-[var(--color-border)] space-y-3">
               <div className="space-y-1.5 text-sm">
                 {lastResponse.tripParams.start && (
                   <div className="flex items-center gap-2">
@@ -483,14 +484,14 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                 <button
                   onClick={handlePlan}
                   disabled={isPlanning}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium bg-[var(--color-accent)] text-white min-h-[44px] transition-opacity ${isPlanning ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}`}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-medium bg-[var(--color-accent)] text-[var(--color-background)] min-h-[44px] transition-opacity ${isPlanning ? 'opacity-70 cursor-wait' : 'hover:opacity-90'}`}
                 >
                   {isPlanning ? (
                     <span className="flex items-center justify-center gap-1.5">
                       <span className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0ms]" />
-                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:150ms]" />
-                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:300ms]" />
+                        <span className="w-1.5 h-1.5 bg-[var(--color-background)] rounded-full animate-bounce [animation-delay:0ms]" />
+                        <span className="w-1.5 h-1.5 bg-[var(--color-background)] rounded-full animate-bounce [animation-delay:150ms]" />
+                        <span className="w-1.5 h-1.5 bg-[var(--color-background)] rounded-full animate-bounce [animation-delay:300ms]" />
                       </span>
                       {t('planning')}
                     </span>
@@ -501,7 +502,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
                 <button
                   onClick={handleEdit}
                   disabled={isPlanning}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--color-muted)]/30 text-[var(--color-foreground)] min-h-[44px] transition-opacity hover:opacity-80 disabled:opacity-40"
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-[var(--color-border)] text-[var(--color-foreground)] min-h-[44px] transition-opacity hover:opacity-80 disabled:opacity-40"
                 >
                   {t('evi_edit_button')}
                 </button>
@@ -513,7 +514,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
         {/* Live transcript while listening */}
         {isListening && transcript && (
           <div className="flex justify-end">
-            <div className="rounded-2xl rounded-br-md px-4 py-3 bg-[var(--color-surface)] max-w-[80%] opacity-60">
+            <div className="rounded-2xl rounded-br-sm px-4 py-3 bg-[var(--color-surface-hover)] max-w-[75%] opacity-60">
               <p className="text-sm text-[var(--color-foreground)] italic">
                 {transcript}
               </p>
@@ -524,10 +525,10 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
       </div>
 
       {/* Input area */}
-      <div className="sticky bottom-0 px-4 pb-4 pt-2 bg-[var(--color-background)] border-t border-[var(--color-muted)]/10">
+      <div className="sticky bottom-0 px-4 pb-4 pt-2 bg-[var(--color-background)] border-t border-[var(--color-border)]">
         {/* Speech error feedback */}
         {speechError && !isListening && (
-          <p className="text-xs text-red-400 text-center mb-2">
+          <p className="text-xs text-[var(--color-danger)] text-center mb-2">
             {speechError === 'previously_denied'
               ? t('evi_mic_previously_denied' as Parameters<typeof t>[0])
               : speechError === 'not_allowed'
@@ -550,21 +551,22 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
         )}
 
         <div className="flex items-center gap-2">
-          {/* Mic button */}
+          {/* Mic button — subtle outlined style per DESIGN.md */}
           {isSupported && (
             <button
               onClick={handleMicPress}
               aria-label={t('evi_speak')}
-              className={`relative flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full transition-colors ${
+              className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full transition-colors border ${
                 isListening
-                  ? 'bg-red-500 text-white animate-pulse'
-                  : 'bg-[var(--color-accent)] text-white'
+                  ? 'bg-[var(--color-danger)] border-[var(--color-danger)] text-white animate-pulse'
+                  : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
               }`}
             >
-              <span className="text-lg">🎤</span>
-              <span className="absolute -top-1 -right-1 text-[9px] px-1 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-muted)] leading-none">
-                {t('evi_voice_beta')}
-              </span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
             </button>
           )}
 
@@ -577,7 +579,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
             onKeyDown={handleKeyDown}
             placeholder={t('evi_placeholder')}
             disabled={state === 'processing'}
-            className="flex-1 rounded-xl px-3 py-2.5 text-sm bg-[var(--color-surface)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] border border-[var(--color-muted)]/20 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] disabled:opacity-50 min-h-[44px]"
+            className="flex-1 rounded-xl px-4 py-2.5 text-sm bg-[var(--color-surface)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/30 focus:border-[var(--color-accent)]/40 disabled:opacity-50 min-h-[44px]"
           />
 
           {/* Send button */}
@@ -585,7 +587,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
             onClick={handleSend}
             disabled={!inputValue.trim() || state === 'processing'}
             title={!inputValue.trim() ? t('evi_type_message' as Parameters<typeof t>[0]) : undefined}
-            className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent)] text-white disabled:opacity-40 transition-opacity"
+            className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent)] text-[var(--color-background)] disabled:opacity-40 transition-opacity font-medium"
             aria-label="Send"
           >
             <span className="text-lg">→</span>
@@ -597,9 +599,9 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
           <div className="text-center mt-2">
             <button
               onClick={onEnterManually}
-              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+              className="text-xs text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
             >
-              {t('evi_manual_link')} →
+              <span className="border-b border-dashed border-[var(--color-muted)]">{t('evi_manual_link')}</span> →
             </button>
           </div>
         )}

@@ -33,7 +33,7 @@ describe('PWA manifest', () => {
 
   it('has correct theme colors', () => {
     manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-    expect(manifest.background_color).toBe('#0A0A0B');
+    expect(manifest.background_color).toBe('#0F0F11');
     expect(manifest.theme_color).toBe('#00D4AA');
   });
 

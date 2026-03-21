@@ -48,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body
-        className={`${beVietnamPro.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased bg-[#0A0A0B] text-[#F5F5F7]`}
+        className={`${beVietnamPro.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased bg-[var(--color-background)] text-[var(--color-foreground)]`}
       >
         {children}
       </body>

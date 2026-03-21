@@ -422,13 +422,13 @@ describe('EVi component', () => {
     it('shows "Enter manually" link when onEnterManually is provided', () => {
       render(<EVi onTripParsed={vi.fn()} onEnterManually={vi.fn()} />);
 
-      expect(screen.getByText('Enter manually →')).toBeInTheDocument();
+      expect(screen.getByText('Enter manually', { exact: false })).toBeInTheDocument();
     });
 
     it('hides "Enter manually" link when onEnterManually is not provided', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 
-      expect(screen.queryByText('Enter manually →')).not.toBeInTheDocument();
+      expect(screen.queryByText('Enter manually', { exact: false })).not.toBeInTheDocument();
     });
 
     it('calls onEnterManually when the link is clicked', () => {
@@ -436,7 +436,7 @@ describe('EVi component', () => {
 
       render(<EVi onTripParsed={vi.fn()} onEnterManually={onEnterManually} />);
 
-      fireEvent.click(screen.getByText('Enter manually →'));
+      fireEvent.click(screen.getByText('Enter manually', { exact: false }));
 
       expect(onEnterManually).toHaveBeenCalledOnce();
     });
@@ -454,7 +454,7 @@ describe('EVi component', () => {
         />,
       );
 
-      fireEvent.click(screen.getByText('Enter manually →'));
+      fireEvent.click(screen.getByText('Enter manually', { exact: false }));
 
       expect(onEnterManually).toHaveBeenCalledOnce();
       expect(onTripParsed).not.toHaveBeenCalled();
@@ -556,7 +556,8 @@ describe('EVi component', () => {
     it('does not show location badge when userLocation is null', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 
-      expect(screen.queryByText('📍')).not.toBeInTheDocument();
+      // No location badge rendered when userLocation is null
+      expect(screen.queryByText('Tô Hiến Thành')).not.toBeInTheDocument();
     });
   });
 
@@ -602,7 +603,7 @@ describe('EVi component', () => {
 
       const micButton = screen.getByLabelText('Speak');
       expect(micButton.className).toContain('animate-pulse');
-      expect(micButton.className).toContain('bg-red-500');
+      expect(micButton.className).toContain('bg-[var(--color-danger)]');
     });
 
     it('shows "Listening..." status text while recording', () => {
@@ -613,12 +614,14 @@ describe('EVi component', () => {
       expect(screen.getByText('Listening...')).toBeInTheDocument();
     });
 
-    it('shows Beta badge on mic button', () => {
+    it('shows mic button as SVG icon without Beta badge', () => {
       setSpeechState({ isSupported: true });
 
       render(<EVi onTripParsed={vi.fn()} />);
 
-      expect(screen.getByText('Beta')).toBeInTheDocument();
+      const micButton = screen.getByLabelText('Speak');
+      expect(micButton.querySelector('svg')).toBeInTheDocument();
+      expect(screen.queryByText('Beta')).not.toBeInTheDocument();
     });
   });
 
