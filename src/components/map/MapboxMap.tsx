@@ -47,13 +47,13 @@ function EndpointMarker({ lat, lng, label }: { readonly lat: number; readonly ln
           height: 30,
           borderRadius: '50%',
           background: '#00D4AA',
-          border: '2px solid #0A0A0B',
+          border: '2px solid #0F0F11',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 'bold',
           fontSize: 13,
-          color: '#0A0A0B',
+          color: '#0F0F11',
           fontFamily: 'system-ui',
         }}
       >
@@ -94,13 +94,13 @@ function StopMarker({
             height: 26,
             borderRadius: '50%',
             background: color,
-            border: '2px solid #0A0A0B',
+            border: '2px solid #0F0F11',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 'bold',
             fontSize: 11,
-            color: '#0A0A0B',
+            color: '#0F0F11',
             fontFamily: 'system-ui',
             cursor: 'pointer',
           }}
@@ -120,7 +120,7 @@ function StopMarker({
             <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(station.name)}</h3>
             <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(station.address)}</p>
             <p style={{ fontSize: 12, margin: 0 }}>
-              <span style={{ color: '#FF3B30', fontWeight: 'bold' }}>
+              <span style={{ color: '#FF4D4F', fontWeight: 'bold' }}>
                 {'selected' in stop ? Math.round(stop.batteryPercentAtArrival) : stop.arrivalBatteryPercent}%
               </span>
               {' → '}
@@ -141,7 +141,7 @@ function StopMarker({
                 marginTop: 8,
                 padding: '4px 12px',
                 background: '#00D4AA',
-                color: '#0A0A0B',
+                color: '#0F0F11',
                 borderRadius: 4,
                 textDecoration: 'none',
                 fontSize: 12,
@@ -166,7 +166,7 @@ function WaypointMarker({ lat, lng, label }: { readonly lat: number; readonly ln
           height: 28,
           borderRadius: '50%',
           background: '#3b82f6',
-          border: '2px solid #0A0A0B',
+          border: '2px solid #0F0F11',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

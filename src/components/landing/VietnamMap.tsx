@@ -74,7 +74,7 @@ export default function VietnamMap() {
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="pointer-events-none absolute z-10 bg-[#1C1C1E]/95 border border-[#00D4AA]/30 text-[#F5F5F7] px-3 py-1.5 rounded-lg text-[13px] font-medium backdrop-blur-sm shadow-lg transition-opacity duration-150"
+        className="pointer-events-none absolute z-10 bg-[#1A1A1F]/95 border border-[#00D4AA]/30 text-[#E8E8ED] px-3 py-1.5 rounded-lg text-[13px] font-medium backdrop-blur-sm shadow-lg transition-opacity duration-150"
         style={{ opacity: 0 }}
       />
 
@@ -96,7 +96,7 @@ export default function VietnamMap() {
           </linearGradient>
           <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#1f4f55" stopOpacity={0.06} />
-            <stop offset="100%" stopColor="#0A0A0B" stopOpacity={0} />
+            <stop offset="100%" stopColor="#0F0F11" stopOpacity={0} />
           </radialGradient>
           <radialGradient id="archipelagoHalo" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#3d8a8a" stopOpacity={0.15} />
@@ -125,7 +125,7 @@ export default function VietnamMap() {
             return (
               <g key={island.name} className="named-island" data-name={island.name}>
                 <path d={island.path} fill="rgba(45,107,107,0.3)" stroke="#3d8a8a" strokeWidth={0.8} />
-                <text className="island-label-sm" x={island.center[0]} y={island.center[1] - 8} textAnchor="middle" fill="#8E8E93" fontSize={8}>
+                <text className="island-label-sm" x={island.center[0]} y={island.center[1] - 8} textAnchor="middle" fill="#6B6B78" fontSize={8}>
                   {island.name}
                 </text>
               </g>
@@ -135,7 +135,7 @@ export default function VietnamMap() {
             <g key={island.name} className="named-island" data-name={island.name}>
               <circle cx={island.center[0]} cy={island.center[1]} r={8} fill="#3d8a8a" opacity={0.1} />
               <circle cx={island.center[0]} cy={island.center[1]} r={3.5} fill="#3d8a8a" />
-              <text className="island-label-sm" x={island.center[0]} y={island.center[1] - 12} textAnchor="middle" fill="#8E8E93" fontSize={8}>
+              <text className="island-label-sm" x={island.center[0]} y={island.center[1] - 12} textAnchor="middle" fill="#6B6B78" fontSize={8}>
                 {island.name}
               </text>
             </g>
@@ -183,7 +183,7 @@ export default function VietnamMap() {
                 <text
                   x={city.x + dx}
                   y={city.y + dy}
-                  fill={city.primary ? '#F5F5F7' : '#8E8E93'}
+                  fill={city.primary ? '#E8E8ED' : '#6B6B78'}
                   fontSize={city.primary ? 11 : 9}
                   fontWeight={city.primary ? 'bold' : 'normal'}
                   pointerEvents="none"

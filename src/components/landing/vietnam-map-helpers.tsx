@@ -60,13 +60,13 @@ export function ArchipelagoGroup({
         width={64}
         height={28}
         rx={6}
-        fill="#1C1C1E"
+        fill="#1A1A1F"
         fillOpacity={0.75}
       />
-      <text x={cx} y={cy + 29} textAnchor="middle" fill="#F5F5F7" fontSize={11} fontWeight="bold">
+      <text x={cx} y={cy + 29} textAnchor="middle" fill="#E8E8ED" fontSize={11} fontWeight="bold">
         {label}
       </text>
-      <text x={cx} y={cy + 39} textAnchor="middle" fill="#8E8E93" fontSize={8}>
+      <text x={cx} y={cy + 39} textAnchor="middle" fill="#6B6B78" fontSize={8}>
         (Việt Nam)
       </text>
       <line

@@ -8,10 +8,10 @@ export const PROVIDER_COLORS: Record<string, string> = {
   VinFast: '#34C759',
   EverCharge: '#007AFF',
   EVONE: '#5856D6',
-  EVPower: '#FF9500',
+  EVPower: '#FFAB40',
   'CHARGE+': '#FF2D55',
 };
-export const DEFAULT_MARKER_COLOR = '#8E8E93';
+export const DEFAULT_MARKER_COLOR = '#6B6B78';
 
 /** Escape HTML special characters to prevent XSS in map popups. */
 export function escapeHtml(str: string): string {
@@ -39,7 +39,7 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
       <h3 style="font-weight:bold;margin:0 0 4px">${name}</h3>
       <p style="font-size:12px;margin:0 0 4px;color:#666">${address}</p>
       <p style="font-size:12px;margin:0">
-        <span style="color:#FF3B30;font-weight:bold">${arrivalBattery}%</span>
+        <span style="color:#FF4D4F;font-weight:bold">${arrivalBattery}%</span>
         → <span style="color:#00D4AA;font-weight:bold">${departureBattery}%</span>
         | ~${chargingTime}min
       </p>
@@ -48,7 +48,7 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
       </p>
       <a href="https://www.google.com/maps/dir/?api=1&destination=${Number(station.latitude).toFixed(6)},${Number(station.longitude).toFixed(6)}"
          target="_blank" rel="noopener noreferrer"
-         style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0A0A0B;
+         style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0F0F11;
                 border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
         Navigate
       </a>
@@ -57,13 +57,13 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
 }
 
 /** Build an SVG marker URL for both map renderers. */
-export function createSvgMarkerUrl(color: string, label: string, textColor: string = '#0A0A0B'): string {
+export function createSvgMarkerUrl(color: string, label: string, textColor: string = '#0F0F11'): string {
   // Validate colors are hex to prevent SVG injection
-  const safeColor = /^#[0-9A-Fa-f]{3,6}$/.test(color) ? color : '#8E8E93';
-  const safeTextColor = /^#[0-9A-Fa-f]{3,6}$/.test(textColor) ? textColor : '#0A0A0B';
+  const safeColor = /^#[0-9A-Fa-f]{3,6}$/.test(color) ? color : '#6B6B78';
+  const safeTextColor = /^#[0-9A-Fa-f]{3,6}$/.test(textColor) ? textColor : '#0F0F11';
   const safeLabel = escapeHtml(label);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">
-    <circle cx="15" cy="15" r="13" fill="${safeColor}" stroke="#0A0A0B" stroke-width="2"/>
+    <circle cx="15" cy="15" r="13" fill="${safeColor}" stroke="#0F0F11" stroke-width="2"/>
     <text x="15" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="${safeTextColor}" font-family="system-ui">${safeLabel}</text>
   </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;

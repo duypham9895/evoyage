@@ -36,7 +36,7 @@ function createCircleIcon(color: string, label: string): L.DivIcon {
     iconSize: [26, 26],
     iconAnchor: [13, 13],
     popupAnchor: [0, -16],
-    html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid #0A0A0B;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#0A0A0B;font-family:system-ui">${label}</div>`,
+    html: `<div style="width:26px;height:26px;border-radius:50%;background:${color};border:2px solid #0F0F11;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;color:#0F0F11;font-family:system-ui">${label}</div>`,
   });
 }
 
@@ -46,7 +46,7 @@ function createWaypointIcon(label: string): L.DivIcon {
     iconSize: [28, 28],
     iconAnchor: [14, 14],
     popupAnchor: [0, -16],
-    html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2px solid #0A0A0B;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;color:#ffffff;font-family:system-ui">${label}</div>`,
+    html: `<div style="width:28px;height:28px;border-radius:50%;background:#3b82f6;border:2px solid #0F0F11;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;color:#ffffff;font-family:system-ui">${label}</div>`,
   });
 }
 
@@ -56,7 +56,7 @@ function createEndpointIcon(label: string): L.DivIcon {
     iconSize: [30, 30],
     iconAnchor: [15, 15],
     popupAnchor: [0, -18],
-    html: `<div style="width:30px;height:30px;border-radius:50%;background:#00D4AA;border:2px solid #0A0A0B;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;color:#0A0A0B;font-family:system-ui">${label}</div>`,
+    html: `<div style="width:30px;height:30px;border-radius:50%;background:#00D4AA;border:2px solid #0F0F11;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;color:#0F0F11;font-family:system-ui">${label}</div>`,
   });
 }
 

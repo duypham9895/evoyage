@@ -58,27 +58,27 @@ export function LandingNavbar({
     <nav
       className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 transition-all duration-300 ${
         scrolled
-          ? 'bg-[#0A0A0B]/90 backdrop-blur-xl border-b border-[#1C1C1E]'
+          ? 'bg-[#0F0F11]/90 backdrop-blur-xl border-b border-[#1A1A1F]'
           : 'bg-transparent'
       }`}
     >
       {/* Logo */}
       <a href="/" className="font-[family-name:var(--font-heading)] font-bold text-2xl tracking-tight flex items-center gap-0.5">
         <span className="text-[#00D26A] italic">e</span>
-        <span className="text-[#F5F5F7]">Voyage</span>
+        <span className="text-[#E8E8ED]">Voyage</span>
       </a>
 
       {/* Desktop right side */}
       <div className="hidden md:flex items-center gap-4">
         <button
           onClick={onLocaleChangeAction}
-          className="px-3 py-1.5 text-sm text-[#8E8E93] hover:text-[#F5F5F7] transition-colors rounded-lg border border-[#2C2C2E] hover:border-[#8E8E93]"
+          className="px-3 py-1.5 text-sm text-[#6B6B78] hover:text-[#E8E8ED] transition-colors rounded-lg border border-[#252530] hover:border-[#6B6B78]"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>
         <a
           href="/plan"
-          className="px-5 py-2.5 bg-[#00D26A] text-[#0A0A0B] font-semibold text-sm rounded-xl hover:bg-[#00E87A] transition-all cta-glow"
+          className="px-5 py-2.5 bg-[#00D26A] text-[#0F0F11] font-semibold text-sm rounded-xl hover:bg-[#00E87A] transition-all cta-glow"
         >
           {translations.navCta}
         </a>
@@ -88,13 +88,13 @@ export function LandingNavbar({
       <div className="flex md:hidden items-center gap-3">
         <button
           onClick={onLocaleChangeAction}
-          className="px-2 py-1 text-xs text-[#8E8E93] border border-[#2C2C2E] rounded-lg"
+          className="px-2 py-1 text-xs text-[#6B6B78] border border-[#252530] rounded-lg"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>
         <a
           href="/plan"
-          className="px-4 py-2 bg-[#00D26A] text-[#0A0A0B] font-semibold text-sm rounded-xl"
+          className="px-4 py-2 bg-[#00D26A] text-[#0F0F11] font-semibold text-sm rounded-xl"
         >
           {translations.navCta}
         </a>
@@ -124,16 +124,16 @@ export function FAQAccordion({
   return (
     <div className="max-w-3xl mx-auto">
       {items.map((item, i) => (
-        <div key={i} className="border-b border-[#2C2C2E]">
+        <div key={i} className="border-b border-[#252530]">
           <button
             onClick={() => toggle(i)}
             className="w-full flex items-center justify-between py-5 text-left group"
           >
-            <span className="font-[family-name:var(--font-sans)] font-medium text-base text-[#F5F5F7] pr-4 group-hover:text-[#00D4AA] transition-colors">
+            <span className="font-[family-name:var(--font-sans)] font-medium text-base text-[#E8E8ED] pr-4 group-hover:text-[#00D4AA] transition-colors">
               {item.question}
             </span>
             <span
-              className={`text-[#8E8E93] text-xl transition-transform duration-200 flex-shrink-0 ${
+              className={`text-[#6B6B78] text-xl transition-transform duration-200 flex-shrink-0 ${
                 openIndex === i ? 'rotate-45' : ''
               }`}
             >
@@ -145,7 +145,7 @@ export function FAQAccordion({
               openIndex === i ? 'max-h-[500px] pb-5' : 'max-h-0'
             }`}
           >
-            <p className="text-[#8E8E93] text-[15px] leading-relaxed">
+            <p className="text-[#6B6B78] text-[15px] leading-relaxed">
               {item.answer}
             </p>
           </div>
@@ -231,7 +231,7 @@ export function StatCounter({
       <div className="font-[family-name:var(--font-heading)] font-bold text-4xl md:text-[56px] text-[#00D26A] leading-tight">
         {displayed}{suffix}
       </div>
-      <div className="text-[#8E8E93] text-base mt-2">{label}</div>
+      <div className="text-[#6B6B78] text-base mt-2">{label}</div>
     </div>
   );
 }
