@@ -691,8 +691,9 @@ function HomeContent() {
           </div>
         </aside>
 
-        {/* Map pane */}
-        <main className="flex-1 relative min-h-[300px]">
+        {/* Map pane — isolate creates a stacking context so Leaflet's
+             internal z-indices (200-600) don't leak over fixed modals */}
+        <main className="flex-1 relative min-h-[300px] isolate">
           {mapContent}
         </main>
       </div>
