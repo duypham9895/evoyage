@@ -155,7 +155,7 @@ export default function MobileBottomSheet({
   return (
     <div
       ref={sheetRef}
-      className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--color-surface)] rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)] border-t border-[var(--color-surface-hover)] lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-40 flex flex-col bg-[var(--color-surface)] rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)] border-t border-[var(--color-surface-hover)] lg:hidden"
       style={{
         height: `${Math.max(SNAP_HEIGHTS.peek, Math.min(currentHeight, typeof window !== 'undefined' ? window.innerHeight * 0.92 : 800))}px`,
         transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
@@ -164,7 +164,7 @@ export default function MobileBottomSheet({
     >
       {/* Drag handle */}
       <div
-        className="flex flex-col items-center pt-2 pb-3 cursor-grab active:cursor-grabbing touch-none select-none"
+        className="shrink-0 flex flex-col items-center pt-2 pb-2 cursor-grab active:cursor-grabbing touch-none select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -175,13 +175,9 @@ export default function MobileBottomSheet({
 
       {/* Content area — flex column so EVi can use flex-1 for its layout */}
       <div
-        className="flex flex-col overflow-hidden overscroll-contain px-4 pb-safe"
+        className="flex-1 min-h-0 flex flex-col overflow-hidden overscroll-contain px-4 pb-safe"
         onTouchStart={handleContentTouchStart}
         onTouchEnd={handleContentTouchEnd}
-        style={{
-          height: `calc(100% - ${snap === 'peek' ? '56' : '20'}px)`,
-          paddingBottom: `max(env(safe-area-inset-bottom, 0px), 24px)`,
-        }}
       >
         {children}
       </div>

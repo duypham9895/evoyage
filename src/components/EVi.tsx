@@ -134,9 +134,9 @@ function LocationBadge({ address }: { readonly address: string }) {
 
 // ── Chip class helpers ──
 
-const CHIP_TRIP = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.25)] hover:border-[var(--color-accent)]/40 transition-colors min-h-[44px] min-w-[44px] max-w-full truncate';
+const CHIP_TRIP = 'px-3.5 py-2 rounded-full text-[13px] font-medium bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[rgba(0,212,170,0.25)] hover:border-[var(--color-accent)]/40 transition-colors min-h-[40px] min-w-[40px] max-w-full truncate';
 
-const CHIP_SECONDARY = 'px-4 py-2.5 rounded-full text-[13px] font-medium bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] transition-colors min-h-[44px] min-w-[44px] max-w-full truncate';
+const CHIP_SECONDARY = 'px-3.5 py-2 rounded-full text-[13px] font-medium bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] transition-colors min-h-[40px] min-w-[40px] max-w-full truncate';
 
 // ── Main Component ──
 
@@ -296,19 +296,19 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
       {/* Chat messages area */}
       <div
         ref={chatContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-2 space-y-2"
         role="log"
         aria-live="polite"
       >
         {/* eVi greeting */}
         <div className="flex items-end gap-2">
           <EViAvatar />
-          <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-[var(--color-surface)] max-w-[75%]">
-            <p className="text-sm text-[var(--color-foreground)]">
+          <div className="rounded-2xl rounded-bl-sm px-3 py-2 bg-[var(--color-surface)] max-w-[80%]">
+            <p className="text-[13px] text-[var(--color-foreground)]">
               {greetingText}
             </p>
             {isFirstVisit && (
-              <p className="text-xs text-[var(--color-muted)] mt-1">
+              <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
                 {t('evi_placeholder')}
               </p>
             )}
@@ -537,7 +537,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onEnterManually, onFindN
       </div>
 
       {/* Input area — pinned at bottom via flex layout */}
-      <div className="shrink-0 px-4 pb-2 pt-2 border-t border-[var(--color-border)]">
+      <div className="shrink-0 px-3 pb-1 pt-1.5 border-t border-[var(--color-border)]">
         {/* Speech error feedback */}
         {speechError && !isListening && (
           <p className="text-xs text-[var(--color-danger)] text-center mb-2">

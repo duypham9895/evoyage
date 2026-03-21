@@ -46,7 +46,7 @@ export default function MobileTabBar({
   return (
     <div
       ref={scrollRef}
-      className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl mb-3 overflow-x-auto scrollbar-hide"
+      className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl mb-1 overflow-x-auto scrollbar-hide"
       role="tablist"
       aria-label="Trip planner tabs"
     >
