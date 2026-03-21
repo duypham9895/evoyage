@@ -3,6 +3,30 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-03-21
+
+### Added
+- **Hybrid speech engine** — two-engine voice input: Web Speech API primary (Chrome/Edge) with MediaRecorder + server-side Whisper fallback (Safari/Firefox)
+- Speech engine abstraction with factory functions, shared types, and callback-based architecture
+- `/api/transcribe` server endpoint with MiniMax STT integration (async create + poll pattern)
+- Silence auto-stop via Web Audio API AnalyserNode (2s RMS threshold)
+- 30-second max recording duration hard stop
+- Engine preference caching in localStorage (7-day TTL)
+- Auto-switch from Web Speech → Whisper on permission denied (no second tap required)
+- MIME type validation on audio file uploads
+- "Processing voice..." UI state for Whisper engine latency
+- Bilingual locale keys for voice processing states (vi/en)
+- **Draggable feedback FAB** — snap-to-edge drag with touch and mouse support, position persistence via localStorage
+- 65 new tests across 5 test files for speech engine (types, web-speech, whisper, unified hook, API route)
+
+### Fixed
+- Feedback modal invisible on desktop due to Leaflet z-index stacking context leak
+- Voice input "permission denied" error caused by redundant getUserMedia pre-check conflicting with Web Speech API's own permission handling
+
+### Changed
+- Replaced `useSpeechRecognition` hook with `useSpeechInput` (two-engine architecture)
+- Test baseline: 452 → 514 tests across 39 files
+
 ## [0.3.0] — 2026-03-21
 
 ### Added
