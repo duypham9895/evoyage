@@ -14,11 +14,11 @@ interface MobileTabBarProps {
 }
 
 const TABS = [
-  { id: 'evi' as const, icon: '🧭', labelKey: 'tab_evi' as const },
-  { id: 'route' as const, icon: '📍', labelKey: 'tab_route' as const },
-  { id: 'vehicle' as const, icon: '🚗', labelKey: 'tab_vehicle' as const },
-  { id: 'battery' as const, icon: '🔋', labelKey: 'tab_battery' as const },
-  { id: 'stations' as const, icon: '⚡', labelKey: 'tab_stations' as const },
+  { id: 'evi' as const, labelKey: 'tab_evi' as const },
+  { id: 'route' as const, labelKey: 'tab_route' as const },
+  { id: 'vehicle' as const, labelKey: 'tab_vehicle' as const },
+  { id: 'battery' as const, labelKey: 'tab_battery' as const },
+  { id: 'stations' as const, labelKey: 'tab_stations' as const },
 ] as const;
 
 export default function MobileTabBar({
@@ -50,7 +50,7 @@ export default function MobileTabBar({
       role="tablist"
       aria-label="Trip planner tabs"
     >
-      {TABS.map(({ id, icon, labelKey }) => {
+      {TABS.map(({ id, labelKey }) => {
         const isActive = activeTab === id;
         const showDot =
           (id === 'route' && hasRoute) ||
@@ -64,16 +64,15 @@ export default function MobileTabBar({
             aria-selected={isActive}
             aria-controls={`tabpanel-${id}`}
             onClick={() => { hapticLight(); onTabChange(id); }}
-            className={`shrink-0 flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+            className={`shrink-0 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap ${
               isActive
-                ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold shadow-sm'
-                : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
+                ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
+                : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface)]'
             }`}
           >
-            <span>{icon}</span>
-            <span>{t(labelKey)}</span>
+            {t(labelKey)}
             {showDot && !isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
+              <span className="w-[5px] h-[5px] rounded-full bg-[var(--color-accent)]" />
             )}
           </button>
         );
