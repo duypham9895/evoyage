@@ -308,6 +308,7 @@
   "nearby_provider": "Provider",
   "nearby_km_away": "{{distance}} km away",
   "nearby_ports": "{{count}} ports",
+  "nearby_results_count": "{{count}} stations found",
   "nearby_active": "Active",
   "nearby_busy": "Busy",
   "nearby_inactive": "Inactive"

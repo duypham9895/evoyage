@@ -226,8 +226,8 @@ function RouteBriefing({
 
       {/* Expandable narrative */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-out ${
-          isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+        className={`transition-all duration-300 ease-out ${
+          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
         }`}
       >
         <p className="text-sm text-[var(--color-foreground)]/80 leading-relaxed pt-2 border-t border-[var(--color-surface-hover)]">

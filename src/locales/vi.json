@@ -308,6 +308,7 @@
   "nearby_provider": "Nhà cung cấp",
   "nearby_km_away": "Cách {{distance}} km",
   "nearby_ports": "{{count}} cổng sạc",
+  "nearby_results_count": "Tìm thấy {{count}} trạm sạc",
   "nearby_active": "Hoạt động",
   "nearby_busy": "Đang bận",
   "nearby_inactive": "Ngừng hoạt động"
