@@ -174,7 +174,7 @@ function LandingContent() {
                   >
                     0{n}
                   </span>
-                  <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg text-[#F5F5F7] mb-2">
+                  <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg md:text-[22px] text-[#F5F5F7] mb-2">
                     {t(`landing_feat${n}_title`)}
                   </h3>
                   <p className="text-[#8E8E93] text-sm leading-relaxed">
