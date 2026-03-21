@@ -373,6 +373,22 @@ describe('EVi component', () => {
       expect(screen.getByText('Find stations nearby')).toBeInTheDocument();
     });
 
+    it('deduplicates identical trips in suggestion chips', () => {
+      setHookState({
+        isFirstVisit: false,
+        recentTrips: [
+          { start: 'Hồ Chí Minh, Vietnam', end: 'Vũng Tàu, Vietnam', vehicleName: 'VinFast VF 5' },
+          { start: 'Hồ Chí Minh, Vietnam', end: 'Vũng Tàu, Vietnam', vehicleName: 'VinFast VF 5' },
+        ],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      // Should only appear once despite two identical trips
+      const chips = screen.getAllByText('Hồ Chí Minh → Vũng Tàu, VF 5');
+      expect(chips).toHaveLength(1);
+    });
+
     it('sends message when a trip suggestion chip is clicked', () => {
       render(<EVi onTripParsed={vi.fn()} />);
 

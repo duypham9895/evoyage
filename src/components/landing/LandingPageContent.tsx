@@ -370,14 +370,14 @@ function LandingContent() {
             <div>
               <h4 className="text-[#8E8E93] text-xs font-medium uppercase tracking-wider mb-4">Links</h4>
               <div className="flex flex-col gap-2">
-                <a href="/plan" className="text-[#F5F5F7] text-sm hover:text-[#00D4AA] transition-colors py-2 inline-block">
+                <a href="/plan" className="text-[#F5F5F7] text-sm hover:text-[#00D4AA] transition-colors py-3 inline-block">
                   {t('landing_footer_start')}
                 </a>
                 <a
                   href="https://github.com/edwardpham94/evoyage"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#F5F5F7] text-sm hover:text-[#00D4AA] transition-colors py-2 inline-block"
+                  className="text-[#F5F5F7] text-sm hover:text-[#00D4AA] transition-colors py-3 inline-block"
                 >
                   {t('landing_footer_github')}
                 </a>
