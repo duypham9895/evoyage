@@ -55,7 +55,7 @@ export default function Header() {
         {/* Language toggle */}
         <button
           onClick={toggleLocale}
-          className="px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
+          className="px-3 py-2.5 sm:px-3 sm:py-1.5 min-h-[44px] min-w-[44px] text-xs sm:text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
           aria-label="Toggle language"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
