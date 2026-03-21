@@ -20,7 +20,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - **Maps:** Mapbox + OpenStreetMap via Leaflet
 - **AI:** MiniMax M2.7 for eVi trip assistant (route narratives, follow-up suggestions)
 - **Data:** VinFast API for real-time charging station data (SSE streaming)
-- **Testing:** Vitest (449 tests), Playwright for E2E
+- **Testing:** Vitest (450 tests), Playwright for E2E
 - **Deployment:** Vercel
 
 ## Getting Started

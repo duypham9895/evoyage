@@ -82,7 +82,7 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **449 tests** across **32 files**
+- **450 tests** across **32 files**
 - Covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, eVi AI chat, speech recognition, suggestions client
 - Runtime: ~4.5 seconds
 - This count should only go UP — never delete tests unless the feature is removed
@@ -90,7 +90,7 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 ### Pre-Commit Checklist
 
 Before every commit, verify:
-- [ ] `npm test` passes (all 449+ tests green)
+- [ ] `npm test` passes (all 450+ tests green)
 - [ ] `npx next build` succeeds (no TypeScript errors)
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
@@ -137,7 +137,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 
 1. **Never skip `/review` before merging.** Code review catches structural issues that tests don't — race conditions, SQL safety, LLM trust boundaries.
 2. **Never skip `/qa` on UI changes.** Always test on mobile (393x852) AND desktop (1440x900). Most drivers use phones.
-3. **Always run `npm test` before committing.** 449+ tests must pass. No exceptions.
+3. **Always run `npm test` before committing.** 450+ tests must pass. No exceptions.
 4. **Use `/investigate` for bugs, not guessing.** Iron Law: no fixes without root cause investigation first.
 5. **Use `/document-release` after shipping.** Keep README, CLAUDE.md, and test counts in sync.
 
