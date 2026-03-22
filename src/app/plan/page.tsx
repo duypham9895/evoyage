@@ -25,7 +25,7 @@ import MapLocateButton from '@/components/map/MapLocateButton';
 import FeedbackFAB from '@/components/feedback/FeedbackFAB';
 import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/layout/MobileTabBar';
-import type { EVVehicleData, CustomVehicleInput, TripPlan } from '@/types';
+import type { EVVehicleData, CustomVehicleInput, TripPlan, ChargingStationData } from '@/types';
 import type { RankedStation, ChargingStopWithAlternatives } from '@/types';
 import type { NominatimResult } from '@/lib/geo/nominatim';
 import type { WaypointData } from '@/components/trip/WaypointInput';
@@ -43,6 +43,13 @@ function HomeContent() {
   const { mode } = useMapMode();
   const { t } = useLocale();
   const isMobile = useIsMobile();
+
+  // Geolocation (lifted — shared between MapLocateButton and NearbyStations)
+  const geo = useGeolocation();
+  const [nearbyStations, setNearbyStations] = useState<readonly (ChargingStationData & { distanceKm: number })[] | null>(null);
+  const handleStationsFound = useCallback((stations: readonly (ChargingStationData & { distanceKm: number })[]) => {
+    setNearbyStations(stations);
+  }, []);
 
   // Mobile tab state
   const [activeTab, setActiveTab] = useState<MobileTab>('evi');
@@ -479,15 +486,44 @@ function HomeContent() {
       label: String(i + 1),
     }));
 
+  // User location for map markers
+  const userLocationForMap = geo.latitude != null && geo.longitude != null
+    ? { lat: geo.latitude, lng: geo.longitude }
+    : null;
+
+  // Clear nearby stations when a trip plan is loaded
+  useEffect(() => {
+    if (tripPlan) setNearbyStations(null);
+  }, [tripPlan]);
+
   // Map component
   const mapContent = (
     <>
       {mode === 'mapbox' ? (
         <MapboxMap tripPlan={tripPlan} waypoints={waypointMarkers} />
       ) : (
-        <LeafletMap tripPlan={tripPlan} waypoints={waypointMarkers} />
+        <LeafletMap
+          tripPlan={tripPlan}
+          waypoints={waypointMarkers}
+          nearbyStations={nearbyStations}
+          userLocation={userLocationForMap}
+        />
       )}
     </>
+  );
+
+  // MapLocateButton overlay (shared between mobile and desktop)
+  const locateButton = (
+    <MapLocateButton
+      latitude={geo.latitude}
+      longitude={geo.longitude}
+      loading={geo.loading}
+      error={geo.error as 'permission_denied' | 'position_unavailable' | 'timeout' | null}
+      geolocationSupported={typeof window !== 'undefined' && 'geolocation' in navigator}
+      onRequestLocation={geo.requestLocation}
+      onStationsFound={handleStationsFound}
+      onSwitchToStationsTab={handleFindNearbyStations}
+    />
   );
 
   // ─── Mobile Layout ─────────────────────────────────────────
@@ -499,6 +535,7 @@ function HomeContent() {
         {/* Full-screen map — isolate stacking context so Leaflet z-indexes don't escape */}
         <main className="flex-1 relative isolate z-0">
           {mapContent}
+          {locateButton}
         </main>
 
         {/* Bottom sheet with tabbed controls */}
@@ -697,6 +734,7 @@ function HomeContent() {
              internal z-indices (200-600) don't leak over fixed modals */}
         <main className="flex-1 relative min-h-[300px] isolate">
           {mapContent}
+          {locateButton}
         </main>
       </div>
 
