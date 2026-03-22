@@ -3,6 +3,23 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-03-22
+
+### Added
+- **Find Nearby Stations — accessible anywhere** — two entry points for quick station discovery:
+  - Map locate button: one-tap GPS, station markers on map with distance labels, compact info bar
+  - eVi chat: ask "tìm trạm sạc gần đây" for personalized results with vehicle compatibility and charge time estimates
+- `POST /api/stations/nearby` endpoint with vehicle lookup, compatibility filtering, and charge time calculation using `getEffectivePowerKw` + `calculateChargeTimeMin`
+- eVi station search intent detection via extended LLM prompt and Zod schema (`isStationSearch`, `stationSearchParams`)
+- `useEVi` hook auto-fetches station data when LLM returns station search intent
+- `MapLocateButton` component with one-shot GPS, info bar, error toasts (permission denied, unavailable, timeout), and 10s auto-dismiss
+- `Map.tsx` nearby stations layer with user location blue dot, provider-colored markers, and fly-to animation
+- 16 bilingual locale keys (EN + VI) for GPS errors, info bar, station compatibility, and charge time
+- GPS error handling for all 4 error types with Vietnamese-first UX
+- `NearbyStationInfo` and `StationSearchParams` TypeScript interfaces
+- TODOS.md with deferred "eVi Show on Map" feature tracked for v2
+- 19 new tests (533 total across 41 files): API route (7), Zod schema (5), MapLocateButton (7)
+
 ## [0.3.0] — 2026-03-21
 
 ### Added
