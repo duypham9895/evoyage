@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { TripPlan } from '@/types';
+import type { TripPlan, ChargingStationData } from '@/types';
 import { getStopStation } from '@/types';
 import { decodePolyline } from '@/lib/geo/polyline';
 import {
@@ -12,6 +12,10 @@ import {
   buildStopPopupHtml,
   escapeHtml,
 } from '@/lib/geo/map-utils';
+
+interface NearbyStationMarker extends ChargingStationData {
+  readonly distanceKm: number;
+}
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -24,6 +28,8 @@ interface WaypointMarkerData {
 interface MapProps {
   readonly tripPlan: TripPlan | null;
   readonly waypoints?: readonly WaypointMarkerData[];
+  readonly nearbyStations?: readonly NearbyStationMarker[] | null;
+  readonly userLocation?: { lat: number; lng: number } | null;
 }
 
 // Dark tile layer (CartoDB Dark Matter)
@@ -60,10 +66,11 @@ function createEndpointIcon(label: string): L.DivIcon {
   });
 }
 
-export default function Map({ tripPlan, waypoints }: MapProps) {
+export default function Map({ tripPlan, waypoints, nearbyStations, userLocation }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const overlaysRef = useRef<L.LayerGroup | null>(null);
+  const nearbyLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -81,6 +88,7 @@ export default function Map({ tripPlan, waypoints }: MapProps) {
     }).addTo(map);
 
     overlaysRef.current = L.layerGroup().addTo(map);
+    nearbyLayerRef.current = L.layerGroup().addTo(map);
     mapInstanceRef.current = map;
 
     return () => {
@@ -153,6 +161,54 @@ export default function Map({ tripPlan, waypoints }: MapProps) {
     });
     map.fitBounds(bounds, { padding: [50, 50] });
   }, [tripPlan, waypoints]);
+
+  // Render nearby station markers (separate layer so trip plan rendering doesn't clear them)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const nearbyLayer = nearbyLayerRef.current;
+    if (!map || !nearbyLayer) return;
+
+    nearbyLayer.clearLayers();
+
+    if (!nearbyStations || nearbyStations.length === 0) return;
+
+    // User location marker (blue pulsing dot)
+    if (userLocation) {
+      const userDot = L.circleMarker([userLocation.lat, userLocation.lng], {
+        radius: 8,
+        fillColor: '#5B9BFF',
+        fillOpacity: 1,
+        color: 'rgba(91,155,255,0.3)',
+        weight: 6,
+      });
+      nearbyLayer.addLayer(userDot);
+
+      // Fly to user location
+      map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 1 });
+    }
+
+    // Station markers with distance labels
+    nearbyStations.forEach((station) => {
+      const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+        popupAnchor: [0, -14],
+        html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #0F0F11;opacity:0.9"></div>`,
+      });
+
+      const marker = L.marker([station.latitude, station.longitude], { icon });
+      marker.bindPopup(
+        `<div style="font-family:system-ui;font-size:13px;line-height:1.4">` +
+        `<b>${escapeHtml(station.name)}</b><br/>` +
+        `<span style="color:#a0a0ab">${station.distanceKm} km · ${station.maxPowerKw} kW · ${station.provider}</span><br/>` +
+        `<a href="https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}" ` +
+        `target="_blank" rel="noopener" style="color:#00D4AA;text-decoration:none">Navigate →</a></div>`,
+      );
+      nearbyLayer.addLayer(marker);
+    });
+  }, [nearbyStations, userLocation]);
 
   return <div ref={mapRef} className="w-full h-full" />;
 }

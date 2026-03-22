@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { EVVehicleData } from '@/types';
 
+// ── Station Search Params Schema ──
+export const StationSearchParams = z.object({
+  radiusKm: z.number().min(1).max(50).default(5),
+  minPowerKw: z.number().min(0).nullable().default(null),
+}).nullable().default(null);
+
+export type StationSearchParamsData = z.infer<typeof StationSearchParams>;
+
 // ── Minimax LLM Output Schema ──
 export const MinimaxTripExtraction = z.object({
   startLocation: z.string().nullable(),
@@ -9,6 +17,8 @@ export const MinimaxTripExtraction = z.object({
   vehicleModel: z.string().nullable(),
   currentBatteryPercent: z.number().min(1).max(100).nullable(),
   isTripRequest: z.boolean(),
+  isStationSearch: z.boolean().default(false),
+  stationSearchParams: StationSearchParams,
   isOutsideVietnam: z.boolean(),
   missingFields: z.array(z.enum([
     'start_location', 'end_location', 'vehicle', 'battery',
@@ -68,9 +78,24 @@ export interface EViTripParams {
   readonly rangeSafetyFactor: number | null;
 }
 
+// ── Nearby Station Info ──
+export interface NearbyStationInfo {
+  readonly name: string;
+  readonly distanceKm: number;
+  readonly maxPowerKw: number;
+  readonly connectorTypes: readonly string[];
+  readonly provider: string;
+  readonly isCompatible: boolean;
+  readonly estimatedChargeTimeMin: number | null;
+  readonly chargingStatus: string | null;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
 // ── API Response ──
 export interface EViParseResponse {
   readonly isComplete: boolean;
+  readonly isStationSearch: boolean;
   readonly followUpType: FollowUpType;
   readonly tripParams: EViTripParams;
   readonly followUpQuestion: string | null;
@@ -79,6 +104,7 @@ export interface EViParseResponse {
   readonly suggestedOptions: readonly SuggestedOption[];
   readonly displayMessage: string;
   readonly error: string | null;
+  readonly nearbyStations: readonly NearbyStationInfo[] | null;
 }
 
 // ── Chat Message (client-side conversation state) ──

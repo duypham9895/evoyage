@@ -100,6 +100,44 @@ describe('MinimaxTripExtraction', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('D12: validates isStationSearch=true with stationSearchParams', () => {
+    const result = MinimaxTripExtraction.safeParse({
+      ...validExtraction,
+      isStationSearch: true,
+      stationSearchParams: {
+        radiusKm: 10,
+        minPowerKw: 50,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.isStationSearch).toBe(true);
+      expect(result.data.stationSearchParams).toEqual({
+        radiusKm: 10,
+        minPowerKw: 50,
+      });
+    }
+  });
+
+  it('D13: stationSearchParams defaults correctly when missing', () => {
+    const result = MinimaxTripExtraction.safeParse({
+      ...validExtraction,
+      isStationSearch: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.stationSearchParams).toBeNull();
+    }
+  });
+
+  it('defaults isStationSearch to false when not provided', () => {
+    const result = MinimaxTripExtraction.safeParse(validExtraction);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.isStationSearch).toBe(false);
+    }
+  });
 });
 
 // ── EViParseRequest ──

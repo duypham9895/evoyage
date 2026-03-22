@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { ChatMessage, EViParseResponse } from '@/lib/evi/types';
+import type { ChatMessage, EViParseResponse, NearbyStationInfo } from '@/lib/evi/types';
 
 // ── State Machine ──
 type EViState = 'idle' | 'processing' | 'complete' | 'follow_up' | 'error';
@@ -57,6 +57,7 @@ function buildHistoryPayload(
 
 function deriveState(response: EViParseResponse): EViState {
   if (response.error) return 'error';
+  if (response.isStationSearch) return 'follow_up';
   if (response.isComplete) return 'complete';
   return 'follow_up';
 }
@@ -313,7 +314,46 @@ export function useEVi(): UseEViReturn {
         return;
       }
 
-      const response: EViParseResponse = await lastRes.json();
+      let response: EViParseResponse = await lastRes.json();
+
+      // Handle station search — fetch nearby stations from dedicated API
+      if (response.isStationSearch && userLocationRef.current) {
+        try {
+          const stationRes = await fetch('/api/stations/nearby', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              latitude: userLocationRef.current.lat,
+              longitude: userLocationRef.current.lng,
+              radiusKm: 5,
+              vehicleId: lastResponseRef.current?.tripParams?.vehicleId ?? null,
+              currentBattery: lastResponseRef.current?.tripParams?.currentBattery ?? null,
+            }),
+          });
+
+          if (stationRes.ok) {
+            const stationData = await stationRes.json();
+            const stations: readonly NearbyStationInfo[] = (stationData.stations ?? []).map(
+              (s: Record<string, unknown>) => ({
+                name: (s.station as Record<string, unknown>)?.name ?? '',
+                distanceKm: s.distanceKm as number,
+                maxPowerKw: (s.station as Record<string, unknown>)?.maxPowerKw ?? 0,
+                connectorTypes: (s.station as Record<string, unknown>)?.connectorTypes ?? [],
+                provider: (s.station as Record<string, unknown>)?.provider ?? '',
+                isCompatible: s.isCompatible as boolean,
+                estimatedChargeTimeMin: (s.estimatedChargeTimeMin as number) ?? null,
+                chargingStatus: (s.station as Record<string, unknown>)?.chargingStatus ?? null,
+                latitude: (s.station as Record<string, unknown>)?.latitude as number,
+                longitude: (s.station as Record<string, unknown>)?.longitude as number,
+              }),
+            );
+            response = { ...response, nearbyStations: stations };
+          }
+        } catch {
+          // Station fetch failed — show response without station data
+        }
+      }
+
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: extractAssistantContent(response),
@@ -334,8 +374,8 @@ export function useEVi(): UseEViReturn {
         }
       }
 
-      // Fetch AI-powered follow-up suggestions for follow_up state
-      if (nextState === 'follow_up') {
+      // Fetch AI-powered follow-up suggestions for follow_up state (not for station search)
+      if (nextState === 'follow_up' && !response.isStationSearch) {
         fetchSuggestions(finalMessages, response);
       }
     } catch {

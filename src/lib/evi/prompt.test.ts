@@ -27,4 +27,15 @@ describe('buildSystemPrompt', () => {
     const vehicleSection = result.split('AVAILABLE VEHICLES IN VIETNAM:')[1]?.split('OUTPUT FORMAT')[0] ?? '';
     expect(vehicleSection.trim()).toBe('');
   });
+
+  it('includes STATION SEARCH section in system prompt', () => {
+    const result = buildSystemPrompt('VinFast VF 8');
+    expect(result).toContain('STATION SEARCH');
+  });
+
+  it('includes isStationSearch field in output format', () => {
+    const result = buildSystemPrompt('VinFast VF 8');
+    const outputSection = result.split('OUTPUT FORMAT')[1] ?? '';
+    expect(outputSection).toContain('isStationSearch');
+  });
 });

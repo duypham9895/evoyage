@@ -20,6 +20,8 @@ import ShareButton from '@/components/trip/ShareButton';
 import EVi from '@/components/EVi';
 import NearbyStations from '@/components/NearbyStations';
 import type { EViTripParams } from '@/lib/evi/types';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import MapLocateButton from '@/components/map/MapLocateButton';
 import FeedbackFAB from '@/components/feedback/FeedbackFAB';
 import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/layout/MobileTabBar';

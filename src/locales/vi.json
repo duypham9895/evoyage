@@ -313,5 +313,21 @@
   "nearby_results_count": "Tìm thấy {{count}} trạm sạc",
   "nearby_active": "Hoạt động",
   "nearby_busy": "Đang bận",
-  "nearby_inactive": "Ngừng hoạt động"
+  "nearby_inactive": "Ngừng hoạt động",
+
+  "nearby_locate_button": "Tìm gần đây",
+  "nearby_info_bar": "{{count}} trạm sạc trong {{radius}} km",
+  "nearby_info_bar_link": "Xem danh sách",
+  "nearby_info_bar_empty": "Không tìm thấy trạm sạc trong {{radius}} km",
+  "nearby_info_bar_expand": "Thử phạm vi rộng hơn",
+  "nearby_fetch_error": "Không thể tải trạm sạc. Thử lại?",
+  "nearby_compatible": "Tương thích",
+  "nearby_not_compatible": "Không tương thích",
+  "nearby_charge_time": "~{{minutes}} phút sạc đến 80%",
+  "nearby_gps_denied": "Cho phép vị trí để tìm trạm sạc gần bạn",
+  "nearby_gps_unavailable": "Không thể xác định vị trí. Thử lại?",
+  "nearby_gps_timeout": "Tìm vị trí quá lâu. Thử lại?",
+  "evi_station_search_intro": "Dưới đây là {{count}} trạm sạc gần bạn, tương thích với {{vehicle}}:",
+  "evi_station_search_intro_no_vehicle": "Dưới đây là {{count}} trạm sạc gần bạn:",
+  "evi_no_vehicle_note": "Chọn xe để xem thông tin tương thích"
 }

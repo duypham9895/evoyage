@@ -313,5 +313,21 @@
   "nearby_results_count": "{{count}} stations found",
   "nearby_active": "Active",
   "nearby_busy": "Busy",
-  "nearby_inactive": "Inactive"
+  "nearby_inactive": "Inactive",
+
+  "nearby_locate_button": "Find nearby",
+  "nearby_info_bar": "{{count}} stations within {{radius}} km",
+  "nearby_info_bar_link": "View list",
+  "nearby_info_bar_empty": "No stations found within {{radius}} km",
+  "nearby_info_bar_expand": "Try a wider radius",
+  "nearby_fetch_error": "Couldn't load stations. Try again?",
+  "nearby_compatible": "Compatible",
+  "nearby_not_compatible": "Not compatible",
+  "nearby_charge_time": "~{{minutes}} min to 80%",
+  "nearby_gps_denied": "Allow location access to find stations near you",
+  "nearby_gps_unavailable": "Couldn't determine your location. Try again?",
+  "nearby_gps_timeout": "Location search took too long. Try again?",
+  "evi_station_search_intro": "Here are {{count}} charging stations near you, compatible with {{vehicle}}:",
+  "evi_station_search_intro_no_vehicle": "Here are {{count}} charging stations near you:",
+  "evi_no_vehicle_note": "Select a vehicle for compatibility info"
 }

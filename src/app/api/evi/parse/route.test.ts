@@ -84,6 +84,8 @@ function baseTripExtraction(overrides: Partial<MinimaxTripExtractionResult> = {}
     vehicleModel: null,
     currentBatteryPercent: null,
     isTripRequest: true,
+    isStationSearch: false,
+    stationSearchParams: null,
     isOutsideVietnam: false,
     missingFields: [],
     followUpQuestion: null,

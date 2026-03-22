@@ -60,6 +60,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Station search request
+  if (extraction.isStationSearch) {
+    return NextResponse.json(buildResponse({
+      isComplete: false,
+      isStationSearch: true,
+      followUpType: null,
+      displayMessage: extraction.followUpQuestion ?? 'Đang tìm trạm sạc gần bạn...',
+      followUpQuestion: null,
+      followUpCount,
+      stationSearchParams: extraction.stationSearchParams ?? { radiusKm: 5, minPowerKw: null },
+    }));
+  }
+
   // Non-trip request
   if (!extraction.isTripRequest) {
     return NextResponse.json(buildResponse({
@@ -204,6 +217,7 @@ export async function POST(request: NextRequest) {
 
   const response: EViParseResponse = {
     isComplete,
+    isStationSearch: false,
     followUpType,
     tripParams,
     followUpQuestion,
@@ -212,6 +226,7 @@ export async function POST(request: NextRequest) {
     suggestedOptions,
     displayMessage,
     error: null,
+    nearbyStations: null,
   };
 
   return NextResponse.json(response);
@@ -221,13 +236,16 @@ export async function POST(request: NextRequest) {
 
 function buildResponse(params: {
   readonly isComplete: boolean;
+  readonly isStationSearch?: boolean;
   readonly followUpType: FollowUpType;
   readonly displayMessage: string;
   readonly followUpQuestion: string | null;
   readonly followUpCount: number;
+  readonly stationSearchParams?: { radiusKm: number; minPowerKw: number | null };
 }): EViParseResponse {
   return {
     isComplete: params.isComplete,
+    isStationSearch: params.isStationSearch ?? false,
     followUpType: params.followUpType,
     tripParams: {
       start: null, startLat: null, startLng: null, startSource: null,
@@ -241,12 +259,14 @@ function buildResponse(params: {
     suggestedOptions: [],
     displayMessage: params.displayMessage,
     error: null,
+    nearbyStations: null,
   };
 }
 
 function buildErrorResponse(error: string, followUpCount: number): EViParseResponse {
   return {
     isComplete: false,
+    isStationSearch: false,
     followUpType: null,
     tripParams: {
       start: null, startLat: null, startLng: null, startSource: null,
@@ -260,5 +280,6 @@ function buildErrorResponse(error: string, followUpCount: number): EViParseRespo
     suggestedOptions: [],
     displayMessage: 'Xin lỗi, dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.',
     error,
+    nearbyStations: null,
   };
 }
