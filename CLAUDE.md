@@ -88,9 +88,9 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **514 tests** across **39 files**
-- Covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, eVi AI chat, speech engines (Web Speech + Whisper), suggestions client, transcription API
-- Runtime: ~4.5 seconds
+- **533 tests** across **41 files**
+- Covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton
+- Runtime: ~5 seconds
 - This count should only go UP — never delete tests unless the feature is removed
 
 ### Pre-Commit Checklist
