@@ -10,6 +10,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "npx playwright test",
+    "test:e2e:real": "MOCK_APIS=false npx playwright test",
     "seed": "npx tsx scripts/seed-vietnam-models.ts",
     "seed:stations": "npx tsx scripts/seed-osm-stations.ts",
     "seed:all": "npm run seed && npm run seed:stations",
