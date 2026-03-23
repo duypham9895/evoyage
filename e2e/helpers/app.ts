@@ -127,36 +127,46 @@ export async function waitForAppReady(page: Page): Promise<void> {
 
 /**
  * Complete a trip plan by filling start, end, vehicle, and clicking Plan Trip.
+ * Handles both desktop (single Plan Trip tab) and mobile (Route + Vehicle tabs).
  * Prerequisite for flows that need trip results (F7, F10).
  */
-export async function completeTripPlan(page: Page): Promise<void> {
-  // Switch to Plan Trip tab first (eVi is active by default)
-  await switchToTab(page, 'Plan Trip');
+export async function completeTripPlan(page: Page, isMobile: boolean): Promise<void> {
+  // Navigate to the route/trip form
+  await switchToTab(page, isMobile ? 'Route' : 'Plan Trip');
 
   // Enter start location (combobox with Vietnamese placeholder "VD: Thủ Thiêm, TP.HCM")
   const startInput = page.getByRole('combobox', { name: /Thủ Thiêm|Thu Thiem/i });
   await startInput.fill('Ho Chi Minh City');
-  // Wait for autocomplete and select first result
   const firstSuggestion = page.locator('[role="listbox"] [role="option"], [data-testid="place-suggestion"]').first();
-  await firstSuggestion.waitFor({ state: 'visible', timeout: 5_000 });
-  await firstSuggestion.click();
+  await expect(firstSuggestion).toBeVisible({ timeout: 5_000 });
+  await firstSuggestion.click({ force: true });
 
   // Enter end location (combobox with Vietnamese placeholder "VD: Vũng Tàu")
   const endInput = page.getByRole('combobox', { name: /Vũng Tàu|Vung Tau/i });
   await endInput.fill('Da Lat');
   const secondSuggestion = page.locator('[role="listbox"] [role="option"], [data-testid="place-suggestion"]').first();
-  await secondSuggestion.waitFor({ state: 'visible', timeout: 5_000 });
-  await secondSuggestion.click();
+  await expect(secondSuggestion).toBeVisible({ timeout: 5_000 });
+  await secondSuggestion.click({ force: true });
 
-  // Select a vehicle first (required before Plan Trip button is enabled)
+  // On mobile, vehicle selection is on a separate tab
+  if (isMobile) {
+    await switchToTab(page, 'Vehicle');
+  }
+
+  // Select a vehicle (required before Plan Trip button is enabled)
   const vehicleSearch = page.getByRole('textbox', { name: /Tìm theo hãng hoặc dòng xe/i });
   await vehicleSearch.fill('VF8');
   const vehicleOption = page.getByRole('button', { name: /VF 8 Plus/i });
   await vehicleOption.waitFor({ state: 'visible', timeout: 5_000 });
   await vehicleOption.click();
 
+  // On mobile, go back to Route tab to click Plan button
+  if (isMobile) {
+    await switchToTab(page, 'Route');
+  }
+
   // Click "Xem lịch trình" (Plan Trip) action button
-  const planButton = page.getByRole('button', { name: 'Xem lịch trình' });
+  const planButton = page.getByRole('button', { name: /Xem lịch trình|Plan this trip/i });
   await planButton.click();
 
   // Wait for results
@@ -165,22 +175,24 @@ export async function completeTripPlan(page: Page): Promise<void> {
 
 /**
  * Switch to a specific tab in the desktop sidebar or mobile tab bar.
+ *
+ * Desktop tabs: eVi, Plan Trip (Lên lộ trình), Stations (Trạm sạc)
+ * Mobile tabs:  eVi, Route (Tuyến đường), Vehicle (Xe), Battery (Pin), Stations (Trạm sạc)
  */
-/**
- * Tab name mapping: English → Vietnamese
- * eVi → eVi (same in both languages)
- * Plan Trip → Lên lộ trình
- * Stations → Trạm sạc
- */
-const TAB_NAMES: Record<string, string[]> = {
+type TabName = 'eVi' | 'Plan Trip' | 'Route' | 'Vehicle' | 'Battery' | 'Stations';
+
+const TAB_NAMES: Record<TabName, string[]> = {
   'eVi': ['eVi'],
   'Plan Trip': ['Plan Trip', 'Lên lộ trình'],
+  'Route': ['Route', 'Tuyến đường'],
+  'Vehicle': ['Vehicle', 'Xe'],
+  'Battery': ['Battery', 'Pin'],
   'Stations': ['Stations', 'Trạm sạc'],
 };
 
 export async function switchToTab(
   page: Page,
-  tabName: 'eVi' | 'Plan Trip' | 'Stations',
+  tabName: TabName,
 ): Promise<void> {
   const names = TAB_NAMES[tabName] ?? [tabName];
   // Build a selector that matches any of the bilingual names

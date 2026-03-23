@@ -2,24 +2,15 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs, navigateToPlan, switchToTab } from './helpers/app';
 
 test.describe('F6: Vehicle Selection + Custom Vehicle', () => {
-  test.skip(({ isMobile }) => isMobile, 'Desktop-only: uses sidebar tab navigation');
-
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
     await navigateToPlan(page);
   });
 
   test('searches and selects a vehicle from the database', async ({ page, isMobile }) => {
-    // Navigate to vehicle/route tab
-    if (isMobile) {
-      // On mobile, look for route/vehicle tab
-      const routeTab = page.locator('[role="tab"]').filter({ hasText: /route|vehicle|xe|tuyến/i }).first();
-      if (await routeTab.isVisible()) {
-        await routeTab.click();
-      }
-    } else {
-      await switchToTab(page, 'Plan Trip');
-    }
+    // Desktop: vehicle search is on Plan Trip tab
+    // Mobile: vehicle search is on dedicated Vehicle tab
+    await switchToTab(page, isMobile ? 'Vehicle' : 'Plan Trip');
 
     // Step 2: Search for VF8 (Vietnamese placeholder)
     const vehicleSearch = page.getByRole('textbox', { name: /Tìm theo hãng hoặc dòng xe/i });
@@ -36,14 +27,7 @@ test.describe('F6: Vehicle Selection + Custom Vehicle', () => {
   });
 
   test('creates a custom vehicle', async ({ page, isMobile }) => {
-    if (isMobile) {
-      const routeTab = page.locator('[role="tab"]').filter({ hasText: /route|vehicle|xe|tuyến/i }).first();
-      if (await routeTab.isVisible()) {
-        await routeTab.click();
-      }
-    } else {
-      await switchToTab(page, 'Plan Trip');
-    }
+    await switchToTab(page, isMobile ? 'Vehicle' : 'Plan Trip');
 
     // Step 5: Click "Add Custom Vehicle"
     const addCustom = page.locator('button:has-text("Custom"), button:has-text("Tùy chỉnh"), button:has-text("Add")').first();

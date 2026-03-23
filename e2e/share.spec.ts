@@ -2,16 +2,14 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs, navigateToPlan, completeTripPlan } from './helpers/app';
 
 test.describe('F7: Share Trip — Link + QR + Image', () => {
-  test.skip(({ isMobile }) => isMobile, 'Desktop-only: uses sidebar tab navigation');
-
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
     await navigateToPlan(page);
   });
 
-  test('opens share modal with copy link and download options', async ({ page }) => {
-    // Complete a trip plan first
-    await completeTripPlan(page);
+  test('opens share modal with copy link and download options', async ({ page, isMobile }) => {
+    // Complete a trip plan first (handles desktop/mobile tab flow)
+    await completeTripPlan(page, isMobile);
 
     // Click Share button (Vietnamese: "Chia sẻ")
     const shareButton = page.locator('button:has-text("Share"), button:has-text("Chia sẻ"), button[aria-label*="hare"]').first();

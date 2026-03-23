@@ -2,19 +2,18 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs, waitForAppReady, switchToTab } from './helpers/app';
 
 test.describe('F10: URL State — Share Link Restoration', () => {
-  test.skip(({ isMobile }) => isMobile, 'Desktop-only: uses sidebar tab navigation');
-
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
   });
 
-  test('restores trip state from URL parameters', async ({ page }) => {
+  test('restores trip state from URL parameters', async ({ page, isMobile }) => {
     // Step 2: Navigate to /plan with URL parameters
     await page.goto('/plan?start=Ho+Chi+Minh+City&end=Da+Lat&startLat=10.7769&startLng=106.7009&endLat=11.9404&endLng=108.4583&vehicleId=vf8-plus');
     await waitForAppReady(page);
 
-    // Switch to Plan Trip tab to see the form inputs
-    await switchToTab(page, 'Plan Trip');
+    // Switch to the route form tab to see inputs
+    // Desktop: "Plan Trip" | Mobile: "Route" (locations are on Route tab)
+    await switchToTab(page, isMobile ? 'Route' : 'Plan Trip');
 
     // Step 3: Verify form auto-filled — start location (combobox with Vietnamese placeholder)
     const startInput = page.getByRole('combobox', { name: /Thủ Thiêm|Thu Thiem/i });
@@ -25,6 +24,10 @@ test.describe('F10: URL State — Share Link Restoration', () => {
     await expect(endInput).toHaveValue(/Da Lat|Đà Lạt/i, { timeout: 5_000 });
 
     // Step 4: Verify vehicle loaded from URL
+    // On mobile, vehicle info may be on Vehicle tab
+    if (isMobile) {
+      await switchToTab(page, 'Vehicle');
+    }
     const vehicleInfo = page.locator('text=/VF 8|VF8/').first();
     await expect(vehicleInfo).toBeVisible({ timeout: 5_000 });
   });
