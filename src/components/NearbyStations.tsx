@@ -5,12 +5,15 @@ import { useLocale } from '@/lib/locale';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { haversineDistance } from '@/lib/routing/station-finder';
 import { hapticLight } from '@/lib/haptics';
+import PlaceAutocomplete from '@/components/trip/PlaceAutocomplete';
+import type { NominatimResult } from '@/lib/geo/nominatim';
 import type { ChargingStationData, LatLng } from '@/types';
 
 // ── Types ──
 
 interface NearbyStationsProps {
   readonly onNavigateToStation?: (station: ChargingStationData) => void;
+  readonly initialLocation?: { readonly lat: number; readonly lng: number } | null;
 }
 
 interface StationWithDistance extends ChargingStationData {
@@ -312,9 +315,26 @@ function StationCard({
 
 // ── Main Component ──
 
-export default function NearbyStations({ onNavigateToStation }: NearbyStationsProps) {
+export default function NearbyStations({ onNavigateToStation, initialLocation }: NearbyStationsProps) {
   const { t } = useLocale();
-  const { latitude, longitude, loading: geoLoading, error: geoError, requestLocation, clearError } = useGeolocation();
+  const internalGeo = useGeolocation();
+
+  // Use initialLocation if provided, otherwise fall back to internal geolocation
+  const hasExternalLocation = initialLocation != null;
+  const geoLatitude = hasExternalLocation ? initialLocation.lat : internalGeo.latitude;
+  const geoLongitude = hasExternalLocation ? initialLocation.lng : internalGeo.longitude;
+  const geoLoading = hasExternalLocation ? false : internalGeo.loading;
+  const geoError = hasExternalLocation ? null : internalGeo.error;
+  const requestLocation = internalGeo.requestLocation;
+  const clearError = internalGeo.clearError;
+
+  // Search-by-address state — overrides GPS location when set
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLocation, setSearchLocation] = useState<LatLng | null>(null);
+
+  // Effective location: search override > GPS/external
+  const latitude = searchLocation?.lat ?? geoLatitude;
+  const longitude = searchLocation?.lng ?? geoLongitude;
 
   // State
   const [radius, setRadius] = useState<RadiusKm>(DEFAULT_RADIUS);
@@ -413,8 +433,22 @@ export default function NearbyStations({ onNavigateToStation }: NearbyStationsPr
     setRadius(r);
   }, []);
 
+  // Search-by-address handlers
+  const handleSearchSelect = useCallback((result: NominatimResult) => {
+    hapticLight();
+    setSearchLocation({ lat: result.lat, lng: result.lng });
+    setSearchQuery(result.displayName);
+  }, []);
+
+  const handleResetToGps = useCallback(() => {
+    hapticLight();
+    setSearchLocation(null);
+    setSearchQuery('');
+  }, []);
+
   const isLoading = geoLoading || fetchLoading;
   const hasLocation = latitude !== null && longitude !== null;
+  const isUsingSearch = searchLocation !== null;
 
   // Geolocation error messages
   const geoErrorMessage = useMemo(() => {
@@ -426,24 +460,43 @@ export default function NearbyStations({ onNavigateToStation }: NearbyStationsPr
     <div className="space-y-4">
       {/* Title */}
       <h2 className="text-base font-bold font-[family-name:var(--font-heading)] text-[var(--color-foreground)]">
-        {t('nearby_title' as Parameters<typeof t>[0])}
+        {hasLocation
+          ? t('nearby_title' as Parameters<typeof t>[0])
+          : t('nearby_empty_heading' as Parameters<typeof t>[0])}
       </h2>
 
-      {/* Location request button (shown when no location yet) */}
+      {/* Location request + search-by-address (shown when no location yet) */}
       {!hasLocation && !isLoading && (
         <div className="space-y-3">
           <button
             onClick={() => { hapticLight(); clearError(); requestLocation(); }}
             className="w-full py-3.5 rounded-xl font-bold font-[family-name:var(--font-heading)] text-sm bg-[var(--color-accent)] text-[var(--color-background)] hover:opacity-90 active:scale-[0.98] transition-all"
           >
-            {t('nearby_find' as Parameters<typeof t>[0])}
+            {t('nearby_empty_use_location' as Parameters<typeof t>[0])}
           </button>
 
           {geoErrorMessage && (
-            <div className="p-3 rounded-lg bg-[var(--color-danger)]/10 text-[var(--color-danger)] text-sm">
-              {geoErrorMessage}
+            <div className="space-y-2">
+              <div className="p-3 rounded-lg bg-[var(--color-danger)]/10 text-[var(--color-danger)] text-sm">
+                {geoErrorMessage}
+              </div>
+              <p className="text-xs text-[var(--color-muted)] text-center">
+                {t('nearby_gps_denied_redirect' as Parameters<typeof t>[0])}
+              </p>
             </div>
           )}
+
+          <p className="text-xs text-[var(--color-muted)] text-center">
+            {t('nearby_empty_or_search' as Parameters<typeof t>[0])}
+          </p>
+
+          <PlaceAutocomplete
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onSelect={handleSearchSelect}
+            placeholder={t('nearby_empty_search_placeholder' as Parameters<typeof t>[0])}
+            label={t('nearby_empty_or_search' as Parameters<typeof t>[0])}
+          />
         </div>
       )}
 
@@ -460,6 +513,25 @@ export default function NearbyStations({ onNavigateToStation }: NearbyStationsPr
       {/* Main content (after location acquired) */}
       {hasLocation && !isLoading && (
         <div className="space-y-4">
+          {/* Search-by-address (active state) + reset button */}
+          <div className="space-y-2">
+            <PlaceAutocomplete
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onSelect={handleSearchSelect}
+              placeholder={t('nearby_empty_search_placeholder' as Parameters<typeof t>[0])}
+              label={t('nearby_empty_or_search' as Parameters<typeof t>[0])}
+            />
+            {isUsingSearch && (
+              <button
+                onClick={handleResetToGps}
+                className="text-xs text-[var(--color-accent)] hover:underline transition-colors"
+              >
+                {t('nearby_empty_use_location' as Parameters<typeof t>[0])}
+              </button>
+            )}
+          </div>
+
           {/* Radius selector */}
           <RadiusSelector radius={radius} onRadiusChange={handleRadiusChange} />
 

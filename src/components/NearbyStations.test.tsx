@@ -10,6 +10,11 @@ import NearbyStations from './NearbyStations';
 const translations: Record<string, string> = {
   nearby_title: 'Nearby Charging Stations',
   nearby_find: 'Find stations near me',
+  nearby_empty_heading: 'Find charging stations near you',
+  nearby_empty_use_location: 'Use my location',
+  nearby_empty_or_search: 'Or search a location',
+  nearby_empty_search_placeholder: 'Search city or address...',
+  nearby_gps_denied_redirect: 'Try searching a location instead',
   nearby_searching: 'Searching...',
   nearby_no_results: 'No stations found within {{radius}} km',
   nearby_location_denied: 'Location access denied.',
@@ -21,6 +26,7 @@ const translations: Record<string, string> = {
   nearby_provider: 'Provider',
   nearby_km_away: '{{distance}} km away',
   nearby_ports: '{{count}} ports',
+  nearby_results_count: '{{count}} stations found',
   nearby_active: 'Active',
   nearby_busy: 'Busy',
   nearby_inactive: 'Inactive',
@@ -43,6 +49,18 @@ vi.mock('@/lib/locale', () => ({
 
 vi.mock('@/lib/haptics', () => ({
   hapticLight: vi.fn(),
+}));
+
+// Mock PlaceAutocomplete
+vi.mock('@/components/trip/PlaceAutocomplete', () => ({
+  default: ({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (v: string) => void }) => (
+    <input
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      role="combobox"
+    />
+  ),
 }));
 
 // Mock useGeolocation
@@ -134,21 +152,43 @@ describe('NearbyStations', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders title', () => {
+  it('renders empty state heading when no location', () => {
+    render(<NearbyStations />);
+    expect(screen.getByText('Find charging stations near you')).toBeInTheDocument();
+  });
+
+  it('renders active title when location is available', () => {
+    mockGeoState = { ...mockGeoState, latitude: 10.8, longitude: 106.7 };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ stations: [] }),
+    } as unknown as Response);
     render(<NearbyStations />);
     expect(screen.getByText('Nearby Charging Stations')).toBeInTheDocument();
   });
 
-  it('shows find button when no location', () => {
+  it('shows use location button when no location', () => {
     render(<NearbyStations />);
-    const button = screen.getByText('Find stations near me');
+    const button = screen.getByText('Use my location');
     expect(button).toBeInTheDocument();
   });
 
-  it('calls requestLocation when find button is clicked', () => {
+  it('shows search-by-address in empty state', () => {
     render(<NearbyStations />);
-    fireEvent.click(screen.getByText('Find stations near me'));
+    expect(screen.getByText('Or search a location')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search city or address...')).toBeInTheDocument();
+  });
+
+  it('calls requestLocation when use location button is clicked', () => {
+    render(<NearbyStations />);
+    fireEvent.click(screen.getByText('Use my location'));
     expect(mockRequestLocation).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows GPS denied redirect message on geolocation error', () => {
+    mockGeoState = { ...mockGeoState, error: 'permission_denied' };
+    render(<NearbyStations />);
+    expect(screen.getByText('Try searching a location instead')).toBeInTheDocument();
   });
 
   it('shows loading state while searching', () => {
