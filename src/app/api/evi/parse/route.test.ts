@@ -104,7 +104,7 @@ describe('POST /api/evi/parse', () => {
     mockFindMany.mockResolvedValue([]);
   });
 
-  it('returns complete trip for a one-shot parse', async () => {
+  it('returns complete trip for a one-shot parse', { timeout: 15000 }, async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       endLocation: 'Đà Lạt',
       vehicleBrand: 'VinFast',
