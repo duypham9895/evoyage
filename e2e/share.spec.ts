@@ -7,9 +7,7 @@ test.describe('F7: Share Trip — Link + QR + Image', () => {
     await navigateToPlan(page);
   });
 
-  test.fixme('opens share modal with copy link and download options', async ({ page }) => {
-    // FIXME: completeTripPlan succeeds but share button click timing is inconsistent.
-    // The modal opens (confirmed via screenshot) but assertions race with rendering.
+  test('opens share modal with copy link and download options', async ({ page }) => {
     // Complete a trip plan first
     await completeTripPlan(page);
 
@@ -18,16 +16,13 @@ test.describe('F7: Share Trip — Link + QR + Image', () => {
     await shareButton.waitFor({ state: 'visible', timeout: 10_000 });
     await shareButton.click();
 
-    // Verify share modal opened (Vietnamese: "Chia sẻ chuyến đi")
-    const modalTitle = page.locator('text=/Chia sẻ chuyến đi|Share trip/i').first();
-    await expect(modalTitle).toBeVisible({ timeout: 5_000 });
+    // Verify share modal opened — wait for "Sao chép liên kết" (Copy link) button
+    // This is the most reliable indicator the modal is fully rendered
+    const copyButton = page.locator('button:has-text("Sao chép liên kết"), button:has-text("Copy link")').first();
+    await expect(copyButton).toBeVisible({ timeout: 10_000 });
 
-    // Verify "Copy link" button exists (Vietnamese: "Sao chép liên kết")
-    const copyButton = page.locator('button:has-text("Copy"), button:has-text("Sao chép")').first();
-    await expect(copyButton).toBeVisible();
-
-    // Verify download PNG option exists (Vietnamese: "Tải ảnh PNG")
-    const downloadButton = page.locator('text=/PNG|Download|Tải ảnh/i').first();
-    await expect(downloadButton).toBeVisible();
+    // Verify download option exists (Vietnamese: "Tải ảnh PNG")
+    const downloadOption = page.locator('text=/PNG|Tải ảnh/i').first();
+    await expect(downloadOption).toBeVisible();
   });
 });

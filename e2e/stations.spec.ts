@@ -21,25 +21,27 @@ test.describe('F3: Nearby Stations — Geolocation Flow', () => {
       await useLocationBtn.click();
     }
 
-    // Verify station count text appears (app fetches from real DB, mock returns 3)
-    // Check for either fixture data or real DB results
+    // Verify station results appear
     const stationResults = page.locator('text=/trạm sạc|station|Nguyễn Huệ|VinFast/i').first();
     await expect(stationResults).toBeVisible({ timeout: 10_000 });
   });
 
-  test.fixme('radius buttons are visible on Stations tab', async ({ page }) => {
-    // FIXME: Radius buttons render inside a conditional block that depends on
-    // geolocation resolving. The auto-geolocation on desktop loads 428 real stations
-    // but the km button selector needs refinement.
+  test('radius buttons are visible on Stations tab', async ({ page }) => {
     await switchToTab(page, 'Stations');
 
-    // Wait for stations tab content to be visible
-    const stationsPanel = page.locator('[role="tabpanel"]');
-    await expect(stationsPanel).toBeVisible({ timeout: 5_000 });
+    // Wait for stations to load first (need geolocation to resolve)
+    const useLocationBtn = page.getByRole('button', { name: 'Dùng vị trí của tôi' });
+    if (await useLocationBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await useLocationBtn.click();
+    }
 
-    // Verify at least one radius km button exists
-    const kmButton = page.locator('button').filter({ hasText: /\d+\s*km/i }).first();
-    await expect(kmButton).toBeVisible({ timeout: 10_000 });
+    // Wait for station results to appear (indicates geolocation resolved)
+    const stationResults = page.locator('text=/trạm sạc|station/i').first();
+    await expect(stationResults).toBeVisible({ timeout: 10_000 });
+
+    // Now verify radius buttons exist — Vietnamese labels "2 km", "5 km", "10 km", "25 km"
+    await expect(page.getByRole('button', { name: '5 km', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '10 km', exact: true })).toBeVisible();
   });
 
   test('shows empty state when geolocation is denied', async ({ page, context }) => {
