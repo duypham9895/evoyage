@@ -3,6 +3,33 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-03-23
+
+### Added
+- **Smart Map Markers** — 4-dimensional visual encoding for station markers: size encodes charging power (20/28/36px), ring color encodes status (green/amber/gray/dashed), compatibility dot (green/red), provider color fill. Drivers can scan and decide at a glance without tapping individual markers.
+- **Rich Mini-Card popups** — tapping a station marker shows a detailed card with distance, power, connector type, ports, status badge, compatibility, estimated charge time, "Ask eVi" bridge button, and "Navigate" link. Replaces basic text popups.
+- **eVi Bridge** — cross-surface integration between eVi chat and the map via lightweight `station-events.ts` event emitter (zero dependencies, native `EventTarget`):
+  - "Show on Map" button on eVi station cards highlights the station with fly-to + pulse animation
+  - "Ask eVi about this station" button on map popups pre-fills the eVi chat input
+  - Auto-switches to eVi tab on both mobile and desktop when triggered from map
+- **StationCard component** — extracted from EVi.tsx for reusable station card rendering with "Show on Map" and "Navigate" buttons
+- **3-tab desktop sidebar** — eVi | Plan Trip | Stations tab layout with animated transitions
+- 11 bilingual locale keys (EN + VI) for map status, mini-card labels, and station card actions
+- Localized mini-card popups — status labels, buttons, and disclaimers use locale strings
+
+### Changed
+- Station markers upgraded from uniform 22px circles to variable-size smart markers
+- Nearby station popups upgraded from basic text to rich mini-card format
+- Map.tsx uses DOM event listeners instead of global `window` callbacks (XSS hardening)
+- Status maps handle both UPPERCASE (VinFast API) and lowercase status values
+
+### Fixed
+- Status ring would show "unknown" for all stations due to case mismatch between API (UPPERCASE) and rendering (lowercase)
+- Station ID mismatch between StationCard (lat-lng key) and Map.tsx (DB id) that prevented highlight from working
+- "Ask eVi" pre-fill text was hardcoded English — now uses locale key `evi_ask_about_station` for bilingual support
+- Mini-card distance displayed raw floating point (e.g., 2.345678 km) — now rounded to 1 decimal
+- Double haptic feedback on desktop tab click — removed duplicate call in DesktopTabBar
+
 ## [0.4.0] — 2026-03-22
 
 ### Added

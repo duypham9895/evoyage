@@ -56,6 +56,23 @@ describe('useDesktopSidebarTab', () => {
     expect(localStorage.getItem('ev-desktop-tab')).toBe('evi');
   });
 
+  it('restores stations tab from localStorage', () => {
+    localStorage.setItem('ev-desktop-tab', 'stations');
+    const { result } = renderHook(() => useDesktopSidebarTab());
+    expect(result.current.activeTab).toBe('stations');
+  });
+
+  it('persists stations tab change to localStorage', () => {
+    const { result } = renderHook(() => useDesktopSidebarTab());
+
+    act(() => {
+      result.current.setTab('stations');
+    });
+
+    expect(result.current.activeTab).toBe('stations');
+    expect(localStorage.getItem('ev-desktop-tab')).toBe('stations');
+  });
+
   it('handles localStorage being unavailable', () => {
     const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('localStorage unavailable');

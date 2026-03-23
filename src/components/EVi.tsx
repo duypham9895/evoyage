@@ -6,6 +6,8 @@ import { useEVi } from '@/hooks/useEVi';
 import { useSpeechInput } from '@/hooks/useSpeechInput';
 import { hapticLight } from '@/lib/haptics';
 import type { EViTripParams } from '@/lib/evi/types';
+import { onStationAskEVi } from '@/lib/events/station-events';
+import StationCard from '@/components/StationCard';
 
 // ── Types ──
 
@@ -262,6 +264,15 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
     reset();
   }, [reset]);
 
+  // Subscribe to "Ask eVi" events from map markers
+  useEffect(() => {
+    const unsubscribe = onStationAskEVi((payload) => {
+      setInputValue(t('evi_ask_about_station' as Parameters<typeof t>[0], { name: payload.stationName }));
+      inputRef.current?.focus();
+    });
+    return unsubscribe;
+  }, [t]);
+
   const handleFollowUpOption = useCallback(
     (label: string) => {
       hapticLight();
@@ -448,6 +459,18 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Nearby station cards (from eVi station search) */}
+        {lastResponse?.nearbyStations && lastResponse.nearbyStations.length > 0 && (
+          <div className="pl-10 space-y-2">
+            {lastResponse.nearbyStations.map((station) => (
+              <StationCard
+                key={`${station.latitude}-${station.longitude}`}
+                station={station}
+              />
+            ))}
           </div>
         )}
 
