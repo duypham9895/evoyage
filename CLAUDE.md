@@ -88,10 +88,11 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **606 tests** across **45 files**
-- Covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar
-- Runtime: ~5 seconds
-- This count should only go UP — never delete tests unless the feature is removed
+- **606 unit/integration tests** across **45 files** (vitest, ~5 seconds)
+- **18 E2E tests** across **10 spec files** (Playwright, ~43 seconds on Desktop Chrome)
+- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar
+- E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state
+- These counts should only go UP — never delete tests unless the feature is removed
 
 ### Pre-Commit Checklist
 
