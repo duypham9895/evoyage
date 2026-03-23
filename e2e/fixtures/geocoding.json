@@ -1,0 +1,16 @@
+[
+  {
+    "place_id": 37845596,
+    "display_name": "Thành phố Hồ Chí Minh, Việt Nam",
+    "lat": "10.7769",
+    "lon": "106.7009",
+    "type": "city"
+  },
+  {
+    "place_id": 37845597,
+    "display_name": "Đà Lạt, Lâm Đồng, Việt Nam",
+    "lat": "11.9404",
+    "lon": "108.4583",
+    "type": "city"
+  }
+]

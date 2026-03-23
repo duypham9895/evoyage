@@ -3,6 +3,23 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] — 2026-03-23
+
+### Added
+- **Cross-browser E2E testing suite** — 10 Playwright spec files covering trip planning, eVi chat, nearby stations, bottom sheet gestures, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, and URL state restoration
+- **5-project Playwright config** — Desktop Chrome/Safari/Firefox + Mobile Chrome/Safari with custom viewports (393x852 mobile, 1440x900 desktop)
+- **Mock fixture system** — `e2e/fixtures/` with deterministic JSON responses for Nominatim, route, vehicles, stations, eVi parse, and short URL APIs
+- **Shared E2E helpers** — `e2e/helpers/app.ts` with `mockAPIs()`, `navigateToPlan()`, `waitForAppReady()`, `completeTripPlan()`, `switchToTab()` utilities
+- **CI E2E integration** — Playwright browser caching + E2E step in GitHub Actions deploy workflow with artifact upload on failure
+- `npm run test:e2e` and `npm run test:e2e:real` scripts for automated and real-API E2E runs
+
+### Changed
+- Playwright config: `retries` increased from 1 to 2, added `video: 'retain-on-failure'`
+- Feedback FAB spec: replaced `waitForTimeout` anti-pattern with `expect().toPass()` polling assertions, extended with form submission tests
+
+### Fixed
+- Replaced `waitForTimeout(300)` and `waitForTimeout(100)` in feedback spec with deterministic `expect().toPass()` assertions (Playwright best practice)
+
 ## [0.5.0] — 2026-03-23
 
 ### Added

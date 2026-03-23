@@ -2,7 +2,12 @@
 
 ## Deferred Work
 
-_No deferred items — all previously deferred work has been shipped._
+### E2E Test Fixmes — 3 tests need mock refinement
+- **F2 (eVi Chat):** Mock auto-triggers `onPlanTrip` via useEffect before test can verify chat response. Needs a two-step mock (incomplete → complete).
+- **F7 (Share):** Share modal opens (confirmed via screenshot) but copy link text assertion races with rendering. Needs more specific selector or wait condition.
+- **F3 (Radius):** Radius km buttons exist but selector doesn't match — needs investigation of actual DOM structure after geolocation resolves.
+- **Priority:** P3 — all 3 are edge cases in the E2E suite. The 18 passing tests cover all critical user flows.
+- **Design doc:** `edwardpham-main-design-20260323-113614.md`
 
 ## Completed
 
