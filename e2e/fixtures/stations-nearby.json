@@ -1,0 +1,74 @@
+{
+  "stations": [
+    {
+      "station": {
+        "id": "station-d1",
+        "name": "VinFast Charging - Nguyễn Huệ",
+        "address": "15 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM",
+        "province": "Ho Chi Minh",
+        "latitude": 10.7739,
+        "longitude": 106.703,
+        "chargerTypes": ["DC"],
+        "connectorTypes": ["CCS2"],
+        "portCount": 4,
+        "maxPowerKw": 150,
+        "stationType": "public",
+        "isVinFastOnly": true,
+        "operatingHours": "24/7",
+        "provider": "VinFast",
+        "chargingStatus": "available",
+        "parkingFee": false
+      },
+      "distanceKm": 0.5,
+      "isCompatible": true,
+      "estimatedChargeTimeMin": 28
+    },
+    {
+      "station": {
+        "id": "station-d3",
+        "name": "VinFast Charging - Lê Duẩn",
+        "address": "75 Lê Duẩn, Bến Nghé, Quận 1, TP.HCM",
+        "province": "Ho Chi Minh",
+        "latitude": 10.7801,
+        "longitude": 106.6986,
+        "chargerTypes": ["DC", "AC"],
+        "connectorTypes": ["CCS2", "Type 2"],
+        "portCount": 6,
+        "maxPowerKw": 120,
+        "stationType": "public",
+        "isVinFastOnly": false,
+        "operatingHours": "06:00-23:00",
+        "provider": "VinFast",
+        "chargingStatus": "available",
+        "parkingFee": true
+      },
+      "distanceKm": 1.2,
+      "isCompatible": true,
+      "estimatedChargeTimeMin": 35
+    },
+    {
+      "station": {
+        "id": "station-d7",
+        "name": "EV Charging Hub - Phú Mỹ Hưng",
+        "address": "Khu Trung Sơn, Quận 7, TP.HCM",
+        "province": "Ho Chi Minh",
+        "latitude": 10.7285,
+        "longitude": 106.6999,
+        "chargerTypes": ["DC"],
+        "connectorTypes": ["CCS2", "CHAdeMO"],
+        "portCount": 8,
+        "maxPowerKw": 200,
+        "stationType": "public",
+        "isVinFastOnly": false,
+        "operatingHours": "24/7",
+        "provider": "EVN",
+        "chargingStatus": "busy",
+        "parkingFee": false
+      },
+      "distanceKm": 4.8,
+      "isCompatible": true,
+      "estimatedChargeTimeMin": 22
+    }
+  ],
+  "count": 3
+}

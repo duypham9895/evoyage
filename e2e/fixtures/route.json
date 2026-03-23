@@ -1,0 +1,52 @@
+{
+  "totalDistanceKm": 310.5,
+  "totalDurationMin": 360,
+  "chargingStops": [
+    {
+      "station": {
+        "id": "station-bao-loc",
+        "name": "VinFast Charging - Bảo Lộc",
+        "address": "Quốc lộ 20, Bảo Lộc, Lâm Đồng",
+        "province": "Lâm Đồng",
+        "latitude": 11.5474,
+        "longitude": 107.8088,
+        "chargerTypes": ["DC"],
+        "connectorTypes": ["CCS2"],
+        "portCount": 4,
+        "maxPowerKw": 150,
+        "stationType": "public",
+        "isVinFastOnly": true,
+        "operatingHours": "24/7",
+        "provider": "VinFast",
+        "chargingStatus": "available",
+        "parkingFee": false
+      },
+      "distanceFromStartKm": 180.2,
+      "arrivalBatteryPercent": 22,
+      "departureBatteryPercent": 80,
+      "estimatedChargingTimeMin": 32
+    }
+  ],
+  "warnings": [],
+  "batterySegments": [
+    {
+      "startKm": 0,
+      "endKm": 180.2,
+      "startBatteryPercent": 80,
+      "endBatteryPercent": 22,
+      "label": "HCM → Bảo Lộc"
+    },
+    {
+      "startKm": 180.2,
+      "endKm": 310.5,
+      "startBatteryPercent": 80,
+      "endBatteryPercent": 35,
+      "label": "Bảo Lộc → Đà Lạt"
+    }
+  ],
+  "arrivalBatteryPercent": 35,
+  "totalChargingTimeMin": 32,
+  "polyline": "k~umAqbtiSdC{E",
+  "startAddress": "Thành phố Hồ Chí Minh, Việt Nam",
+  "endAddress": "Đà Lạt, Lâm Đồng, Việt Nam"
+}

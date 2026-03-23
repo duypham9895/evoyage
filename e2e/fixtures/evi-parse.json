@@ -1,0 +1,27 @@
+{
+  "isComplete": true,
+  "isStationSearch": false,
+  "followUpType": null,
+  "tripParams": {
+    "start": "Thành phố Hồ Chí Minh, Việt Nam",
+    "startLat": 10.7769,
+    "startLng": 106.7009,
+    "startSource": "parsed",
+    "end": "Đà Lạt, Lâm Đồng, Việt Nam",
+    "endLat": 11.9404,
+    "endLng": 108.4583,
+    "vehicleId": "vf5-plus",
+    "vehicleName": "VinFast VF 5 Plus",
+    "vehicleData": null,
+    "currentBattery": 80,
+    "minArrival": 15,
+    "rangeSafetyFactor": 0.80
+  },
+  "followUpQuestion": null,
+  "followUpCount": 1,
+  "maxFollowUps": 2,
+  "suggestedOptions": [],
+  "displayMessage": "Got it! Planning a trip from HCM to Da Lat with VinFast VF 5 Plus.",
+  "error": null,
+  "nearbyStations": null
+}
