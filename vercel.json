@@ -1,4 +1,7 @@
 {
+  "git": {
+    "deploymentEnabled": false
+  },
   "functions": {
     "src/app/api/stations/[id]/vinfast-detail/route.ts": {
       "memory": 512
