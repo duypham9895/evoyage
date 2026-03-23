@@ -19,11 +19,7 @@ vi.mock('@/lib/locale', () => ({
   }),
 }));
 
-vi.mock('@/lib/haptics', () => ({
-  hapticLight: vi.fn(),
-}));
-
-// jsdom stub for haptics (uses window.matchMedia)
+// jsdom stub for matchMedia (used by some imports)
 Object.defineProperty(window, 'matchMedia', {
   value: vi.fn().mockReturnValue({ matches: false }),
   writable: true,

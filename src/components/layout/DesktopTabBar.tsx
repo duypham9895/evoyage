@@ -2,7 +2,6 @@
 
 import { useRef, useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
-import { hapticLight } from '@/lib/haptics';
 import type { DesktopSidebarTab } from '@/hooks/useDesktopSidebarTab';
 
 interface DesktopTabBarProps {
@@ -67,7 +66,7 @@ export default function DesktopTabBar({ activeTab, onTabChange }: DesktopTabBarP
             aria-controls={panelId}
             id={`desktop-tab-${id}`}
             tabIndex={isActive ? 0 : -1}
-            onClick={() => { hapticLight(); onTabChange(id); }}
+            onClick={() => onTabChange(id)}
             className={`flex-1 py-2.5 min-h-[44px] text-sm font-semibold rounded-t-lg transition-colors ${
               isActive
                 ? 'bg-[var(--color-accent)] text-[var(--color-background)]'

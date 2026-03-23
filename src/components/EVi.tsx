@@ -267,11 +267,11 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
   // Subscribe to "Ask eVi" events from map markers
   useEffect(() => {
     const unsubscribe = onStationAskEVi((payload) => {
-      setInputValue(`Tell me about ${payload.stationName}`);
+      setInputValue(t('evi_ask_about_station' as Parameters<typeof t>[0], { name: payload.stationName }));
       inputRef.current?.focus();
     });
     return unsubscribe;
-  }, []);
+  }, [t]);
 
   const handleFollowUpOption = useCallback(
     (label: string) => {

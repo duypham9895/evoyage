@@ -347,5 +347,6 @@
   "map_card_ask_evi": "Hỏi eVi về trạm này",
   "map_card_charge_time": "~{{minutes}} phút sạc đến 80%",
   "map_card_ports": "{{count}} cổng sạc",
-  "evi_show_on_map": "Xem trên bản đồ"
+  "evi_show_on_map": "Xem trên bản đồ",
+  "evi_ask_about_station": "Cho mình biết về {{name}}"
 }

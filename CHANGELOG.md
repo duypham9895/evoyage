@@ -26,6 +26,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follo
 ### Fixed
 - Status ring would show "unknown" for all stations due to case mismatch between API (UPPERCASE) and rendering (lowercase)
 - Station ID mismatch between StationCard (lat-lng key) and Map.tsx (DB id) that prevented highlight from working
+- "Ask eVi" pre-fill text was hardcoded English — now uses locale key `evi_ask_about_station` for bilingual support
+- Mini-card distance displayed raw floating point (e.g., 2.345678 km) — now rounded to 1 decimal
+- Double haptic feedback on desktop tab click — removed duplicate call in DesktopTabBar
 
 ## [0.4.0] — 2026-03-22
 

@@ -170,9 +170,9 @@ describe('mini-card', () => {
       expect(html).toContain(longName);
     });
 
-    it('formats distance with decimal precision', () => {
+    it('formats distance rounded to one decimal', () => {
       const html = renderMiniCardHtml({ ...baseData, distanceKm: 1.234 });
-      expect(html).toContain('1.234 km');
+      expect(html).toContain('1.2 km');
     });
   });
 });

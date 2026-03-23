@@ -347,5 +347,6 @@
   "map_card_ask_evi": "Ask eVi about this station",
   "map_card_charge_time": "~{{minutes}} min to 80%",
   "map_card_ports": "{{count}} ports",
-  "evi_show_on_map": "Show on Map"
+  "evi_show_on_map": "Show on Map",
+  "evi_ask_about_station": "Tell me about {{name}}"
 }

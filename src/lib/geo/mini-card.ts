@@ -86,7 +86,7 @@ export function renderMiniCardHtml(data: MiniCardData, labels: MiniCardLabels = 
     `<div style="font-family:system-ui;max-width:220px;font-size:12px;line-height:1.5">` +
       `<div style="font-weight:600;color:${providerColor};margin-bottom:4px">${name}</div>` +
       `<div style="display:flex;justify-content:space-between;color:#aab;font-size:11px;margin-bottom:3px">` +
-        `<span>${data.distanceKm} km</span>` +
+        `<span>${data.distanceKm.toFixed(1)} km</span>` +
         `<span>${data.maxPowerKw} kW ${connectors}</span>` +
       `</div>` +
       `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">` +
