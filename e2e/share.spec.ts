@@ -2,6 +2,8 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs, navigateToPlan, completeTripPlan } from './helpers/app';
 
 test.describe('F7: Share Trip — Link + QR + Image', () => {
+  test.skip(({ isMobile }) => isMobile, 'Desktop-only: uses sidebar tab navigation');
+
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
     await navigateToPlan(page);

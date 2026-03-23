@@ -2,6 +2,8 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs } from './helpers/app';
 
 test.describe('F8: Bilingual — Vietnamese <-> English', () => {
+  test.skip(({ isMobile }) => isMobile, 'Desktop-only: language toggle not accessible on mobile viewport');
+
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
   });

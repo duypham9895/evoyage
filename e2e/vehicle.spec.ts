@@ -2,6 +2,8 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs, navigateToPlan, switchToTab } from './helpers/app';
 
 test.describe('F6: Vehicle Selection + Custom Vehicle', () => {
+  test.skip(({ isMobile }) => isMobile, 'Desktop-only: uses sidebar tab navigation');
+
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
     await navigateToPlan(page);

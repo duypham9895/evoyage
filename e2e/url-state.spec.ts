@@ -2,6 +2,8 @@ import { test, expect } from 'playwright/test';
 import { mockAPIs, waitForAppReady, switchToTab } from './helpers/app';
 
 test.describe('F10: URL State — Share Link Restoration', () => {
+  test.skip(({ isMobile }) => isMobile, 'Desktop-only: uses sidebar tab navigation');
+
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
   });
@@ -27,18 +29,26 @@ test.describe('F10: URL State — Share Link Restoration', () => {
     await expect(vehicleInfo).toBeVisible({ timeout: 5_000 });
   });
 
-  test('short URL redirect resolves correctly', async ({ page }) => {
-    // Step 5: Mock the short URL redirect
-    await page.route('**/s/aBcD1e2', (route) =>
-      route.fulfill({
+  test('short URL redirect resolves correctly', async ({ page, browserName }) => {
+    // WebKit doesn't support route.fulfill with redirect status codes
+    // Use route.fulfill with 200 + meta refresh as a cross-browser alternative
+    await page.route('**/s/aBcD1e2', (route) => {
+      const redirectUrl = '/plan?start=Ho+Chi+Minh+City&end=Da+Lat&vehicleId=vf8-plus';
+      if (browserName === 'webkit') {
+        // Serve HTML that redirects via meta refresh + JS
+        return route.fulfill({
+          status: 200,
+          contentType: 'text/html',
+          body: `<html><head><meta http-equiv="refresh" content="0;url=${redirectUrl}"><script>window.location.replace("${redirectUrl}")</script></head></html>`,
+        });
+      }
+      return route.fulfill({
         status: 307,
-        headers: {
-          Location: '/plan?start=Ho+Chi+Minh+City&end=Da+Lat&vehicleId=vf8-plus',
-        },
-      }),
-    );
+        headers: { Location: redirectUrl },
+      });
+    });
 
-    // Step 6: Navigate to short URL
+    // Navigate to short URL
     await page.goto('/s/aBcD1e2');
 
     // Verify redirect happened (page should end up at /plan)

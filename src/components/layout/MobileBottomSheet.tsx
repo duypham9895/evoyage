@@ -155,6 +155,7 @@ export default function MobileBottomSheet({
   return (
     <div
       ref={sheetRef}
+      data-testid="bottom-sheet"
       className="fixed bottom-0 left-0 right-0 z-40 flex flex-col bg-[var(--color-surface)] rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)] border-t border-[var(--color-surface-hover)] lg:hidden"
       style={{
         height: `${Math.max(SNAP_HEIGHTS.peek, Math.min(currentHeight, typeof window !== 'undefined' ? window.innerHeight * 0.92 : 800))}px`,
@@ -164,6 +165,7 @@ export default function MobileBottomSheet({
     >
       {/* Drag handle */}
       <div
+        data-testid="sheet-handle"
         className="shrink-0 flex flex-col items-center pt-2 pb-2 cursor-grab active:cursor-grabbing touch-none select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
