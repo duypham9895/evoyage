@@ -10,39 +10,17 @@ test.describe('F4: Mobile Bottom Sheet Gestures', () => {
     await navigateToPlan(page);
   });
 
-  test('swipe up expands sheet to full screen', async ({ page }) => {
-    // Step 2: Find the bottom sheet handle
-    const handle = page.locator('[data-testid="sheet-handle"], [role="slider"], .sheet-handle, .drag-handle').first();
-
-    // If no explicit handle, use the sheet container
-    const sheet = handle.or(page.locator('[data-testid="bottom-sheet"], .bottom-sheet').first());
+  test('bottom sheet is visible with drag handle', async ({ page }) => {
+    const sheet = page.locator('[data-testid="bottom-sheet"]');
     await expect(sheet).toBeVisible();
 
-    // Step 3: Swipe up
+    const handle = page.locator('[data-testid="sheet-handle"]');
+    await expect(handle).toBeVisible();
+
+    // Verify sheet has reasonable height (not collapsed to 0)
     const box = await sheet.boundingBox();
-    if (box) {
-      await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
-      // Simulate swipe up gesture
-      const startY = box.y + box.height / 2;
-      const endY = 100; // Near top of viewport
-
-      await page.mouse.move(box.x + box.width / 2, startY);
-      await page.mouse.down();
-      await page.mouse.move(box.x + box.width / 2, endY, { steps: 10 });
-      await page.mouse.up();
-    }
-
-    // Step 4: Verify sheet expanded — content should be scrollable
-    // The sheet should now cover more of the viewport
-    await page.waitForFunction(() => {
-      const sheet = document.querySelector('[data-testid="bottom-sheet"], .bottom-sheet, [role="dialog"]');
-      if (!sheet) return false;
-      const rect = sheet.getBoundingClientRect();
-      // Sheet should be near top of viewport when expanded
-      return rect.top < window.innerHeight * 0.3;
-    }, { timeout: 5_000 }).catch(() => {
-      // Swipe gesture may not work perfectly in emulation — not a blocking failure
-    });
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThan(100);
   });
 
   test('tab switching works on mobile', async ({ page }) => {
