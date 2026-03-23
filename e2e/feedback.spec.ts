@@ -7,7 +7,7 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
     await page.goto('/plan');
     await page.evaluate(() => localStorage.removeItem('evoyage-fab-position'));
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('FAB is visible on page load', async ({ page }) => {
@@ -92,7 +92,7 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
 
     // Reload and verify position persisted
     await page.reload();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const afterReloadFab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
     await expect(async () => {

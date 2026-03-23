@@ -110,8 +110,9 @@ export async function navigateToPlan(page: Page): Promise<void> {
  * Verifies map container and Leaflet tile layers are loaded.
  */
 export async function waitForAppReady(page: Page): Promise<void> {
-  // Wait for the main page content to be present
-  await page.waitForLoadState('networkidle');
+  // Wait for DOM ready — avoid 'networkidle' which times out in CI
+  // due to ongoing map tile requests and SSE connections
+  await page.waitForLoadState('domcontentloaded');
 
   // Verify map container rendered (Leaflet)
   const mapContainer = page.locator('.leaflet-container');

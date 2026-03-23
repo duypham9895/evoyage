@@ -21,7 +21,7 @@ test.describe('F8: Bilingual — Vietnamese <-> English', () => {
 
     // Step 5: Navigate to /plan
     await page.goto('/plan');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Step 6: Verify /plan UI is in Vietnamese
     const viPlanText = page.locator('text=/eVi|Trạm|Kế hoạch/').first();
