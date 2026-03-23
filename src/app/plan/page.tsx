@@ -25,6 +25,7 @@ import MapLocateButton from '@/components/map/MapLocateButton';
 import FeedbackFAB from '@/components/feedback/FeedbackFAB';
 import MobileBottomSheet from '@/components/layout/MobileBottomSheet';
 import MobileTabBar, { type MobileTab } from '@/components/layout/MobileTabBar';
+import DesktopTabBar from '@/components/layout/DesktopTabBar';
 import type { EVVehicleData, CustomVehicleInput, TripPlan, ChargingStationData } from '@/types';
 import type { RankedStation, ChargingStopWithAlternatives } from '@/types';
 import type { NominatimResult } from '@/lib/geo/nominatim';
@@ -209,9 +210,8 @@ function HomeContent() {
     setEndCoords({ lat: result.lat, lng: result.lng });
   }, []);
 
-  // Desktop sidebar: tab switcher (eVi chat vs manual form) + stations overlay
+  // Desktop sidebar: tab switcher (eVi chat vs Plan Trip vs Stations)
   const { activeTab: desktopSidebarTab, setTab: handleDesktopTabChange } = useDesktopSidebarTab();
-  const [showStationsView, setShowStationsView] = useState(false);
 
   // Flag to auto-trigger planning after eVi fills the form
   const [autoPlanPending, setAutoPlanPending] = useState(false);
@@ -259,13 +259,12 @@ function HomeContent() {
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, []);
 
-  // "Find nearby stations" — switch to stations tab (mobile) or stations view (desktop)
+  // "Find nearby stations" — switch to stations tab on both mobile and desktop
   const handleFindNearbyStations = useCallback(() => {
     setActiveTab('stations');
-    setShowStationsView(true);
-    handleDesktopTabChange('evi');
+    handleDesktopTabChange('stations');
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
-  }, []);
+  }, [handleDesktopTabChange]);
 
   // Clear coords when text input changes manually
   const handleStartChange = useCallback((value: string) => {
@@ -496,6 +495,18 @@ function HomeContent() {
     if (tripPlan) setNearbyStations(null);
   }, [tripPlan]);
 
+  // Mobile: auto-request geolocation when Stations tab is active (300ms debounce)
+  useEffect(() => {
+    if (activeTab !== 'stations') return;
+    if (geo.latitude != null || geo.loading) return; // Already have location or loading
+
+    const timer = setTimeout(() => {
+      geo.requestLocation();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, geo.latitude, geo.loading, geo.requestLocation]);
+
   // Map component
   const mapContent = (
     <>
@@ -507,6 +518,7 @@ function HomeContent() {
           waypoints={waypointMarkers}
           nearbyStations={nearbyStations}
           userLocation={userLocationForMap}
+          onSwitchToEVi={() => { setActiveTab('evi'); handleDesktopTabChange('evi'); }}
         />
       )}
     </>
@@ -607,7 +619,9 @@ function HomeContent() {
             )}
 
             {activeTab === 'stations' && (
-              <NearbyStations />
+              <NearbyStations
+                initialLocation={geo.latitude != null && geo.longitude != null ? { lat: geo.latitude, lng: geo.longitude } : null}
+              />
             )}
 
             {/* Plan button — only on route/vehicle/battery tabs (eVi has its own, stations doesn't need one) */}
@@ -629,62 +643,27 @@ function HomeContent() {
     );
   }
 
-  // ─── Desktop Layout (unchanged) ───────────────────────────
+  // ─── Desktop Layout ──────────────────────────────────────
   return (
     <div className="h-screen flex flex-col">
       <Header />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Sidebar — tab switcher + content */}
+        {/* Sidebar — 3-tab switcher + content */}
         <aside className="w-full lg:w-[380px] lg:min-w-[380px] flex flex-col overflow-hidden bg-[var(--color-surface)] border-r border-[var(--color-surface-hover)]">
-          {/* Desktop tab bar */}
-          {!showStationsView && (
-            <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-[var(--color-border)]" role="tablist" aria-label={t('desktop_tab_evi' as Parameters<typeof t>[0])}>
-              <button
-                role="tab"
-                aria-selected={desktopSidebarTab === 'evi'}
-                aria-controls="desktop-tabpanel-evi"
-                id="desktop-tab-evi"
-                onClick={() => handleDesktopTabChange('evi')}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
-                  desktopSidebarTab === 'evi'
-                    ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
-                    : 'bg-transparent text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
-                }`}
-              >
-                {t('desktop_tab_evi' as Parameters<typeof t>[0])}
-              </button>
-              <button
-                role="tab"
-                aria-selected={desktopSidebarTab === 'planTrip'}
-                aria-controls="desktop-tabpanel-plan"
-                id="desktop-tab-plan"
-                onClick={() => handleDesktopTabChange('planTrip')}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-t-lg transition-colors ${
-                  desktopSidebarTab === 'planTrip'
-                    ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
-                    : 'bg-transparent text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
-                }`}
-              >
-                {t('desktop_tab_plan' as Parameters<typeof t>[0])}
-              </button>
-            </div>
-          )}
+          {/* Desktop tab bar (eVi | Plan Trip | Stations) */}
+          <DesktopTabBar activeTab={desktopSidebarTab} onTabChange={handleDesktopTabChange} />
 
-          {/* Sidebar content */}
+          {/* Sidebar content — 150ms fade-in transition on tab switch */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-            {showStationsView ? (
-              <div className="space-y-4">
-                <button
-                  onClick={() => setShowStationsView(false)}
-                  className="text-sm text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
-                >
-                  ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
-                </button>
-                <NearbyStations />
+            {desktopSidebarTab === 'stations' ? (
+              <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-stations" aria-labelledby="desktop-tab-stations">
+                <NearbyStations
+                  initialLocation={geo.latitude != null && geo.longitude != null ? { lat: geo.latitude, lng: geo.longitude } : null}
+                />
               </div>
             ) : desktopSidebarTab === 'planTrip' ? (
-              <div className="space-y-4" role="tabpanel" id="desktop-tabpanel-plan" aria-labelledby="desktop-tab-plan">
+              <div className="space-y-4 animate-fadeIn" role="tabpanel" id="desktop-tabpanel-plan" aria-labelledby="desktop-tab-planTrip">
                 <TripInput
                   start={start}
                   end={end}

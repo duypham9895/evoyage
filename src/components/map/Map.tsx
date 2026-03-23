@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import type { TripPlan, ChargingStationData } from '@/types';
 import { getStopStation } from '@/types';
 import { decodePolyline } from '@/lib/geo/polyline';
@@ -12,9 +12,20 @@ import {
   buildStopPopupHtml,
   escapeHtml,
 } from '@/lib/geo/map-utils';
+import { renderSmartMarkerHtml, getMarkerSize } from '@/lib/geo/smart-marker';
+import { renderMiniCardHtml, type MiniCardLabels } from '@/lib/geo/mini-card';
+import { useLocale } from '@/lib/locale';
+import {
+  onStationHighlight,
+  onStationClearHighlight,
+  emitStationAskEVi,
+  type StationHighlightPayload,
+} from '@/lib/events/station-events';
 
-interface NearbyStationMarker extends ChargingStationData {
+export interface NearbyStationMarker extends ChargingStationData {
   readonly distanceKm: number;
+  readonly isCompatible?: boolean | null;
+  readonly estimatedChargeTimeMin?: number | null;
 }
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -30,6 +41,7 @@ interface MapProps {
   readonly waypoints?: readonly WaypointMarkerData[];
   readonly nearbyStations?: readonly NearbyStationMarker[] | null;
   readonly userLocation?: { lat: number; lng: number } | null;
+  readonly onSwitchToEVi?: () => void;
 }
 
 // Dark tile layer (CartoDB Dark Matter)
@@ -66,11 +78,14 @@ function createEndpointIcon(label: string): L.DivIcon {
   });
 }
 
-export default function Map({ tripPlan, waypoints, nearbyStations, userLocation }: MapProps) {
+export default function Map({ tripPlan, waypoints, nearbyStations, userLocation, onSwitchToEVi }: MapProps) {
+  const { t } = useLocale();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const overlaysRef = useRef<L.LayerGroup | null>(null);
   const nearbyLayerRef = useRef<L.LayerGroup | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nearbyMarkersRef = useRef<globalThis.Map<string, L.Marker>>(new globalThis.Map());
 
   // Initialize map
   useEffect(() => {
@@ -162,6 +177,82 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation 
     map.fitBounds(bounds, { padding: [50, 50] });
   }, [tripPlan, waypoints]);
 
+  // Register global callback for "Ask eVi" button in mini-card popups
+  const handleAskEVi = useCallback((stationId: string, stationName: string) => {
+    emitStationAskEVi({ stationId, stationName });
+    onSwitchToEVi?.();
+  }, [onSwitchToEVi]);
+
+  // Highlight a specific station marker (fly-to + pulse)
+  const highlightStation = useCallback((payload: StationHighlightPayload) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Clear previous highlight timer
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+
+    // Fly to station
+    map.flyTo([payload.latitude, payload.longitude], 16, { duration: 1 });
+
+    // Dim all markers, then pulse the target
+    nearbyMarkersRef.current.forEach((marker, id) => {
+      const el = marker.getElement();
+      if (!el) return;
+      if (id === payload.stationId) {
+        el.style.opacity = '1';
+        el.style.animation = 'station-pulse 1.5s ease-in-out infinite';
+      } else {
+        el.style.opacity = '0.3';
+        el.style.animation = '';
+      }
+    });
+
+    // Auto-clear after 8 seconds
+    highlightTimerRef.current = setTimeout(() => {
+      nearbyMarkersRef.current.forEach((marker) => {
+        const el = marker.getElement();
+        if (!el) return;
+        el.style.opacity = '1';
+        el.style.animation = '';
+      });
+    }, 8000);
+  }, []);
+
+  // Clear highlight on map background click
+  const clearHighlight = useCallback(() => {
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+      highlightTimerRef.current = null;
+    }
+    nearbyMarkersRef.current.forEach((marker) => {
+      const el = marker.getElement();
+      if (!el) return;
+      el.style.opacity = '1';
+      el.style.animation = '';
+    });
+  }, []);
+
+  // Subscribe to station highlight events
+  useEffect(() => {
+    const unsubHighlight = onStationHighlight(highlightStation);
+    const unsubClear = onStationClearHighlight(clearHighlight);
+
+    // Clear highlight on map background click
+    const map = mapInstanceRef.current;
+    if (map) {
+      map.on('click', clearHighlight);
+    }
+
+    return () => {
+      unsubHighlight();
+      unsubClear();
+      if (map) map.off('click', clearHighlight);
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    };
+  }, [highlightStation, clearHighlight]);
+
   // Render nearby station markers (separate layer so trip plan rendering doesn't clear them)
   useEffect(() => {
     const map = mapInstanceRef.current;
@@ -169,8 +260,32 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation 
     if (!map || !nearbyLayer) return;
 
     nearbyLayer.clearLayers();
+    nearbyMarkersRef.current.clear();
 
     if (!nearbyStations || nearbyStations.length === 0) return;
+
+    // Inject pulse animation CSS (once)
+    if (!document.getElementById('station-pulse-css')) {
+      const style = document.createElement('style');
+      style.id = 'station-pulse-css';
+      style.textContent = `@keyframes station-pulse { 0%,100% { transform:scale(1); filter:brightness(1); } 50% { transform:scale(1.3); filter:brightness(1.4); } }`;
+      document.head.appendChild(style);
+    }
+
+    // Build locale labels for mini-card popups
+    const miniCardLabels: MiniCardLabels = {
+      available: t('map_status_available' as Parameters<typeof t>[0]),
+      busy: t('map_status_busy' as Parameters<typeof t>[0]),
+      offline: t('map_status_offline' as Parameters<typeof t>[0]),
+      statusUnknown: t('map_status_unknown' as Parameters<typeof t>[0]),
+      disclaimer: t('map_status_disclaimer' as Parameters<typeof t>[0]),
+      compatible: t('nearby_compatible' as Parameters<typeof t>[0]),
+      notCompatible: t('nearby_not_compatible' as Parameters<typeof t>[0]),
+      chargeTime: t('map_card_charge_time' as Parameters<typeof t>[0]),
+      askEVi: t('map_card_ask_evi' as Parameters<typeof t>[0]),
+      navigate: t('nearby_navigate' as Parameters<typeof t>[0]),
+      ports: t('map_card_ports' as Parameters<typeof t>[0]),
+    };
 
     // User location marker (blue pulsing dot)
     if (userLocation) {
@@ -187,28 +302,67 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation 
       map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 1 });
     }
 
-    // Station markers with distance labels
+    // Smart station markers with visual encoding
     nearbyStations.forEach((station) => {
-      const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
+      const { size } = getMarkerSize(station.maxPowerKw);
+      const half = size / 2;
+      const markerHtml = renderSmartMarkerHtml({
+        provider: station.provider,
+        maxPowerKw: station.maxPowerKw,
+        chargingStatus: station.chargingStatus,
+        isCompatible: station.isCompatible ?? null,
+      });
+
       const icon = L.divIcon({
         className: '',
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
-        popupAnchor: [0, -14],
-        html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #0F0F11;opacity:0.9"></div>`,
+        iconSize: [size, size],
+        iconAnchor: [half, half],
+        popupAnchor: [0, -half - 4],
+        html: markerHtml,
       });
 
       const marker = L.marker([station.latitude, station.longitude], { icon });
-      marker.bindPopup(
-        `<div style="font-family:system-ui;font-size:13px;line-height:1.4">` +
-        `<b>${escapeHtml(station.name)}</b><br/>` +
-        `<span style="color:#a0a0ab">${station.distanceKm} km · ${station.maxPowerKw} kW · ${station.provider}</span><br/>` +
-        `<a href="https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}" ` +
-        `target="_blank" rel="noopener" style="color:#00D4AA;text-decoration:none">Navigate →</a></div>`,
-      );
+
+      // Rich mini-card popup
+      const popupHtml = renderMiniCardHtml({
+        name: station.name,
+        distanceKm: station.distanceKm,
+        maxPowerKw: station.maxPowerKw,
+        connectorTypes: station.connectorTypes,
+        portCount: station.portCount,
+        provider: station.provider,
+        chargingStatus: station.chargingStatus,
+        isCompatible: station.isCompatible ?? null,
+        estimatedChargeTimeMin: station.estimatedChargeTimeMin ?? null,
+        latitude: station.latitude,
+        longitude: station.longitude,
+      }, miniCardLabels);
+
+      marker.bindPopup(popupHtml, { maxWidth: 240, className: 'smart-popup' });
+
+      // When popup opens, attach DOM event listener for "Ask eVi" button (no global callback)
+      marker.on('popupopen', () => {
+        const popup = marker.getPopup();
+        const el = popup?.getElement();
+        const askBtn = el?.querySelector('[data-action="ask-evi"]');
+        askBtn?.addEventListener('click', () => {
+          handleAskEVi(station.id, station.name);
+        });
+      });
+
+      // Transfer highlight on marker click
+      marker.on('click', () => {
+        highlightStation({
+          stationId: `${station.latitude}-${station.longitude}`,
+          latitude: station.latitude,
+          longitude: station.longitude,
+        });
+      });
+
       nearbyLayer.addLayer(marker);
+      nearbyMarkersRef.current.set(`${station.latitude}-${station.longitude}`, marker);
     });
-  }, [nearbyStations, userLocation]);
+  }, [nearbyStations, userLocation, handleAskEVi, highlightStation]);
 
   return <div ref={mapRef} className="w-full h-full" />;
 }
