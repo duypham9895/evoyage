@@ -9,7 +9,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 ## What it does
 
 - Plan routes between any two points in Vietnam with EV-specific constraints
-- See real-time charging station availability from VinFast's network (<!-- STATIONS_COUNT_START -->18,000+<!-- STATIONS_COUNT_END --> stations, 63 provinces — auto-updated daily after the crawl)
+- See real-time charging station availability from VinFast's network (<!-- STATIONS_COUNT_START -->18,496+<!-- STATIONS_COUNT_END --> stations, 63 provinces — auto-updated daily after the crawl)
 - See **trip cost** in VND — electricity vs gasoline equivalent so you know your savings before you leave
 - Report station status with one tap (Working / Broken / Busy) — community-verified data
 - Get AI-powered trip planning via eVi — describe your trip in natural language and let AI fill in the details
