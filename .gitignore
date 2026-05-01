@@ -53,3 +53,13 @@ next-env.d.ts
 # data artifacts
 /data/
 .gstack/
+
+# Claude Code runtime state (keep agents/, docs/, skills/ tracked)
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# session-local context (retros, scratchpads)
+.context/
+
+# Playwright run artifacts
+/test-results/
