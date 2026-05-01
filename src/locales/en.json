@@ -143,8 +143,8 @@
   "landing_hero_subtitle": "eVoyage calculates real-world range, finds charging stations along your route, and shows exactly where to stop — so you can drive with confidence.",
   "landing_hero_cta": "Plan your trip",
   "landing_hero_stat_stations": "Stations",
-  "landing_hero_stat_models": "EV models",
-  "landing_hero_stat_provinces": "Provinces",
+  "landing_hero_stat_models": "VinFast models",
+  "landing_hero_stat_provinces": "Provinces & cities",
   "landing_hero_stats_freshness": "Charging-station count auto-updated daily · last sync {{date}}",
 
   "landing_how_title": "How it works",
@@ -178,8 +178,8 @@
 
   "landing_stats_title": "Covering all of Vietnam",
   "landing_stats_stations": "Stations",
-  "landing_stats_provinces": "Provinces",
-  "landing_stats_models": "EV models",
+  "landing_stats_provinces": "Provinces & cities",
+  "landing_stats_models": "VinFast models",
   "landing_stats_free": "Always free",
 
   "landing_faq_title": "Common questions",
