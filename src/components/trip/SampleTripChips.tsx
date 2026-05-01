@@ -8,61 +8,21 @@ interface SampleTripChipsProps {
   readonly onPick: (trip: { start: string; end: string }) => void;
 }
 
-interface SampleTrip {
-  readonly startVi: string;
-  readonly endVi: string;
-  readonly startEn: string;
-  readonly endEn: string;
-}
-
-// Sample trips chosen for first-time visitor familiarity:
-// HCMC pair (Đà Lạt + Vũng Tàu) — most-searched outbound routes from the south.
-// Hà Nội → Hạ Long — the iconic northern weekend trip.
-// Đà Nẵng → Huế — central region, shortest of the four.
-const SAMPLE_TRIPS: readonly SampleTrip[] = [
-  {
-    startVi: 'Quận 1, TP.HCM',
-    endVi: 'Đà Lạt',
-    startEn: 'District 1, HCMC',
-    endEn: 'Da Lat',
-  },
-  {
-    startVi: 'Quận 1, TP.HCM',
-    endVi: 'Vũng Tàu',
-    startEn: 'District 1, HCMC',
-    endEn: 'Vung Tau',
-  },
-  {
-    startVi: 'Hà Nội',
-    endVi: 'Hạ Long',
-    startEn: 'Hanoi',
-    endEn: 'Ha Long',
-  },
-  {
-    startVi: 'Đà Nẵng',
-    endVi: 'Huế',
-    startEn: 'Da Nang',
-    endEn: 'Hue',
-  },
-];
-
-// Hardcoded copy pending orchestrator integration into en.json/vi.json.
-// See LOCALE_KEYS_TO_ADD.md at repo root.
-const LABEL_COPY = {
-  vi: 'Gợi ý cho bạn',
-  en: 'Try a sample trip',
-};
+const SAMPLE_TRIPS = [
+  { startKey: 'sample_trip_hcm_dalat_start', endKey: 'sample_trip_hcm_dalat_end' },
+  { startKey: 'sample_trip_hcm_vungtau_start', endKey: 'sample_trip_hcm_vungtau_end' },
+  { startKey: 'sample_trip_hanoi_halong_start', endKey: 'sample_trip_hanoi_halong_end' },
+  { startKey: 'sample_trip_danang_hue_start', endKey: 'sample_trip_danang_hue_end' },
+] as const;
 
 export default function SampleTripChips({ start, end, onPick }: SampleTripChipsProps) {
-  const { locale } = useLocale();
+  const { t } = useLocale();
 
-  // Hide as soon as the user types meaningful content in either field.
-  // `trim()` so that pure whitespace doesn't suppress the helper.
   if (start.trim().length > 0 || end.trim().length > 0) {
     return null;
   }
 
-  const sectionLabel = LABEL_COPY[locale];
+  const sectionLabel = t('sample_trip_chips_label');
 
   return (
     <div className="space-y-2">
@@ -72,23 +32,17 @@ export default function SampleTripChips({ start, end, onPick }: SampleTripChipsP
         aria-label={sectionLabel}
         style={{ scrollbarWidth: 'none' }}
       >
-        {SAMPLE_TRIPS.map((trip) => {
-          const startLabel = locale === 'vi' ? trip.startVi : trip.startEn;
-          const endLabel = locale === 'vi' ? trip.endVi : trip.endEn;
-          const display = `${startLabel} → ${endLabel}`;
+        {SAMPLE_TRIPS.map(({ startKey, endKey }) => {
+          const startLabel = t(startKey as Parameters<typeof t>[0]);
+          const endLabel = t(endKey as Parameters<typeof t>[0]);
           return (
             <button
-              key={`${trip.startVi}-${trip.endVi}`}
+              key={startKey}
               type="button"
-              onClick={() =>
-                onPick({
-                  start: locale === 'vi' ? trip.startVi : trip.startEn,
-                  end: locale === 'vi' ? trip.endVi : trip.endEn,
-                })
-              }
+              onClick={() => onPick({ start: startLabel, end: endLabel })}
               className="flex-shrink-0 inline-flex items-center min-h-[40px] px-3.5 py-2 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] text-sm font-medium hover:bg-[var(--color-accent)]/20 active:scale-[0.98] transition-all whitespace-nowrap"
             >
-              {display}
+              {startLabel} → {endLabel}
             </button>
           );
         })}

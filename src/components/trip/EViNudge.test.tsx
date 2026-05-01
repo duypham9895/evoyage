@@ -3,15 +3,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EViNudge from './EViNudge';
+import vi_dict from '@/locales/vi.json';
+import en_dict from '@/locales/en.json';
 
-// ── Locale mock — defaults to Vietnamese; tests can override ──
+// ── Locale mock — `t()` resolves from the actual locale JSON ──
 
 let mockLocale: 'vi' | 'en' = 'vi';
+const dicts = { vi: vi_dict, en: en_dict } as const;
 
 vi.mock('@/lib/locale', () => ({
   useLocale: () => ({
     locale: mockLocale,
-    t: (key: string) => key,
+    t: (key: string) =>
+      (dicts[mockLocale] as Record<string, string>)[key] ?? key,
     tBi: (obj: { messageVi: string; messageEn: string }) =>
       mockLocale === 'vi' ? obj.messageVi : obj.messageEn,
     toggleLocale: () => {},

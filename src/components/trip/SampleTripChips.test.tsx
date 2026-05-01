@@ -3,16 +3,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import SampleTripChips from '@/components/trip/SampleTripChips';
+import vi_dict from '@/locales/vi.json';
+import en_dict from '@/locales/en.json';
 
-// Mock locale module — we override `useLocale` per-test so we can verify
-// VN vs EN labels independently.
+// Mock locale module — `t()` resolves from the actual locale JSON so
+// component-level localization is exercised end-to-end without a provider.
 const mockLocaleState = { current: 'vi' as 'vi' | 'en' };
+const dicts = { vi: vi_dict, en: en_dict } as const;
 
 vi.mock('@/lib/locale', () => ({
   useLocale: () => ({
     locale: mockLocaleState.current,
     toggleLocale: () => {},
-    t: (key: string) => key,
+    t: (key: string) =>
+      (dicts[mockLocaleState.current] as Record<string, string>)[key] ?? key,
     tBi: (obj: { messageVi: string; messageEn: string }) =>
       mockLocaleState.current === 'vi' ? obj.messageVi : obj.messageEn,
   }),

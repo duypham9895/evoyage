@@ -382,5 +382,22 @@
   "trip_cost_hero_percent_more": "Tốn thêm {{percent}}%",
   "trip_cost_show_breakdown": "Cách tính?",
   "trip_cost_hide_breakdown": "Ẩn",
+
+  "sample_trip_chips_label": "Gợi ý cho bạn",
+  "sample_trip_hcm_dalat_start": "Quận 1, TP.HCM",
+  "sample_trip_hcm_dalat_end": "Đà Lạt",
+  "sample_trip_hcm_vungtau_start": "Quận 1, TP.HCM",
+  "sample_trip_hcm_vungtau_end": "Vũng Tàu",
+  "sample_trip_hanoi_halong_start": "Hà Nội",
+  "sample_trip_hanoi_halong_end": "Hạ Long",
+  "sample_trip_danang_hue_start": "Đà Nẵng",
+  "sample_trip_danang_hue_end": "Huế",
+
+  "evi_nudge_headline": "Bí ý tưởng? Hỏi eVi nhé.",
+  "evi_nudge_body": "Ví dụ: 'gợi ý chuyến đi cuối tuần'",
+  "evi_nudge_cta": "Mở eVi",
+  "evi_nudge_dismiss": "Để sau",
+  "evi_nudge_close_aria": "Đóng",
+
   "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ."
 }

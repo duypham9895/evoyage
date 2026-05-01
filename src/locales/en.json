@@ -382,5 +382,22 @@
   "trip_cost_hero_percent_more": "{{percent}}% more",
   "trip_cost_show_breakdown": "How is this calculated?",
   "trip_cost_hide_breakdown": "Hide",
+
+  "sample_trip_chips_label": "Try a sample trip",
+  "sample_trip_hcm_dalat_start": "District 1, HCMC",
+  "sample_trip_hcm_dalat_end": "Da Lat",
+  "sample_trip_hcm_vungtau_start": "District 1, HCMC",
+  "sample_trip_hcm_vungtau_end": "Vung Tau",
+  "sample_trip_hanoi_halong_start": "Hanoi",
+  "sample_trip_hanoi_halong_end": "Ha Long",
+  "sample_trip_danang_hue_start": "Da Nang",
+  "sample_trip_danang_hue_end": "Hue",
+
+  "evi_nudge_headline": "Stuck? Ask eVi.",
+  "evi_nudge_body": "Try: 'suggest a weekend trip'",
+  "evi_nudge_cta": "Open eVi",
+  "evi_nudge_dismiss": "Later",
+  "evi_nudge_close_aria": "Close",
+
   "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly."
 }
