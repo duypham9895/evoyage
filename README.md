@@ -2,7 +2,9 @@
 
 Plan EV road trips across Vietnam with real charging station data. Know exactly where to charge, how long to wait, and whether you'll make it — before you leave.
 
-**Built entirely by Claude Code.** Duy Pham is the Product Manager — defining features, making design decisions, and ensuring quality. [Read about the transparency philosophy.](https://evoyage.vercel.app)
+**Live:** [https://evoyagevn.vercel.app/](https://evoyagevn.vercel.app/)
+
+**Built entirely by Claude Code.** Duy Pham is the Product Manager — defining features, making design decisions, and ensuring quality.
 
 ## What it does
 
@@ -35,7 +37,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 
 ```bash
 # Clone and install
-git clone https://github.com/phamduy-agilityio/evoyage.git
+git clone https://github.com/duypham9895/evoyage.git
 cd evoyage
 npm install
 

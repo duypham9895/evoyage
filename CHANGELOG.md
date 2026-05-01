@@ -3,6 +3,15 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.6.2] — 2026-05-01
+
+### Fixed
+- **Wrong production URL in README** — the "transparency philosophy" link pointed to `https://evoyage.vercel.app` (404), not the live `https://evoyagevn.vercel.app/`. Visitors clicking the only outbound link in the README intro hit a dead page.
+- **Wrong clone URL in README and CONTRIBUTING.md** — `https://github.com/phamduy-agilityio/evoyage.git` (404) instead of `https://github.com/duypham9895/evoyage.git`. This is the third stale-username variant shipped to docs after `edwardpham94` (footer, fixed in 0.6.0) and `evoyage` (live URL above) — same class of drift, different surface. Repo-wide grep is now clean.
+
+### Changed
+- **Live URL promoted to a prominent line under the tagline** so the "try the app" path is obvious. Previously buried as a "transparency philosophy" link inside the credit line.
+
 ## [0.6.1] — 2026-05-01
 
 ### Fixed

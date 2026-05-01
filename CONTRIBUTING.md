@@ -15,7 +15,7 @@ If you're interested in the project:
 ## Development Setup
 
 ```bash
-git clone https://github.com/phamduy-agilityio/evoyage.git
+git clone https://github.com/duypham9895/evoyage.git
 cd evoyage
 npm install
 cp .env.example .env.local
