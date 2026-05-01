@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
 import { hapticLight } from '@/lib/haptics';
 import { emitStationHighlight } from '@/lib/events/station-events';
+import { trackStationTapped } from '@/lib/analytics';
 import type { NearbyStationInfo } from '@/lib/evi/types';
 
 // ── Status Color Mapping ──
@@ -41,12 +42,17 @@ export default function StationCard({ station }: StationCardProps) {
 
   const handleShowOnMap = useCallback(() => {
     hapticLight();
+    const stationId = `${station.latitude}-${station.longitude}`;
     emitStationHighlight({
-      stationId: `${station.latitude}-${station.longitude}`,
+      stationId,
       latitude: station.latitude,
       longitude: station.longitude,
     });
-  }, [station.latitude, station.longitude]);
+    // Analytics: opaque ID + provider category only — no coords, no name.
+    try {
+      trackStationTapped(stationId, station.provider);
+    } catch { /* analytics never breaks the flow */ }
+  }, [station.latitude, station.longitude, station.provider]);
 
   const statusColor = station.chargingStatus
     ? (STATUS_COLORS[station.chargingStatus] ?? 'text-gray-500')

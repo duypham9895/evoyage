@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Be_Vietnam_Pro, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
+import AnalyticsProvider from '@/components/AnalyticsProvider';
 import './globals.css';
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body
         className={`${beVietnamPro.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased bg-[var(--color-background)] text-[var(--color-foreground)]`}
       >
+        <AnalyticsProvider />
         {children}
       </body>
     </html>

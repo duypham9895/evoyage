@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { useLocale } from '@/lib/locale';
+import { trackShareClicked } from '@/lib/analytics';
 import type { TripPlan } from '@/types';
 
 interface ShareButtonProps {
@@ -153,6 +154,8 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
     try {
       const url = await getOrCreateShortUrl();
       await navigator.clipboard.writeText(url);
+      // Analytics: just the share method category — no URL, no params.
+      try { trackShareClicked('link'); } catch { /* analytics never breaks the flow */ }
       setLinkState('copied');
 
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
