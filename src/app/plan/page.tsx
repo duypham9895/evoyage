@@ -13,6 +13,7 @@ import { useDesktopSidebarTab } from '@/hooks/useDesktopSidebarTab';
 import { useUrlState, parseUrlState } from '@/hooks/useUrlState';
 import Header from '@/components/layout/Header';
 import TripInput from '@/components/trip/TripInput';
+import SampleTripChips from '@/components/trip/SampleTripChips';
 import BrandModelSelector from '@/components/trip/BrandModelSelector';
 import AddCustomVehicle from '@/components/trip/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
@@ -274,6 +275,17 @@ function HomeContent() {
     handleDesktopTabChange('stations');
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, [handleDesktopTabChange]);
+
+  // Pre-fill both inputs from a sample-trip chip. Coords are cleared so the
+  // existing flow (Nominatim resolves on submit / on suggestion click) still
+  // takes over — we don't auto-submit.
+  const handleSampleTripPick = useCallback((trip: { start: string; end: string }) => {
+    hapticLight();
+    setStart(trip.start);
+    setEnd(trip.end);
+    setStartCoords(null);
+    setEndCoords(null);
+  }, []);
 
   // Clear coords when text input changes manually
   const handleStartChange = useCallback((value: string) => {
@@ -585,6 +597,7 @@ function HomeContent() {
 
             {activeTab === 'route' && (
               <>
+                <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} />
                 <TripInput
                   start={start}
                   end={end}
@@ -682,6 +695,7 @@ function HomeContent() {
               </div>
             ) : desktopSidebarTab === 'planTrip' ? (
               <div className="space-y-4 animate-fadeIn" role="tabpanel" id="desktop-tabpanel-plan" aria-labelledby="desktop-tab-planTrip">
+                <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} />
                 <TripInput
                   start={start}
                   end={end}
