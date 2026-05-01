@@ -35,10 +35,10 @@ The `.env` file contains:
 
 - A live Supabase `DATABASE_URL` with plaintext password embedded in the connection string
 - A live Supabase `DIRECT_URL` with the same password
-- A live `GOOGLE_MAPS_API_KEY` (`AIzaSyDxSZFY1bEiHiddXMPJImYpwnBZ_rqn67Q`)
-- A live `MAPBOX_ACCESS_TOKEN` (`pk.eyJ1IjoiZHV5cGhhbTk4OTUiLCJhIjoiY...`)
+- A live `GOOGLE_MAPS_API_KEY` (`[REDACTED — see commit history; key rotated 2026-05-01 after GitHub secret-scan alert #1]`)
+- A live `MAPBOX_ACCESS_TOKEN` (`[REDACTED — token rotated 2026-05-01]`)
 
-The `.gitignore` correctly excludes `.env*`, so these are not in the git history. However, the password `47iozg2bwotmCD2` and the API keys above are now visible in this audit context and should be considered exposed.
+The `.gitignore` correctly excludes `.env*`, so these are not in the git history. However, the database password and API keys above were inadvertently transcribed into this audit and should be considered exposed. **All three secrets must be rotated immediately** — see remediation steps below. Literal values have been redacted from this document, but the originals remain in older commits and on GitHub forks/caches; rotation in the upstream provider is the only effective mitigation.
 
 **Immediate actions required:**
 
