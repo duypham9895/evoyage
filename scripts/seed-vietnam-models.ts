@@ -226,7 +226,16 @@ const VIETNAM_MODELS = [
 async function main() {
   console.log('Seeding Vietnam EV models...');
 
-  for (const vehicle of VIETNAM_MODELS) {
+  for (const rawVehicle of VIETNAM_MODELS) {
+    // Derive efficiency from battery+range when not explicitly set; required by
+    // the trip cost transparency feature in TripSummary.
+    const vehicle = {
+      ...rawVehicle,
+      efficiencyWhPerKm:
+        rawVehicle.batteryCapacityKwh > 0 && rawVehicle.officialRangeKm > 0
+          ? (rawVehicle.batteryCapacityKwh * 1000) / rawVehicle.officialRangeKm
+          : undefined,
+    };
     await prisma.eVVehicle.upsert({
       where: {
         brand_model_variant: {
