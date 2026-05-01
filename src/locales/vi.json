@@ -368,5 +368,6 @@
   "trip_cost_electricity": "Sạc điện: ~{{amount}}",
   "trip_cost_savings": "So với xăng: tiết kiệm {{amount}} ({{percent}}%)",
   "trip_cost_no_savings": "So với xăng: tốn thêm {{amount}}",
-  "trip_cost_note": "Ước tính theo giá sạc EVN 3.500 ₫/kWh và xăng RON95 23.000 ₫/L."
+  "trip_cost_note": "Ước tính theo giá sạc EVN 3.500 ₫/kWh và xăng RON95 23.000 ₫/L.",
+  "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ."
 }

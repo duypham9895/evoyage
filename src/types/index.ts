@@ -134,6 +134,10 @@ export interface TripPlan {
   readonly startAddress: string;
   readonly endAddress: string;
   readonly tripId?: string;
+  /** Which routing engine produced this plan. Set ONLY on the OSRM-default
+   *  code path so the UI can show a fallback note when 'mapbox' was used.
+   *  Absent when the user explicitly selected the Mapbox provider. */
+  readonly routeProvider?: 'osrm' | 'mapbox';
 }
 
 export type MapMode = 'osm' | 'mapbox';

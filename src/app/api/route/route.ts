@@ -396,6 +396,16 @@ export async function POST(request: NextRequest) {
     });
     const tripId = createHash('sha256').update(tripIdInput).digest('hex').slice(0, 16);
 
+    // routeProvider is set ONLY when the user requested OSRM and we got a
+    // result from the OSRM client (which carries a `provider` field saying
+    // whether OSRM succeeded or we fell back to Mapbox). When the user
+    // explicitly chose Mapbox, leave routeProvider undefined — the UI note
+    // is only meaningful for the "OSRM failed, we used Mapbox" case.
+    const routeProvider: 'osrm' | 'mapbox' | undefined =
+      provider === 'osrm' && 'provider' in directions
+        ? directions.provider
+        : undefined;
+
     const tripPlan: TripPlan = {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
       totalDurationMin,
@@ -408,6 +418,7 @@ export async function POST(request: NextRequest) {
       startAddress: directions.startAddress,
       endAddress: directions.endAddress,
       tripId,
+      ...(routeProvider !== undefined ? { routeProvider } : {}),
     };
 
     // Cache trip plan for share card generation

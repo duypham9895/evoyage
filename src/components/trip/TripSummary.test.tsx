@@ -37,6 +37,8 @@ const translations: Record<string, string> = {
   trip_cost_savings: 'vs gasoline: save {{amount}} ({{percent}}%)',
   trip_cost_no_savings: 'vs gasoline: {{amount}} more',
   trip_cost_note: 'Estimate note',
+  // Routing-fallback note
+  route_provider_fallback: 'Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly.',
 };
 
 vi.mock('@/lib/locale', () => ({
@@ -149,6 +151,40 @@ describe('TripSummary — trip cost section', () => {
     const section = screen.getByTestId('trip-cost-section');
     expect(section).toHaveTextContent('Electricity: ~630.000 ₫');
     expect(section).toHaveTextContent('vs gasoline: save 980.000 ₫ (61%)');
+  });
+
+  it('shows the routing-fallback note when routeProvider === "mapbox"', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({ routeProvider: 'mapbox' })}
+        isLoading={false}
+      />,
+    );
+
+    const note = screen.getByTestId('route-provider-fallback-note');
+    expect(note).toBeInTheDocument();
+    expect(note).toHaveTextContent(/Mapbox/);
+    expect(note).toHaveTextContent(/OSM service was unavailable/);
+  });
+
+  it('hides the routing-fallback note when routeProvider === "osrm"', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({ routeProvider: 'osrm' })}
+        isLoading={false}
+      />,
+    );
+    expect(screen.queryByTestId('route-provider-fallback-note')).not.toBeInTheDocument();
+  });
+
+  it('hides the routing-fallback note when routeProvider is absent', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan()}
+        isLoading={false}
+      />,
+    );
+    expect(screen.queryByTestId('route-provider-fallback-note')).not.toBeInTheDocument();
   });
 
   it('shows "more expensive" copy when EV cost exceeds gasoline equivalent', () => {
