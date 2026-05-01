@@ -89,6 +89,8 @@ export interface ChargingStationData {
   readonly provider: string;
   readonly chargingStatus: string | null;
   readonly parkingFee: boolean | null;
+  /** Crowdsourced verification timestamp — set when latest report is WORKING. */
+  readonly lastVerifiedAt?: string | Date | null;
 }
 
 // ── Route Planning Types ──

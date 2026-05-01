@@ -11,6 +11,7 @@ import {
   formatVnd,
 } from '@/lib/trip/cost';
 import StationDetailExpander from './StationDetailExpander';
+import StationStatusReporter from './StationStatusReporter';
 
 interface TripSummaryProps {
   readonly tripPlan: TripPlan | null;
@@ -608,6 +609,12 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
 
                     {/* Station detail expander */}
                     <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
+
+                    {/* Crowdsourced status reporting (1-tap working/broken/busy) */}
+                    <StationStatusReporter
+                      stationId={station.id}
+                      lastVerifiedAt={station.lastVerifiedAt}
+                    />
 
                     {/* Alternatives */}
                     {alternatives.length > 0 && (

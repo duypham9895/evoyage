@@ -348,5 +348,15 @@
   "map_card_charge_time": "~{{minutes}} min to 80%",
   "map_card_ports": "{{count}} ports",
   "evi_show_on_map": "Show on Map",
-  "evi_ask_about_station": "Tell me about {{name}}"
+  "evi_ask_about_station": "Tell me about {{name}}",
+
+  "station_report_section_title": "Is this charger up to date?",
+  "station_report_working": "Report working",
+  "station_report_broken": "Report broken",
+  "station_report_busy": "Report busy",
+  "station_report_thanks": "Thanks for the report",
+  "station_report_failed": "Couldn't send report. Try again.",
+  "station_report_rate_limited": "Slow down a moment and try again.",
+  "station_report_last_verified": "Last confirmed: {{minutes}} min ago",
+  "station_report_last_verified_just_now": "Last confirmed: just now"
 }

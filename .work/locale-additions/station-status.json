@@ -1,0 +1,24 @@
+{
+  "en": {
+    "station_report_section_title": "Is this charger up to date?",
+    "station_report_working": "Report working",
+    "station_report_broken": "Report broken",
+    "station_report_busy": "Report busy",
+    "station_report_thanks": "Thanks for the report",
+    "station_report_failed": "Couldn't send report. Try again.",
+    "station_report_rate_limited": "Slow down a moment and try again.",
+    "station_report_last_verified": "Last confirmed: {{minutes}} min ago",
+    "station_report_last_verified_just_now": "Last confirmed: just now"
+  },
+  "vi": {
+    "station_report_section_title": "Trạm sạc còn dùng được không?",
+    "station_report_working": "Báo trạm hoạt động",
+    "station_report_broken": "Báo lỗi",
+    "station_report_busy": "Báo đang bận",
+    "station_report_thanks": "Cảm ơn bạn đã báo",
+    "station_report_failed": "Không gửi được báo cáo. Thử lại nhé.",
+    "station_report_rate_limited": "Chậm lại một chút rồi thử lại nhé.",
+    "station_report_last_verified": "Xác nhận lần cuối: {{minutes}} phút trước",
+    "station_report_last_verified_just_now": "Xác nhận lần cuối: vừa xong"
+  }
+}
