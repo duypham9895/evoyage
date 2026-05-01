@@ -79,7 +79,11 @@ async function main() {
   const response = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+      'User-Agent': 'evoyage/1.0 (https://evoyagevn.vercel.app)',
+    },
   });
 
   if (!response.ok) {
