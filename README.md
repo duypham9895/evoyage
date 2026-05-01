@@ -28,7 +28,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - **Data:** VinFast API for real-time charging station data (SSE streaming, daily refresh via GitHub Actions cron)
 - **Database:** Prisma + Supabase Postgres (region `ap-southeast-1`)
 - **Analytics:** PostHog (gated on `NEXT_PUBLIC_POSTHOG_KEY` — no-op without it)
-- **Testing:** Vitest (713 tests, 53 files), Playwright for E2E (10 spec files)
+- **Testing:** Vitest (728 tests, 54 files), Playwright for E2E (10 spec files)
 - **Quality gate:** husky + lint-staged pre-commit hook runs ESLint on staged `.ts/.tsx` files
 - **Design System:** [DESIGN.md](./DESIGN.md) — colors, typography, spacing, component rules
 - **Deployment:** Vercel
