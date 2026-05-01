@@ -3,6 +3,36 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] — 2026-05-01
+
+### Added
+- **Trip cost transparency** — every trip now shows electricity cost in VND alongside a gasoline-equivalent comparison so drivers see EV savings before they leave (e.g., HCMC→Đà Lạt at ~200,528 ₫ electricity vs. saving ~294,869 ₫ over gasoline at 60%). Defaults: EVN public charging at 3,500 ₫/kWh, RON95 at 23,000 ₫/L. Constants exported in `src/lib/trip/cost.ts` for easy adjustment.
+- **Station status crowdsourcing** — 1-tap "Báo trạm hoạt động / Báo lỗi / Báo đang bận" buttons under every charging stop in trip results. Backed by new `StationStatusReport` Prisma table, rate-limited POST `/api/stations/[id]/status-report` endpoint (5/min/IP), and a denormalized `ChargingStation.lastVerifiedAt` field updated on `WORKING` reports.
+- **Mapbox Directions fallback** — when OSRM returns 5xx (502/503/504) or network-fails, routing transparently falls back to Mapbox Directions API (using the existing `MAPBOX_ACCESS_TOKEN`). Returns include a `provider: 'osrm' | 'mapbox'` field; UI shows a small text note when Mapbox was used. 4xx errors from OSRM still propagate as real failures. Eliminates the single-point-of-failure that took down trip planning during the 2026-05-01 OSRM outage.
+- **PostHog product analytics** — instrumented 6 user events (`trackPageView`, `trackTripPlanned`, `trackStationTapped`, `trackFeedbackOpened`, `trackEviMessage`, `trackShareClicked`). Defense-in-depth gating: no-op unless `NODE_ENV === 'production'` AND `NEXT_PUBLIC_POSTHOG_KEY` is set. No PII captured (only opaque IDs, enums, aggregate distances).
+- **Disaster recovery runbook** at [docs/RECOVERY.md](./docs/RECOVERY.md) — severity classification (paused / deleted / corrupted), step-by-step rebuild commands, post-recovery checklist, smoke-test endpoints. Based on a real 2026-04-30 incident (~30 min recovery from total DB deletion).
+- **Pre-commit lint hook** via husky + lint-staged — runs `eslint --quiet` on staged `.ts/.tsx` files and blocks commits with new ESLint errors (catches Rules-of-Hooks violations, unused imports, etc.). Sub-second on typical commits; the 6,388-warning legacy backlog doesn't block anything.
+
+### Changed
+- VinFast station crawler cron re-enabled in `.github/workflows/crawl-stations.yml` (`0 1 * * *` UTC = 08:00 Asia/Saigon daily). GitHub Actions secrets (`DATABASE_URL`, `DIRECT_URL`) updated to point at the recovered Supabase project. Crawl runtime is ~3-5 min, well under the free-tier minute budget.
+- `scripts/seed-vietnam-models.ts` now derives `efficiencyWhPerKm` from `(batteryCapacityKwh * 1000) / officialRangeKm` at seed time, so future re-seeds can't reintroduce nulls.
+- `scripts/seed-osm-stations.ts` adds explicit `Accept` and `User-Agent` headers to the Overpass API fetch (was returning 406 due to missing UA).
+- README + CLAUDE.md test counts refreshed (606 → 713 across 45 → 53 files); README now mentions 18,000+ stations (up from 150+).
+- BrandModelSelector vehicle filter tabs and selected-vehicle stats no longer use emoji icons (DESIGN.md "less icons, more humanity" rule); BatteryStatusPanel driving-style buttons same.
+
+### Fixed
+- **Trip cost section was always invisible** — every seeded vehicle had `efficiencyWhPerKm: null`, and the cost component correctly no-op'd when missing. Three-layer fix: UI fallback computes efficiency from battery+range when the field is null; seed script populates the field for new entries; in-session DB backfill applied to the 15 existing rows (range 89–207 Wh/km across the VinFast + BYD lineup).
+- **`/plan` crashed on desktop** with "Application error: a client-side exception has occurred" — `MapLocateButton` had an early `return null` before `useCallback` and `useEffect`, a Rules-of-Hooks violation that stayed dormant until a hydration fix made `geolocationSupported` toggle false→true on mount, which changed the hook count between renders. Moved the early return after all hooks.
+- **Hydration mismatch warning** on `/plan` — replaced inline `typeof window !== 'undefined' && 'geolocation' in navigator` (always false on SSR, true on client) with a `useState(false)` + `useEffect`-on-mount pattern so server and client render the same DOM on first paint.
+- Footer GitHub link pointed at the wrong account (`edwardpham94/evoyage` → 404). Now correctly links to `duypham9895/evoyage`.
+- Hero map's `aria-label` was hardcoded Vietnamese in both languages; moved to a `hero_map_alt` locale key so it translates with the language toggle.
+- Removed two unused parameters in `scripts/seed-osm-stations.ts` (`lng` in `inferProvince`, `c` in `connectorTypes.map`) flagged by TypeScript.
+
+### Infrastructure
+- Multi-agent parallel build pattern: 5 worktree-isolated agents shipped 5 features in parallel (analytics, cost, station status, code quality, docs), with a 6th synthesizer agent merging clean branches into main per "Option B" policy (auto-merge on tests-pass + no-warnings). Cross-branch locale keys merged via `.work/locale-additions/*.json` snippets.
+- `.gitignore` extended to exclude `.claude/worktrees/`, `.claude/scheduled_tasks.lock`, `.context/`, and `/test-results/`.
+- `package.json` version bumped from `0.2.0` to `0.6.0` to align with the CHANGELOG numbering scheme that began at `0.5.x`.
+
 ## [0.5.1] — 2026-03-23
 
 ### Added
