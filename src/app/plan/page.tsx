@@ -48,6 +48,14 @@ function HomeContent() {
 
   // Geolocation (lifted — shared between MapLocateButton and NearbyStations)
   const geo = useGeolocation();
+  // Hydration-safe geolocation feature detection: render `false` on SSR
+  // (no `navigator`), then update on mount so server and client agree on the
+  // initial DOM. Prevents the "server rendered HTML didn't match the client"
+  // warning that fires when the button conditionally renders.
+  const [geolocationSupported, setGeolocationSupported] = useState(false);
+  useEffect(() => {
+    setGeolocationSupported(typeof navigator !== 'undefined' && 'geolocation' in navigator);
+  }, []);
   const [nearbyStations, setNearbyStations] = useState<readonly (ChargingStationData & { distanceKm: number })[] | null>(null);
   const handleStationsFound = useCallback((stations: readonly (ChargingStationData & { distanceKm: number })[]) => {
     setNearbyStations(stations);
@@ -536,7 +544,7 @@ function HomeContent() {
       longitude={geo.longitude}
       loading={geo.loading}
       error={geo.error as 'permission_denied' | 'position_unavailable' | 'timeout' | null}
-      geolocationSupported={typeof window !== 'undefined' && 'geolocation' in navigator}
+      geolocationSupported={geolocationSupported}
       onRequestLocation={geo.requestLocation}
       onStationsFound={handleStationsFound}
       onSwitchToStationsTab={handleFindNearbyStations}
