@@ -12,6 +12,7 @@ import {
 } from '@/lib/trip/cost';
 import StationDetailExpander from './StationDetailExpander';
 import StationStatusReporter from './StationStatusReporter';
+import StationTrustChip from './StationTrustChip';
 
 interface TripSummaryProps {
   readonly tripPlan: TripPlan | null;
@@ -257,8 +258,19 @@ function RouteBriefing({
   );
 }
 
-// ── Trip Cost Transparency ──
+// ── Trip Cost Hero ──
 
+/**
+ * Hero pill showing electricity-vs-gasoline savings as the emotional payoff
+ * of choosing EV. Renders above the trip overview card so the savings number
+ * is the first thing a driver sees in the summary.
+ *
+ * When EV is more expensive than gasoline (rare, possible with stale fuel
+ * pricing), the copy uses neutral muted color — we don't shame the driver.
+ *
+ * Tap "How is this calculated?" to expand the breakdown with assumptions
+ * (EVN 3,500 ₫/kWh, RON95 23,000 ₫/L). Keeps the headline honest.
+ */
 function TripCostSection({
   distanceKm,
   efficiencyWhPerKm,
@@ -267,6 +279,7 @@ function TripCostSection({
   readonly efficiencyWhPerKm: number;
 }) {
   const { t } = useLocale();
+  const [isOpen, setIsOpen] = useState(false);
 
   const electricity = calculateElectricityCostVnd(distanceKm, efficiencyWhPerKm);
   const gasoline = calculateGasolineEquivalentVnd(distanceKm);
@@ -275,32 +288,68 @@ function TripCostSection({
   if (electricity <= 0 || gasoline <= 0) return null;
 
   const isSaving = savedVnd > 0;
+  const absVnd = Math.abs(savedVnd);
+  const absPercent = Math.abs(savedPercent);
+
+  const heroLabel = isSaving
+    ? t('trip_cost_hero_savings' as Parameters<typeof t>[0], { amount: formatVnd(absVnd) })
+    : t('trip_cost_hero_extra' as Parameters<typeof t>[0], { amount: formatVnd(absVnd) });
+
+  const subtitleLabel = isSaving
+    ? t('trip_cost_hero_percent_cheaper' as Parameters<typeof t>[0], { percent: String(absPercent) })
+    : t('trip_cost_hero_percent_more' as Parameters<typeof t>[0], { percent: String(absPercent) });
+
+  const heroBg = isSaving
+    ? 'bg-[var(--color-accent-subtle)] border-[var(--color-accent)]/30'
+    : 'bg-[var(--color-surface)] border-[var(--color-border)]';
+  const heroText = isSaving ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]';
 
   return (
-    <div
-      data-testid="trip-cost-section"
-      className="border-t border-[var(--color-surface-hover)] pt-3 space-y-1"
-    >
-      <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
-        {t('trip_cost_heading' as Parameters<typeof t>[0])}
+    <div data-testid="trip-cost-section" className={`rounded-lg border p-3 ${heroBg}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <div className={`text-base font-semibold font-[family-name:var(--font-heading)] ${heroText} truncate`}>
+            {heroLabel}
+          </div>
+          <div className="text-xs text-[var(--color-muted)] mt-0.5">{subtitleLabel}</div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+          className="shrink-0 text-[11px] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors underline-offset-2 hover:underline"
+        >
+          {isOpen
+            ? t('trip_cost_hide_breakdown' as Parameters<typeof t>[0])
+            : t('trip_cost_show_breakdown' as Parameters<typeof t>[0])}
+        </button>
       </div>
-      <div className="text-sm text-[var(--color-foreground)] font-[family-name:var(--font-mono)]">
-        {t('trip_cost_electricity' as Parameters<typeof t>[0], { amount: formatVnd(electricity) })}
-      </div>
-      <div className={`text-sm font-[family-name:var(--font-mono)] ${
-        isSaving ? 'text-[var(--color-safe)]' : 'text-[var(--color-muted)]'
-      }`}>
-        {isSaving
-          ? t('trip_cost_savings' as Parameters<typeof t>[0], {
-              amount: formatVnd(savedVnd),
-              percent: String(savedPercent),
-            })
-          : t('trip_cost_no_savings' as Parameters<typeof t>[0], {
-              amount: formatVnd(Math.abs(savedVnd)),
-            })}
-      </div>
-      <div className="text-[10px] text-[var(--color-muted)] leading-relaxed">
-        {t('trip_cost_note' as Parameters<typeof t>[0])}
+
+      <div
+        className={`transition-all duration-200 ease-out overflow-hidden ${
+          isOpen ? 'max-h-[200px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="space-y-1 pt-2 border-t border-[var(--color-surface-hover)]">
+          <div className="text-xs text-[var(--color-foreground)] font-[family-name:var(--font-mono)]">
+            {t('trip_cost_electricity' as Parameters<typeof t>[0], { amount: formatVnd(electricity) })}
+          </div>
+          <div className={`text-xs font-[family-name:var(--font-mono)] ${
+            isSaving ? 'text-[var(--color-safe)]' : 'text-[var(--color-muted)]'
+          }`}>
+            {isSaving
+              ? t('trip_cost_savings' as Parameters<typeof t>[0], {
+                  amount: formatVnd(savedVnd),
+                  percent: String(savedPercent),
+                })
+              : t('trip_cost_no_savings' as Parameters<typeof t>[0], {
+                  amount: formatVnd(Math.abs(savedVnd)),
+                })}
+          </div>
+          <div className="text-[10px] text-[var(--color-muted)] leading-relaxed">
+            {t('trip_cost_note' as Parameters<typeof t>[0])}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -394,6 +443,14 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         )}
       </div>
 
+      {/* Cost hero — emotional payoff of choosing EV; first thing user sees */}
+      {vehicleEfficiencyWhPerKm != null && vehicleEfficiencyWhPerKm > 0 && (
+        <TripCostSection
+          distanceKm={tripPlan.totalDistanceKm}
+          efficiencyWhPerKm={vehicleEfficiencyWhPerKm}
+        />
+      )}
+
       {/* Route Briefing — loads asynchronously after trip plan */}
       <RouteBriefing
         overview={narrativeState.overview}
@@ -434,14 +491,6 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
             </div>
           </div>
         </div>
-
-        {/* Trip cost transparency — only when vehicle efficiency is known */}
-        {vehicleEfficiencyWhPerKm != null && vehicleEfficiencyWhPerKm > 0 && (
-          <TripCostSection
-            distanceKm={tripPlan.totalDistanceKm}
-            efficiencyWhPerKm={vehicleEfficiencyWhPerKm}
-          />
-        )}
 
         {/* Battery journey bar */}
         <div>
@@ -577,6 +626,11 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                     />
                   </div>
                 </button>
+
+                {/* Trust chip — surfaces lastVerifiedAt without expanding the report widget */}
+                <div className="px-3 -mt-1 ml-8">
+                  <StationTrustChip lastVerifiedAt={station.lastVerifiedAt} />
+                </div>
 
                 {/* QuickStats row — always visible, not inside the expand button */}
                 <div className="px-3 pb-3 ml-8">

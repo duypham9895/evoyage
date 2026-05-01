@@ -365,10 +365,22 @@
   "station_report_last_verified": "Xác nhận lần cuối: {{minutes}} phút trước",
   "station_report_last_verified_just_now": "Xác nhận lần cuối: vừa xong",
 
+  "station_trust_recent_minutes": "Đã xác minh {{minutes}} phút trước",
+  "station_trust_recent_hours": "Đã xác minh {{hours}}h trước",
+  "station_trust_recent_just_now": "Đã xác minh vừa xong",
+  "station_trust_older_days": "Đã xác minh {{days}} ngày trước",
+  "station_trust_none": "Chưa có xác minh gần đây",
+
   "trip_cost_heading": "Chi phí chuyến đi",
   "trip_cost_electricity": "Sạc điện: ~{{amount}}",
   "trip_cost_savings": "So với xăng: tiết kiệm {{amount}} ({{percent}}%)",
   "trip_cost_no_savings": "So với xăng: tốn thêm {{amount}}",
   "trip_cost_note": "Ước tính theo giá sạc EVN 3.500 ₫/kWh và xăng RON95 23.000 ₫/L.",
+  "trip_cost_hero_savings": "Tiết kiệm {{amount}} so với xăng",
+  "trip_cost_hero_extra": "Tốn thêm {{amount}} so với xăng",
+  "trip_cost_hero_percent_cheaper": "Rẻ hơn {{percent}}%",
+  "trip_cost_hero_percent_more": "Tốn thêm {{percent}}%",
+  "trip_cost_show_breakdown": "Cách tính?",
+  "trip_cost_hide_breakdown": "Ẩn",
   "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ."
 }

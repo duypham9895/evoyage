@@ -365,10 +365,22 @@
   "station_report_last_verified": "Last confirmed: {{minutes}} min ago",
   "station_report_last_verified_just_now": "Last confirmed: just now",
 
+  "station_trust_recent_minutes": "Verified {{minutes}} min ago",
+  "station_trust_recent_hours": "Verified {{hours}}h ago",
+  "station_trust_recent_just_now": "Verified just now",
+  "station_trust_older_days": "Verified {{days}}d ago",
+  "station_trust_none": "No recent verification",
+
   "trip_cost_heading": "Trip cost",
   "trip_cost_electricity": "Electricity: ~{{amount}}",
   "trip_cost_savings": "vs gasoline: save {{amount}} ({{percent}}%)",
   "trip_cost_no_savings": "vs gasoline: {{amount}} more",
   "trip_cost_note": "Estimate based on EVN public charging at 3.500 ₫/kWh and RON95 at 23.000 ₫/L.",
+  "trip_cost_hero_savings": "Save {{amount}} vs gasoline",
+  "trip_cost_hero_extra": "{{amount}} more than gasoline",
+  "trip_cost_hero_percent_cheaper": "{{percent}}% cheaper",
+  "trip_cost_hero_percent_more": "{{percent}}% more",
+  "trip_cost_show_breakdown": "How is this calculated?",
+  "trip_cost_hide_breakdown": "Hide",
   "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly."
 }
