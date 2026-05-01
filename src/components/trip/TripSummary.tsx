@@ -4,11 +4,19 @@ import { useState } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
+import {
+  calculateElectricityCostVnd,
+  calculateGasolineEquivalentVnd,
+  calculateSavings,
+  formatVnd,
+} from '@/lib/trip/cost';
 import StationDetailExpander from './StationDetailExpander';
 
 interface TripSummaryProps {
   readonly tripPlan: TripPlan | null;
   readonly isLoading: boolean;
+  /** Vehicle energy efficiency in Wh/km — required to show cost transparency. */
+  readonly vehicleEfficiencyWhPerKm?: number | null;
   readonly onSelectAlternativeStation?: (stopIndex: number, station: RankedStation) => void;
   readonly onBackToChat?: () => void;
 }
@@ -248,9 +256,58 @@ function RouteBriefing({
   );
 }
 
+// ── Trip Cost Transparency ──
+
+function TripCostSection({
+  distanceKm,
+  efficiencyWhPerKm,
+}: {
+  readonly distanceKm: number;
+  readonly efficiencyWhPerKm: number;
+}) {
+  const { t } = useLocale();
+
+  const electricity = calculateElectricityCostVnd(distanceKm, efficiencyWhPerKm);
+  const gasoline = calculateGasolineEquivalentVnd(distanceKm);
+  const { savedVnd, savedPercent } = calculateSavings(electricity, gasoline);
+
+  if (electricity <= 0 || gasoline <= 0) return null;
+
+  const isSaving = savedVnd > 0;
+
+  return (
+    <div
+      data-testid="trip-cost-section"
+      className="border-t border-[var(--color-surface-hover)] pt-3 space-y-1"
+    >
+      <div className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+        {t('trip_cost_heading' as Parameters<typeof t>[0])}
+      </div>
+      <div className="text-sm text-[var(--color-foreground)] font-[family-name:var(--font-mono)]">
+        {t('trip_cost_electricity' as Parameters<typeof t>[0], { amount: formatVnd(electricity) })}
+      </div>
+      <div className={`text-sm font-[family-name:var(--font-mono)] ${
+        isSaving ? 'text-[var(--color-safe)]' : 'text-[var(--color-muted)]'
+      }`}>
+        {isSaving
+          ? t('trip_cost_savings' as Parameters<typeof t>[0], {
+              amount: formatVnd(savedVnd),
+              percent: String(savedPercent),
+            })
+          : t('trip_cost_no_savings' as Parameters<typeof t>[0], {
+              amount: formatVnd(Math.abs(savedVnd)),
+            })}
+      </div>
+      <div className="text-[10px] text-[var(--color-muted)] leading-relaxed">
+        {t('trip_cost_note' as Parameters<typeof t>[0])}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ──
 
-export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
   const { t, tBi } = useLocale();
   const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
   const narrativeState = useRouteNarrative(tripPlan);
@@ -376,6 +433,14 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
             </div>
           </div>
         </div>
+
+        {/* Trip cost transparency — only when vehicle efficiency is known */}
+        {vehicleEfficiencyWhPerKm != null && vehicleEfficiencyWhPerKm > 0 && (
+          <TripCostSection
+            distanceKm={tripPlan.totalDistanceKm}
+            efficiencyWhPerKm={vehicleEfficiencyWhPerKm}
+          />
+        )}
 
         {/* Battery journey bar */}
         <div>
