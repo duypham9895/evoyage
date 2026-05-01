@@ -358,5 +358,11 @@
   "station_report_failed": "Không gửi được báo cáo. Thử lại nhé.",
   "station_report_rate_limited": "Chậm lại một chút rồi thử lại nhé.",
   "station_report_last_verified": "Xác nhận lần cuối: {{minutes}} phút trước",
-  "station_report_last_verified_just_now": "Xác nhận lần cuối: vừa xong"
+  "station_report_last_verified_just_now": "Xác nhận lần cuối: vừa xong",
+
+  "trip_cost_heading": "Chi phí chuyến đi",
+  "trip_cost_electricity": "Sạc điện: ~{{amount}}",
+  "trip_cost_savings": "So với xăng: tiết kiệm {{amount}} ({{percent}}%)",
+  "trip_cost_no_savings": "So với xăng: tốn thêm {{amount}}",
+  "trip_cost_note": "Ước tính theo giá sạc EVN 3.500 ₫/kWh và xăng RON95 23.000 ₫/L."
 }

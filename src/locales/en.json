@@ -358,5 +358,11 @@
   "station_report_failed": "Couldn't send report. Try again.",
   "station_report_rate_limited": "Slow down a moment and try again.",
   "station_report_last_verified": "Last confirmed: {{minutes}} min ago",
-  "station_report_last_verified_just_now": "Last confirmed: just now"
+  "station_report_last_verified_just_now": "Last confirmed: just now",
+
+  "trip_cost_heading": "Trip cost",
+  "trip_cost_electricity": "Electricity: ~{{amount}}",
+  "trip_cost_savings": "vs gasoline: save {{amount}} ({{percent}}%)",
+  "trip_cost_no_savings": "vs gasoline: {{amount}} more",
+  "trip_cost_note": "Estimate based on EVN public charging at 3.500 ₫/kWh and RON95 at 23.000 ₫/L."
 }

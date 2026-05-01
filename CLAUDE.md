@@ -93,7 +93,7 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **606 unit/integration tests** across **45 files** (vitest, ~5 seconds)
+- **690 unit/integration tests** across **51 files** (vitest, ~7 seconds)
 - **18 E2E tests** across **10 spec files** (Playwright, ~43 seconds on Desktop Chrome)
 - Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar
 - E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state
@@ -102,7 +102,7 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 ### Pre-Commit Checklist
 
 Before every commit, verify:
-- [ ] `npm test` passes (all 606+ tests green)
+- [ ] `npm test` passes (all 690+ tests green)
 - [ ] `npx next build` succeeds (no TypeScript errors)
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
@@ -149,7 +149,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 
 1. **Never skip `/review` before merging.** Code review catches structural issues that tests don't — race conditions, SQL safety, LLM trust boundaries.
 2. **Never skip `/qa` on UI changes.** Always test on mobile (393x852) AND desktop (1440x900). Most drivers use phones.
-3. **Always run `npm test` before committing.** 606+ tests must pass. No exceptions.
+3. **Always run `npm test` before committing.** 690+ tests must pass. No exceptions.
 4. **Use `/investigate` for bugs, not guessing.** Iron Law: no fixes without root cause investigation first.
 5. **Use `/document-release` after shipping.** Keep README, CLAUDE.md, and test counts in sync.
 
