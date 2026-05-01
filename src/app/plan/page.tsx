@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
+import { trackTripPlanned } from '@/lib/analytics';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
@@ -374,6 +375,10 @@ function HomeContent() {
       }
 
       setTripPlan(data as TripPlan);
+      // Analytics: aggregate-only payload (city labels + km), no coords/PII.
+      try {
+        trackTripPlanned(start, isLoopTrip ? start : end, (data as TripPlan).totalDistanceKm);
+      } catch { /* analytics never breaks the flow */ }
       // Auto-expand bottom sheet fully and switch to route tab to show charging details
       setActiveTab('route');
       setBottomSheetSnap({ point: 'full', trigger: Date.now() });
