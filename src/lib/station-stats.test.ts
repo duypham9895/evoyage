@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatStationCount, replaceStationsBlock } from './station-stats';
+import { formatLastUpdated, formatStationCount, replaceStationsBlock } from './station-stats';
 import stationStats from '@/data/station-stats.json';
 
 describe('formatStationCount', () => {
@@ -61,5 +61,31 @@ describe('station-stats.json', () => {
     expect(stationStats.count).toBeGreaterThan(0);
     expect(typeof stationStats.lastUpdated).toBe('string');
     expect(() => new Date(stationStats.lastUpdated).toISOString()).not.toThrow();
+  });
+});
+
+describe('formatLastUpdated', () => {
+  const iso = '2026-05-01T00:00:00.000Z';
+
+  it('returns a string that includes the four-digit year for en', () => {
+    expect(formatLastUpdated(iso, 'en')).toMatch(/2026/);
+  });
+
+  it('returns a string that includes the four-digit year for vi', () => {
+    expect(formatLastUpdated(iso, 'vi')).toMatch(/2026/);
+  });
+
+  it('uses an English month name for en locale', () => {
+    expect(formatLastUpdated(iso, 'en').toLowerCase()).toContain('may');
+  });
+
+  it('uses a Vietnamese month token for vi locale', () => {
+    // vi-VN long format includes "tháng" — drift-proof against ICU patch versions.
+    expect(formatLastUpdated(iso, 'vi').toLowerCase()).toContain('tháng');
+  });
+
+  it('returns empty string for invalid timestamps without throwing', () => {
+    expect(formatLastUpdated('not-a-date', 'en')).toBe('');
+    expect(formatLastUpdated('', 'vi')).toBe('');
   });
 });

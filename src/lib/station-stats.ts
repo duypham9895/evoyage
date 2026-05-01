@@ -17,6 +17,12 @@ export function formatStationCount(count: number, locale: Locale): string {
   return count.toLocaleString(LOCALE_BCP47[locale]);
 }
 
+export function formatLastUpdated(iso: string, locale: Locale): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(LOCALE_BCP47[locale], { dateStyle: 'long' }).format(date);
+}
+
 const STATIONS_BLOCK_RE =
   /<!-- STATIONS_COUNT_START -->[\s\S]*?<!-- STATIONS_COUNT_END -->/g;
 

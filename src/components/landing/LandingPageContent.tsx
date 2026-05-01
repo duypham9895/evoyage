@@ -12,7 +12,7 @@ import VietnamMap from './VietnamMap';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
 import stationStats from '@/data/station-stats.json';
-import { formatStationCount } from '@/lib/station-stats';
+import { formatLastUpdated, formatStationCount } from '@/lib/station-stats';
 
 const dictionaries = { vi, en } as const;
 
@@ -115,6 +115,12 @@ function LandingContent() {
                   <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_provinces')}</span>
                 </div>
               </div>
+              <p className="text-[var(--color-muted)] text-xs mt-3 max-w-md">
+                {t('landing_hero_stats_freshness').replace(
+                  '{{date}}',
+                  formatLastUpdated(stationStats.lastUpdated, locale),
+                )}
+              </p>
             </div>
 
             {/* Right: interactive Vietnam map */}

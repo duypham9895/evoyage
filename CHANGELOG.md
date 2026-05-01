@@ -3,6 +3,18 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.7.1] — 2026-05-01
+
+### Added
+- **Visible "last sync" caption** under the landing-page hero stat row — reads `stationStats.lastUpdated` and renders a locale-aware long date (en `May 1, 2026`, vi `1 tháng 5, 2026`) so visitors see at a glance that the station number is auto-updated daily, not a marketing approximation. Pairs with the auto-update infra shipped in 0.7.0; the same `station-stats.json` write that bumps the count also updates the date the homepage displays.
+- New `formatLastUpdated(iso, locale)` helper in `src/lib/station-stats.ts` — wraps `Intl.DateTimeFormat` with `dateStyle: 'long'`, returns empty string for unparseable input so a corrupted JSON never crashes the hero. New locale key `landing_hero_stats_freshness` in en.json + vi.json with `{{date}}` placeholder.
+
+### Changed
+- Manually triggered the daily crawl one cycle early so 0.7.0's seed value (`18,000`) was replaced by the real network count (`18,496`) before the next scheduled run. README + `station-stats.json` synced in commit `83edcd0` (bot).
+
+### Tests
+- 723 → 728 (+5). New `formatLastUpdated` cases cover en/vi year inclusion, locale-specific month tokens (`may` for en, `tháng` for vi — drift-proof against ICU patch versions), and graceful empty-string return for invalid ISO input.
+
 ## [0.7.0] — 2026-05-01
 
 ### Added
