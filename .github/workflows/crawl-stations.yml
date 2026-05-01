@@ -6,6 +6,9 @@ on:
     - cron: '0 1 * * *'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: write
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
@@ -33,3 +36,19 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: npx tsx scripts/crawl-vinfast-stations.ts
+
+      - name: Sync README station count
+        run: npx tsx scripts/update-readme-stats.ts
+
+      - name: Commit station-stats + README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/station-stats.json README.md
+          if git diff --cached --quiet; then
+            echo "No station-count changes to commit."
+            exit 0
+          fi
+          COUNT=$(node -e "console.log(require('./src/data/station-stats.json').count)")
+          git commit -m "chore(stations): sync VinFast count to ${COUNT} [skip ci]"
+          git push

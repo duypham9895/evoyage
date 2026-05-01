@@ -11,6 +11,9 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { chromium } from 'playwright';
+import { writeFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const prisma = new PrismaClient();
 
@@ -320,6 +323,14 @@ async function main() {
   console.log(`  Updated: ${updated}`);
   console.log(`  Skipped (out of service): ${skippedOutOfService}`);
   console.log(`  Mappings saved: ${mappingsSaved}`);
+
+  const activeCount = toProcess.length;
+  const statsPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src/data/station-stats.json');
+  writeFileSync(
+    statsPath,
+    `${JSON.stringify({ count: activeCount, lastUpdated: new Date().toISOString() }, null, 2)}\n`,
+  );
+  console.log(`  Wrote ${statsPath} (count=${activeCount})`);
 }
 
 main()

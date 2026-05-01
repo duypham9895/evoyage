@@ -157,7 +157,7 @@
   "landing_features_title": "Tính năng nổi bật",
   "landing_feat1_title": "Ước tính quãng đường thực tế",
   "landing_feat1_desc": "Mặc định dùng hệ số an toàn 80% — sát thực tế cho điều kiện lái xe tại Việt Nam với điều hoà, kẹt xe, và đường đồi.",
-  "landing_feat2_title": "18.000+ trạm sạc VinFast",
+  "landing_feat2_title": "{{count}}+ trạm sạc VinFast",
   "landing_feat2_desc": "Dữ liệu cập nhật hàng ngày. Xem số cổng, công suất, và trạng thái ngay trên bản đồ.",
   "landing_feat3_title": "Nhận biết địa hình",
   "landing_feat3_desc": "Tự động phát hiện đoạn đường đèo và dốc cao — giúp bạn biết trước địa hình ảnh hưởng đến pin.",

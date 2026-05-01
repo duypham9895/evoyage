@@ -3,6 +3,19 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] — 2026-05-01
+
+### Added
+- **Auto-updating VinFast station count across README and landing page** — single source of truth at `src/data/station-stats.json`, written by the daily crawler at the end of `scripts/crawl-vinfast-stations.ts` (`count = valid Vietnam VinFast stations − OUTOFSERVICE`). The landing page imports the JSON at build time and renders a locale-aware count (en `18,234`, vi `18.234`) in the hero stat row, the mid-page `StatCounter`, and the `landing_feat2_title` locale string. README is updated via a bounded marker block (`<!-- STATIONS_COUNT_START -->...<!-- STATIONS_COUNT_END -->`) by `scripts/update-readme-stats.ts`. Eliminates the 5-place drift class (README + en.json + vi.json + 2× `LandingPageContent.tsx`) that previously required manual edits whenever the network grew.
+- **Daily auto-commit step** in `.github/workflows/crawl-stations.yml` — after a successful crawl, the workflow runs the README updater and bot-commits both `src/data/station-stats.json` and `README.md` with a `[skip ci]` tag. Guarded by `git diff --cached --quiet` so unchanged content never produces an empty commit; failed crawls don't touch either file. New `permissions: contents: write` is scoped to the workflow only.
+
+### Changed
+- `landing_feat2_title` in `en.json` and `vi.json` now uses a `{{count}}` placeholder instead of the hardcoded "18,000+" / "18.000+".
+- The line in README that listed VinFast network stats now ends with "auto-updated daily after the crawl" so readers know the number is live, not a marketing approximation.
+
+### Tests
+- 713 → 723 (+10), 53 → 54 files. New `src/lib/station-stats.test.ts` covers `formatStationCount` (locale separators, sub-1000 numbers, seven-figure numbers) and `replaceStationsBlock` (single/multiple/multiline/no-marker cases, plus a regression test asserting the README-side `en-US` separator regardless of caller locale).
+
 ## [0.6.2] — 2026-05-01
 
 ### Fixed
