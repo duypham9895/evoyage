@@ -32,15 +32,26 @@ git clone https://github.com/phamduy-agilityio/evoyage.git
 cd evoyage
 npm install
 
-# Set up environment variables
-cp .env.example .env.local
-# Add your API keys: MINIMAX_API_KEY, MAPBOX_TOKEN (optional)
+# Set up environment variables in .env.local
+# Required: DATABASE_URL, DIRECT_URL (Supabase Postgres)
+# Required: MINIMAX_API_KEY (eVi assistant)
+# Optional: MAPBOX_TOKEN (richer basemap)
+
+# Push schema and seed reference data
+npm run db:push
+npm run seed:all
 
 # Run development server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see the app.
+
+`npm run seed:all` runs both `seed` (15 EV models) and `seed:stations` (OpenStreetMap charging stations). To also load the full VinFast network, run `npx tsx scripts/crawl-vinfast-stations.ts` separately — it takes a few minutes.
+
+## Disaster Recovery
+
+If the production database is paused, deleted, or corrupted, see [docs/RECOVERY.md](./docs/RECOVERY.md) for the full runbook (severity levels, step-by-step rebuild, post-recovery checklist).
 
 ## Development
 

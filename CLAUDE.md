@@ -38,9 +38,14 @@ When writing Vietnamese copy, refer to the creator as "Duy" (not "Mình" or "Tô
 - Mapbox + OpenStreetMap for maps
 - VinFast API for charging station data (SSE streaming for real-time detail)
 - MiniMax M2.7 AI for eVi trip assistant (via OpenAI-compatible API)
+- Prisma + Supabase Postgres (region `ap-southeast-1`), deployed on Vercel
 - Bilingual: Vietnamese (vi) and English (en) via JSON locale files
 - Vitest for unit + integration tests
 - Playwright for E2E tests
+
+## Operations
+
+- **Disaster recovery:** If the production DB is paused, deleted, or corrupted, follow [docs/RECOVERY.md](./docs/RECOVERY.md). Schema lives in `prisma/schema.prisma`; reference data lives in `scripts/seed-*.ts` and `scripts/crawl-vinfast-stations.ts`. Never edit the schema in the Supabase UI.
 
 ## Testing — Mandatory Rules
 
