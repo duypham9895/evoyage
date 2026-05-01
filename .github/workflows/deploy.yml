@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  deployments: write
+
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -69,5 +73,44 @@ jobs:
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Create GitHub deployment
+        id: gh-deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          deployment_id=$(gh api "repos/${{ github.repository }}/deployments" \
+            --method POST \
+            -f ref="${{ github.sha }}" \
+            -f environment="production" \
+            -f description="Vercel production deploy" \
+            -F auto_merge=false \
+            -F 'required_contexts=[]' \
+            --jq '.id')
+          echo "id=$deployment_id" >> "$GITHUB_OUTPUT"
+
       - name: Deploy
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        id: vercel-deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} | tail -n1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Mark deployment success
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/deployments/${{ steps.gh-deployment.outputs.id }}/statuses" \
+            --method POST \
+            -f state="success" \
+            -f environment_url="${{ steps.vercel-deploy.outputs.url }}" \
+            -f description="Deployed to Vercel"
+
+      - name: Mark deployment failure
+        if: failure() && steps.gh-deployment.outputs.id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/deployments/${{ steps.gh-deployment.outputs.id }}/statuses" \
+            --method POST \
+            -f state="failure" \
+            -f description="Vercel deploy failed"
