@@ -3,6 +3,17 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] — 2026-05-01
+
+### Fixed
+- **Stale "150+ stations" copy** on the landing page — replaced in 4 places (hero stat counter, mid-page StatCounter, en/vi locale keys for the features grid) with the actual count, "18,000+". Previously made the project look hobby-scale despite shipping with 18,800+ live stations after the recovery.
+- **Latent Rules-of-Hooks violation** in `src/components/trip/StationDetailExpander.tsx` — early `if (stationProvider !== 'VinFast') return null` sat before `useCallback`, identical pattern to the bug that crashed `/plan` on desktop in 0.6.0. Caught by the husky/lint-staged pre-commit hook installed in 0.6.0 when the file was touched for the emoji removal — the hook earned its keep within an hour of being installed.
+- 3 decorative ⚡ emojis removed: `StationInfoChips` power chip prefix, `StationDetailExpander` power chip prefix, `MapboxMap` popup HTML. Per DESIGN.md "less icons, more humanity" rule. The `ElevationChart` ⚡ markers were kept — they're functional chart status indicators, which DESIGN.md explicitly allows.
+
+### Investigated and reverted (NOT bugs after tracing actual usage)
+- `ShareButton`'s render-scope `typeof navigator` check — only consumed inside a modal that opens on user click, so SSR/hydration is over by the time it matters. The "fix" introduced lint errors without fixing anything real.
+- `MobileBottomSheet`'s render-scope `window.innerHeight` reads — only affect a `style` attribute, which React silently overwrites on mismatch. Soft warning, not a crash.
+
 ## [0.6.0] — 2026-05-01
 
 ### Added
