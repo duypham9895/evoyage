@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { formatLastUpdated, formatStationCount, replaceStationsBlock } from './station-stats';
+import {
+  formatLastUpdated,
+  formatStationCount,
+  replaceStationsBlock,
+  renderEnergyPricesBlock,
+  replaceEnergyPricesBlock,
+} from './station-stats';
 import stationStats from '@/data/station-stats.json';
 
 describe('formatStationCount', () => {
@@ -87,5 +93,62 @@ describe('formatLastUpdated', () => {
   it('returns empty string for invalid timestamps without throwing', () => {
     expect(formatLastUpdated('not-a-date', 'en')).toBe('');
     expect(formatLastUpdated('', 'vi')).toBe('');
+  });
+});
+
+describe('renderEnergyPricesBlock', () => {
+  const prices = {
+    gasolineVndPerLiter: 23750,
+    dieselVndPerLiter: 28170,
+    evnHomeVndPerKwh: 2998,
+    vGreenVndPerKwh: 3858,
+  };
+
+  it('produces four bullet lines wrapped by the marker comments', () => {
+    const out = renderEnergyPricesBlock(prices);
+    expect(out.startsWith('<!-- ENERGY_PRICES_START -->')).toBe(true);
+    expect(out.endsWith('<!-- ENERGY_PRICES_END -->')).toBe(true);
+    const bullets = out.split('\n').filter((l) => l.trim().startsWith('- '));
+    expect(bullets).toHaveLength(4);
+  });
+
+  it('formats VND with comma thousand-separators', () => {
+    const out = renderEnergyPricesBlock(prices);
+    expect(out).toContain('₫23,750');
+    expect(out).toContain('₫28,170');
+    expect(out).toContain('₫2,998');
+    expect(out).toContain('₫3,858');
+  });
+
+  it('attributes each price to the correct authoritative source', () => {
+    const out = renderEnergyPricesBlock(prices);
+    expect(out).toContain('Petrolimex');
+    expect(out).toContain('EVN tier 4');
+    expect(out).toContain('V-GREEN');
+    expect(out).toContain('free for VinFast owners until 2029');
+  });
+});
+
+describe('replaceEnergyPricesBlock', () => {
+  const prices = {
+    gasolineVndPerLiter: 24000,
+    dieselVndPerLiter: 28500,
+    evnHomeVndPerKwh: 3050,
+    vGreenVndPerKwh: 3858,
+  };
+
+  it('replaces a single existing block in place', () => {
+    const before =
+      'Intro\n<!-- ENERGY_PRICES_START -->\nold\n<!-- ENERGY_PRICES_END -->\nOutro';
+    const after = replaceEnergyPricesBlock(before, prices);
+    expect(after).toContain('Intro');
+    expect(after).toContain('Outro');
+    expect(after).toContain('₫24,000');
+    expect(after).not.toContain('old');
+  });
+
+  it('returns content unchanged when no markers are present', () => {
+    const before = 'no markers here';
+    expect(replaceEnergyPricesBlock(before, prices)).toBe(before);
   });
 });

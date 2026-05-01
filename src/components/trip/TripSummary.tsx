@@ -4,12 +4,8 @@ import { useState } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
-import {
-  calculateElectricityCostVnd,
-  calculateGasolineEquivalentVnd,
-  calculateSavings,
-  formatVnd,
-} from '@/lib/trip/cost';
+import { calculateSavings, formatVnd } from '@/lib/trip/cost';
+import { computeTripCost } from '@/lib/trip-cost';
 import StationDetailExpander from './StationDetailExpander';
 import StationStatusReporter from './StationStatusReporter';
 import StationTrustChip from './StationTrustChip';
@@ -19,6 +15,12 @@ interface TripSummaryProps {
   readonly isLoading: boolean;
   /** Vehicle energy efficiency in Wh/km — required to show cost transparency. */
   readonly vehicleEfficiencyWhPerKm?: number | null;
+  /** Vehicle brand — used to apply the V-GREEN free-charging policy for VinFast owners. */
+  readonly vehicleBrand?: string | null;
+  /** Vehicle usable battery (kWh) — for kWh/100km derivation when efficiency is missing. */
+  readonly vehicleUsableBatteryKwh?: number | null;
+  /** Vehicle official range (km) — for kWh/100km derivation when efficiency is missing. */
+  readonly vehicleOfficialRangeKm?: number | null;
   readonly onSelectAlternativeStation?: (stopIndex: number, station: RankedStation) => void;
   readonly onBackToChat?: () => void;
 }
@@ -274,35 +276,64 @@ function RouteBriefing({
 function TripCostSection({
   distanceKm,
   efficiencyWhPerKm,
+  vehicleBrand,
+  vehicleUsableBatteryKwh,
+  vehicleOfficialRangeKm,
 }: {
   readonly distanceKm: number;
   readonly efficiencyWhPerKm: number;
+  readonly vehicleBrand?: string | null;
+  readonly vehicleUsableBatteryKwh?: number | null;
+  readonly vehicleOfficialRangeKm?: number | null;
 }) {
   const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
 
-  const electricity = calculateElectricityCostVnd(distanceKm, efficiencyWhPerKm);
-  const gasoline = calculateGasolineEquivalentVnd(distanceKm);
-  const { savedVnd, savedPercent } = calculateSavings(electricity, gasoline);
+  // Live energy prices (gasoline + diesel + EVN home + V-GREEN with free flag)
+  // pulled from the daily-crawled `energy-prices.json`.
+  const live = computeTripCost({
+    distanceKm,
+    vehicle: {
+      brand: vehicleBrand ?? '',
+      model: '',
+      usableBatteryKwh: vehicleUsableBatteryKwh ?? null,
+      officialRangeKm: vehicleOfficialRangeKm ?? 0,
+      efficiencyWhPerKm: efficiencyWhPerKm > 0 ? efficiencyWhPerKm : null,
+    },
+  });
 
-  if (electricity <= 0 || gasoline <= 0) return null;
+  // Hero savings still computed against gasoline. When V-GREEN is free for the
+  // user's VinFast vehicle, electricity cost is effectively 0 and the hero
+  // copy switches to the "free vs ₫X gas" framing.
+  const electricityForHero = live.electric.isFreeAtVGreen ? 0 : live.electric.homeChargingVnd;
+  const gasoline = live.gasoline.vnd;
+  const { savedVnd, savedPercent } = calculateSavings(electricityForHero, gasoline);
 
+  if (gasoline <= 0) return null;
+
+  const isFree = live.electric.isFreeAtVGreen;
   const isSaving = savedVnd > 0;
   const absVnd = Math.abs(savedVnd);
   const absPercent = Math.abs(savedPercent);
 
-  const heroLabel = isSaving
+  const heroLabel = isFree
+    ? t('trip_cost_hero_free' as Parameters<typeof t>[0], { amount: formatVnd(gasoline) })
+    : isSaving
     ? t('trip_cost_hero_savings' as Parameters<typeof t>[0], { amount: formatVnd(absVnd) })
     : t('trip_cost_hero_extra' as Parameters<typeof t>[0], { amount: formatVnd(absVnd) });
 
-  const subtitleLabel = isSaving
+  const subtitleLabel = isFree
+    ? t('trip_cost_hero_percent_free' as Parameters<typeof t>[0])
+    : isSaving
     ? t('trip_cost_hero_percent_cheaper' as Parameters<typeof t>[0], { percent: String(absPercent) })
     : t('trip_cost_hero_percent_more' as Parameters<typeof t>[0], { percent: String(absPercent) });
 
-  const heroBg = isSaving
+  const heroBg = isFree || isSaving
     ? 'bg-[var(--color-accent-subtle)] border-[var(--color-accent)]/30'
     : 'bg-[var(--color-surface)] border-[var(--color-border)]';
-  const heroText = isSaving ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-secondary)]';
+  const heroText = isFree || isSaving
+    ? 'text-[var(--color-accent)]'
+    : 'text-[var(--color-text-secondary)]';
 
   return (
     <div data-testid="trip-cost-section" className={`rounded-lg border p-3 ${heroBg}`}>
@@ -327,26 +358,37 @@ function TripCostSection({
 
       <div
         className={`transition-all duration-200 ease-out overflow-hidden ${
-          isOpen ? 'max-h-[200px] opacity-100 mt-3' : 'max-h-0 opacity-0'
+          isOpen ? 'max-h-[260px] opacity-100 mt-3' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="space-y-1 pt-2 border-t border-[var(--color-surface-hover)]">
           <div className="text-xs text-[var(--color-foreground)] font-[family-name:var(--font-mono)]">
-            {t('trip_cost_electricity' as Parameters<typeof t>[0], { amount: formatVnd(electricity) })}
+            {t('trip_cost_gasoline_line' as Parameters<typeof t>[0], {
+              amount: formatVnd(live.gasoline.vnd),
+            })}
           </div>
-          <div className={`text-xs font-[family-name:var(--font-mono)] ${
-            isSaving ? 'text-[var(--color-safe)]' : 'text-[var(--color-muted)]'
-          }`}>
-            {isSaving
-              ? t('trip_cost_savings' as Parameters<typeof t>[0], {
-                  amount: formatVnd(savedVnd),
-                  percent: String(savedPercent),
-                })
-              : t('trip_cost_no_savings' as Parameters<typeof t>[0], {
-                  amount: formatVnd(Math.abs(savedVnd)),
-                })}
+          <div className="text-xs text-[var(--color-foreground)] font-[family-name:var(--font-mono)]">
+            {t('trip_cost_diesel_line' as Parameters<typeof t>[0], {
+              amount: formatVnd(live.diesel.vnd),
+            })}
           </div>
-          <div className="text-[10px] text-[var(--color-muted)] leading-relaxed">
+          {isFree ? (
+            <div className="text-xs text-[var(--color-accent)] font-[family-name:var(--font-mono)]">
+              {t('trip_cost_electric_free_line' as Parameters<typeof t>[0])}
+            </div>
+          ) : (
+            <div className="text-xs text-[var(--color-foreground)] font-[family-name:var(--font-mono)]">
+              {t('trip_cost_electric_vgreen_line' as Parameters<typeof t>[0], {
+                amount: formatVnd(live.electric.vGreenVnd),
+              })}
+            </div>
+          )}
+          <div className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+            {t('trip_cost_electric_home_line' as Parameters<typeof t>[0], {
+              amount: formatVnd(live.electric.homeChargingVnd),
+            })}
+          </div>
+          <div className="text-[10px] text-[var(--color-muted)] leading-relaxed pt-1">
             {t('trip_cost_note' as Parameters<typeof t>[0])}
           </div>
         </div>
@@ -357,7 +399,7 @@ function TripCostSection({
 
 // ── Main Component ──
 
-export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
   const { t, tBi } = useLocale();
   const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
   const narrativeState = useRouteNarrative(tripPlan);
@@ -448,6 +490,9 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         <TripCostSection
           distanceKm={tripPlan.totalDistanceKm}
           efficiencyWhPerKm={vehicleEfficiencyWhPerKm}
+          vehicleBrand={vehicleBrand}
+          vehicleUsableBatteryKwh={vehicleUsableBatteryKwh}
+          vehicleOfficialRangeKm={vehicleOfficialRangeKm}
         />
       )}
 

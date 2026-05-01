@@ -669,7 +669,7 @@ function HomeContent() {
                   (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
                     ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
                     : null)
-                } onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} />}
+                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} />}
                 {/* Inline share button for mobile — replaces floating FAB */}
                 {tripPlan && !isPlanning && (
                   <div className="pt-2">
@@ -793,7 +793,7 @@ function HomeContent() {
                   (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
                     ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
                     : null)
-                } onSelectAlternativeStation={handleSelectAlternativeStation} />
+                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} />
               </div>
             ) : (
               <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className="flex flex-col h-full -m-4">

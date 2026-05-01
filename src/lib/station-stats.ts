@@ -33,3 +33,36 @@ export function replaceStationsBlock(content: string, count: number): string {
     `<!-- STATIONS_COUNT_START -->${formatted}+<!-- STATIONS_COUNT_END -->`,
   );
 }
+
+const ENERGY_PRICES_BLOCK_RE =
+  /<!-- ENERGY_PRICES_START -->[\s\S]*?<!-- ENERGY_PRICES_END -->/g;
+
+export interface EnergyPricesReadmeBlock {
+  readonly gasolineVndPerLiter: number;
+  readonly dieselVndPerLiter: number;
+  readonly evnHomeVndPerKwh: number;
+  readonly vGreenVndPerKwh: number;
+}
+
+/**
+ * Render the README "Live energy prices" block as four indented bullet lines.
+ * Auto-rewritten daily by `scripts/update-readme-stats.ts`.
+ */
+export function renderEnergyPricesBlock(prices: EnergyPricesReadmeBlock): string {
+  const fmt = (n: number) => n.toLocaleString('en-US');
+  return [
+    '<!-- ENERGY_PRICES_START -->',
+    `  - Gasoline RON 95-III: ₫${fmt(prices.gasolineVndPerLiter)} / liter (Petrolimex)`,
+    `  - Diesel DO 0,05S: ₫${fmt(prices.dieselVndPerLiter)} / liter (Petrolimex)`,
+    `  - Electricity at home: ₫${fmt(prices.evnHomeVndPerKwh)} / kWh (EVN tier 4 · 201–300 kWh/month)`,
+    `  - V-GREEN public charging: ₫${fmt(prices.vGreenVndPerKwh)} / kWh (free for VinFast owners until 2029)`,
+    '<!-- ENERGY_PRICES_END -->',
+  ].join('\n');
+}
+
+export function replaceEnergyPricesBlock(
+  content: string,
+  prices: EnergyPricesReadmeBlock,
+): string {
+  return content.replace(ENERGY_PRICES_BLOCK_RE, renderEnergyPricesBlock(prices));
+}

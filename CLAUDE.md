@@ -47,6 +47,19 @@ When writing Vietnamese copy, refer to the creator as "Duy" (not "Mình" or "Tô
 
 - **Disaster recovery:** If the production DB is paused, deleted, or corrupted, follow [docs/RECOVERY.md](./docs/RECOVERY.md). Schema lives in `prisma/schema.prisma`; reference data lives in `scripts/seed-*.ts` and `scripts/crawl-vinfast-stations.ts`. Never edit the schema in the Supabase UI.
 
+## Coding Behavior — Karpathy Guidelines (Mandatory)
+
+Apply [.claude/skills/karpathy-guidelines/SKILL.md](./.claude/skills/karpathy-guidelines/SKILL.md) on every code change. Invoke the `karpathy-guidelines` skill before writing, reviewing, or refactoring code.
+
+The four rules in one line each:
+
+1. **Think Before Coding** — State assumptions, surface ambiguities, present tradeoffs, push back on bad approaches. Don't pick silently.
+2. **Simplicity First** — Minimum code that solves the asked problem. No speculative features, abstractions, configurability, or error handling for impossible cases. If 200 lines could be 50, rewrite.
+3. **Surgical Changes** — Touch only what the user asked for. Don't reformat, refactor, or "improve" adjacent code. Match existing style. Mention unrelated dead code; don't delete it.
+4. **Goal-Driven Execution** — Translate vague asks into verifiable outcomes ("Add validation" → "Write tests for invalid inputs, then make them pass"). State a mini-plan with verification checks for multi-step work.
+
+Tradeoff: these guidelines bias toward caution over speed. For trivial tasks (typo fixes, locale tweaks, one-line config), use judgment.
+
 ## Testing — Mandatory Rules
 
 ### When to Run Tests
@@ -93,71 +106,17 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **728 unit/integration tests** across **54 files** (vitest, ~7 seconds)
+- **813 unit/integration tests** across **63 files** (vitest, ~9 seconds)
 - **18 E2E tests** across **10 spec files** (Playwright, ~43 seconds on Desktop Chrome)
-- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar
+- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar, energy-price parsers (Petrolimex / V-GREEN / EVN), trip-cost calculator, HomeEnergyPrices block
 - E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state
 - These counts should only go UP — never delete tests unless the feature is removed
 
 ### Pre-Commit Checklist
 
 Before every commit, verify:
-- [ ] `npm test` passes (all 728+ tests green)
+- [ ] `npm test` passes (all 813+ tests green)
 - [ ] `npx next build` succeeds (no TypeScript errors)
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
 - [ ] Locale keys match between en.json and vi.json
-
-## gstack — Development Workflow (Mandatory)
-
-This project follows the gstack development process. Every feature, bug fix, and refactor MUST go through this workflow. No exceptions.
-
-### Standard Workflow
-
-```
-Think → Plan → Build → Review → Test → Ship → Reflect
-```
-
-| Phase | What to do | gstack skill |
-|-------|-----------|-------------|
-| **Think** | Brainstorm the idea, challenge assumptions | `/office-hours` |
-| **Plan** | Review architecture + design before coding | `/plan-eng-review`, `/plan-design-review` |
-| **Build** | Implement with TDD, use `/investigate` for bugs | `/investigate`, `/freeze` |
-| **Review** | Code review before merge — catches what tests miss | `/review` |
-| **Test** | QA the running app as a real user (mobile + desktop) | `/qa` |
-| **Ship** | Tests → changelog → version bump → PR | `/ship` |
-| **Reflect** | Update docs, run retrospective | `/document-release`, `/retro` |
-
-### When to use each skill
-
-| Situation | Skill |
-|-----------|-------|
-| New feature idea | `/office-hours` first, then `/plan-eng-review` |
-| Ready to code | `/freeze` to scope edits, then build |
-| Found a bug | `/investigate` — root cause first, no guessing |
-| Code done, ready for review | `/review` — two-pass: critical then informational |
-| Want to test the running app | `/qa` — browser-based testing on mobile + desktop |
-| Report bugs without fixing | `/qa-only` |
-| Visual polish needed | `/design-review` — finds and fixes UI inconsistencies |
-| Ready to deploy | `/ship` — automated tests, changelog, PR |
-| After shipping | `/document-release` — sync all docs |
-| End of week | `/retro` — commit analysis, trends |
-| Working with production | `/careful` or `/guard` for safety |
-| Want a second opinion | `/codex` — adversarial code review |
-
-### Rules
-
-1. **Never skip `/review` before merging.** Code review catches structural issues that tests don't — race conditions, SQL safety, LLM trust boundaries.
-2. **Never skip `/qa` on UI changes.** Always test on mobile (393x852) AND desktop (1440x900). Most drivers use phones.
-3. **Always run `npm test` before committing.** 728+ tests must pass. No exceptions.
-4. **Use `/investigate` for bugs, not guessing.** Iron Law: no fixes without root cause investigation first.
-5. **Use `/document-release` after shipping.** Keep README, CLAUDE.md, and test counts in sync.
-
-### Troubleshooting
-
-If gstack skills aren't working:
-```bash
-cd ~/.claude/skills/gstack && ./setup
-# Then in Claude Code:
-/reload-plugins
-```

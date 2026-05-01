@@ -9,10 +9,12 @@ import {
   useLandingLocale,
 } from './LandingClient';
 import VietnamMap from './VietnamMap';
+import HomeEnergyPrices from './HomeEnergyPrices';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
 import stationStats from '@/data/station-stats.json';
 import { formatLastUpdated, formatStationCount } from '@/lib/station-stats';
+import { getEnergyPrices } from '@/lib/energy-prices';
 
 const dictionaries = { vi, en } as const;
 
@@ -152,6 +154,9 @@ function LandingContent() {
           </div>
         </div>
       </section>
+
+      {/* ─── Today's Energy Prices ─────────────────────── */}
+      <HomeEnergyPrices snapshot={getEnergyPrices()} t={t} locale={locale} />
 
       {/* ─── How It Works ───────────────────────────────── */}
       <section className="py-12 md:py-32 bg-[var(--color-background)]">

@@ -10,7 +10,14 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 
 - Plan routes between any two points in Vietnam with EV-specific constraints
 - See real-time charging station availability from VinFast's network (<!-- STATIONS_COUNT_START -->18,496+<!-- STATIONS_COUNT_END --> stations, 63 provinces — auto-updated daily after the crawl)
-- See **trip cost** in VND — electricity vs gasoline equivalent so you know your savings before you leave
+- See **trip cost** in VND — gasoline vs diesel vs electric, scaled to your route, with V-GREEN free charging applied for VinFast owners through 2029
+- Live energy prices auto-updated daily from authoritative sources:
+<!-- ENERGY_PRICES_START -->
+  - Gasoline RON 95-III: ₫23,750 / liter (Petrolimex)
+  - Diesel DO 0,05S: ₫28,170 / liter (Petrolimex)
+  - Electricity at home: ₫2,998 / kWh (EVN tier 4 · 201–300 kWh/month)
+  - V-GREEN public charging: ₫3,858 / kWh (free for VinFast owners until 2029)
+<!-- ENERGY_PRICES_END -->
 - Report station status with one tap (Working / Broken / Busy) — community-verified data
 - Get AI-powered trip planning via eVi — describe your trip in natural language and let AI fill in the details
 - Compare alternative charging stations ranked by speed, detour time, and cost

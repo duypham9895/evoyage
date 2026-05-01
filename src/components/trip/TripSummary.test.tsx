@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, cleanup } from '@testing-library/react';
@@ -37,6 +36,19 @@ const translations: Record<string, string> = {
   trip_cost_savings: 'vs gasoline: save {{amount}} ({{percent}}%)',
   trip_cost_no_savings: 'vs gasoline: {{amount}} more',
   trip_cost_note: 'Estimate note',
+  trip_cost_hero_savings: 'Save {{amount}} vs gasoline',
+  trip_cost_hero_extra: '{{amount}} more than gasoline',
+  trip_cost_hero_free: 'Free at V-GREEN vs gasoline {{amount}}',
+  trip_cost_hero_percent_cheaper: '{{percent}}% cheaper',
+  trip_cost_hero_percent_more: '{{percent}}% more',
+  trip_cost_hero_percent_free: 'Free until 2029 for VinFast owners',
+  trip_cost_show_breakdown: 'How is this calculated?',
+  trip_cost_hide_breakdown: 'Hide',
+  trip_cost_gasoline_line: 'Gasoline: ~{{amount}}',
+  trip_cost_diesel_line: 'Diesel: ~{{amount}}',
+  trip_cost_electric_free_line: 'Electric: Free at V-GREEN (until 2029)',
+  trip_cost_electric_vgreen_line: 'Electric at V-GREEN: ~{{amount}}',
+  trip_cost_electric_home_line: 'Electric at home: ~{{amount}}',
   // Routing-fallback note
   route_provider_fallback: 'Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly.',
 };
@@ -92,7 +104,7 @@ afterEach(() => {
 // ── Tests ──
 
 describe('TripSummary — trip cost section', () => {
-  it('renders cost lines when efficiency is provided', () => {
+  it('renders gasoline, diesel, and electric breakdown rows when efficiency is provided', () => {
     render(
       <TripSummary
         tripPlan={makeTripPlan()}
@@ -100,13 +112,45 @@ describe('TripSummary — trip cost section', () => {
         vehicleEfficiencyWhPerKm={150}
       />,
     );
-
     const section = screen.getByTestId('trip-cost-section');
     expect(section).toBeInTheDocument();
-    // 100 km × 150 Wh/km = 15 kWh × 3500 = 52,500 VND
-    expect(section).toHaveTextContent('Electricity: ~52.500 ₫');
-    // 100 km × 7 L/100km × 23000 = 161,000; saves 108,500 VND ≈ 67%
-    expect(section).toHaveTextContent('vs gasoline: save 108.500 ₫ (67%)');
+    // Three live-priced fuel lines render with VND-formatted numbers
+    expect(section).toHaveTextContent(/Gasoline: ~[\d.]+ ₫/);
+    expect(section).toHaveTextContent(/Diesel: ~[\d.]+ ₫/);
+    expect(section).toHaveTextContent(/Electric at home: ~[\d.]+ ₫/);
+  });
+
+  it('shows "Free at V-GREEN" line for VinFast vehicles before 2029-12-31', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan()}
+        isLoading={false}
+        vehicleEfficiencyWhPerKm={150}
+        vehicleBrand="VinFast"
+        vehicleUsableBatteryKwh={82}
+        vehicleOfficialRangeKm={471}
+      />,
+    );
+    const section = screen.getByTestId('trip-cost-section');
+    expect(section).toHaveTextContent('Electric: Free at V-GREEN (until 2029)');
+    // V-GREEN paid line should NOT appear when free
+    expect(section).not.toHaveTextContent(/Electric at V-GREEN: ~/);
+    // Home line still shows so the customer sees the alternative
+    expect(section).toHaveTextContent(/Electric at home: ~[\d.]+ ₫/);
+  });
+
+  it('shows paid V-GREEN line for non-VinFast vehicles', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan()}
+        isLoading={false}
+        vehicleEfficiencyWhPerKm={150}
+        vehicleBrand="Tesla"
+      />,
+    );
+    const section = screen.getByTestId('trip-cost-section');
+    expect(section).toHaveTextContent(/Electric at V-GREEN: ~[\d.]+ ₫/);
+    expect(section).not.toHaveTextContent('Free at V-GREEN');
   });
 
   it('hides cost section when efficiency is missing', () => {
@@ -138,7 +182,7 @@ describe('TripSummary — trip cost section', () => {
     expect(screen.queryByTestId('trip-cost-section')).not.toBeInTheDocument();
   });
 
-  it('renders cost for very long trips with grouped formatting', () => {
+  it('renders cost for very long trips with grouped formatting (dot thousands)', () => {
     render(
       <TripSummary
         tripPlan={makeTripPlan({ totalDistanceKm: 1000 })}
@@ -146,11 +190,10 @@ describe('TripSummary — trip cost section', () => {
         vehicleEfficiencyWhPerKm={180}
       />,
     );
-    // 1000 × 180 / 1000 = 180 kWh × 3500 = 630,000
-    // gasoline: 1000 × 7 / 100 × 23000 = 1,610,000; saved = 980,000 ≈ 61%
     const section = screen.getByTestId('trip-cost-section');
-    expect(section).toHaveTextContent('Electricity: ~630.000 ₫');
-    expect(section).toHaveTextContent('vs gasoline: save 980.000 ₫ (61%)');
+    // For a 1000 km trip the gasoline line must use grouped formatting (≥1M VND).
+    // Match a number with at least two dot-separators, e.g. "1.900.000 ₫".
+    expect(section).toHaveTextContent(/Gasoline: ~\d+\.\d{3}\.\d{3} ₫/);
   });
 
   it('shows the routing-fallback note when routeProvider === "mapbox"', () => {
@@ -187,18 +230,18 @@ describe('TripSummary — trip cost section', () => {
     expect(screen.queryByTestId('route-provider-fallback-note')).not.toBeInTheDocument();
   });
 
-  it('shows "more expensive" copy when EV cost exceeds gasoline equivalent', () => {
+  it('shows "more than gasoline" copy when EV home cost exceeds gasoline equivalent', () => {
     // Force EV cost > gas: efficiency 1500 Wh/km is unrealistic but exercises the branch.
-    // 100 × 1500 / 1000 = 150 kWh × 3500 = 525,000 vs gas 161,000 → +364,000
+    // Tesla brand prevents the V-GREEN free path so the comparison runs against home charging.
     render(
       <TripSummary
         tripPlan={makeTripPlan()}
         isLoading={false}
         vehicleEfficiencyWhPerKm={1500}
+        vehicleBrand="Tesla"
       />,
     );
-
     const section = screen.getByTestId('trip-cost-section');
-    expect(section).toHaveTextContent('vs gasoline: 364.000 ₫ more');
+    expect(section).toHaveTextContent(/more than gasoline/);
   });
 });

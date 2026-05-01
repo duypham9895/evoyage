@@ -1,0 +1,75 @@
+{
+  "products": [
+    {
+      "ID": "5bc76fdd0b7143fcb14bc4e5402060bf",
+      "Title": "Xăng RON 95-V",
+      "EnglishTitle": "RON 95-V",
+      "Link": "",
+      "Zone1Price": 24650,
+      "Zone2Price": 25140,
+      "OrderIndex": 1,
+      "LastModified": "2026-04-29T07:58:55.702Z"
+    },
+    {
+      "ID": "b75bc8919d6541dd81e1c60a76f4d78e",
+      "Title": "Xăng RON 95-III",
+      "EnglishTitle": "RON 95-III",
+      "Link": "",
+      "Zone1Price": 23750,
+      "Zone2Price": 24220,
+      "OrderIndex": 2,
+      "LastModified": "2026-04-29T08:00:08.855Z"
+    },
+    {
+      "ID": "85176bf8a6dd45d597c6980f7a674316",
+      "Title": "Xăng E10 RON 95-III",
+      "EnglishTitle": "E10 RON 95-III",
+      "Link": "",
+      "Zone1Price": 23190,
+      "Zone2Price": 23650,
+      "OrderIndex": 3,
+      "LastModified": "2026-04-29T07:58:41.355Z"
+    },
+    {
+      "ID": "2ed3d75ed91945b39bee9206b0f31da7",
+      "Title": "Xăng E5 RON 92-II",
+      "EnglishTitle": "E5 RON 92-II",
+      "Link": "",
+      "Zone1Price": 22620,
+      "Zone2Price": 23070,
+      "OrderIndex": 4,
+      "LastModified": "2026-04-29T07:59:28.355Z"
+    },
+    {
+      "ID": "fc72027b30984e92ba58a7013dad211e",
+      "Title": "DO 0,001S-V",
+      "EnglishTitle": "DO 0,001S-V",
+      "Link": "",
+      "Zone1Price": 29430,
+      "Zone2Price": 30010,
+      "OrderIndex": 5,
+      "LastModified": "2026-04-29T07:59:12.741Z"
+    },
+    {
+      "ID": "66d8c775ff6645329c7f0b94f47642b0",
+      "Title": "DO 0,05S-II",
+      "EnglishTitle": "DO 0.05S-II",
+      "Link": "",
+      "Zone1Price": 28170,
+      "Zone2Price": 28730,
+      "OrderIndex": 6,
+      "LastModified": "2026-04-29T07:59:55.370Z"
+    },
+    {
+      "ID": "cbd141e7c64a4d9b8a6cb96b5a121882",
+      "Title": "Dầu hỏa 2-K",
+      "EnglishTitle": "2-K Kerosene",
+      "Link": "",
+      "Zone1Price": 31980,
+      "Zone2Price": 32610,
+      "OrderIndex": 7,
+      "LastModified": "2026-04-29T07:59:42.569Z"
+    }
+  ],
+  "capturedAt": "2026-05-01T09:24:24.647Z"
+}

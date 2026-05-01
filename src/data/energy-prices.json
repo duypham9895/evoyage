@@ -1,0 +1,81 @@
+{
+  "lastSyncedAt": "2026-05-01T10:33:14.584Z",
+  "petrolimex": {
+    "source": "https://www.petrolimex.com.vn/index.html",
+    "effectiveAt": "2026-04-29T08:00:08.000Z",
+    "products": {
+      "ron95v": {
+        "label": "Xăng RON 95-V",
+        "vndPerLiter": 24650
+      },
+      "ron95iii": {
+        "label": "Xăng RON 95-III",
+        "vndPerLiter": 23750
+      },
+      "e10ron95iii": {
+        "label": "Xăng E10 RON 95-III",
+        "vndPerLiter": 23190
+      },
+      "e5ron92": {
+        "label": "Xăng E5 RON 92-II",
+        "vndPerLiter": 22620
+      },
+      "do0001s": {
+        "label": "DO 0,001S-V",
+        "vndPerLiter": 29430
+      },
+      "do005s": {
+        "label": "DO 0,05S-II",
+        "vndPerLiter": 28170
+      },
+      "kerosene": {
+        "label": "Dầu hỏa 2-K",
+        "vndPerLiter": 31980
+      }
+    }
+  },
+  "vgreen": {
+    "source": "https://vgreen.net/vi/cau-hoi-thuong-gap",
+    "effectiveAt": "2024-03-19",
+    "vndPerKwh": 3858,
+    "freeForVinFastUntil": "2029-12-31"
+  },
+  "evnResidential": {
+    "source": "https://en.evn.com.vn/d6/news/RETAIL-ELECTRICITY-TARIFF-9-28-252.aspx",
+    "effectiveAt": "2025-05-09",
+    "tiers": [
+      {
+        "minKwh": 0,
+        "maxKwh": 50,
+        "vndPerKwh": 1984
+      },
+      {
+        "minKwh": 51,
+        "maxKwh": 100,
+        "vndPerKwh": 2050
+      },
+      {
+        "minKwh": 101,
+        "maxKwh": 200,
+        "vndPerKwh": 2380
+      },
+      {
+        "minKwh": 201,
+        "maxKwh": 300,
+        "vndPerKwh": 2998
+      },
+      {
+        "minKwh": 301,
+        "maxKwh": 400,
+        "vndPerKwh": 3350
+      },
+      {
+        "minKwh": 401,
+        "maxKwh": null,
+        "vndPerKwh": 3460
+      }
+    ],
+    "representativeTier": 4,
+    "representativeVndPerKwh": 2998
+  }
+}

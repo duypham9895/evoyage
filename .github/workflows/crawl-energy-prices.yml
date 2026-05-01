@@ -1,0 +1,49 @@
+name: Crawl Energy Prices
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC (10:00 AM Vietnam) — Petrolimex usually adjusts
+    # at 15:00 ICT (08:00 UTC) on Thursdays, so 10:00 AM next-day reliably
+    # captures the previous day's adjustment.
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Crawl energy prices (Petrolimex + V-GREEN + EVN)
+        run: npx tsx scripts/crawl-energy-prices.ts
+
+      - name: Sync README energy-prices block
+        run: npx tsx scripts/update-readme-stats.ts
+
+      - name: Commit energy-prices.json + README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/energy-prices.json README.md
+          if git diff --cached --quiet; then
+            echo "No energy-price changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(energy-prices): daily sync [skip ci]"
+          git push
