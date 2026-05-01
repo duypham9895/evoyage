@@ -63,7 +63,7 @@ function parseProvider(tags: Record<string, string>): { provider: string; isVinF
   return { provider: 'Other', isVinFast: false };
 }
 
-function inferProvince(lat: number, lng: number): string {
+function inferProvince(lat: number): string {
   // Simple region inference based on coordinates
   if (lat > 20.5) return 'Hà Nội / Northern';
   if (lat > 15.5) return 'Đà Nẵng / Central';
@@ -110,7 +110,7 @@ async function main() {
     const connectorTypes = parseConnectorTypes(tags);
     const maxPower = parseMaxPower(tags);
     const { provider, isVinFast } = parseProvider(tags);
-    const chargerTypes = connectorTypes.map((c) =>
+    const chargerTypes = connectorTypes.map(() =>
       maxPower >= 20 ? `DC_${maxPower}kW` : `AC_${maxPower}kW`,
     );
 
@@ -122,8 +122,8 @@ async function main() {
         name,
         address: tags['addr:street']
           ? `${tags['addr:housenumber'] ?? ''} ${tags['addr:street']}, ${tags['addr:city'] ?? ''}`.trim()
-          : inferProvince(el.lat, el.lon),
-        province: tags['addr:city'] ?? tags['addr:province'] ?? inferProvince(el.lat, el.lon),
+          : inferProvince(el.lat),
+        province: tags['addr:city'] ?? tags['addr:province'] ?? inferProvince(el.lat),
         latitude: el.lat,
         longitude: el.lon,
         chargerTypes: JSON.stringify([...new Set(chargerTypes)]),
