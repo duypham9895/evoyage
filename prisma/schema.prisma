@@ -103,12 +103,28 @@ model ChargingStation {
   markerIcon     String? // Icon URL for map display
   rawData        String? // Complete original JSON from source API
 
+  // Crowdsourced status — denormalized from latest WORKING StationStatusReport
+  lastVerifiedAt DateTime?
+
   @@index([latitude, longitude])
   @@index([province])
   @@index([provider])
   @@index([isVinFastOnly])
   @@index([chargingStatus])
   @@index([entityId])
+  @@index([lastVerifiedAt])
+}
+
+model StationStatusReport {
+  id        String   @id @default(cuid())
+  stationId String
+  status    String // "WORKING" | "BROKEN" | "BUSY"
+  ipHash    String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([stationId, createdAt])
+  @@index([createdAt])
 }
 
 model VinFastStationDetail {

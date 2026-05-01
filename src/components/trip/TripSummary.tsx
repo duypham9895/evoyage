@@ -5,6 +5,7 @@ import { useLocale } from '@/lib/locale';
 import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import StationDetailExpander from './StationDetailExpander';
+import StationStatusReporter from './StationStatusReporter';
 
 interface TripSummaryProps {
   readonly tripPlan: TripPlan | null;
@@ -543,6 +544,12 @@ export default function TripSummary({ tripPlan, isLoading, onSelectAlternativeSt
 
                     {/* Station detail expander */}
                     <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
+
+                    {/* Crowdsourced status reporting (1-tap working/broken/busy) */}
+                    <StationStatusReporter
+                      stationId={station.id}
+                      lastVerifiedAt={station.lastVerifiedAt}
+                    />
 
                     {/* Alternatives */}
                     {alternatives.length > 0 && (

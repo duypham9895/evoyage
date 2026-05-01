@@ -348,5 +348,15 @@
   "map_card_charge_time": "~{{minutes}} phút sạc đến 80%",
   "map_card_ports": "{{count}} cổng sạc",
   "evi_show_on_map": "Xem trên bản đồ",
-  "evi_ask_about_station": "Cho mình biết về {{name}}"
+  "evi_ask_about_station": "Cho mình biết về {{name}}",
+
+  "station_report_section_title": "Trạm sạc còn dùng được không?",
+  "station_report_working": "Báo trạm hoạt động",
+  "station_report_broken": "Báo lỗi",
+  "station_report_busy": "Báo đang bận",
+  "station_report_thanks": "Cảm ơn bạn đã báo",
+  "station_report_failed": "Không gửi được báo cáo. Thử lại nhé.",
+  "station_report_rate_limited": "Chậm lại một chút rồi thử lại nhé.",
+  "station_report_last_verified": "Xác nhận lần cuối: {{minutes}} phút trước",
+  "station_report_last_verified_just_now": "Xác nhận lần cuối: vừa xong"
 }
