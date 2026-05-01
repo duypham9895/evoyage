@@ -42,9 +42,6 @@ export default function MapLocateButton({
   const [fetchError, setFetchError] = useState(false);
   const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Hide button if geolocation not supported
-  if (!geolocationSupported) return null;
-
   const handleTap = useCallback(() => {
     setFetchError(false);
     setInfoBar(null);
@@ -129,6 +126,10 @@ export default function MapLocateButton({
       if (autoDismissRef.current) clearTimeout(autoDismissRef.current);
     };
   }, [latitude, longitude, loading, error, onStationsFound]);
+
+  // Hide button if geolocation not supported. MUST come after all hooks so
+  // the hook count stays stable across renders (Rules of Hooks).
+  if (!geolocationSupported) return null;
 
   const borderColor =
     buttonState === 'located'

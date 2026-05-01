@@ -211,23 +211,22 @@ export default function BatteryStatusPanel({
         <label className="text-xs text-[var(--color-muted)] mb-2 block">{t('driving_style' as Parameters<typeof t>[0])}</label>
         <div className="flex gap-1.5">
           {([
-            { label: 'driving_style_eco', value: 0.70, icon: '🌿' },
-            { label: 'driving_style_normal', value: 0.80, icon: '🚗' },
-            { label: 'driving_style_sport', value: 0.90, icon: '⚡' },
-          ] as const).map(({ label: lbl, value, icon }) => {
+            { label: 'driving_style_eco', value: 0.70 },
+            { label: 'driving_style_normal', value: 0.80 },
+            { label: 'driving_style_sport', value: 0.90 },
+          ] as const).map(({ label: lbl, value }) => {
             const isSelected = Math.abs(rangeSafetyFactor - value) < 0.05;
             return (
               <button
                 key={lbl}
                 onClick={() => { hapticTick(); onRangeSafetyFactorChange(value); }}
-                className={`flex-1 py-2.5 text-xs rounded-lg transition-colors flex flex-col items-center gap-0.5 ${
+                className={`flex-1 py-2.5 text-xs rounded-lg transition-colors ${
                   isSelected
                     ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                     : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
                 }`}
               >
-                <span className="text-base">{icon}</span>
-                <span>{t(lbl as Parameters<typeof t>[0])}</span>
+                {t(lbl as Parameters<typeof t>[0])}
               </button>
             );
           })}
