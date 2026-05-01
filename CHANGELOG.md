@@ -3,6 +3,38 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] — 2026-05-01
+
+Audit-driven UI/UX pass. The full audit lives at [docs/design/uiux-audit-2026-05-01.md](./docs/design/uiux-audit-2026-05-01.md) and the staged plan at [docs/plans/2026-05-01-uiux-improvements.md](./docs/plans/2026-05-01-uiux-improvements.md). Phases 1 → 5 + a bonus locale-interpolation fix all landed in this release.
+
+### Added
+- **Station trust chip** on every charging stop in the trip summary — a small chip showing crowdsourced verification recency (`Đã xác minh 2 phút trước` / `Đã xác minh 3 ngày trước` / `Chưa có xác minh gần đây`) above the always-visible `QuickStats` row. Closes the loop on the `lastVerifiedAt` data shipped in 0.6.0 — drivers no longer have to expand the report widget to see the trust signal. New helper `lib/stations/trust-signal.ts` classifies into 3 tiers (recent <24h, older 24h–7d, none ≥7d or null) and is reused per stop.
+- **Cost transparency hero pill** at the top of the trip summary — promotes the savings number from a buried 3-line text block to a single accent-tinted pill: e.g. `Tiết kiệm 277.907 ₫ so với xăng` with subtitle `Rẻ hơn 60%` and a tap-to-expand `Cách tính?` disclosure that surfaces the full breakdown + EVN/RON95 assumptions. Uses neutral muted color (not danger) when EV is more expensive than gasoline so the driver is never shamed.
+- **Sample-trip chips** on the `/plan` empty state — when both inputs are empty, 4 popular trip chips render above the form (`Quận 1, TP.HCM → Đà Lạt`, `→ Vũng Tàu`, `Hà Nội → Hạ Long`, `Đà Nẵng → Huế`). Tap pre-fills both inputs without auto-submitting; chips disappear on first user keystroke. Lowers typing barrier for first-time mobile visitors.
+- **eVi discoverability nudge** — a one-time-per-session toast (`Bí ý tưởng? Hỏi eVi nhé.`) that surfaces after either (a) a tap on the disabled "Plan trip" button, or (b) 90 seconds idle on `/plan` with no input. Capped via `sessionStorage` (key `evi_nudge_shown`); fails gracefully when storage is unavailable (private mode). Uses `--color-accent-subtle` background and stays below the FeedbackFAB in z-order.
+- **4 landing-only gradient color tokens** in `globals.css` — `--color-landing-navy`, `-navy-deep`, `-footer`, `-alt`. Documented in DESIGN.md as marketing-surface only.
+- **Documented design system extensions**: typography scale gained `3xl: 40px` (section headings) and `display: 56px` (hero h1, StatCounter); border-radius scale gained `2xl: 24px` (landing/skeleton cards). All sizes had been shipping outside the documented scale.
+
+### Changed
+- **Unified accent green across the funnel.** Landing CTAs and badges had used `#00D26A` and `#00E87A` while in-app surfaces used `--color-accent` (`#00D4AA`). All three collapsed onto `--color-accent` / `--color-accent-dim` (CTAs darken on hover instead of brightening). Brand color is now coherent from landing → app.
+- **Replaced undocumented cobalt blue `#1464F4`** (used 5× in landing as a de facto secondary accent) with `--color-info` (`#5B9BFF`, lighter pastel). Step cards alternate `--color-info` / `--color-accent` cleanly using design tokens.
+- **Landing page fully tokenized.** `LandingPageContent.tsx`, `LandingClient.tsx`, and the `VietnamMap` tooltip migrated from raw hex to CSS variables. Repo-wide `grep '\b#[0-9A-Fa-f]{6}\b'` against Tailwind classes returns zero matches in landing files. (SVG `fill=`/`stroke=` decorative teals in `VietnamMap.tsx` are intentionally left as map art.)
+- **Status colors unified.** `StationCard.tsx` migrated from Tailwind palette (`text-green-400`, `text-amber-400`, `text-gray-400`, `text-red-400`) to design tokens (`--color-safe`, `--color-warn`, `--color-muted`, `--color-danger`). `StationInfoChips.tsx` 24/7 chip migrated from `text-blue-400` → `--color-info`.
+- **DESIGN.md `Surface Hover` / `Surface Elevated` descriptions reconciled with `globals.css`.** The shipped names had been correct for months; the documentation was the drift. Updated to match what every component already does.
+- **Landing model count is now derived** from `VINFAST_MODELS.length` (= 6) instead of a hardcoded `15+`. Locale strings updated to "VinFast models" (en) / "Dòng xe VinFast" (vi) so the claim is accurate. Same drift class as the station-count auto-update shipped in 0.7.0.
+- **Province count updated `63` → `34`** to reflect Vietnam's 2025 administrative reform (28 provinces + 6 centrally-run cities, effective 2025-07-01). Source: [Wikipedia: 2025 Vietnamese administrative reform](https://en.wikipedia.org/wiki/2025_Vietnamese_administrative_reform). EN label rephrased "Provinces" → "Provinces & cities"; the existing Vietnamese "Tỉnh thành" was already accurate.
+
+### Fixed
+- **Latent locale-interpolation bug on landing page.** `LandingPageContent.tsx` had a local `useT()` that did `dict[key] ?? key` with no `{{var}}` interpolation. Since 0.7.0 added `{{count}}` to `landing_feat2_title`, the features section had been rendering `{{count}}+ trạm sạc VinFast` literally. `useT()` now mirrors the `interpolate()` pattern from `src/lib/locale.tsx`; the call site passes `{ count: stationStats.count }`.
+- **Latent ESLint errors in `LandingClient.tsx`** surfaced by the husky pre-commit hook when the file was touched: logo `<a href="/">` → `<Link>`, and `setState`-inside-`useEffect` (`StatCounter`'s reduced-motion branch) → lazy `useState` initializer. Both errors were pre-existing; the hook earned its keep again.
+
+### Tests
+- 728 → 759 (+31) across 54 → 57 files. New tests:
+  - `lib/stations/trust-signal.test.ts` (14) — tier boundaries (24h, 7d), null/future input, ISO string acceptance
+  - `components/trip/SampleTripChips.test.tsx` (9) — empty-state rendering, hide-on-input, locale labels (vi/en), onPick payload
+  - `components/trip/EViNudge.test.tsx` (8) — sessionStorage gating, CTA/dismiss/X handlers, locale copy, private-mode resilience
+- The `locale-keys.test.ts` parity check picked up 14 new keys (`station_trust_*` × 5, `trip_cost_hero_*` + breakdown × 6, `sample_trip_*` × 9, `evi_nudge_*` × 5) without manual updates — the test does its job.
+
 ## [0.7.1] — 2026-05-01
 
 ### Added
