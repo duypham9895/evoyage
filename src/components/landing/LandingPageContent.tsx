@@ -242,7 +242,7 @@ function LandingContent() {
           </ScrollAnimator>
 
           {/* Horizontal scroll on mobile, grid on desktop */}
-          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory md:snap-none -mx-6 px-6 md:mx-0 md:px-0">
+          <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto pb-4 md:pb-0 snap-x snap-mandatory md:snap-none -mx-6 px-6 md:mx-0 md:px-0">
             {VINFAST_MODELS.map((car) => (
               <ScrollAnimator key={car.model} className="snap-start">
                 <div className="min-w-[180px] bg-[var(--color-surface)] rounded-2xl p-5 border border-[var(--color-surface-hover)] hover:border-[var(--color-surface-hover)] transition-all">
@@ -275,20 +275,19 @@ function LandingContent() {
                 </div>
               </ScrollAnimator>
             ))}
+          </div>
 
-            {/* Add vehicle card */}
-            <ScrollAnimator className="snap-start">
+          <ScrollAnimator>
+            <div className="text-center mt-8">
               <a
                 href="/plan"
-                className="min-w-[180px] h-full bg-transparent rounded-2xl p-5 border-2 border-dashed border-[var(--color-surface-hover)] hover:border-[var(--color-muted)] transition-all flex flex-col items-center justify-center gap-3 min-h-[240px]"
+                className="inline-flex items-center gap-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] text-sm font-medium transition-colors"
               >
-                <div className="w-12 h-12 rounded-full border-2 border-dashed border-[var(--color-surface-hover)] flex items-center justify-center">
-                  <span className="text-[var(--color-muted)] text-2xl">+</span>
-                </div>
-                <span className="text-[var(--color-muted)] text-sm text-center">{t('landing_models_add')}</span>
+                {t('landing_models_add')}
+                <span aria-hidden>→</span>
               </a>
-            </ScrollAnimator>
-          </div>
+            </div>
+          </ScrollAnimator>
         </div>
       </section>
 
