@@ -374,7 +374,7 @@ function LandingContent() {
                   {t('landing_footer_start')}
                 </a>
                 <a
-                  href="https://github.com/edwardpham94/evoyage"
+                  href="https://github.com/duypham9895/evoyage"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#E8E8ED] text-sm hover:text-[#00D4AA] transition-colors py-3 inline-block"

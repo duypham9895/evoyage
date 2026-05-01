@@ -3,11 +3,15 @@
 import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
+import { LocaleProvider } from '@/lib/locale';
 import VietnamMap from './VietnamMap';
+
+const renderWithLocale = (ui: React.ReactElement) =>
+  render(<LocaleProvider>{ui}</LocaleProvider>);
 
 describe('VietnamMap', () => {
   it('renders SVG with accessibility attributes', () => {
-    render(<VietnamMap />);
+    renderWithLocale(<VietnamMap />);
     const svg = screen.getByRole('img');
     expect(svg).toBeInTheDocument();
     expect(svg).toHaveAttribute('aria-label');
@@ -15,7 +19,7 @@ describe('VietnamMap', () => {
   });
 
   it('renders all 63 provinces', () => {
-    const { container } = render(<VietnamMap />);
+    const { container } = renderWithLocale(<VietnamMap />);
     const provinces = container.querySelectorAll('.province');
     expect(provinces).toHaveLength(63);
   });

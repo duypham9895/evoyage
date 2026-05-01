@@ -180,14 +180,14 @@ export default function BrandModelSelector({
           </div>
           <div className="flex gap-3 text-xs text-[var(--color-muted)]">
             <span className="font-[family-name:var(--font-mono)]">
-              🔋 {selectedVehicle.batteryCapacityKwh} kWh
+              {t('vehicle_battery_label')} {selectedVehicle.batteryCapacityKwh} kWh
             </span>
             <span className="font-[family-name:var(--font-mono)]">
-              📏 {selectedVehicle.officialRangeKm} km
+              {t('vehicle_range_label')} {selectedVehicle.officialRangeKm} km
             </span>
             {selectedVehicle.dcMaxChargingPowerKw && (
               <span className="font-[family-name:var(--font-mono)]">
-                ⚡ {selectedVehicle.dcMaxChargingPowerKw} kW
+                {t('vehicle_dc_power_label')} {selectedVehicle.dcMaxChargingPowerKw} kW
               </span>
             )}
           </div>

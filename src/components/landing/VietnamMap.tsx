@@ -1,10 +1,12 @@
 'use client';
 
 import { useRef, useCallback } from 'react';
+import { useLocale } from '@/lib/locale';
 import { VIETNAM_MAP } from './vietnam-map-paths';
 import { LABEL_OFFSETS, getCityColor, ArchipelagoGroup } from './vietnam-map-helpers';
 
 export default function VietnamMap() {
+  const { t } = useLocale();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const touchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -82,7 +84,7 @@ export default function VietnamMap() {
         viewBox={VIETNAM_MAP.viewBox}
         className="w-full h-auto"
         role="img"
-        aria-label="Bản đồ Việt Nam với tuyến đường xe điện từ TP.HCM đến Hà Nội, bao gồm quần đảo Hoàng Sa và Trường Sa"
+        aria-label={t('hero_map_alt')}
         onMouseOver={handleMouseOver}
         onMouseMove={handleMouseMove}
         onMouseOut={handleMouseOut}
