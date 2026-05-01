@@ -25,15 +25,17 @@
   - `base`: 16px — body text, inputs
   - `lg`: 20px — section headings (h3)
   - `xl`: 24px — page headings (h2)
-  - `2xl`: 32px — hero headings (h1)
-  - Line-height: 1.5 body, 1.2 headings
+  - `2xl`: 32px — hero headings (h1) in app surfaces
+  - `3xl`: 40px — landing-page section headings (mobile starts at `xl: 24px` and scales up)
+  - `display`: 56px — landing-page hero h1 + StatCounter values
+  - Line-height: 1.5 body, 1.2 headings, 1.1 display
 
 ## Color
 - **Approach:** Restrained — accent is rare and meaningful, hierarchy from surface elevation
 - **Background:** `#0F0F11` — softer than pure black, reduces eye strain
 - **Surface:** `#1A1A1F` — chat bubbles, cards, primary content containers
-- **Surface Elevated:** `#252530` — active states, hover, sent messages, dropdowns
-- **Surface Hover:** `#2E2E3A` — hover state for elevated surfaces
+- **Surface Hover:** `#252530` — second-tier surface; active states, sent messages, static borders that need to read above base surface
+- **Surface Elevated:** `#2E2E3A` — top tier; hover state on already-elevated surfaces, dropdowns, the brightest interactive shade
 - **Accent:** `#00D4AA` — EV-green, CTAs, active tab indicator, links. Use sparingly.
 - **Accent Dim:** `#00A888` — hover/pressed state for accent elements
 - **Accent Subtle:** `rgba(0, 212, 170, 0.15)` — filled chip backgrounds, subtle highlights
@@ -49,6 +51,13 @@
   - Info: `#5B9BFF` — blue, loading states, informational
 - **Dark mode:** This IS the dark mode. No light mode planned.
 
+### Landing-page gradient tokens (marketing surface only)
+- `--color-landing-navy: #0D1B3E` — primary marketing navy, hero/final-CTA gradient anchor + Stats section solid
+- `--color-landing-navy-deep: #081428` — deepest gradient transition stop, mid of hero
+- `--color-landing-footer: #0B0B0D` — footer one-shade-darker than `background`, signals end-of-page
+- `--color-landing-alt: #111114` — features/transparency section, one-shade-lighter than `background` for subtle alternation
+- These four tokens are reserved for the landing page only. Do not use them in app surfaces.
+
 ## Spacing
 - **Base unit:** 4px
 - **Density:** Comfortable — chat messages need breathing room
@@ -61,9 +70,10 @@
 - **Max content width:** 1200px (landing page), 100% (app/map view)
 - **Border radius:**
   - `sm`: 6px — small badges, tags
-  - `md`: 12px — buttons, inputs, tabs, cards
+  - `md`: 12px — buttons, inputs, tabs, cards (CTA buttons specifically use `xl: 20px` for landing prominence)
   - `lg`: 16px — chat bubbles, bottom sheet content
-  - `xl`: 20px — bottom sheet handle area
+  - `xl`: 20px — bottom sheet handle area, prominent landing CTAs
+  - `2xl`: 24px — landing-page feature/vehicle/transparency cards, `TripSummary` skeleton cards
   - `full`: 9999px — pills, chips, avatars
 
 ## Motion
@@ -125,3 +135,7 @@
 | 2026-03-21 | Filled chips over outlined | 15% accent opacity creates warm glow, instantly readable on dark backgrounds |
 | 2026-03-21 | Surface elevation hierarchy | Three-tier depth (#0F0F11 → #1A1A1F → #252530) replaces single flat dark background |
 | 2026-03-21 | Keep existing fonts | Be Vietnam Pro, Space Grotesk, JetBrains Mono are excellent choices — no change needed |
+| 2026-05-01 | Reconcile Surface Hover / Surface Elevated naming with implementation | Original DESIGN.md had values swapped relative to globals.css. Components were authored against globals.css naming and shipped correctly for months — the doc was the drift, not the code. Updated descriptions to match shipped reality. |
+| 2026-05-01 | Add `3xl: 40px` and `display: 56px` to type scale | Landing hero/StatCounter (56px) and section headings (40px) had been shipping outside the documented scale. Doc was drift, not code. |
+| 2026-05-01 | Add `2xl: 24px` to border-radius scale | Landing cards and `TripSummary` skeleton cards had been shipping `rounded-2xl` outside the documented scale. Doc was drift, not code. |
+| 2026-05-01 | Add four `--color-landing-*` tokens for marketing-only gradient surfaces | `#0D1B3E`, `#081428`, `#0B0B0D`, `#111114` are intentional dark-navy gradient art on the landing page. Tokenized so future changes happen in one place. Reserved for landing only — do not use in app surfaces. |

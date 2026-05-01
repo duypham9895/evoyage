@@ -76,7 +76,7 @@ export default function VietnamMap() {
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="pointer-events-none absolute z-10 bg-[#1A1A1F]/95 border border-[#00D4AA]/30 text-[#E8E8ED] px-3 py-1.5 rounded-lg text-[13px] font-medium backdrop-blur-sm shadow-lg transition-opacity duration-150"
+        className="pointer-events-none absolute z-10 bg-[var(--color-surface)]/95 border border-[var(--color-accent)]/30 text-[var(--color-foreground)] px-3 py-1.5 rounded-lg text-[13px] font-medium backdrop-blur-sm shadow-lg transition-opacity duration-150"
         style={{ opacity: 0 }}
       />
 

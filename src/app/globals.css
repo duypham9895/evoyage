@@ -16,6 +16,11 @@
   --color-muted: #6B6B78;
   --color-text-secondary: #A0A0AB;
   --color-border: rgba(107, 107, 120, 0.2);
+  /* Landing-page gradient stops — intentional dark-navy art for marketing surface only */
+  --color-landing-navy: #0D1B3E;
+  --color-landing-navy-deep: #081428;
+  --color-landing-footer: #0B0B0D;
+  --color-landing-alt: #111114;
   --font-sans: var(--font-sans), system-ui, sans-serif;
   --font-mono: var(--font-mono);
   --font-heading: var(--font-heading);

@@ -95,7 +95,7 @@ export default function StationInfoChips({ station }: StationInfoChipsProps) {
           <span
             role="listitem"
             aria-label="Operating hours: 24/7"
-            className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full border text-blue-400 border-blue-400 font-medium"
+            className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full border text-[color:var(--color-info)] border-[color:var(--color-info)] font-medium"
           >
             {t('station_hours_24h')}
           </span>

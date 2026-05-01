@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import Link from 'next/link';
 
 /* ─── Scroll Animation Observer ─────────────────────────── */
 
@@ -58,27 +59,27 @@ export function LandingNavbar({
     <nav
       className={`fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-between px-6 transition-all duration-300 ${
         scrolled
-          ? 'bg-[#0F0F11]/90 backdrop-blur-xl border-b border-[#1A1A1F]'
+          ? 'bg-[var(--color-background)]/90 backdrop-blur-xl border-b border-[var(--color-surface)]'
           : 'bg-transparent'
       }`}
     >
       {/* Logo */}
-      <a href="/" className="font-[family-name:var(--font-heading)] font-bold text-2xl tracking-tight flex items-center gap-0.5">
-        <span className="text-[#00D26A] italic">e</span>
-        <span className="text-[#E8E8ED]">Voyage</span>
-      </a>
+      <Link href="/" className="font-[family-name:var(--font-heading)] font-bold text-2xl tracking-tight flex items-center gap-0.5">
+        <span className="text-[var(--color-accent)] italic">e</span>
+        <span className="text-[var(--color-foreground)]">Voyage</span>
+      </Link>
 
       {/* Desktop right side */}
       <div className="hidden md:flex items-center gap-4">
         <button
           onClick={onLocaleChangeAction}
-          className="px-3 py-1.5 text-sm text-[#6B6B78] hover:text-[#E8E8ED] transition-colors rounded-lg border border-[#252530] hover:border-[#6B6B78]"
+          className="px-3 py-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>
         <a
           href="/plan"
-          className="px-5 py-2.5 bg-[#00D26A] text-[#0F0F11] font-semibold text-sm rounded-xl hover:bg-[#00E87A] transition-all cta-glow"
+          className="px-5 py-2.5 bg-[var(--color-accent)] text-[var(--color-background)] font-semibold text-sm rounded-xl hover:bg-[var(--color-accent-dim)] transition-all cta-glow"
         >
           {translations.navCta}
         </a>
@@ -88,13 +89,13 @@ export function LandingNavbar({
       <div className="flex md:hidden items-center gap-3">
         <button
           onClick={onLocaleChangeAction}
-          className="px-2 py-1 text-xs text-[#6B6B78] border border-[#252530] rounded-lg"
+          className="px-2 py-1 text-xs text-[var(--color-muted)] border border-[var(--color-surface-hover)] rounded-lg"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>
         <a
           href="/plan"
-          className="px-4 py-2 bg-[#00D26A] text-[#0F0F11] font-semibold text-sm rounded-xl"
+          className="px-4 py-2 bg-[var(--color-accent)] text-[var(--color-background)] font-semibold text-sm rounded-xl"
         >
           {translations.navCta}
         </a>
@@ -124,16 +125,16 @@ export function FAQAccordion({
   return (
     <div className="max-w-3xl mx-auto">
       {items.map((item, i) => (
-        <div key={i} className="border-b border-[#252530]">
+        <div key={i} className="border-b border-[var(--color-surface-hover)]">
           <button
             onClick={() => toggle(i)}
             className="w-full flex items-center justify-between py-5 text-left group"
           >
-            <span className="font-[family-name:var(--font-sans)] font-medium text-base text-[#E8E8ED] pr-4 group-hover:text-[#00D4AA] transition-colors">
+            <span className="font-[family-name:var(--font-sans)] font-medium text-base text-[var(--color-foreground)] pr-4 group-hover:text-[var(--color-accent)] transition-colors">
               {item.question}
             </span>
             <span
-              className={`text-[#6B6B78] text-xl transition-transform duration-200 flex-shrink-0 ${
+              className={`text-[var(--color-muted)] text-xl transition-transform duration-200 flex-shrink-0 ${
                 openIndex === i ? 'rotate-45' : ''
               }`}
             >
@@ -145,7 +146,7 @@ export function FAQAccordion({
               openIndex === i ? 'max-h-[500px] pb-5' : 'max-h-0'
             }`}
           >
-            <p className="text-[#6B6B78] text-[15px] leading-relaxed">
+            <p className="text-[var(--color-muted)] text-[15px] leading-relaxed">
               {item.answer}
             </p>
           </div>
@@ -166,18 +167,21 @@ export function StatCounter({
   readonly suffix?: string;
   readonly label: string;
 }) {
-  const [displayed, setDisplayed] = useState(0);
+  // Lazy initializer reads prefers-reduced-motion at mount so we can snap
+  // straight to the final value without a setState-in-effect (which the
+  // react-hooks lint rule flags as a cascading-render anti-pattern).
+  const [displayed, setDisplayed] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? value : 0;
+  });
   const ref = useRef<HTMLDivElement>(null);
-  const hasAnimated = useRef(false);
+  const hasAnimated = useRef(
+    typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
 
   useEffect(() => {
-    // Respect prefers-reduced-motion: skip animation entirely
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      hasAnimated.current = true;
-      setDisplayed(value);
-      return;
-    }
+    if (hasAnimated.current) return;
 
     const el = ref.current;
     if (!el) return;
@@ -228,10 +232,10 @@ export function StatCounter({
 
   return (
     <div ref={ref} className="text-center">
-      <div className="font-[family-name:var(--font-heading)] font-bold text-4xl md:text-[56px] text-[#00D26A] leading-tight">
+      <div className="font-[family-name:var(--font-heading)] font-bold text-4xl md:text-[56px] text-[var(--color-accent)] leading-tight">
         {displayed}{suffix}
       </div>
-      <div className="text-[#6B6B78] text-base mt-2">{label}</div>
+      <div className="text-[var(--color-muted)] text-base mt-2">{label}</div>
     </div>
   );
 }

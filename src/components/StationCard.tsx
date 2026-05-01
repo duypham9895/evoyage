@@ -10,14 +10,14 @@ import type { NearbyStationInfo } from '@/lib/evi/types';
 // ── Status Color Mapping ──
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: 'text-green-400',
-  active: 'text-green-400',
-  BUSY: 'text-amber-400',
-  busy: 'text-amber-400',
-  UNAVAILABLE: 'text-gray-400',
-  unavailable: 'text-gray-400',
-  INACTIVE: 'text-gray-400',
-  inactive: 'text-gray-400',
+  ACTIVE: 'text-[var(--color-safe)]',
+  active: 'text-[var(--color-safe)]',
+  BUSY: 'text-[var(--color-warn)]',
+  busy: 'text-[var(--color-warn)]',
+  UNAVAILABLE: 'text-[var(--color-muted)]',
+  unavailable: 'text-[var(--color-muted)]',
+  INACTIVE: 'text-[var(--color-muted)]',
+  inactive: 'text-[var(--color-muted)]',
 };
 
 const STATUS_KEYS: Record<string, string> = {
@@ -55,8 +55,8 @@ export default function StationCard({ station }: StationCardProps) {
   }, [station.latitude, station.longitude, station.provider]);
 
   const statusColor = station.chargingStatus
-    ? (STATUS_COLORS[station.chargingStatus] ?? 'text-gray-500')
-    : 'text-gray-500';
+    ? (STATUS_COLORS[station.chargingStatus] ?? 'text-[var(--color-muted)]')
+    : 'text-[var(--color-muted)]';
 
   const statusKey = station.chargingStatus
     ? (STATUS_KEYS[station.chargingStatus] ?? 'map_status_unknown')
@@ -87,7 +87,7 @@ export default function StationCard({ station }: StationCardProps) {
 
       {/* Compatibility */}
       {station.isCompatible !== null && station.isCompatible !== undefined && (
-        <div className={`text-xs ${station.isCompatible ? 'text-green-400' : 'text-red-400'}`}>
+        <div className={`text-xs ${station.isCompatible ? 'text-[var(--color-safe)]' : 'text-[var(--color-danger)]'}`}>
           {station.isCompatible
             ? t('nearby_compatible' as Parameters<typeof t>[0])
             : t('nearby_not_compatible' as Parameters<typeof t>[0])}
