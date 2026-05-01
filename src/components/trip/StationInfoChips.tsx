@@ -74,7 +74,6 @@ export default function StationInfoChips({ station }: StationInfoChipsProps) {
       <BaseChip
         className="text-[color:var(--color-accent)] border-[color:var(--color-accent)]"
       >
-        <span aria-hidden="true">⚡</span>
         <span>{maxPowerKw} kW</span>
       </BaseChip>
 

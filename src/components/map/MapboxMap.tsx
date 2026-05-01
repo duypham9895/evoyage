@@ -130,7 +130,7 @@ function StopMarker({
               {` | ~${'selected' in stop ? Math.round(stop.selected.estimatedChargeTimeMin) : stop.estimatedChargingTimeMin}min`}
             </p>
             <p style={{ fontSize: 11, margin: '4px 0 0', color: '#888' }}>
-              ⚡ {station.maxPowerKw}kW | {station.connectorTypes.join(', ')} | {station.provider}
+              {station.maxPowerKw}kW | {station.connectorTypes.join(', ')} | {station.provider}
             </p>
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}

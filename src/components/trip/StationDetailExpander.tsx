@@ -76,7 +76,7 @@ function BasicConnectorInfo({ detail }: { detail: VinFastStationDetail }) {
         ))}
         {detail.maxPowerKw > 0 && (
           <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-accent)]">
-            ⚡ {detail.maxPowerKw} kW
+            {detail.maxPowerKw} kW
           </span>
         )}
         {detail.portCount > 0 && (
@@ -244,8 +244,6 @@ function StationDetailExpanderInner({
     return () => clearInterval(timer);
   }, [cooldownRemaining]);
 
-  if (stationProvider !== 'VinFast') return null;
-
   const isStreaming = stage === 'connecting' || stage === 'fetching' || stage === 'retrying' || stage === 'parsing';
 
   const handleToggle = useCallback(async () => {
@@ -335,6 +333,10 @@ function StationDetailExpanderInner({
       : t('station_detail_expand');
 
   const isButtonDisabled = isStreaming || (stage === 'error' && cooldownRemaining > 0);
+
+  // Hide for non-VinFast stations. MUST come after all hooks so the hook
+  // count stays stable across renders (Rules of Hooks).
+  if (stationProvider !== 'VinFast') return null;
 
   return (
     <div>

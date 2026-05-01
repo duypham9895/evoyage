@@ -94,7 +94,7 @@ function LandingContent() {
               {/* Stats row */}
               <div className="flex flex-wrap gap-6 md:gap-10 mt-10 text-sm">
                 <div>
-                  <span className="text-[#E8E8ED] font-bold text-xl font-[family-name:var(--font-heading)]">150+</span>
+                  <span className="text-[#E8E8ED] font-bold text-xl font-[family-name:var(--font-heading)]">18,000+</span>
                   <span className="text-[#6B6B78] ml-2">{t('landing_hero_stat_stations')}</span>
                 </div>
                 <div>
@@ -260,7 +260,7 @@ function LandingContent() {
           </ScrollAnimator>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-            <StatCounter value={150} suffix="+" label={t('landing_stats_stations')} />
+            <StatCounter value={18000} suffix="+" label={t('landing_stats_stations')} />
             <StatCounter value={63} label={t('landing_stats_provinces')} />
             <StatCounter value={15} suffix="+" label={t('landing_stats_models')} />
             <div className="text-center">
