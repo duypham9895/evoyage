@@ -1,9 +1,9 @@
 name: Crawl VinFast Stations
 
 on:
-  # schedule:
-  #   # Run daily at 01:00 UTC (08:00 AM Vietnam)
-  #   - cron: '0 1 * * *'
+  schedule:
+    # Run daily at 01:00 UTC (08:00 AM Vietnam)
+    - cron: '0 1 * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
