@@ -492,6 +492,16 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         ))}
       </div>
 
+      {/* Routing-fallback note — text-only, muted color (informational, not error) */}
+      {tripPlan.routeProvider === 'mapbox' && (
+        <p
+          data-testid="route-provider-fallback-note"
+          className="text-xs text-[var(--color-muted)] leading-relaxed px-2"
+        >
+          {t('route_provider_fallback' as Parameters<typeof t>[0])}
+        </p>
+      )}
+
       {/* Charging stops list */}
       {tripPlan.chargingStops.length > 0 && (
         <div className="space-y-2">

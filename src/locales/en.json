@@ -368,5 +368,6 @@
   "trip_cost_electricity": "Electricity: ~{{amount}}",
   "trip_cost_savings": "vs gasoline: save {{amount}} ({{percent}}%)",
   "trip_cost_no_savings": "vs gasoline: {{amount}} more",
-  "trip_cost_note": "Estimate based on EVN public charging at 3.500 ₫/kWh and RON95 at 23.000 ₫/L."
+  "trip_cost_note": "Estimate based on EVN public charging at 3.500 ₫/kWh and RON95 at 23.000 ₫/L.",
+  "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly."
 }
