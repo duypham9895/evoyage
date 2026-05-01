@@ -588,7 +588,7 @@ function HomeContent() {
                   isLoopTrip={isLoopTrip}
                   onToggleLoop={handleToggleLoop}
                 />
-                {(tripPlan || isPlanning) && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} />}
+                {(tripPlan || isPlanning) && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={selectedVehicle?.efficiencyWhPerKm ?? null} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} />}
                 {/* Inline share button for mobile — replaces floating FAB */}
                 {tripPlan && !isPlanning && (
                   <div className="pt-2">
@@ -699,7 +699,7 @@ function HomeContent() {
                 {planButton}
                 {errorDisplay}
 
-                <TripSummary tripPlan={tripPlan} isLoading={isPlanning} onSelectAlternativeStation={handleSelectAlternativeStation} />
+                <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={selectedVehicle?.efficiencyWhPerKm ?? null} onSelectAlternativeStation={handleSelectAlternativeStation} />
               </div>
             ) : (
               <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className="flex flex-col h-full -m-4">

@@ -1,0 +1,17 @@
+{
+  "_note": "Locale additions for trip cost transparency. Synthesizer should merge these keys into src/locales/en.json and src/locales/vi.json. Template syntax uses double-curly braces ({{var}}) to match the existing interpolate() in src/lib/locale.tsx.",
+  "en": {
+    "trip_cost_heading": "Trip cost",
+    "trip_cost_electricity": "Electricity: ~{{amount}}",
+    "trip_cost_savings": "vs gasoline: save {{amount}} ({{percent}}%)",
+    "trip_cost_no_savings": "vs gasoline: {{amount}} more",
+    "trip_cost_note": "Estimate based on EVN public charging at 3.500 ₫/kWh and RON95 at 23.000 ₫/L."
+  },
+  "vi": {
+    "trip_cost_heading": "Chi phí chuyến đi",
+    "trip_cost_electricity": "Sạc điện: ~{{amount}}",
+    "trip_cost_savings": "So với xăng: tiết kiệm {{amount}} ({{percent}}%)",
+    "trip_cost_no_savings": "So với xăng: tốn thêm {{amount}}",
+    "trip_cost_note": "Ước tính theo giá sạc EVN 3.500 ₫/kWh và xăng RON95 23.000 ₫/L."
+  }
+}
