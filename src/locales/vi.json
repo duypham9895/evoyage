@@ -415,7 +415,6 @@
   "evi_nudge_body": "Ví dụ: 'gợi ý chuyến đi cuối tuần'",
   "evi_nudge_cta": "Mở eVi",
   "evi_nudge_dismiss": "Để sau",
-  "evi_nudge_close_aria": "Đóng",
 
   "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ."
 }

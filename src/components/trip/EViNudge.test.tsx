@@ -79,16 +79,6 @@ describe('EViNudge', () => {
     expect(sessionStorage.getItem(SESSION_KEY)).toBe('1');
   });
 
-  it('calls onDismiss when X close button is clicked, then sets sessionStorage', () => {
-    const onDismiss = vi.fn();
-    render(
-      <EViNudge shouldShow={true} onOpenEvi={vi.fn()} onDismiss={onDismiss} />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: /đóng|close/i }));
-    expect(onDismiss).toHaveBeenCalledTimes(1);
-    expect(sessionStorage.getItem(SESSION_KEY)).toBe('1');
-  });
-
   it('renders English copy when locale is en', () => {
     mockLocale = 'en';
     render(

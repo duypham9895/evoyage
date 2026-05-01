@@ -62,43 +62,28 @@ export default function EViNudge({ shouldShow, onOpenEvi, onDismiss }: EViNudgeP
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-20 right-3 lg:bottom-24 lg:right-6 z-[700] max-w-xs w-[calc(100vw-1.5rem)] sm:w-auto rounded-lg p-3 pr-2 shadow-lg shadow-black/40 border border-[var(--color-accent-dim)] bg-[var(--color-accent-subtle)] backdrop-blur-sm animate-fadeIn"
+      className="fixed bottom-[calc(55vh+64px)] right-3 lg:bottom-36 lg:right-6 z-[700] max-w-xs w-[calc(100vw-1.5rem)] sm:w-auto rounded-lg p-3 shadow-lg shadow-black/40 border border-[var(--color-accent-dim)] bg-[var(--color-surface)] animate-fadeIn"
     >
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="font-[family-name:var(--font-heading)] font-semibold text-sm text-[var(--color-accent)]">
-            {t('evi_nudge_headline')}
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--color-muted)]">
-            {t('evi_nudge_body')}
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleOpen}
-              className="px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-semibold font-[family-name:var(--font-heading)] hover:opacity-90 active:scale-[0.98] transition-all"
-            >
-              {t('evi_nudge_cta')}
-            </button>
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="px-2 py-1.5 rounded-md text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
-            >
-              {t('evi_nudge_dismiss')}
-            </button>
-          </div>
-        </div>
+      <p className="font-[family-name:var(--font-heading)] font-semibold text-sm text-[var(--color-accent)]">
+        {t('evi_nudge_headline')}
+      </p>
+      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+        {t('evi_nudge_body')}
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="px-3 py-1.5 rounded-md bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-semibold font-[family-name:var(--font-heading)] hover:opacity-90 active:scale-[0.98] transition-all"
+        >
+          {t('evi_nudge_cta')}
+        </button>
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label={t('evi_nudge_close_aria')}
-          className="shrink-0 -mt-0.5 -mr-0.5 w-6 h-6 rounded-md text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] transition-colors flex items-center justify-center"
+          className="px-2 py-1.5 rounded-md text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          {t('evi_nudge_dismiss')}
         </button>
       </div>
     </div>
