@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -333,12 +332,11 @@ describe('NearbyStations', () => {
 
     render(<NearbyStations />);
 
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledTimes(1);
-    });
+    // Wait for the radius selector to render (component leaves loading state).
+    const tenKmButton = await screen.findByText('10 km');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
 
-    // Click 10 km radius
-    fireEvent.click(screen.getByText('10 km'));
+    fireEvent.click(tenKmButton);
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
