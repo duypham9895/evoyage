@@ -19,6 +19,7 @@ import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
 import TripSummary from '@/components/trip/TripSummary';
 import ShareButton from '@/components/trip/ShareButton';
 import EVi from '@/components/EVi';
+import EViNudge from '@/components/trip/EViNudge';
 import NearbyStations from '@/components/NearbyStations';
 import type { EViTripParams } from '@/lib/evi/types';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -225,6 +226,21 @@ function HomeContent() {
   // Flag to auto-trigger planning after eVi fills the form
   const [autoPlanPending, setAutoPlanPending] = useState(false);
 
+  // eVi discoverability nudge — fires once per session after 90s on /plan
+  // with no input, OR when the user attempts to plan with invalid state.
+  const [showEviNudge, setShowEviNudge] = useState(false);
+
+  const handleOpenEviFromNudge = useCallback(() => {
+    setShowEviNudge(false);
+    setActiveTab('evi');
+    handleDesktopTabChange('evi');
+    setBottomSheetSnap({ point: 'full', trigger: Date.now() });
+  }, [handleDesktopTabChange]);
+
+  const handleDismissEviNudge = useCallback(() => {
+    setShowEviNudge(false);
+  }, []);
+
   // eVi: AI fills form state from parsed trip
   const fillFormFromEVi = useCallback((params: EViTripParams) => {
     if (params.start) setStart(params.start);
@@ -417,6 +433,25 @@ function HomeContent() {
     }
   }, [autoPlanPending, handlePlanTrip]);
 
+  // eVi nudge trigger 1: 90s on /plan with empty start AND end fields.
+  // The nudge component itself respects sessionStorage — we only flip the
+  // local "shouldShow" flag here.
+  useEffect(() => {
+    if (start || end) return; // user is engaged, no nudge
+    // Skip the timer if the nudge has already fired this session
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage.getItem('evi_nudge_shown') === '1') {
+        return;
+      }
+    } catch {
+      // sessionStorage unavailable — proceed; the component will fail-gracefully
+    }
+    const timer = setTimeout(() => {
+      setShowEviNudge(true);
+    }, 90_000);
+    return () => clearTimeout(timer);
+  }, [start, end]);
+
   // Handle alternative station selection: swap selected ↔ clicked alternative immutably
   const handleSelectAlternativeStation = useCallback(
     (stopIndex: number, station: RankedStation) => {
@@ -456,8 +491,23 @@ function HomeContent() {
       ? t('plan_disabled_vehicle')
       : null;
 
+  // Trigger 2: tap on disabled Plan-Trip area = signal of frustration → show nudge.
+  // Wrapper div catches pointerDown even when the inner button is disabled
+  // (disabled buttons don't fire click events).
+  const handlePlanWrapperPointerDown = useCallback(() => {
+    if (canPlan || isPlanning) return;
+    try {
+      if (typeof window !== 'undefined' && window.sessionStorage.getItem('evi_nudge_shown') === '1') {
+        return;
+      }
+    } catch {
+      // fall through and show the nudge anyway
+    }
+    setShowEviNudge(true);
+  }, [canPlan, isPlanning]);
+
   const planButton = (
-    <div>
+    <div onPointerDown={handlePlanWrapperPointerDown}>
       <button
         onClick={handlePlanTrip}
         disabled={!canPlan}
@@ -651,6 +701,13 @@ function HomeContent() {
         {/* Feedback FAB */}
         <FeedbackFAB />
 
+        {/* eVi discoverability nudge — one-time-per-session */}
+        <EViNudge
+          shouldShow={showEviNudge}
+          onOpenEvi={handleOpenEviFromNudge}
+          onDismiss={handleDismissEviNudge}
+        />
+
         {/* Custom vehicle modal */}
         <AddCustomVehicle
           isOpen={showCustomForm}
@@ -745,6 +802,13 @@ function HomeContent() {
 
       {/* Feedback FAB */}
       <FeedbackFAB />
+
+      {/* eVi discoverability nudge — one-time-per-session */}
+      <EViNudge
+        shouldShow={showEviNudge}
+        onOpenEvi={handleOpenEviFromNudge}
+        onDismiss={handleDismissEviNudge}
+      />
 
       {/* Custom vehicle modal */}
       <AddCustomVehicle
