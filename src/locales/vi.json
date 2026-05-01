@@ -143,7 +143,7 @@
   "landing_hero_subtitle": "eVoyage tính quãng đường thực tế, tìm trạm sạc dọc đường, và cho bạn biết chính xác nên dừng sạc ở đâu — yên tâm lên đường.",
   "landing_hero_cta": "Bắt đầu ngay",
   "landing_hero_stat_stations": "Trạm sạc",
-  "landing_hero_stat_models": "Dòng xe",
+  "landing_hero_stat_models": "Dòng xe VinFast",
   "landing_hero_stat_provinces": "Tỉnh thành",
   "landing_hero_stats_freshness": "Số liệu trạm sạc cập nhật hằng ngày · lần gần nhất {{date}}",
 
@@ -179,7 +179,7 @@
   "landing_stats_title": "Trên khắp Việt Nam",
   "landing_stats_stations": "Trạm sạc",
   "landing_stats_provinces": "Tỉnh thành",
-  "landing_stats_models": "Dòng xe",
+  "landing_stats_models": "Dòng xe VinFast",
   "landing_stats_free": "Hoàn toàn miễn phí",
 
   "landing_faq_title": "Câu hỏi thường gặp",

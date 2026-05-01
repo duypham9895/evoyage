@@ -16,10 +16,25 @@ import { formatLastUpdated, formatStationCount } from '@/lib/station-stats';
 
 const dictionaries = { vi, en } as const;
 
+type InterpolationParams = Record<string, string | number>;
+
+/**
+ * Replace `{{key}}` placeholders with values from params.
+ * Mirrors the `interpolate()` helper in src/lib/locale.tsx so this
+ * landing-only `useT()` keeps parity with the global locale provider.
+ */
+function interpolate(template: string, params?: InterpolationParams): string {
+  if (!params) return template;
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => {
+    const value = params[key];
+    return value !== undefined ? String(value) : match;
+  });
+}
+
 function useT() {
   const { locale } = useLandingLocale();
   const dict = dictionaries[locale] as Record<string, string>;
-  return (key: string) => dict[key] ?? key;
+  return (key: string, params?: InterpolationParams) => interpolate(dict[key] ?? key, params);
 }
 
 /* ─── Vietnam Map (GADM geographic data) ───────────────── */
@@ -45,6 +60,13 @@ const VINFAST_MODELS = [
   { model: 'VF 8', rangeKm: 471, batteryKwh: 87.7, dcChargeMin: 26 },
   { model: 'VF 9', rangeKm: 594, batteryKwh: 123, dcChargeMin: 26 },
 ] as const;
+
+/**
+ * Vietnam consolidated 63 provinces + municipalities into 34 administrative units
+ * (6 centrally-run cities + 28 provinces) effective 2025-07-01. Source:
+ * https://en.wikipedia.org/wiki/2025_Vietnamese_administrative_reform
+ */
+const VIETNAM_PROVINCE_COUNT = 34;
 
 /* ─── Main Landing Content ──────────────────────────────── */
 
@@ -107,11 +129,11 @@ function LandingContent() {
                   <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_stations')}</span>
                 </div>
                 <div>
-                  <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">15+</span>
+                  <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">{VINFAST_MODELS.length}+</span>
                   <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_models')}</span>
                 </div>
                 <div>
-                  <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">63</span>
+                  <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">{VIETNAM_PROVINCE_COUNT}</span>
                   <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_provinces')}</span>
                 </div>
               </div>
@@ -190,7 +212,7 @@ function LandingContent() {
                     0{n}
                   </span>
                   <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg md:text-[22px] text-[var(--color-foreground)] mb-2">
-                    {t(`landing_feat${n}_title`)}
+                    {t(`landing_feat${n}_title`, n === 2 ? { count: stationStats.count } : undefined)}
                   </h3>
                   <p className="text-[var(--color-muted)] text-sm leading-relaxed">
                     {t(`landing_feat${n}_desc`)}
@@ -276,8 +298,8 @@ function LandingContent() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <StatCounter value={stationStats.count} suffix="+" label={t('landing_stats_stations')} />
-            <StatCounter value={63} label={t('landing_stats_provinces')} />
-            <StatCounter value={15} suffix="+" label={t('landing_stats_models')} />
+            <StatCounter value={VIETNAM_PROVINCE_COUNT} label={t('landing_stats_provinces')} />
+            <StatCounter value={VINFAST_MODELS.length} suffix="+" label={t('landing_stats_models')} />
             <div className="text-center">
               <div className="font-[family-name:var(--font-heading)] font-bold text-4xl md:text-[56px] text-[var(--color-accent)] leading-tight">
                 24/7
