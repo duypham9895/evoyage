@@ -122,11 +122,24 @@ export default function StationAmenities({
     );
   }
 
+  function handleReportMissing() {
+    window.dispatchEvent(new CustomEvent('evoyage:open-feedback'));
+  }
+
   return (
     <div className="pt-2 space-y-1.5">
-      <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
-        {t('amenities_heading' as Parameters<typeof t>[0])}
-      </h4>
+      <div className="flex items-center justify-between">
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+          {t('amenities_heading' as Parameters<typeof t>[0])}
+        </h4>
+        <button
+          type="button"
+          onClick={handleReportMissing}
+          className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+        >
+          {t('amenities_report_missing' as Parameters<typeof t>[0])}
+        </button>
+      </div>
       <ol role="list" className="space-y-1">
         {state.pois.map((poi) => {
           const fallbackKey = (

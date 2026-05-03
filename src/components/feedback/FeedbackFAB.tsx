@@ -65,6 +65,7 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
     ) {
       const y = clampY(saved.y);
       const x = Math.max(EDGE_PADDING, Math.min(saved.x, window.innerWidth - BUTTON_SIZE - EDGE_PADDING));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration: localStorage-derived initial position can't be read in SSR initializer
       setDragPosition({ x, y });
     }
     // If no saved position or invalid: dragPosition stays null → CSS handles default
@@ -74,12 +75,22 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
   useEffect(() => {
     const shouldPulse = !safeGetRaw('evoyage-feedback-seen');
     if (!shouldPulse) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydration: localStorage flag can't be read in SSR initializer
     setShowPulse(true);
     const timer = setTimeout(() => {
       setShowPulse(false);
       safeSetRaw('evoyage-feedback-seen', '1');
     }, 5000);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Phase 4 — allow nested components (e.g. StationAmenities) to open the
+  // feedback dialog with a pre-selected category via window event so we
+  // don't have to thread `onOpenFeedback` props all the way down.
+  useEffect(() => {
+    const handler = () => setIsOpen(true);
+    window.addEventListener('evoyage:open-feedback', handler);
+    return () => window.removeEventListener('evoyage:open-feedback', handler);
   }, []);
 
   // ─── Snap to nearest edge ─────────────────────────────
