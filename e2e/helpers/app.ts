@@ -165,8 +165,10 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
     await switchToTab(page, 'Route');
   }
 
-  // Click "Xem lịch trình" (Plan Trip) action button
-  const planButton = page.getByRole('button', { name: /Xem lịch trình|Plan this trip/i });
+  // Click the calculate-route action button (handles both legacy and renamed copy)
+  const planButton = page.getByRole('button', {
+    name: /Calculate route|Tính lộ trình|Plan this trip|Xem lịch trình/i,
+  });
   await planButton.click();
 
   // Wait for results
@@ -176,14 +178,14 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
 /**
  * Switch to a specific tab in the desktop sidebar or mobile tab bar.
  *
- * Desktop tabs: eVi, Plan Trip (Lên lộ trình), Stations (Trạm sạc)
- * Mobile tabs:  eVi, Route (Tuyến đường), Vehicle (Xe), Battery (Pin), Stations (Trạm sạc)
+ * Desktop tabs: eVi, Trip / Chuyến đi (was "Plan Trip" / "Lên lộ trình"), Stations / Trạm sạc
+ * Mobile tabs:  eVi, Route, Vehicle, Battery, Stations
  */
 type TabName = 'eVi' | 'Plan Trip' | 'Route' | 'Vehicle' | 'Battery' | 'Stations';
 
 const TAB_NAMES: Record<TabName, string[]> = {
   'eVi': ['eVi'],
-  'Plan Trip': ['Plan Trip', 'Lên lộ trình'],
+  'Plan Trip': ['Trip', 'Chuyến đi', 'Plan Trip', 'Lên lộ trình'],
   'Route': ['Route', 'Tuyến đường'],
   'Vehicle': ['Vehicle', 'Xe'],
   'Battery': ['Battery', 'Pin'],

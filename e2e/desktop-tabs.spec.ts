@@ -20,11 +20,11 @@ test.describe('F5: Tab Navigation', () => {
       expect(tabLabels.some((t) => /battery|pin/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /station|trạm/i.test(t))).toBeTruthy();
     } else {
-      // Desktop: 3 tabs (eVi, Plan Trip, Stations)
+      // Desktop: 3 tabs (eVi, Trip / Chuyến đi, Stations)
       await expect(tabs).toHaveCount(3, { timeout: 5_000 });
       const tabLabels = await tabs.allTextContents();
       expect(tabLabels.some((t) => /evi/i.test(t))).toBeTruthy();
-      expect(tabLabels.some((t) => /plan|lộ trình/i.test(t))).toBeTruthy();
+      expect(tabLabels.some((t) => /trip|chuyến đi|plan|lộ trình/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /station|trạm/i.test(t))).toBeTruthy();
     }
   });
@@ -42,8 +42,8 @@ test.describe('F5: Tab Navigation', () => {
       await stationsTab.click();
       await expect(stationsTab).toHaveAttribute('aria-selected', 'true');
     } else {
-      // Desktop: click Plan Trip tab, then Stations tab
-      const planTab = tabs.filter({ hasText: /plan|lộ trình/i }).first();
+      // Desktop: click Trip tab, then Stations tab
+      const planTab = tabs.filter({ hasText: /trip|chuyến đi|plan|lộ trình/i }).first();
       await planTab.click();
       await expect(planTab).toHaveAttribute('aria-selected', 'true');
 
