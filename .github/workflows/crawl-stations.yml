@@ -72,4 +72,9 @@ jobs:
           fi
           COUNT=$(node -e "console.log(require('./src/data/station-stats.json').count)")
           git commit -m "chore(stations): sync VinFast count to ${COUNT} [skip ci]"
-          git push
+          # Workflow runs for ~20 min; main may have advanced. Rebase before push.
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $attempt failed — retrying after 5s…"
+            sleep 5
+          done

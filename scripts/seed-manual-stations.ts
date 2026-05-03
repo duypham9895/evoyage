@@ -108,7 +108,9 @@ async function main(): Promise<void> {
         portCount: row.connectorTypes.length || 1,
         maxPowerKw: row.maxPowerKw,
         stationType: row.stationType,
+        isVinFastOnly: false,
         provider: row.provider,
+        dataSource: 'manual',
         scrapedAt: new Date(),
       },
     });

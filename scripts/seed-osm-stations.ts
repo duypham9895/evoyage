@@ -168,7 +168,9 @@ async function main(): Promise<void> {
         connectorTypes: parsed.connectorTypes,
         portCount: parsed.portCount,
         maxPowerKw: parsed.maxPowerKw,
+        isVinFastOnly: parsed.isVinFast,
         provider: parsed.provider,
+        dataSource: 'osm',
         scrapedAt: new Date(),
       },
     });
