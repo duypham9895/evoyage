@@ -155,7 +155,7 @@ describe('useRouteNarrative', () => {
     const plan = makeTripPlan();
     const { result, rerender } = renderHook(
       ({ tp }: { tp: TripPlan | null }) => useRouteNarrative(tp),
-      { initialProps: { tp: plan } },
+      { initialProps: { tp: plan as TripPlan | null } },
     );
 
     await waitFor(() => {
