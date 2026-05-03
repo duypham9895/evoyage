@@ -11,16 +11,15 @@ test.describe('F5: Tab Navigation', () => {
     const tabs = page.locator('[role="tab"]');
 
     if (isMobile) {
-      // Mobile: 5 tabs (eVi, Route, Vehicle, Battery, Stations)
-      await expect(tabs).toHaveCount(5, { timeout: 5_000 });
+      // Mobile: 4 tabs (Route, Vehicle, Battery, Stations) — eVi is opened via FAB
+      await expect(tabs).toHaveCount(4, { timeout: 5_000 });
       const tabLabels = await tabs.allTextContents();
-      expect(tabLabels.some((t) => /evi/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /route|tuyến/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /vehicle|xe/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /battery|pin/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /station|trạm/i.test(t))).toBeTruthy();
     } else {
-      // Desktop: 3 tabs (eVi, Trip / Chuyến đi, Stations)
+      // Desktop: 3 tabs (eVi sidebar, Trip / Chuyến đi, Stations)
       await expect(tabs).toHaveCount(3, { timeout: 5_000 });
       const tabLabels = await tabs.allTextContents();
       expect(tabLabels.some((t) => /evi/i.test(t))).toBeTruthy();
