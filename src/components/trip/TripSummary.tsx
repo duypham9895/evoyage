@@ -6,6 +6,10 @@ import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import { calculateSavings, formatVnd } from '@/lib/trip/cost';
 import { computeTripCost } from '@/lib/trip-cost';
+import { extractCityName } from '@/lib/trip/extract-city';
+import { extractStationShortName } from '@/lib/trip/extract-station-name';
+import { detectPasses } from '@/lib/trip/detect-passes';
+import RouteTimeline, { type RouteTimelineStop } from './RouteTimeline';
 import StationDetailExpander from './StationDetailExpander';
 import StationStatusReporter from './StationStatusReporter';
 import StationTrustChip from './StationTrustChip';
@@ -397,6 +401,140 @@ function TripCostSection({
   );
 }
 
+// ── Trip Overview Card (Phase 1 redesign) ──
+
+function formatHM(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h${m}m`;
+}
+
+function formatEta(totalMin: number, locale: 'vi' | 'en'): string | null {
+  const eta = new Date(Date.now() + totalMin * 60_000);
+  if (eta.getTime() <= Date.now()) return null;
+  return new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false,
+  }).format(eta);
+}
+
+function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
+  const { t, locale } = useLocale();
+
+  const startCity = extractCityName(tripPlan.startAddress);
+  const endCity = extractCityName(tripPlan.endAddress);
+
+  const totalTimeMin = tripPlan.totalDurationMin + tripPlan.totalChargingTimeMin;
+  const totalTimeStr = formatHM(totalTimeMin);
+  const driveStr = formatHM(tripPlan.totalDurationMin);
+  const chargeStr = formatHM(tripPlan.totalChargingTimeMin);
+
+  const eta = formatEta(totalTimeMin, locale);
+  const arrivalBattery = Math.max(0, Math.round(tripPlan.arrivalBatteryPercent));
+  const startBattery = Math.round(tripPlan.batterySegments[0]?.startBatteryPercent ?? 0);
+
+  // Map TripPlan's chargingStops (heterogeneous shape) to RouteTimeline-friendly stops.
+  // Uses .reduce so per-segment distance is computed without mid-render mutation.
+  const stopDistanceFromStart = (s: TripPlan['chargingStops'][number]): number =>
+    'selected' in s ? s.distanceAlongRouteKm : s.distanceFromStartKm;
+
+  const timelineStops: RouteTimelineStop[] = tripPlan.chargingStops.map((stop, i, arr) => {
+    const hasAlternatives = 'selected' in stop;
+    const station: ChargingStationData = hasAlternatives ? stop.selected.station : stop.station;
+    const arrivalP = hasAlternatives ? stop.batteryPercentAtArrival : stop.arrivalBatteryPercent;
+    const departureP = hasAlternatives ? stop.batteryPercentAfterCharge : stop.departureBatteryPercent;
+    const chargeT = hasAlternatives ? stop.selected.estimatedChargeTimeMin : stop.estimatedChargingTimeMin;
+
+    const distFromStart = stopDistanceFromStart(stop);
+    const prevDistFromStart = i === 0 ? 0 : stopDistanceFromStart(arr[i - 1]!);
+    const segDistance = Math.max(0, distFromStart - prevDistFromStart);
+
+    const extracted = extractStationShortName(station.name);
+    const shortName = extracted === 'Trạm' ? `Trạm ${i + 1}` : extracted;
+
+    return {
+      shortName,
+      distanceFromPrevKm: segDistance,
+      arrivalPercent: arrivalP,
+      departurePercent: departureP,
+      chargeTimeMin: chargeT,
+    };
+  });
+
+  const passes = detectPasses(tripPlan.polyline);
+
+  return (
+    <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
+      {/* Headline */}
+      <div className="space-y-0.5">
+        <h3 className="text-base font-semibold font-[family-name:var(--font-heading)] text-[var(--color-foreground)]">
+          {startCity} → {endCity}
+        </h3>
+        <p className="text-base font-bold text-[var(--color-accent)]">
+          {t('trip_arrival_battery_hero', { percent: String(arrivalBattery) })}
+        </p>
+        <p className="text-sm text-[var(--color-muted)]">
+          {eta
+            ? t('trip_duration_with_eta', { time: totalTimeStr, eta })
+            : t('trip_duration_only', { time: totalTimeStr })}
+        </p>
+      </div>
+
+      {/* Route timeline — only when there are charging stops to visualize */}
+      {tripPlan.chargingStops.length > 0 && (
+        <RouteTimeline
+          startCity={startCity}
+          startBatteryPercent={startBattery}
+          endCity={endCity}
+          arrivalBatteryPercent={arrivalBattery}
+          totalDistanceKm={tripPlan.totalDistanceKm}
+          stops={timelineStops}
+          swipeHint={t('trip_timeline_swipe_hint')}
+          ariaStopLabel={(n, name, arrive, depart, mins) =>
+            t('trip_timeline_aria_stop', {
+              n: String(n),
+              name,
+              arrive: String(arrive),
+              depart: String(depart),
+              minutes: String(mins),
+            })
+          }
+        />
+      )}
+
+      {/* Terrain warnings — surface known mountain passes when route crosses them */}
+      {passes.map((pass) => (
+        <div
+          key={pass.id}
+          data-testid={`terrain-warning-${pass.id}`}
+          className="p-2 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-md text-xs"
+        >
+          {t('trip_terrain_warning_pass', {
+            passName: locale === 'vi' ? pass.nameVi : pass.nameEn,
+            drainPercent: String(pass.drainPercent),
+          })}
+        </div>
+      ))}
+
+      {/* Compact totals row */}
+      <div className="space-y-0.5 text-sm">
+        <p className="font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
+          {t('trip_totals_compact', {
+            distance: String(tripPlan.totalDistanceKm),
+            stops: String(tripPlan.chargingStops.length),
+          })}
+        </p>
+        <p className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+          {t('trip_breakdown_drive_charge', { drive: driveStr, charge: chargeStr })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ──
 
 export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
@@ -466,12 +604,6 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
 
   if (!tripPlan) return null;
 
-  const totalTimeMin = tripPlan.totalDurationMin + tripPlan.totalChargingTimeMin;
-  const hours = Math.floor(totalTimeMin / 60);
-  const minutes = totalTimeMin % 60;
-  const driveHours = Math.floor(tripPlan.totalDurationMin / 60);
-  const driveMinutes = tripPlan.totalDurationMin % 60;
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -506,88 +638,21 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         isLoading={narrativeState.isLoading}
       />
 
-      <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
-        {/* Route */}
-        <div className="text-sm text-[var(--color-muted)]">
-          {tripPlan.startAddress} → {tripPlan.endAddress}
+      <TripOverviewCard tripPlan={tripPlan} />
+
+      {/* No charging needed pill — only when literally no charging stops AND no warnings */}
+      {tripPlan.chargingStops.length === 0 && tripPlan.warnings.length === 0 && (
+        <div className="p-3 bg-[var(--color-safe)]/10 text-[var(--color-safe)] rounded-lg text-sm">
+          {t('no_charging_needed')}
         </div>
+      )}
 
-        {/* Key stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="text-xs text-[var(--color-muted)]">{t('distance')}</div>
-            <div className="text-xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
-              {tripPlan.totalDistanceKm} km
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-[var(--color-muted)]">{t('total_time')}</div>
-            <div className="text-xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-foreground)]">
-              {hours}h{minutes > 0 ? `${minutes}m` : ''}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-[var(--color-muted)]">{t('driving')}</div>
-            <div className="text-sm font-[family-name:var(--font-mono)]">
-              {driveHours}h{driveMinutes > 0 ? `${driveMinutes}m` : ''}
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-[var(--color-muted)]">{t('charging')}</div>
-            <div className="text-sm font-[family-name:var(--font-mono)]">
-              {tripPlan.totalChargingTimeMin}m ({tripPlan.chargingStops.length} {t('stops')})
-            </div>
-          </div>
+      {/* Trip-level warnings (e.g. no compatible station found in some segment) */}
+      {tripPlan.warnings.map((w, i) => (
+        <div key={i} className="p-3 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-lg text-sm">
+          {tBi(w)}
         </div>
-
-        {/* Battery journey bar */}
-        <div>
-          <div className="text-xs text-[var(--color-muted)] mb-2">{t('battery_journey')}</div>
-          <div className="flex h-7 rounded-full overflow-hidden bg-[var(--color-surface-hover)]">
-            {tripPlan.batterySegments.map((seg, i) => {
-              const widthPercent = ((seg.endKm - seg.startKm) / tripPlan.totalDistanceKm) * 100;
-              const avgBattery = (seg.startBatteryPercent + seg.endBatteryPercent) / 2;
-              const color =
-                avgBattery > 50
-                  ? 'bg-[var(--color-safe)]'
-                  : avgBattery > 25
-                    ? 'bg-[var(--color-warn)]'
-                    : 'bg-[var(--color-danger)]';
-
-              return (
-                <div
-                  key={i}
-                  className={`${color} flex items-center justify-center text-[10px] font-bold text-[var(--color-background)] border-r border-[var(--color-background)] last:border-r-0`}
-                  style={{ width: `${widthPercent}%` }}
-                  title={seg.label}
-                >
-                  {widthPercent > 10 && `${Math.round(seg.endBatteryPercent)}%`}
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-between text-xs text-[var(--color-muted)] mt-1">
-            <span>{t('start')} {tripPlan.batterySegments[0]?.startBatteryPercent}%</span>
-            <span className={tripPlan.arrivalBatteryPercent < 25 ? 'font-bold text-[var(--color-warn)]' : ''}>
-              {t('arrive')} {Math.round(tripPlan.arrivalBatteryPercent)}%
-            </span>
-          </div>
-        </div>
-
-        {/* No charging needed */}
-        {tripPlan.chargingStops.length === 0 && tripPlan.warnings.length === 0 && (
-          <div className="p-3 bg-[var(--color-safe)]/10 text-[var(--color-safe)] rounded-lg text-sm">
-            {t('no_charging_needed')}
-          </div>
-        )}
-
-        {/* Warnings */}
-        {tripPlan.warnings.map((w, i) => (
-          <div key={i} className="p-3 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-lg text-sm">
-            {tBi(w)}
-          </div>
-        ))}
-      </div>
+      ))}
 
       {/* Routing-fallback note — text-only, muted color (informational, not error) */}
       {tripPlan.routeProvider === 'mapbox' && (

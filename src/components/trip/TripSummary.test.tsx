@@ -15,9 +15,17 @@ const translations: Record<string, string> = {
   driving: 'Driving',
   charging: 'Charging',
   stops: 'stops',
-  battery_journey: 'Battery journey',
   start: 'Start',
   arrive: 'Arrive',
+  // New Phase 1 redesign keys
+  trip_arrival_battery_hero: '{{percent}}% battery when you arrive',
+  trip_duration_with_eta: '~{{time}} · arrive at {{eta}} if leaving now',
+  trip_duration_only: '~{{time}}',
+  trip_totals_compact: '{{distance}} km · {{stops}} stops',
+  trip_breakdown_drive_charge: 'Drive {{drive}} · Charge {{charge}}',
+  trip_timeline_swipe_hint: '← Swipe for more stops',
+  trip_timeline_aria_stop: 'Stop {{n}}: {{name}}, arrive {{arrive}}%, charge to {{depart}}%, {{minutes}} minutes',
+  trip_terrain_warning_pass: 'Route includes {{passName}} — battery drains ~{{drainPercent}}% faster',
   no_charging_needed: 'No charging needed',
   charging_stops: 'Charging stops',
   navigate: 'Navigate',
@@ -124,7 +132,8 @@ describe('TripSummary — recalc behavior (preserve previous trip during isLoadi
     });
     render(<TripSummary tripPlan={prev} isLoading={true} />);
     // Distance and arrival from the PREVIOUS trip remain on screen during recalc.
-    expect(screen.getByText('298.9 km')).toBeInTheDocument();
+    // Distance now embedded in the trip-totals-compact string ("298.9 km · 0 stops").
+    expect(screen.getByText(/298\.9 km/)).toBeInTheDocument();
     expect(screen.getByText(/57/)).toBeInTheDocument();
     // The skeleton "Calculating route..." text must NOT replace the visible trip.
     expect(screen.queryByText('Calculating route...')).not.toBeInTheDocument();
