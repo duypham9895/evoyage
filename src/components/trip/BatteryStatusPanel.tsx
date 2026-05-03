@@ -24,6 +24,7 @@ interface BatteryStatusPanelProps {
   readonly onCurrentBatteryChange: (value: number) => void;
   readonly onMinArrivalChange: (value: number) => void;
   readonly onRangeSafetyFactorChange: (value: number) => void;
+  readonly disabled?: boolean;
 }
 
 const BATTERY_QUICK_SELECT = [50, 60, 70, 80, 90, 100] as const;
@@ -45,6 +46,7 @@ export default function BatteryStatusPanel({
   onCurrentBatteryChange,
   onMinArrivalChange,
   onRangeSafetyFactorChange,
+  disabled = false,
 }: BatteryStatusPanelProps) {
   const { t, tBi } = useLocale();
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -148,7 +150,9 @@ export default function BatteryStatusPanel({
             onPointerUp={() => setIsDraggingSlider(false)}
             onPointerLeave={() => setIsDraggingSlider(false)}
             onPointerCancel={() => setIsDraggingSlider(false)}
-            className="w-full"
+            disabled={disabled}
+            aria-disabled={disabled}
+            className="w-full disabled:opacity-60 disabled:cursor-not-allowed"
             style={sliderFillStyle(currentBattery, 10, 100)}
           />
         </div>
@@ -157,7 +161,8 @@ export default function BatteryStatusPanel({
             <button
               key={val}
               onClick={() => { hapticTick(); onCurrentBatteryChange(val); }}
-              className={`flex-1 py-2 text-xs rounded-lg transition-colors ${
+              disabled={disabled}
+              className={`flex-1 py-2 text-xs rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                 currentBattery === val
                   ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                   : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
@@ -186,7 +191,9 @@ export default function BatteryStatusPanel({
           step={5}
           value={minArrival}
           onChange={(e) => onMinArrivalChange(parseInt(e.target.value, 10))}
-          className="w-full"
+          disabled={disabled}
+          aria-disabled={disabled}
+          className="w-full disabled:opacity-60 disabled:cursor-not-allowed"
           style={sliderFillStyle(minArrival, 5, 30)}
         />
       </div>
@@ -220,7 +227,8 @@ export default function BatteryStatusPanel({
               <button
                 key={lbl}
                 onClick={() => { hapticTick(); onRangeSafetyFactorChange(value); }}
-                className={`flex-1 py-2.5 text-xs rounded-lg transition-colors ${
+                disabled={disabled}
+                className={`flex-1 py-2.5 text-xs rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                   isSelected
                     ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                     : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
@@ -237,7 +245,8 @@ export default function BatteryStatusPanel({
       <div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors flex items-center gap-1"
+          disabled={disabled}
+          className="text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <span className={`transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>
             ▶
@@ -263,7 +272,9 @@ export default function BatteryStatusPanel({
               step={5}
               value={Math.round(rangeSafetyFactor * 100)}
               onChange={(e) => handleRSFChange(parseInt(e.target.value, 10) / 100)}
-              className="w-full"
+              disabled={disabled}
+              aria-disabled={disabled}
+              className="w-full disabled:opacity-60 disabled:cursor-not-allowed"
               style={sliderFillStyle(Math.round(rangeSafetyFactor * 100), 50, 100)}
             />
 
@@ -272,7 +283,8 @@ export default function BatteryStatusPanel({
                 <button
                   key={val}
                   onClick={() => handleRSFChange(val)}
-                  className={`flex-1 py-2 text-xs rounded-lg transition-colors ${
+                  disabled={disabled}
+                  className={`flex-1 py-2 text-xs rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                     rangeSafetyFactor === val
                       ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
                       : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'

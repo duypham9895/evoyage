@@ -19,6 +19,7 @@ interface WaypointInputProps {
   readonly isLoopTrip: boolean;
   readonly onToggleLoop: () => void;
   readonly startName: string;
+  readonly disabled?: boolean;
 }
 
 const MAX_WAYPOINTS = 5;
@@ -31,6 +32,7 @@ export default function WaypointInput({
   isLoopTrip,
   onToggleLoop,
   startName,
+  disabled = false,
 }: WaypointInputProps) {
   const { t } = useLocale();
 
@@ -55,7 +57,7 @@ export default function WaypointInput({
         <div key={i}>
           {/* Add button before this waypoint */}
           {i === 0 && waypoints.length < MAX_WAYPOINTS && (
-            <AddStopButton onClick={() => onAdd(-1)} label={t('waypoints_add')} />
+            <AddStopButton onClick={() => onAdd(-1)} label={t('waypoints_add')} disabled={disabled} />
           )}
 
           <div className="flex items-center gap-2">
@@ -80,13 +82,15 @@ export default function WaypointInput({
                 onSelect={(r) => handleSelect(i, r)}
                 label=""
                 placeholder={t('waypoints_search_placeholder')}
+                disabled={disabled}
               />
             </div>
 
             {/* Remove button */}
             <button
               onClick={() => onRemove(i)}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-danger)]/10 text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors"
+              disabled={disabled}
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-danger)]/10 text-[var(--color-muted)] hover:text-[var(--color-danger)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--color-muted)]"
               aria-label={t('waypoints_remove')}
             >
               ✕
@@ -95,14 +99,14 @@ export default function WaypointInput({
 
           {/* Add button after this waypoint */}
           {waypoints.length < MAX_WAYPOINTS && (
-            <AddStopButton onClick={() => onAdd(i)} label={t('waypoints_add')} />
+            <AddStopButton onClick={() => onAdd(i)} label={t('waypoints_add')} disabled={disabled} />
           )}
         </div>
       ))}
 
       {/* Add first waypoint button (when none exist) */}
       {waypoints.length === 0 && (
-        <AddStopButton onClick={() => onAdd(-1)} label={t('waypoints_add')} />
+        <AddStopButton onClick={() => onAdd(-1)} label={t('waypoints_add')} disabled={disabled} />
       )}
 
       {/* Max waypoints notice */}
@@ -115,7 +119,8 @@ export default function WaypointInput({
       {/* Loop trip toggle */}
       <button
         onClick={onToggleLoop}
-        className={`w-full py-2 text-xs rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+        disabled={disabled}
+        className={`w-full py-2 text-xs rounded-lg border transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
           isLoopTrip
             ? 'border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5'
             : 'border-[var(--color-surface-hover)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
@@ -128,12 +133,13 @@ export default function WaypointInput({
   );
 }
 
-function AddStopButton({ onClick, label }: { readonly onClick: () => void; readonly label: string }) {
+function AddStopButton({ onClick, label, disabled = false }: { readonly onClick: () => void; readonly label: string; readonly disabled?: boolean }) {
   return (
     <div className="flex justify-center py-1">
       <button
         onClick={onClick}
-        className="flex items-center gap-1 px-3 py-1 text-[10px] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/5 rounded-full border border-dashed border-[var(--color-accent)]/30 hover:border-[var(--color-accent)] transition-colors"
+        disabled={disabled}
+        className="flex items-center gap-1 px-3 py-1 text-[10px] text-[var(--color-accent)] hover:bg-[var(--color-accent)]/5 rounded-full border border-dashed border-[var(--color-accent)]/30 hover:border-[var(--color-accent)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <span>+</span>
         <span>{label}</span>

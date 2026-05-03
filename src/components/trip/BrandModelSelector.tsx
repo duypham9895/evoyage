@@ -9,12 +9,14 @@ interface BrandModelSelectorProps {
   readonly selectedVehicle: EVVehicleData | null;
   readonly onSelect: (vehicle: EVVehicleData | null) => void;
   readonly onCustomCarClick: () => void;
+  readonly disabled?: boolean;
 }
 
 export default function BrandModelSelector({
   selectedVehicle,
   onSelect,
   onCustomCarClick,
+  disabled = false,
 }: BrandModelSelectorProps) {
   const { t } = useLocale();
   const [vehicles, setVehicles] = useState<readonly EVVehicleData[]>([]);
@@ -78,7 +80,8 @@ export default function BrandModelSelector({
       <div className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl">
         <button
           onClick={() => setVietnamOnly(true)}
-          className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors ${
+          disabled={disabled}
+          className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             vietnamOnly
               ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
@@ -88,7 +91,8 @@ export default function BrandModelSelector({
         </button>
         <button
           onClick={() => setVietnamOnly(false)}
-          className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors ${
+          disabled={disabled}
+          className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             !vietnamOnly
               ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
               : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
@@ -104,7 +108,9 @@ export default function BrandModelSelector({
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder={t('search_vehicles')}
-        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
+        disabled={disabled}
+        aria-disabled={disabled}
+        className="w-full px-3 py-2 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)] disabled:opacity-60 disabled:cursor-not-allowed"
       />
 
       {/* Vehicle list */}
@@ -133,7 +139,8 @@ export default function BrandModelSelector({
                 <button
                   key={v.id}
                   onClick={() => { hapticLight(); onSelect(v); }}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-colors ${
+                  disabled={disabled}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                     selectedVehicle?.id === v.id
                       ? 'bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)]'
                       : 'hover:bg-[var(--color-surface-hover)]'
@@ -160,7 +167,8 @@ export default function BrandModelSelector({
       {/* Custom car button */}
       <button
         onClick={onCustomCarClick}
-        className="w-full px-3 py-2 text-sm border border-dashed border-[var(--color-surface-hover)] rounded-lg text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors"
+        disabled={disabled}
+        className="w-full px-3 py-2 text-sm border border-dashed border-[var(--color-surface-hover)] rounded-lg text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {t('car_not_listed')}
       </button>

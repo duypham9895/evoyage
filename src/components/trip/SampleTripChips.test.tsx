@@ -141,4 +141,22 @@ describe('SampleTripChips', () => {
       end: 'Hạ Long',
     });
   });
+
+  // Trip-calc input lock (spec: 2026-05-03-trip-calc-input-lock-design.md §3.1)
+  // While a trip calc is in flight, sample chips must not trigger another
+  // sample-trip swap that would create a race condition with the live calc.
+  it('renders all chips as disabled when disabled=true', () => {
+    const onPick = vi.fn();
+    render(<SampleTripChips start="" end="" onPick={onPick} disabled />);
+    const buttons = screen.getAllByRole('button');
+    buttons.forEach((btn) => expect(btn).toBeDisabled());
+  });
+
+  it('does not call onPick when a disabled chip is clicked', () => {
+    const onPick = vi.fn();
+    render(<SampleTripChips start="" end="" onPick={onPick} disabled />);
+    const firstChip = screen.getAllByRole('button')[0];
+    fireEvent.click(firstChip);
+    expect(onPick).not.toHaveBeenCalled();
+  });
 });

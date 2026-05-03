@@ -10,6 +10,7 @@ interface PlaceAutocompleteProps {
   readonly placeholder: string;
   readonly label: string;
   readonly showGpsButton?: boolean;
+  readonly disabled?: boolean;
 }
 
 const DEBOUNCE_MS = 400;
@@ -21,6 +22,7 @@ export default function PlaceAutocomplete({
   placeholder,
   label,
   showGpsButton = false,
+  disabled = false,
 }: PlaceAutocompleteProps) {
   const listboxId = useId();
   const [suggestions, setSuggestions] = useState<readonly NominatimResult[]>([]);
@@ -187,14 +189,16 @@ export default function PlaceAutocomplete({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => suggestions.length > 0 && setIsOpen(true)}
+          onFocus={() => !disabled && suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
           role="combobox"
           aria-expanded={isOpen}
           aria-autocomplete="list"
           aria-controls={listboxId}
-          className="w-full px-3 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)]"
+          disabled={disabled}
+          aria-disabled={disabled}
+          className="w-full px-3 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-xl text-sm focus:outline-none focus:border-[var(--color-accent)] transition-colors placeholder:text-[var(--color-muted)] disabled:opacity-60 disabled:cursor-not-allowed"
         />
         {isLoading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -205,7 +209,7 @@ export default function PlaceAutocomplete({
           <button
             type="button"
             onClick={handleUseMyLocation}
-            disabled={isLocating}
+            disabled={isLocating || disabled}
             className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-colors rounded-lg ${
               gpsError ? 'text-[var(--color-danger)]' : 'text-[var(--color-muted)] hover:text-[var(--color-accent)]'
             }`}

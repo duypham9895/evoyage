@@ -22,6 +22,7 @@ interface TripInputProps {
   readonly onReorderWaypoints?: (fromIndex: number, toIndex: number) => void;
   readonly isLoopTrip?: boolean;
   readonly onToggleLoop?: () => void;
+  readonly disabled?: boolean;
 }
 
 /** Shorten Nominatim display name to first 2-3 meaningful parts */
@@ -47,6 +48,7 @@ export default function TripInput({
   onReorderWaypoints,
   isLoopTrip = false,
   onToggleLoop,
+  disabled = false,
 }: TripInputProps) {
   const { t } = useLocale();
 
@@ -83,6 +85,7 @@ export default function TripInput({
           label={t('starting_point')}
           placeholder={t('starting_point_placeholder')}
           showGpsButton
+          disabled={disabled}
         />
 
         <div className="flex justify-center">
@@ -101,6 +104,7 @@ export default function TripInput({
               isLoopTrip={isLoopTrip}
               onToggleLoop={onToggleLoop}
               startName={start}
+              disabled={disabled}
             />
             <div className="flex justify-center">
               <div className="w-px h-4 bg-[var(--color-surface-hover)]" />
@@ -120,6 +124,7 @@ export default function TripInput({
             onSelect={handleEndSelect}
             label={t('destination')}
             placeholder={t('destination_placeholder')}
+            disabled={disabled}
           />
         )}
       </div>

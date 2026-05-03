@@ -6,6 +6,7 @@ interface SampleTripChipsProps {
   readonly start: string;
   readonly end: string;
   readonly onPick: (trip: { start: string; end: string }) => void;
+  readonly disabled?: boolean;
 }
 
 const SAMPLE_TRIPS = [
@@ -15,7 +16,7 @@ const SAMPLE_TRIPS = [
   { startKey: 'sample_trip_danang_hue_start', endKey: 'sample_trip_danang_hue_end' },
 ] as const;
 
-export default function SampleTripChips({ start, end, onPick }: SampleTripChipsProps) {
+export default function SampleTripChips({ start, end, onPick, disabled = false }: SampleTripChipsProps) {
   const { t } = useLocale();
 
   if (start.trim().length > 0 || end.trim().length > 0) {
@@ -40,7 +41,8 @@ export default function SampleTripChips({ start, end, onPick }: SampleTripChipsP
               key={startKey}
               type="button"
               onClick={() => onPick({ start: startLabel, end: endLabel })}
-              className="flex-shrink-0 inline-flex items-center min-h-[40px] px-3.5 py-2 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] text-sm font-medium hover:bg-[var(--color-accent)]/20 active:scale-[0.98] transition-all whitespace-nowrap"
+              disabled={disabled}
+              className="flex-shrink-0 inline-flex items-center min-h-[40px] px-3.5 py-2 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/20 text-[var(--color-accent)] text-sm font-medium hover:bg-[var(--color-accent)]/20 active:scale-[0.98] transition-all whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[var(--color-accent-subtle)]"
             >
               {startLabel} → {endLabel}
             </button>
