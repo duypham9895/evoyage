@@ -416,7 +416,10 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
     });
   };
 
-  if (isLoading) {
+  // Skeleton only when there's no previous trip to show. If a previous tripPlan
+  // exists, keep it on screen during re-calc — Cancel button at the bottom of the
+  // form already signals "calculating" (per trip-calc-input-lock spec §3.3).
+  if (isLoading && !tripPlan) {
     return (
       <div className="space-y-4">
         {/* Status message */}

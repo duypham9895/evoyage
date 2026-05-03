@@ -8,6 +8,7 @@ import type { TripPlan } from '@/types';
 // ── Mocks ──
 
 const translations: Record<string, string> = {
+  planning: 'Calculating route...',
   trip_summary: 'Trip summary',
   distance: 'Distance',
   total_time: 'Total time',
@@ -102,6 +103,33 @@ afterEach(() => {
 });
 
 // ── Tests ──
+
+// Trip-calc input lock spec: 2026-05-03-trip-calc-input-lock-design.md §3.3 promises
+// "Cancel reverts to previous tripPlan" — but if TripSummary swaps to a skeleton
+// during isLoading regardless of tripPlan, the user sees their last good plan blink
+// away during every re-calc. Round 2 of QA (2026-05-03) caught this gap.
+describe('TripSummary — recalc behavior (preserve previous trip during isLoading)', () => {
+  it('renders skeleton ONLY when isLoading=true AND no previous tripPlan exists', () => {
+    render(<TripSummary tripPlan={null} isLoading={true} />);
+    // Skeleton uses the planning text + animate-pulse divs — no real trip data.
+    expect(screen.getByText('Calculating route...')).toBeInTheDocument();
+  });
+
+  it('keeps previous tripPlan visible during isLoading=true (no skeleton swap)', () => {
+    const prev = makeTripPlan({
+      totalDistanceKm: 298.9,
+      arrivalBatteryPercent: 57,
+      startAddress: 'Quận 1, TP.HCM',
+      endAddress: 'Đà Lạt',
+    });
+    render(<TripSummary tripPlan={prev} isLoading={true} />);
+    // Distance and arrival from the PREVIOUS trip remain on screen during recalc.
+    expect(screen.getByText('298.9 km')).toBeInTheDocument();
+    expect(screen.getByText(/57/)).toBeInTheDocument();
+    // The skeleton "Calculating route..." text must NOT replace the visible trip.
+    expect(screen.queryByText('Calculating route...')).not.toBeInTheDocument();
+  });
+});
 
 describe('TripSummary — trip cost section', () => {
   it('renders gasoline, diesel, and electric breakdown rows when efficiency is provided', () => {
