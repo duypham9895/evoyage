@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
 import { useLocale } from '@/lib/locale';
 import { hapticLight } from '@/lib/haptics';
 
-export type MobileTab = 'evi' | 'route' | 'vehicle' | 'battery' | 'stations';
+export type MobileTab = 'route' | 'vehicle' | 'battery' | 'stations';
 
 interface MobileTabBarProps {
   readonly activeTab: MobileTab;
@@ -14,7 +13,6 @@ interface MobileTabBarProps {
 }
 
 const TABS = [
-  { id: 'evi' as const, labelKey: 'tab_evi' as const },
   { id: 'route' as const, labelKey: 'tab_route' as const },
   { id: 'vehicle' as const, labelKey: 'tab_vehicle' as const },
   { id: 'battery' as const, labelKey: 'tab_battery' as const },
@@ -28,25 +26,10 @@ export default function MobileTabBar({
   hasRoute,
 }: MobileTabBarProps) {
   const { t } = useLocale();
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const scrollActiveIntoView = useCallback(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const activeButton = container.querySelector('[aria-selected="true"]');
-    if (activeButton) {
-      activeButton.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  }, []);
-
-  useEffect(() => {
-    scrollActiveIntoView();
-  }, [activeTab, scrollActiveIntoView]);
 
   return (
     <div
-      ref={scrollRef}
-      className="flex gap-1 p-1 bg-[var(--color-background)] rounded-xl mb-1 overflow-x-auto scrollbar-hide"
+      className="flex p-0.5 bg-[var(--color-background)] rounded-xl mb-1"
       role="tablist"
       aria-label="Trip planner tabs"
     >
@@ -64,10 +47,10 @@ export default function MobileTabBar({
             aria-selected={isActive}
             aria-controls={`tabpanel-${id}`}
             onClick={() => { hapticLight(); onTabChange(id); }}
-            className={`shrink-0 flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap min-h-[44px] ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-[13px] transition-colors whitespace-nowrap min-h-[40px] ${
               isActive
-                ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-                : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface)]'
+                ? 'text-[var(--color-foreground)] font-semibold border-b-2 border-[var(--color-accent)]'
+                : 'text-[var(--color-muted)] font-medium border-b-2 border-transparent hover:text-[var(--color-foreground)]'
             }`}
           >
             {t(labelKey)}
