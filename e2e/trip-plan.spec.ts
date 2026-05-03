@@ -43,8 +43,10 @@ test.describe('F1: Trip Planning — Happy Path', () => {
       await switchToTab(page, 'Route');
     }
 
-    // Click "Plan this trip" / "Xem lịch trình" button
-    const planButton = page.locator('button:has-text("Plan this trip"), button:has-text("Xem lịch trình")');
+    // Click the calculate-route action button (handles both legacy and renamed copy)
+    const planButton = page.locator(
+      'button:has-text("Calculate route"), button:has-text("Tính lộ trình"), button:has-text("Plan this trip"), button:has-text("Xem lịch trình")',
+    );
     await planButton.click();
 
     // Verify route API was called
