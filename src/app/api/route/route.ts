@@ -6,6 +6,9 @@ import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
 import { isValidCoordinate, COORDINATE_ERROR_EN } from '@/lib/geo/coordinate-validation';
 import { fetchDirections, fetchDirectionsWithWaypoints } from '@/lib/routing/osrm';
 import { fetchDirectionsMapbox } from '@/lib/routing/mapbox-directions';
+import { fetchTrafficAwareDirections, MapboxTrafficError } from '@/lib/routing/mapbox-traffic';
+import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
+import { isHoliday } from '@/lib/trip/vietnam-holidays';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/routing/route-planner';
 import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
@@ -39,6 +42,8 @@ const routeRequestSchema = z.object({
   minArrivalPercent: z.number().min(5).max(30),
   rangeSafetyFactor: z.number().min(0.5).max(1.0),
   provider: z.enum(['osrm', 'mapbox']).default('osrm'),
+  /** Phase 2 — ISO 8601 departure time. Absent or null → "now" (free-flow). */
+  departAt: z.string().datetime().nullable().optional(),
   waypoints: z.array(z.object({
     lat: z.number().min(0).max(30),
     lng: z.number().min(95).max(115),
@@ -91,6 +96,7 @@ export async function POST(request: NextRequest) {
     minArrivalPercent,
     rangeSafetyFactor,
     provider,
+    departAt,
     waypoints,
   } = parsed.data;
 
@@ -406,9 +412,67 @@ export async function POST(request: NextRequest) {
         ? directions.provider
         : undefined;
 
+    // Phase 2 — Departure Intelligence: layer traffic awareness on top of the
+    // free-flow route. Heuristic peak-hour callout always available ($0); when
+    // the user picked a non-"now" departure within Mapbox's 7-day predictive
+    // horizon AND we have coordinates AND a Mapbox token, we ALSO call
+    // driving-traffic for a sharper duration estimate. Heuristic stays as the
+    // user-visible callout regardless of source so the reasonVi label is
+    // consistent.
+    const departureMoment = departAt ? new Date(departAt) : new Date();
+    const peakWindow = evaluatePeakHour(departureMoment, directions.polyline);
+    const holiday = isHoliday(departureMoment);
+
+    let adjustedDurationMin = totalDurationMin;
+    let trafficSource: 'heuristic' | 'mapbox-traffic' = 'heuristic';
+
+    if (peakWindow) {
+      adjustedDurationMin = Math.round(totalDurationMin * peakWindow.multiplier);
+    }
+
+    // Mapbox traffic-aware override (only when we have everything we need)
+    const mapboxTokenForTraffic = process.env.MAPBOX_ACCESS_TOKEN;
+    const coordsAvailable = startLat != null && startLng != null && endLat != null && endLng != null;
+    const futureDepart = departAt != null && new Date(departAt).getTime() > Date.now();
+    if (futureDepart && coordsAvailable && mapboxTokenForTraffic) {
+      try {
+        const trafficResult = await fetchTrafficAwareDirections({
+          origin: { lat: startLat!, lng: startLng! },
+          destination: { lat: endLat!, lng: endLng! },
+          accessToken: mapboxTokenForTraffic,
+          departAt: new Date(departAt!),
+        });
+        adjustedDurationMin = Math.round(trafficResult.durationSeconds / 60);
+        trafficSource = 'mapbox-traffic';
+      } catch (err) {
+        // Fall back to heuristic silently — log only when Mapbox is genuinely
+        // misbehaving (5xx, network), not when departure is too far out
+        if (err instanceof MapboxTrafficError && err.kind !== 'depart_too_far') {
+          console.warn('Mapbox traffic-aware routing failed; using heuristic only', {
+            kind: err.kind,
+            statusCode: err.statusCode,
+          });
+        }
+      }
+    }
+
+    const trafficMetadata = peakWindow || trafficSource === 'mapbox-traffic'
+      ? {
+          trafficMultiplier: totalDurationMin > 0
+            ? Math.round((adjustedDurationMin / totalDurationMin) * 100) / 100
+            : 1.0,
+          source: trafficSource,
+          peakWindowReasonVi: peakWindow?.reasonVi ?? '',
+          peakWindowReasonEn: peakWindow?.reasonEn ?? '',
+          ...(holiday && holiday.kind === 'travel-heavy'
+            ? { holidayId: holiday.id, holidayNameVi: holiday.nameVi, holidayNameEn: holiday.nameEn }
+            : {}),
+        }
+      : undefined;
+
     const tripPlan: TripPlan = {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
-      totalDurationMin,
+      totalDurationMin: adjustedDurationMin,
       chargingStops: plan.chargingStops,
       warnings: plan.warnings,
       batterySegments: plan.batterySegments,
@@ -419,6 +483,8 @@ export async function POST(request: NextRequest) {
       endAddress: directions.endAddress,
       tripId,
       ...(routeProvider !== undefined ? { routeProvider } : {}),
+      ...(departAt ? { departureAtIso: departAt } : {}),
+      ...(trafficMetadata ? { traffic: trafficMetadata } : {}),
     };
 
     // Cache trip plan for share card generation

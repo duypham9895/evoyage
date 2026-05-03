@@ -122,6 +122,22 @@ export interface BatterySegment {
   readonly label: string;
 }
 
+/**
+ * Phase 2 — Departure Intelligence metadata attached when the user picked
+ * a non-"now" departure time. Heuristic peak-hour callout when route hits
+ * a major Vietnamese city bbox at a known peak window; holiday boost when
+ * the trip falls within the ±1 day window of a travel-heavy holiday.
+ */
+export interface TripTrafficMetadata {
+  readonly trafficMultiplier: number; // 1.0 = no congestion, 1.5 = +50% travel time
+  readonly source: 'mapbox-traffic' | 'heuristic';
+  readonly peakWindowReasonVi: string;
+  readonly peakWindowReasonEn: string;
+  readonly holidayId?: string;
+  readonly holidayNameVi?: string;
+  readonly holidayNameEn?: string;
+}
+
 export interface TripPlan {
   readonly totalDistanceKm: number;
   readonly totalDurationMin: number;
@@ -138,6 +154,11 @@ export interface TripPlan {
    *  code path so the UI can show a fallback note when 'mapbox' was used.
    *  Absent when the user explicitly selected the Mapbox provider. */
   readonly routeProvider?: 'osrm' | 'mapbox';
+  /** ISO 8601 departure time the user picked (Phase 2). Absent → "now". */
+  readonly departureAtIso?: string;
+  /** Phase 2 traffic-awareness metadata. Absent when departure is "now"
+   *  AND no peak window applies (i.e. trip is in free-flow conditions). */
+  readonly traffic?: TripTrafficMetadata;
 }
 
 export type MapMode = 'osm' | 'mapbox';
