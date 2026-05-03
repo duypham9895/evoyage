@@ -82,7 +82,8 @@ describe('MobileTabBar', () => {
     expect(firstTab.className).toMatch(/flex-1/);
   });
 
-  it('calls onTabChange with the right tab id when clicked', () => {
+  it('calls onTabChange and hapticLight when clicked', async () => {
+    const { hapticLight } = await import('@/lib/haptics');
     const onTabChange = vi.fn();
     render(
       <MobileTabBar
@@ -94,6 +95,7 @@ describe('MobileTabBar', () => {
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Pin' }));
     expect(onTabChange).toHaveBeenCalledWith('battery');
+    expect(hapticLight).toHaveBeenCalledTimes(1);
   });
 
   it('shows notification dot on route tab when hasRoute=true and not active', () => {
