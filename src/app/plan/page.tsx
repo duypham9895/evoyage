@@ -93,6 +93,12 @@ function HomeContent() {
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+
+  // In-flight calc tracking — for Cancel + timeout fallback
+  const planAbortRef = useRef<AbortController | null>(null);
+  const planTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const TRIP_CALC_TIMEOUT_MS = 10_000;
 
   // Auto-snap bottom sheet to half when results load
   const [bottomSheetSnap, setBottomSheetSnap] = useState<{ point: 'peek' | 'half' | 'full'; trigger: number } | undefined>(undefined);
@@ -373,15 +379,33 @@ function HomeContent() {
       setError('Please select a vehicle');
       return;
     }
+    // Idempotent: ignore re-entry while a calc is in flight (defense in depth
+    // — UI also locks inputs, but EVi or other entry points could still call).
+    if (planAbortRef.current) return;
+
+    const controller = new AbortController();
+    planAbortRef.current = controller;
 
     setIsPlanning(true);
     setError(null);
-    setTripPlan(null);
+    setTimedOut(false);
+    // Note: do NOT clear tripPlan here — keep previous result visible so Cancel
+    // / timeout can revert without destroying the user's last good plan.
+
+    planTimeoutRef.current = setTimeout(() => {
+      // Timeout fallback: abort + surface a "try again" message.
+      controller.abort();
+      planAbortRef.current = null;
+      planTimeoutRef.current = null;
+      setIsPlanning(false);
+      setTimedOut(true);
+    }, TRIP_CALC_TIMEOUT_MS);
 
     try {
       const response = await fetch('/api/route', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           start: isLoopTrip ? start : start,
           end: isLoopTrip ? start : end,
@@ -432,11 +456,49 @@ function HomeContent() {
         localStorage.setItem('ev-recent-trips', JSON.stringify(updated));
       } catch { /* localStorage unavailable */ }
     } catch (err) {
+      // Aborted (Cancel or timeout): the abort path already set state — no-op here.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
-      setIsPlanning(false);
+      // Only clear if THIS calc is still the active one. A late response from a
+      // previously-aborted calc must not overwrite the new in-flight calc's state.
+      if (planAbortRef.current === controller) {
+        if (planTimeoutRef.current) {
+          clearTimeout(planTimeoutRef.current);
+          planTimeoutRef.current = null;
+        }
+        planAbortRef.current = null;
+        setIsPlanning(false);
+      }
     }
   }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip]);
+
+  // Cancel an in-flight calculation — reverts to previous tripPlan (if any).
+  const handleCancelPlanTrip = useCallback(() => {
+    if (planAbortRef.current) {
+      planAbortRef.current.abort();
+      planAbortRef.current = null;
+    }
+    if (planTimeoutRef.current) {
+      clearTimeout(planTimeoutRef.current);
+      planTimeoutRef.current = null;
+    }
+    setIsPlanning(false);
+    setTimedOut(false);
+  }, []);
+
+  // Dismiss timeout banner (after Retry click or X)
+  const handleDismissTimeout = useCallback(() => {
+    setTimedOut(false);
+  }, []);
+
+  // Cleanup on unmount — avoid leaked state updates from stale fetches
+  useEffect(() => {
+    return () => {
+      planAbortRef.current?.abort();
+      if (planTimeoutRef.current) clearTimeout(planTimeoutRef.current);
+    };
+  }, []);
 
   // Auto-plan after eVi fills form (state updates need a render cycle)
   useEffect(() => {
@@ -519,7 +581,18 @@ function HomeContent() {
     setShowEviNudge(true);
   }, [canPlan, isPlanning]);
 
-  const planButton = (
+  const planButton = isPlanning ? (
+    // Cancel button replaces Plan button while a calc is in flight (per spec §3.3)
+    <button
+      onClick={handleCancelPlanTrip}
+      className="w-full py-3.5 rounded-xl font-bold font-[family-name:var(--font-heading)] text-base transition-all border border-[var(--color-surface-hover)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] active:scale-[0.98]"
+    >
+      <span className="flex items-center justify-center gap-2">
+        <span className="w-4 h-4 border-2 border-[var(--color-foreground)] border-t-transparent rounded-full animate-spin" />
+        {t('plan_calculating_label')} · {t('plan_cancel')}
+      </span>
+    </button>
+  ) : (
     <div onPointerDown={handlePlanWrapperPointerDown}>
       <button
         onClick={handlePlanTrip}
@@ -531,16 +604,9 @@ function HomeContent() {
             : 'bg-[var(--color-surface-hover)] text-[var(--color-muted)] cursor-not-allowed opacity-60'
         }`}
       >
-        {isPlanning ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-[var(--color-background)] border-t-transparent rounded-full animate-spin" />
-            {t('planning')}
-          </span>
-        ) : (
-          t('plan_trip_button')
-        )}
+        {t('plan_trip_button')}
       </button>
-      {!canPlan && !isPlanning && disabledReason && (
+      {!canPlan && disabledReason && (
         <p className="text-xs text-[var(--color-muted)] text-center mt-1.5">{disabledReason}</p>
       )}
     </div>
@@ -549,6 +615,29 @@ function HomeContent() {
   const errorDisplay = error ? (
     <div className="p-3 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-sm">
       {error}
+    </div>
+  ) : null;
+
+  // Timeout banner — shown after TRIP_CALC_TIMEOUT_MS elapses without response.
+  // Retry triggers a fresh planTrip; dismiss closes the banner without retrying.
+  const timeoutBanner = timedOut ? (
+    <div className="p-3 bg-[var(--color-warn)]/10 border border-[var(--color-warn)]/30 rounded-lg text-sm text-[var(--color-warn)] flex items-center justify-between gap-3">
+      <span className="flex-1">{t('plan_calc_timeout_message')}</span>
+      <div className="flex gap-2 flex-shrink-0">
+        <button
+          onClick={() => { handleDismissTimeout(); handlePlanTrip(); }}
+          className="px-3 py-1.5 rounded-lg bg-[var(--color-warn)] text-[var(--color-background)] text-xs font-semibold hover:opacity-90 transition-opacity"
+        >
+          {t('plan_calc_timeout_retry')}
+        </button>
+        <button
+          onClick={handleDismissTimeout}
+          className="px-2 py-1.5 rounded-lg text-[var(--color-warn)] hover:bg-[var(--color-warn)]/10 transition-colors text-xs"
+          aria-label={t('plan_cancel')}
+        >
+          ✕
+        </button>
+      </div>
     </div>
   ) : null;
 
@@ -649,7 +738,7 @@ function HomeContent() {
 
             {activeTab === 'route' && (
               <>
-                <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} />
+                <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} disabled={isPlanning} />
                 <TripInput
                   start={start}
                   end={end}
@@ -665,6 +754,7 @@ function HomeContent() {
                   onReorderWaypoints={handleReorderWaypoints}
                   isLoopTrip={isLoopTrip}
                   onToggleLoop={handleToggleLoop}
+                  disabled={isPlanning}
                 />
                 {(tripPlan || isPlanning) && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
                   selectedVehicle?.efficiencyWhPerKm ??
@@ -686,6 +776,7 @@ function HomeContent() {
                 selectedVehicle={selectedVehicle}
                 onSelect={handleSelectVehicle}
                 onCustomCarClick={() => setShowCustomForm(true)}
+                disabled={isPlanning}
               />
             )}
 
@@ -698,6 +789,7 @@ function HomeContent() {
                 onCurrentBatteryChange={setCurrentBattery}
                 onMinArrivalChange={setMinArrival}
                 onRangeSafetyFactorChange={handleRSFChange}
+                disabled={isPlanning}
               />
             )}
 
@@ -710,6 +802,7 @@ function HomeContent() {
             {/* Plan button — only on route/vehicle/battery tabs (eVi has its own, stations doesn't need one) */}
             {activeTab !== 'stations' && activeTab !== 'evi' && planButton}
             {activeTab !== 'stations' && activeTab !== 'evi' && errorDisplay}
+            {activeTab !== 'stations' && activeTab !== 'evi' && timeoutBanner}
           </div>
         </MobileBottomSheet>
 
@@ -755,7 +848,7 @@ function HomeContent() {
               </div>
             ) : desktopSidebarTab === 'planTrip' ? (
               <div className="space-y-4 animate-fadeIn" role="tabpanel" id="desktop-tabpanel-plan" aria-labelledby="desktop-tab-planTrip">
-                <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} />
+                <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} disabled={isPlanning} />
                 <TripInput
                   start={start}
                   end={end}
@@ -770,12 +863,14 @@ function HomeContent() {
                   onReorderWaypoints={handleReorderWaypoints}
                   isLoopTrip={isLoopTrip}
                   onToggleLoop={handleToggleLoop}
+                  disabled={isPlanning}
                 />
 
                 <BrandModelSelector
                   selectedVehicle={selectedVehicle}
                   onSelect={handleSelectVehicle}
                   onCustomCarClick={() => setShowCustomForm(true)}
+                  disabled={isPlanning}
                 />
 
                 <BatteryStatusPanel
@@ -786,10 +881,12 @@ function HomeContent() {
                   onCurrentBatteryChange={setCurrentBattery}
                   onMinArrivalChange={setMinArrival}
                   onRangeSafetyFactorChange={handleRSFChange}
+                  disabled={isPlanning}
                 />
 
                 {planButton}
                 {errorDisplay}
+                {timeoutBanner}
 
                 <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
                   selectedVehicle?.efficiencyWhPerKm ??
