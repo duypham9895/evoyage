@@ -101,6 +101,48 @@ function buildHtmlBody(payload: EmailPayload): string {
   `;
 }
 
+/**
+ * Plain-text alternative for the email's MIME body. Without this, Resend
+ * auto-generates a text body from the HTML — and that auto-generation does
+ * not QP-escape the `=` characters in URL params, causing recipient email
+ * clients to mis-decode `=10`, `=11`, etc. as control bytes (DLE, DC1).
+ * Providing our own text body bypasses that path; Resend QP-encodes our
+ * text correctly so URLs survive transit.
+ */
+function buildTextBody(payload: EmailPayload): string {
+  const label = CATEGORY_LABELS_VI[payload.category];
+  const time = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+
+  const lines: string[] = [];
+  lines.push('eVoyage — Phản hồi mới');
+  lines.push('');
+  lines.push(`Loại phản hồi: ${label}`);
+  lines.push(`Thời gian: ${time}`);
+  lines.push(`ID: ${payload.feedbackId}`);
+  lines.push('');
+  lines.push('Mô tả:');
+  lines.push(payload.description);
+
+  if (payload.email) lines.push('', `Email: ${payload.email}`);
+  if (payload.name) lines.push(`Tên: ${payload.name}`);
+  if (payload.phone) lines.push(`SĐT: ${payload.phone}`);
+  if (payload.stationName) lines.push(`Trạm sạc: ${payload.stationName}`);
+  if (payload.stepsToReproduce) lines.push('', 'Tái tạo lỗi:', payload.stepsToReproduce);
+  if (payload.useCase) lines.push('', 'Use case:', payload.useCase);
+  if (payload.correctInfo) lines.push('', 'Thông tin đúng:', payload.correctInfo);
+  if (payload.rating) lines.push('', `Đánh giá: ${payload.rating}/5`);
+
+  if (payload.pageUrl || payload.userAgent || payload.viewport) {
+    lines.push('');
+    if (payload.pageUrl) lines.push(`Trang: ${payload.pageUrl}`);
+    if (payload.userAgent) lines.push(`Thiết bị: ${payload.userAgent.slice(0, 200)}`);
+    if (payload.viewport) lines.push(`Màn hình: ${payload.viewport}`);
+  }
+
+  lines.push('', '—', 'Email này được gửi từ hệ thống phản hồi eVoyage');
+  return lines.join('\n');
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -153,6 +195,7 @@ export async function sendFeedbackEmail(payload: EmailPayload): Promise<void> {
 
     const subject = buildSubject(payload.category, payload.description);
     const html = buildHtmlBody(payload);
+    const text = buildTextBody(payload);
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -166,6 +209,7 @@ export async function sendFeedbackEmail(payload: EmailPayload): Promise<void> {
         reply_to: payload.email || undefined,
         subject,
         html,
+        text,
       }),
     });
 
