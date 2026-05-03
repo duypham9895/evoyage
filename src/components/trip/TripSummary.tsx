@@ -9,7 +9,9 @@ import { computeTripCost } from '@/lib/trip-cost';
 import { extractCityName } from '@/lib/trip/extract-city';
 import { extractStationShortName } from '@/lib/trip/extract-station-name';
 import { detectPasses } from '@/lib/trip/detect-passes';
+import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import RouteTimeline, { type RouteTimelineStop } from './RouteTimeline';
+import WhatIfCards, { type WhatIfOption } from './WhatIfCards';
 import StationDetailExpander from './StationDetailExpander';
 import StationStatusReporter from './StationStatusReporter';
 import StationTrustChip from './StationTrustChip';
@@ -27,6 +29,9 @@ interface TripSummaryProps {
   readonly vehicleOfficialRangeKm?: number | null;
   readonly onSelectAlternativeStation?: (stopIndex: number, station: RankedStation) => void;
   readonly onBackToChat?: () => void;
+  /** Phase 2 — called when the user taps a what-if card to replan with that
+   *  departure time. Receives an ISO 8601 string. */
+  readonly onSelectDepartureTime?: (iso: string) => void;
 }
 
 // ── Battery color helpers ──
@@ -411,8 +416,11 @@ function formatHM(min: number): string {
   return `${h}h${m}m`;
 }
 
-function formatEta(totalMin: number, locale: 'vi' | 'en'): string | null {
-  const eta = new Date(Date.now() + totalMin * 60_000);
+function formatEta(totalMin: number, locale: 'vi' | 'en', baseIso?: string): string | null {
+  // When the user picked a future departure, anchor the ETA on that moment;
+  // otherwise treat it as "leaving now" and anchor on the current clock.
+  const baseMs = baseIso ? new Date(baseIso).getTime() : Date.now();
+  const eta = new Date(baseMs + totalMin * 60_000);
   if (eta.getTime() <= Date.now()) return null;
   return new Intl.DateTimeFormat(locale === 'vi' ? 'vi-VN' : 'en-GB', {
     hour: 'numeric',
@@ -421,7 +429,13 @@ function formatEta(totalMin: number, locale: 'vi' | 'en'): string | null {
   }).format(eta);
 }
 
-function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
+function TripOverviewCard({
+  tripPlan,
+  onSelectDepartureTime,
+}: {
+  readonly tripPlan: TripPlan;
+  readonly onSelectDepartureTime?: (iso: string) => void;
+}) {
   const { t, locale } = useLocale();
 
   const startCity = extractCityName(tripPlan.startAddress);
@@ -432,7 +446,8 @@ function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
   const driveStr = formatHM(tripPlan.totalDurationMin);
   const chargeStr = formatHM(tripPlan.totalChargingTimeMin);
 
-  const eta = formatEta(totalTimeMin, locale);
+  const eta = formatEta(totalTimeMin, locale, tripPlan.departureAtIso);
+  const hasPickedDeparture = tripPlan.departureAtIso != null;
   const arrivalBattery = Math.max(0, Math.round(tripPlan.arrivalBatteryPercent));
   const startBattery = Math.round(tripPlan.batterySegments[0]?.startBatteryPercent ?? 0);
 
@@ -466,6 +481,44 @@ function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
 
   const passes = detectPasses(tripPlan.polyline);
 
+  // Phase 2 — when the user picked a future departure, build 3 heuristic-
+  // predicted "what-if" options so they can compare. We don't fan-out 3
+  // /api/route fetches: the polyline doesn't change with departure time,
+  // only the multiplier does, so we recompute the multiplier client-side.
+  const whatIfOptions: readonly WhatIfOption[] = (() => {
+    if (!tripPlan.departureAtIso) return [];
+    const baseDuration =
+      tripPlan.traffic && tripPlan.traffic.trafficMultiplier > 0
+        ? Math.round(tripPlan.totalDurationMin / tripPlan.traffic.trafficMultiplier)
+        : tripPlan.totalDurationMin;
+
+    const current = new Date(tripPlan.departureAtIso);
+    const plus2h = new Date(current.getTime() + 2 * 60 * 60 * 1000);
+    const tomorrow = new Date(current);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(6, 30, 0, 0);
+
+    const candidates: Array<{ key: string; label: string; date: Date }> = [
+      { key: 'current', label: t('trip_whatif_current' as Parameters<typeof t>[0]), date: current },
+      { key: 'plus2h', label: t('trip_whatif_plus_2h' as Parameters<typeof t>[0]), date: plus2h },
+      { key: 'tomorrow', label: t('trip_whatif_tomorrow_morning' as Parameters<typeof t>[0]), date: tomorrow },
+    ];
+
+    return candidates.map(({ key, label, date }): WhatIfOption => {
+      const peak = evaluatePeakHour(date, tripPlan.polyline);
+      const adjusted = peak ? Math.round(baseDuration * peak.multiplier) : baseDuration;
+      const arrival = new Date(date.getTime() + adjusted * 60_000);
+      return {
+        key,
+        label,
+        departAt: date.toISOString(),
+        totalDurationMin: adjusted,
+        arrivalEtaIso: arrival.toISOString(),
+        peakWindowReason: peak ? (locale === 'vi' ? peak.reasonVi : peak.reasonEn) : null,
+      };
+    });
+  })();
+
   return (
     <div className="p-4 bg-[var(--color-surface)] rounded-lg space-y-3">
       {/* Headline */}
@@ -478,7 +531,9 @@ function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
         </p>
         <p className="text-sm text-[var(--color-muted)]">
           {eta
-            ? t('trip_duration_with_eta', { time: totalTimeStr, eta })
+            ? hasPickedDeparture
+              ? t('trip_duration_with_eta_picked' as Parameters<typeof t>[0], { time: totalTimeStr, eta })
+              : t('trip_duration_with_eta', { time: totalTimeStr, eta })
             : t('trip_duration_only', { time: totalTimeStr })}
         </p>
       </div>
@@ -530,6 +585,19 @@ function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
         </div>
       )}
 
+      {/* Phase 2 what-if comparison — heuristic-only, no extra fetches.
+          Shown when user picked a future departure; tap a non-current
+          card to ask the parent to replan with that time. */}
+      {whatIfOptions.length > 0 && (
+        <WhatIfCards
+          options={whatIfOptions}
+          currentKey="current"
+          onSelect={(option) => {
+            if (option.departAt) onSelectDepartureTime?.(option.departAt);
+          }}
+        />
+      )}
+
       {/* Terrain warnings — surface known mountain passes when route crosses them */}
       {passes.map((pass) => (
         <div
@@ -562,7 +630,7 @@ function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
 
 // ── Main Component ──
 
-export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime }: TripSummaryProps) {
   const { t, tBi } = useLocale();
   const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
   const narrativeState = useRouteNarrative(tripPlan);
@@ -663,7 +731,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         isLoading={narrativeState.isLoading}
       />
 
-      <TripOverviewCard tripPlan={tripPlan} />
+      <TripOverviewCard tripPlan={tripPlan} onSelectDepartureTime={onSelectDepartureTime} />
 
       {/* No charging needed pill — only when literally no charging stops AND no warnings */}
       {tripPlan.chargingStops.length === 0 && tripPlan.warnings.length === 0 && (
