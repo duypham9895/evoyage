@@ -19,6 +19,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useLocale } from '@/lib/locale';
+import { trackAmenitiesViewed, trackAmenityTapped } from '@/lib/analytics';
 import type { AmenityCategory } from '@/lib/station/categorize-poi';
 
 interface AmenityRow {
@@ -83,6 +84,7 @@ export default function StationAmenities({
       })
       .then((data) => {
         if (cancelled) return;
+        trackAmenitiesViewed(stationId, data.fromCache, data.pois?.length ?? 0);
         if (!data.pois || data.pois.length === 0) {
           setState({ kind: 'empty' });
         } else {
@@ -159,6 +161,7 @@ export default function StationAmenities({
                 href={googleMapsPoiUrl(poi.lat, poi.lng, poi.name)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackAmenityTapped(poi.category, poi.walkingMinutes)}
                 className="flex items-center gap-2 py-1 text-xs hover:underline"
               >
                 <span className={`w-2 h-2 rounded-full ${dotCls} shrink-0`} aria-hidden="true" />

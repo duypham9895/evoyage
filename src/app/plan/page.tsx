@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
-import { trackTripPlanned } from '@/lib/analytics';
+import { trackTripPlanned, trackDeparturePicked } from '@/lib/analytics';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
@@ -93,7 +93,14 @@ function HomeContent() {
   const [minArrival, setMinArrival] = useState(DEFAULT_MIN_ARRIVAL);
   const [rangeSafetyFactor, setRangeSafetyFactor] = useState(DEFAULT_RANGE_SAFETY_FACTOR);
   /** Phase 2 — ISO 8601 departure time, or null for "now". */
-  const [departAt, setDepartAt] = useState<string | null>(null);
+  const [departAt, setDepartAtRaw] = useState<string | null>(null);
+  const setDepartAt = useCallback((next: string | null) => {
+    setDepartAtRaw(next);
+    if (next) {
+      const leadHours = (new Date(next).getTime() - Date.now()) / 3_600_000;
+      trackDeparturePicked(leadHours);
+    }
+  }, []);
 
   // Trip result
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);

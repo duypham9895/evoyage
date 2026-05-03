@@ -118,3 +118,55 @@ export function trackEviMessage(
 export function trackShareClicked(shareMethod: 'link' | 'qr'): void {
   safeCapture('share_clicked', { share_method: shareMethod });
 }
+
+// ── Phase 1+2+4 Trust Intelligence events ────────────────────────────────
+// Capture engagement with the trust-intelligence layer so we have a baseline
+// before Phase 3b ships and can measure whether each Phase actually moves
+// driver behavior.
+
+/** Phase 1 — A terrain warning rendered on a trip plan. */
+export function trackTerrainWarningShown(passId: string, drainPercent: number): void {
+  safeCapture('terrain_warning_shown', { pass_id: passId, drain_percent: drainPercent });
+}
+
+/** Phase 2 — User picked a non-"now" departure time. */
+export function trackDeparturePicked(leadHours: number): void {
+  safeCapture('departure_picked', { lead_hours: Math.round(leadHours * 10) / 10 });
+}
+
+/** Phase 2 — Traffic callout rendered (heuristic or live). */
+export function trackTrafficCalloutShown(
+  source: 'heuristic' | 'mapbox-traffic',
+  multiplier: number,
+): void {
+  safeCapture('traffic_callout_shown', {
+    source,
+    multiplier: Math.round(multiplier * 100) / 100,
+  });
+}
+
+/** Phase 2 — User tapped a what-if alternative card. */
+export function trackWhatIfPicked(optionKey: string): void {
+  safeCapture('whatif_picked', { option: optionKey });
+}
+
+/** Phase 4 — User expanded a stop and the amenities panel mounted. */
+export function trackAmenitiesViewed(
+  stationId: string,
+  fromCache: boolean,
+  poiCount: number,
+): void {
+  safeCapture('amenities_viewed', {
+    station_id: stationId,
+    from_cache: fromCache,
+    poi_count: poiCount,
+  });
+}
+
+/** Phase 4 — User tapped a POI row to open in Google Maps. */
+export function trackAmenityTapped(category: string, walkingMinutes: number): void {
+  safeCapture('amenity_tapped', {
+    category,
+    walking_minutes: walkingMinutes,
+  });
+}

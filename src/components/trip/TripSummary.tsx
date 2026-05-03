@@ -1,8 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useRouteNarrative } from '@/hooks/useRouteNarrative';
+import {
+  trackTerrainWarningShown,
+  trackTrafficCalloutShown,
+  trackWhatIfPicked,
+} from '@/lib/analytics';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import { calculateSavings, formatVnd } from '@/lib/trip/cost';
 import { computeTripCost } from '@/lib/trip-cost';
@@ -482,6 +487,21 @@ function TripOverviewCard({
 
   const passes = detectPasses(tripPlan.polyline);
 
+  // Trust intelligence impression events — fire once per trip plan so the
+  // funnel measures "did the user actually see this feature" rather than
+  // re-firing on every render.
+  useEffect(() => {
+    for (const pass of passes) {
+      trackTerrainWarningShown(pass.id, pass.drainPercent);
+    }
+    if (tripPlan.traffic) {
+      trackTrafficCalloutShown(
+        tripPlan.traffic.source,
+        tripPlan.traffic.trafficMultiplier,
+      );
+    }
+  }, [tripPlan.tripId]); // eslint-disable-line react-hooks/exhaustive-deps -- key on tripId only; passes/traffic are derived from polyline which changes when tripId does
+
   // Phase 2 — when the user picked a future departure, build 3 heuristic-
   // predicted "what-if" options so they can compare. We don't fan-out 3
   // /api/route fetches: the polyline doesn't change with departure time,
@@ -594,6 +614,7 @@ function TripOverviewCard({
           options={whatIfOptions}
           currentKey="current"
           onSelect={(option) => {
+            trackWhatIfPicked(option.key);
             if (option.departAt) onSelectDepartureTime?.(option.departAt);
           }}
         />
