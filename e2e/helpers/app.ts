@@ -52,6 +52,16 @@ export async function mockAPIs(page: Page): Promise<void> {
     }),
   );
 
+  // Map-bounds station fetch (e.g. NearbyStations, MapLocateButton). Returning
+  // an empty list keeps the dev server hermetic — no DATABASE_URL needed.
+  await page.route(/\/api\/stations(\?|$)/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ stations: [], count: 0 }),
+    }),
+  );
+
   await page.route('**/api/evi/parse', (route) =>
     route.fulfill({
       status: 200,
