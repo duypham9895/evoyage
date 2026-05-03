@@ -81,6 +81,7 @@
   "tab_route": "Tuyến đường",
   "tab_vehicle": "Xe",
   "tab_battery": "Pin",
+  "tab_stations": "Trạm sạc",
 
   "stations_best": "Tốt nhất",
   "stations_ok": "Tạm ổn",
@@ -289,7 +290,6 @@
   "feedback_back": "Quay lại",
   "feedback_station_report": "Báo lỗi",
 
-  "tab_evi": "eVi",
   "evi_fab_label": "Mở trợ lý eVi",
   "evi_greeting_first": "Xin chào! Mình là eVi. Cho mình biết bạn muốn đi đâu nhé!",
   "evi_greeting_return": "Đi đâu hôm nay?",
