@@ -58,6 +58,10 @@ jobs:
         continue-on-error: true
         run: npx tsx scripts/seed-manual-stations.ts
 
+      - name: Promote crowdsourced reports
+        continue-on-error: true
+        run: npx tsx scripts/promote-crowdsourced-stations.ts
+
       - name: Sync README station count
         run: npx tsx scripts/update-readme-stats.ts
 
