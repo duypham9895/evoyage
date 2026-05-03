@@ -1,10 +1,14 @@
 # Trip Overview — Route Timeline Redesign
 
-**Status**: Approved (v2) 2026-05-03 — incorporates Head-of-Product critique on ETA framing and trust-intelligence layer
+**Status**: Approved (v3) 2026-05-03 — Phase 1 of the Trust Intelligence roadmap
 **Owner**: Duy Phạm (PM) · Implementation: Claude Code
 **Trigger**: User feedback that the current overview card "just put the beginning and end points from the trip, don't have any meaning"
 
+**Project framing (per `feedback_no_mvp_serious_features.md` + `feedback_zero_infra_cost.md`)**:
+This spec is **not an MVP**. It is Phase 1 of a deliberate Trust Intelligence build-out for eVoyage. Each phase ships as a complete, well-engineered feature using free data sources and free-tier infrastructure (`$0` ongoing cost). The four phases form a coherent product story: drivers must be able to TRUST the trip plan, and trust requires real intelligence (terrain, traffic, station behavior, surroundings).
+
 **Changelog**:
+- **v3 (2026-05-03)**: Reframed §13 from "deferred unless complaints" (MVP language) to a structured roadmap. Added §14 Trust Intelligence Roadmap context. Removed any "ship cheap, iterate later" framing.
 - **v2 (2026-05-03)**: ETA reframed as secondary with "nếu đi ngay" caveat (was: ETA hero); arrival battery promoted to hero (trust signal). Added terrain-warning row driven by static known-pass detection (no API). Locale keys restructured accordingly.
 - **v1 (2026-05-03)**: Initial route-timeline redesign approved.
 
@@ -338,20 +342,55 @@ The auto-checking `locale-keys.test.ts` will catch mismatches.
 - [ ] `npm test` passes (all 813+ tests stay green or higher)
 - [ ] `npx next build` succeeds (no TypeScript errors)
 
-## 13. Out of scope (explicitly deferred)
+## 13. Scope of this phase
 
-These were considered and **not** included in this iteration:
+Items below are **NOT** in this phase. Each falls into one of three categories:
 
-- Departure-time picker — add only if user data shows non-real-time usage
-- Province / city milestones along the route (reverse-geocode waypoints)
-- Animated battery flow on the timeline (motion design)
-- Tappable timeline nodes that scroll to the matching detail card below
-- A/B testing the redesign — too small a user base to be statistically meaningful
-- Persisting "swipe hint dismissed" state — always show for now; revisit if annoying
-- **Elevation API** for arbitrary terrain detection — static known-pass dataset covers 90% of Vietnamese trips; add only if non-pass terrain becomes a complaint
-- **Peak-hour traffic warnings** — needs traffic data source + Vietnam-specific rush-hour modeling
-- **Weather impact on range** — needs weather API + range-degradation model
-- **Charging station reservation status** — V-GREEN does not currently expose a reservation API
-- **Food / amenities near charging stops** — needs places-API integration (cost, latency)
+### 13a. Scheduled in the Trust Intelligence Roadmap (see §14)
 
-These 5 "trust intelligence" items above were specifically discussed in the Head-of-Product review on 2026-05-03 and consciously deferred to keep the v1 redesign shippable. If post-launch user feedback prioritizes any of them, file a follow-up spec.
+These are committed work, sequenced for delivery in subsequent phases. They are **not deferred-conditionally** — they will be built.
+
+| Item | Phase | Why later, not now |
+|---|---|---|
+| **Departure-time picker + real-time traffic-aware ETA** | Phase 2 | Needs Mapbox `driving-traffic` profile integration + UI redesign of departure flow. Coherent feature, deserves own spec. |
+| **Peak-hour traffic warnings** | Phase 2 | Same workstream as departure-time picker — both rely on traffic intelligence layer. |
+| **Charging station popularity prediction + reservation surfacing** | Phase 3 | Needs 4–8 weeks of historical `chargingStatus` data accumulation. **Data collection cron starts in parallel with this phase** so cold-start is shorter when Phase 3 ships. |
+| **Charging stop amenities (Overpass POI integration)** | Phase 4 | Needs Overpass query layer + Postgres caching schema + UI for inline previews. Independent workstream. |
+
+### 13b. Backlog — sensible additions, awaiting prioritization
+
+These are real product improvements but not in any active phase yet. Will be promoted into a phase based on user feedback or design availability.
+
+- Province / city milestones along the route (reverse-geocode waypoints) — adds geographic context to timeline; needs reverse-geocode source decision (Nominatim free OK)
+- Tappable timeline nodes that scroll to the matching detail card below — UX polish, not new intelligence
+- Persisting "swipe hint dismissed" state — minor UX; current always-shown is acceptable
+- Animated battery flow on the timeline (motion design) — pure aesthetic; needs motion-design pass first
+
+### 13c. Genuinely speculative — needs validation before any work
+
+These would change the product in ways that need user research first. Do **not** treat as roadmap items.
+
+- **Weather impact on range model** — only valuable if VN drivers actually adjust trips based on weather; needs user research to confirm
+- **Elevation API for arbitrary terrain** (beyond known passes) — static pass dataset covers 90% of cases; would only matter for unusual rural routes
+- **A/B testing the redesign** — eVoyage user base is too small for statistical significance; revisit if scale changes
+
+---
+
+## 14. Trust Intelligence Roadmap
+
+This spec is Phase 1 of a four-phase build-out. Each phase is a separate, fully-specced feature delivering coherent user value at $0 ongoing infra cost. Phases are sequenced for impact, dependencies, and data-accumulation timing.
+
+| Phase | Feature | Status | Ongoing Cost | Effort |
+|---|---|---|---|---|
+| **1** | **Trip Overview Timeline + Terrain Warnings** (this spec) | In design (v3) | $0 | ~1 week |
+| **2** | **Departure Intelligence + Real-Time Traffic** — Mapbox `driving-traffic` (within free tier 100k/month) + departure-time picker + heuristic peak-hour fallback + what-if comparison + holiday-aware buffer | Spec to be written next | $0 | ~2 weeks |
+| **3** | **Station Popularity Engine** — historical aggregation of crawled `chargingStatus` → 168-cell heatmap per station + holiday boosts + reservation deep-link to V-GREEN. **Data collection cron starts in parallel with Phase 1** to mitigate cold-start. | Spec to be written; data collection migration starts immediately | $0 | ~2 weeks (after data accumulates) |
+| **4** | **Charging Stop Amenities** — Overpass API POI query (food, ATM, WC, fuel, pharmacy) + 30-day Postgres cache + walking-time filter + categorization aligned to charge duration | Spec to be written | $0 | ~1.5 weeks |
+
+**Critical dependency**: Phase 3's popularity engine needs ≥ 4 weeks of accumulated status data for meaningful predictions. To prevent ship-then-wait, the **data collection cron is implemented in a parallel workstream during Phase 1**, so by the time Phase 3 ships, the prediction model has signal.
+
+**Cross-phase principles** (apply to all four):
+1. **$0 ongoing cost** — free-tier infrastructure only (Vercel + Supabase + Mapbox free tier + Overpass + GitHub Actions + external cron service)
+2. **Honest UX about data limits** — when data is sparse (cold-start, missing OSM data, etc.), show "chưa đủ dữ liệu" rather than fake confidence
+3. **Crowdsource where possible** — post-trip prompts feed back into models, improving accuracy over time
+4. **No paid APIs without explicit user approval** — see `feedback_zero_infra_cost.md`
