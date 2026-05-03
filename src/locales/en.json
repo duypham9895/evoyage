@@ -81,6 +81,7 @@
   "tab_route": "Route",
   "tab_vehicle": "Vehicle",
   "tab_battery": "Battery",
+  "tab_stations": "Stations",
 
   "stations_best": "Best",
   "stations_ok": "OK",
@@ -289,7 +290,6 @@
   "feedback_back": "Back",
   "feedback_station_report": "Report error",
 
-  "tab_evi": "eVi",
   "evi_fab_label": "Open eVi assistant",
   "evi_greeting_first": "Hi! I'm eVi. Tell me where you'd like to go!",
   "evi_greeting_return": "Where to today?",
