@@ -31,11 +31,13 @@ describe('EViFab', () => {
     expect(button.className).toMatch(/lg:hidden/);
   });
 
-  it('calls onOpen when clicked', () => {
+  it('calls onOpen and hapticLight when clicked', async () => {
+    const { hapticLight } = await import('@/lib/haptics');
     const onOpen = vi.fn();
     render(<EViFab onOpen={onOpen} isOpen={false} />);
     fireEvent.click(screen.getByRole('button'));
     expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(hapticLight).toHaveBeenCalledTimes(1);
   });
 
   it('is hidden when isOpen is true', () => {
