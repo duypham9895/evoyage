@@ -505,6 +505,31 @@ function TripOverviewCard({ tripPlan }: { readonly tripPlan: TripPlan }) {
         />
       )}
 
+      {/* Phase 2 traffic callout — surfaces predicted/real-time congestion
+          when the trip falls inside a known peak window. The badge below
+          tells the user whether the multiplier came from Mapbox real-time
+          data or our heuristic. */}
+      {tripPlan.traffic && (
+        <div
+          data-testid="trip-traffic-callout"
+          className="p-2 bg-[var(--color-warn)]/10 text-[var(--color-warn)] rounded-md text-xs space-y-0.5"
+        >
+          <div>
+            {t('trip_traffic_callout' as Parameters<typeof t>[0], {
+              reason:
+                locale === 'vi'
+                  ? tripPlan.traffic.peakWindowReasonVi
+                  : tripPlan.traffic.peakWindowReasonEn,
+            })}
+          </div>
+          <div className="text-[10px] text-[var(--color-muted)]">
+            {tripPlan.traffic.source === 'mapbox-traffic'
+              ? t('trip_traffic_realtime_badge' as Parameters<typeof t>[0])
+              : t('trip_traffic_heuristic_badge' as Parameters<typeof t>[0])}
+          </div>
+        </div>
+      )}
+
       {/* Terrain warnings — surface known mountain passes when route crosses them */}
       {passes.map((pass) => (
         <div
