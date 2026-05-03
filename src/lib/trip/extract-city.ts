@@ -24,6 +24,12 @@ const FALLBACK = '—';
 const PATTERNS: ReadonlyArray<{ test: RegExp; replace: (match: RegExpMatchArray) => string }> = [
   { test: /^Th(à|à)nh ph(ố|o) Hồ Chí Minh$/i, replace: () => 'TP.HCM' },
   { test: /^TP\.\s*Hồ Chí Minh$/i, replace: () => 'TP.HCM' },
+  // Already-abbreviated HCMC forms surfaced from sample-trip chips and other
+  // non-geocoded sources. Match before the generic "Thành phố ..." rule so
+  // we don't accidentally fall through to second-to-last fallback.
+  { test: /^TP\.?\s*HCM$/i, replace: () => 'TP.HCM' },
+  { test: /^TPHCM$/i, replace: () => 'TP.HCM' },
+  { test: /^Sài\s*Gòn$/i, replace: () => 'Sài Gòn' },
   { test: /^(?:Thành phố|Thủ đô) Hà Nội$/i, replace: () => 'Hà Nội' },
   { test: /^Thành phố (.+)$/i, replace: (m) => m[1]!.trim() },
   { test: /^Tỉnh (.+)$/i, replace: (m) => m[1]!.trim() },

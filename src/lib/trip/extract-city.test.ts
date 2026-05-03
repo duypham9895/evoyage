@@ -14,6 +14,20 @@ describe('extractCityName', () => {
     expect(extractCityName('123 Lê Lợi, TP. Hồ Chí Minh, Việt Nam')).toBe('TP.HCM');
   });
 
+  it('returns "TP.HCM" already-abbreviated form unchanged (regression for visual QA bug 2026-05-03)', () => {
+    // Real input from sample-trip chips: "Quận 1, TP.HCM" — visual QA showed
+    // the headline rendering as "Quận 1" instead of "TP.HCM" because the
+    // walk-start-to-end logic hit "Quận 1" first via fallback path. Adding
+    // an explicit TP.HCM pattern fixes this.
+    expect(extractCityName('Quận 1, TP.HCM')).toBe('TP.HCM');
+    expect(extractCityName('Thủ Thiêm, TP HCM')).toBe('TP.HCM');
+    expect(extractCityName('Bình Thạnh, TPHCM')).toBe('TP.HCM');
+  });
+
+  it('handles informal "Sài Gòn" form', () => {
+    expect(extractCityName('Quận 3, Sài Gòn')).toBe('Sài Gòn');
+  });
+
   it('returns "Đà Lạt" for the canonical Da Lat pattern', () => {
     expect(
       extractCityName(
