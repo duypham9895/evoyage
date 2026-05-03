@@ -12,6 +12,7 @@ import { detectPasses } from '@/lib/trip/detect-passes';
 import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import RouteTimeline, { type RouteTimelineStop } from './RouteTimeline';
 import WhatIfCards, { type WhatIfOption } from './WhatIfCards';
+import StationAmenities from './StationAmenities';
 import StationDetailExpander from './StationDetailExpander';
 import StationStatusReporter from './StationStatusReporter';
 import StationTrustChip from './StationTrustChip';
@@ -879,6 +880,14 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
 
                     {/* Station detail expander */}
                     <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
+
+                    {/* Phase 4 — nearby amenities (food, ATM, WC, fuel, pharmacy)
+                        within walking distance, lazy-fetched on first expand */}
+                    <StationAmenities
+                      stationId={station.id}
+                      stationLat={station.latitude}
+                      stationLng={station.longitude}
+                    />
 
                     {/* Crowdsourced status reporting (1-tap working/broken/busy) */}
                     <StationStatusReporter
