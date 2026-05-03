@@ -1,0 +1,10 @@
+name,address,latitude,longitude,province,provider,connectorTypes,maxPowerKw,stationType,sourceUrl
+# Template — replace these examples with real entries gathered from public news / Facebook groups / blog posts.
+# Notes:
+#   - Use commas, not semicolons. Wrap any cell containing a comma in double quotes ("...").
+#   - connectorTypes: comma-separated list within the cell (e.g. "CCS2,Type2_AC")
+#   - stationType: AC | DC | swap
+#   - sourceUrl: required — link to the public reference that confirms the station's existence.
+# Example rows (delete before running on real data):
+"Porsche Centre Hà Nội","Phạm Văn Đồng, Bắc Từ Liêm, Hà Nội",21.0511,105.7795,Hà Nội,Porsche,CCS2,150,DC,https://example.com/porsche-hanoi-news-link
+"BMW Long Biên","Long Biên, Hà Nội",21.0445,105.8950,Hà Nội,BMW,CCS2,50,DC,https://example.com/bmw-longbien-link
