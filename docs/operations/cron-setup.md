@@ -2,7 +2,12 @@
 
 Operator runbook for the `/api/cron/poll-station-status` and `/api/cron/aggregate-popularity` endpoints introduced by [`docs/specs/2026-05-03-station-status-data-collection-design.md`](../specs/2026-05-03-station-status-data-collection-design.md).
 
-These two endpoints are scheduled by an external service (cron-job.org free tier) because Vercel Hobby caps cron jobs at 2 executions per day, which doesn't cover the hourly polling cadence we need.
+**Architecture (v2, 2026-05-03)**: Both endpoints are invoked by GitHub Actions workflows (`poll-station-status.yml` and `aggregate-popularity.yml`) using authenticated curl — keeping the whole pipeline inside infrastructure we already operate. This replaces the original spec's external `cron-job.org` dependency to remove operator-setup burden.
+
+Production cadence:
+- Cookie refresh: every 2 hours (`refresh-vinfast-cookies.yml`)
+- Polling: every 2 hours, offset by 5 minutes (`poll-station-status.yml`)
+- Aggregation: daily at 02:00 AM Vietnam (`aggregate-popularity.yml`)
 
 ## Prerequisites
 
@@ -48,41 +53,24 @@ LIMIT 1;
 
 You should see one row with `expiresAt` ~7 days in the future and a non-trivial `cookie_size` (typically 500–2000 bytes).
 
-### 3. Configure cron-job.org
+### 3. GitHub Actions workflows (auto-configured)
 
-Sign up at [cron-job.org](https://cron-job.org) (free tier supports unlimited 1-minute-resolution jobs). Create two jobs:
+The polling and aggregation are invoked by three workflows that live alongside the cookie-refresh job:
 
-#### Job A — `evoyage-poll-station-status`
+| Workflow file | Schedule | Purpose |
+|---|---|---|
+| `refresh-vinfast-cookies.yml` | every 2 hours | Playwright refreshes CF cookies into `VinfastApiCookies` |
+| `poll-station-status.yml` | every 2 hours, +5 min offset | curl `/api/cron/poll-station-status` |
+| `aggregate-popularity.yml` | daily 19:00 UTC (02:00 AM VN) | curl `/api/cron/aggregate-popularity` |
 
-| Field | Value |
-|---|---|
-| Title | `evoyage-poll-station-status` |
-| URL | `https://evoyage.app/api/cron/poll-station-status` |
-| Schedule | Every hour, at minute 0 (`0 * * * *`) |
-| Request method | POST |
-| Headers | `Authorization: Bearer <CRON_SECRET>` |
-| Treat as failure | HTTP status > 299 |
-| Notifications | Email on failure |
-
-#### Job B — `evoyage-aggregate-popularity`
-
-| Field | Value |
-|---|---|
-| Title | `evoyage-aggregate-popularity` |
-| URL | `https://evoyage.app/api/cron/aggregate-popularity` |
-| Schedule | Daily at 19:00 UTC (= 02:00 AM Vietnam) |
-| Request method | POST |
-| Headers | `Authorization: Bearer <CRON_SECRET>` |
-| Treat as failure | HTTP status > 299 |
-| Notifications | Email on failure |
+The polling and aggregation workflows authenticate via `${{ secrets.CRON_SECRET }}`. Set this in **GitHub repo settings → Secrets and variables → Actions** with the same value used in Vercel env vars.
 
 ### 4. Smoke test
 
-After both jobs are configured, manually run each one from the cron-job.org dashboard:
+After workflows merge to main, manually trigger each via `workflow_dispatch`:
 
-- **Poll job**: Should return 200 with body like `{ "ok": true, "stationsPolled": 1500, "observationsInserted": 1500, "errors": [], "durationMs": 4200 }` on first run (every station is "new" so all get inserted). Subsequent runs in the same hour should show low `observationsInserted` (only changed stations).
-
-- **Aggregate job**: Should return 200 with `{ "ok": true, "popularityRowsUpserted": 0, ... }` initially (no observations yet), then increasing numbers as data accumulates.
+- **Poll job** (`Poll Station Status`): Should run for ~30-60 seconds. The response logged in the action run should look like `{"ok":true,"stationsPolled":36943,"observationsInserted":N,...}`. First-time runs insert ~18k rows; subsequent runs only the changed ones.
+- **Aggregate job** (`Aggregate Station Popularity`): Should run for ~5-10 seconds. Response: `{"ok":true,"popularityRowsUpserted":N,"observationsPruned":M,...}`.
 
 ## Ongoing monitoring
 
@@ -90,8 +78,8 @@ After both jobs are configured, manually run each one from the cron-job.org dash
 
 | Metric | Where | Healthy range |
 |---|---|---|
-| Hourly poll success rate | cron-job.org execution history | ≥ 95% (occasional V-GREEN timeouts are OK) |
-| Daily aggregate success rate | cron-job.org execution history | 100% (this should never fail in normal operation) |
+| Hourly poll success rate | GitHub Actions → "Poll Station Status" runs | ≥ 95% (occasional V-GREEN timeouts are OK) |
+| Daily aggregate success rate | GitHub Actions → "Aggregate Station Popularity" runs | 100% (this should never fail in normal operation) |
 | Cookie refresh success | GitHub Actions → workflow runs | 100% hourly (if a single hour fails, polling tolerates a 1-hour gap; if multiple consecutive hours fail, run `workflow_dispatch` and investigate) |
 | Observation row growth | Supabase → SQL `SELECT COUNT(*) FROM "StationStatusObservation"` | ~3000-5000 new rows/day after dedup |
 | Popularity table size | Supabase → SQL `SELECT COUNT(*) FROM "StationPopularity"` | Stabilizes at ~station_count × 168 cells |
@@ -103,7 +91,7 @@ After both jobs are configured, manually run each one from the cron-job.org dash
 | Poll endpoint returns `{ ok: false, reason: "cookies_expired" }` | Weekly refresh hasn't run or expired early | Trigger `workflow_dispatch` on **Refresh VinFast Cookies** |
 | Poll endpoint returns `{ ok: false, reason: "cookies_missing" }` | Database row missing entirely | Same as above — trigger workflow |
 | Poll endpoint returns `{ ok: false, reason: "upstream_failed", errors: ["cloudflare_blocked: ..."] }` | Cookies invalidated by V-GREEN-side change | Trigger workflow; if still blocked, investigate `scripts/refresh-vinfast-cookies.ts` against current vinfastauto.com behavior |
-| Cron-job.org shows 401 errors | `CRON_SECRET` rotated in Vercel without updating cron-job.org headers | Sync the new secret to both places |
+| GHA workflow shows 401 errors | `CRON_SECRET` rotated in Vercel without updating GHA secret | Update `gh secret set CRON_SECRET` to match Vercel value |
 | Observation table growing too fast | A station's status flapping every hour (broken sensor) | Inspect with `SELECT "stationId", COUNT(*) FROM "StationStatusObservation" WHERE "observedAt" > NOW() - INTERVAL '1 day' GROUP BY 1 ORDER BY 2 DESC LIMIT 10;` |
 
 ## Secret rotation
@@ -112,10 +100,10 @@ When rotating `CRON_SECRET`:
 
 1. Generate a new 64+ char random string: `openssl rand -hex 32`
 2. Update Vercel project env var (Settings → Environment Variables → `CRON_SECRET`)
-3. Trigger a deployment so the new value takes effect
-4. Update both cron-job.org jobs' `Authorization` header
-5. Test each job manually from the cron-job.org dashboard
-6. The old secret is immediately invalid — no rolling window. If you can't update both atomically, accept ~1 hour of failed polls during the rotation.
+3. Update GHA secret: `echo "$NEW_SECRET" | gh secret set CRON_SECRET`
+4. Trigger a Vercel deployment so the new value takes effect
+5. Test each workflow manually via `workflow_dispatch`
+6. The old secret is immediately invalid — no rolling window. If you can't update both Vercel and GHA atomically, accept up to one polling cycle of failed requests during the rotation.
 
 ## Cost accounting
 
@@ -123,9 +111,8 @@ All zero-cost as of 2026-05-03. Verify quarterly:
 
 | Resource | Tier | Headroom |
 |---|---|---|
-| cron-job.org | Free tier | 2 jobs of ~744+30 = 774 invocations/month total — well within free limits |
-| Vercel functions | Hobby | Hourly poll: ~5s × 744/month = ~62 min compute; daily aggregate: ~10s × 30 = 5 min. Well under 100 GB-hours/month |
+| Vercel functions | Hobby | Polling ~10s × 360/month = ~60 min; aggregation ~5s × 30 = 2.5 min. Well under 100 GB-hours/month |
 | Supabase Postgres | Free tier | ~63 MB steady-state for both tables — < 13% of 500 MB free quota |
-| GitHub Actions | Free tier (public repo unlimited; private 2000 min/month) | Cookie refresh ~2 min × 720/month = ~1440 min/month + existing crawl-stations.yml ~600 min/month = ~2040 min/month — tight against the 2000-minute limit. If exceeded, options: (a) make repo public (unlimited GHA), (b) reduce crawl-stations.yml to every 2 days, (c) refresh cookies every 90 min instead of hourly. |
+| GitHub Actions | Free tier (public repo unlimited; private 2000 min/month) | Cookie refresh ~2 min × 360/month ≈ 720 min · poll-station-status ~1 min × 360 ≈ 360 min · aggregate-popularity ~1 min × 30 ≈ 30 min · existing crawl-stations.yml ~600 min/month. **Total ~1710 min/month**, comfortable headroom under 2000. |
 
 If any tier is approached: see decisions log in the design spec for upgrade paths.
