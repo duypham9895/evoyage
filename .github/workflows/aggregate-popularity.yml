@@ -1,0 +1,35 @@
+name: Aggregate Station Popularity
+
+# Daily aggregation that rebuilds the StationPopularity 168-cell heatmap from
+# the rolling 60-day window of StationStatusObservation rows, and prunes raw
+# observations older than 90 days.
+#
+# Idempotent — re-running on the same day overwrites with identical numbers.
+
+on:
+  schedule:
+    # Daily at 19:00 UTC = 02:00 AM Vietnam (off-peak)
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST aggregate-popularity
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -s -X POST https://evoyagevn.vercel.app/api/cron/aggregate-popularity \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            --max-time 120 \
+            --fail-with-body)
+          echo "Response: $response"
+          if echo "$response" | grep -q '"ok":false'; then
+            echo "::error::Aggregation endpoint returned ok=false"
+            exit 1
+          fi

@@ -2,14 +2,15 @@ name: Refresh VinFast Cookies
 
 on:
   schedule:
-    # Hourly. CF clearance cookies on vinfastauto.com expire ~2 hours after
-    # issuance (production finding 2026-05-03), so a weekly refresh leaves
-    # the polling endpoint serving expired cookies 99% of the time.
-    # Hourly refresh + 2-hour cookie TTL = always a 1-hour buffer.
-    # Cost: ~720 runs/month × ~2 min = ~1440 min/month on GHA private-repo
-    # free tier (2000 min/month). Tight but fits with the existing
-    # crawl-stations.yml at ~600 min/month.
-    - cron: '0 * * * *'
+    # Every 2 hours. CF clearance cookies on vinfastauto.com expire ~2 hours
+    # after issuance (production finding 2026-05-03). Refreshing every 2 hours
+    # has zero buffer in the worst case (refresh runs at T+2h+5s, polling at
+    # T+1h59m gets cookies_expired) — acceptable: the next polling cycle picks
+    # up the new cookies. Hourly refresh would give a 1-hour buffer but
+    # exceeds the GHA private-repo 2000 min/month budget when combined with
+    # poll-station-status.yml + crawl-stations.yml.
+    # Cost: ~360 runs/month × ~2 min = ~720 min/month
+    - cron: '0 */2 * * *'
   workflow_dispatch: # manual trigger for ad-hoc recovery
 
 permissions:

@@ -1,0 +1,44 @@
+name: Poll Station Status
+
+# Calls the Vercel polling endpoint every 2 hours to dedup-on-change insert
+# fresh chargingStatus observations into Postgres. Pairs with the
+# refresh-vinfast-cookies workflow (which keeps the cookie row valid).
+#
+# Cadence rationale: hourly would be ideal for the 168-cell heatmap, but the
+# combined GHA budget on a private repo at ~2000 min/month doesn't fit
+# (cookie refresh + crawl-stations.yml + this) at hourly. Every 2 hours gives
+# 12 samples/day per cell — still statistically usable for popularity prediction.
+#
+# Production finding 2026-05-03: This workflow replaces the spec's original
+# cron-job.org dependency, removing operator setup burden and keeping the
+# whole pipeline inside infra we already operate.
+
+on:
+  schedule:
+    # Every 2 hours, 5 minutes past the hour (gives the cookie-refresh
+    # workflow time to finish its top-of-hour run before we poll).
+    - cron: '5 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: POST poll-station-status
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -s -X POST https://evoyagevn.vercel.app/api/cron/poll-station-status \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            --max-time 60 \
+            --fail-with-body)
+          echo "Response: $response"
+          # Surface ok=false so the workflow turns red and email-notifies
+          if echo "$response" | grep -q '"ok":false'; then
+            echo "::error::Polling endpoint returned ok=false"
+            exit 1
+          fi
