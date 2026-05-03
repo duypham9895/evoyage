@@ -182,6 +182,19 @@ model VinfastApiCookies {
   @@index([expiresAt])
 }
 
+// Phase 4 — Charging Stop Amenities. Cached OSM POIs (food, ATM, WC, fuel,
+// pharmacy, etc.) within walking distance of each charging station, queried
+// from Overpass API and refreshed lazy-on-first-lookup with a 30-day TTL.
+// See docs/specs/2026-05-03-phase-4-charging-stop-amenities-design.md §3c.
+model StationPois {
+  stationId String   @id
+  poisJson  String // serialized OsmPoi[] payload
+  fetchedAt DateTime @default(now())
+  expiresAt DateTime // fetchedAt + 30 days
+
+  @@index([expiresAt])
+}
+
 model ShortUrl {
   id          String    @id @default(cuid())
   code        String    @unique
