@@ -18,6 +18,7 @@ import SampleTripChips from '@/components/trip/SampleTripChips';
 import BrandModelSelector from '@/components/trip/BrandModelSelector';
 import AddCustomVehicle from '@/components/trip/AddCustomVehicle';
 import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
+import DepartureTimePicker from '@/components/trip/DepartureTimePicker';
 import TripSummary from '@/components/trip/TripSummary';
 import ShareButton from '@/components/trip/ShareButton';
 import EVi from '@/components/EVi';
@@ -91,6 +92,8 @@ function HomeContent() {
   const [currentBattery, setCurrentBattery] = useState(DEFAULT_CURRENT_BATTERY);
   const [minArrival, setMinArrival] = useState(DEFAULT_MIN_ARRIVAL);
   const [rangeSafetyFactor, setRangeSafetyFactor] = useState(DEFAULT_RANGE_SAFETY_FACTOR);
+  /** Phase 2 — ISO 8601 departure time, or null for "now". */
+  const [departAt, setDepartAt] = useState<string | null>(null);
 
   // Trip result
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
@@ -420,6 +423,7 @@ function HomeContent() {
           minArrivalPercent: minArrival,
           rangeSafetyFactor,
           provider: mode === 'mapbox' ? 'mapbox' : 'osrm',
+          ...(departAt ? { departAt } : {}),
           waypoints: waypoints
             .filter(wp => wp.coords)
             .map(wp => ({
@@ -784,16 +788,27 @@ function HomeContent() {
             )}
 
             {activeTab === 'battery' && (
-              <BatteryStatusPanel
-                vehicle={activeVehicle}
-                currentBattery={currentBattery}
-                minArrival={minArrival}
-                rangeSafetyFactor={rangeSafetyFactor}
-                onCurrentBatteryChange={setCurrentBattery}
-                onMinArrivalChange={setMinArrival}
-                onRangeSafetyFactorChange={handleRSFChange}
-                disabled={isPlanning}
-              />
+              <div className="space-y-3">
+                <DepartureTimePicker
+                  value={departAt}
+                  onChange={setDepartAt}
+                  i18n={{
+                    label: t('trip_departure_picker_label' as Parameters<typeof t>[0]),
+                    resetButton: t('trip_departure_picker_reset' as Parameters<typeof t>[0]),
+                    helperFuture: t('trip_departure_picker_helper' as Parameters<typeof t>[0]),
+                  }}
+                />
+                <BatteryStatusPanel
+                  vehicle={activeVehicle}
+                  currentBattery={currentBattery}
+                  minArrival={minArrival}
+                  rangeSafetyFactor={rangeSafetyFactor}
+                  onCurrentBatteryChange={setCurrentBattery}
+                  onMinArrivalChange={setMinArrival}
+                  onRangeSafetyFactorChange={handleRSFChange}
+                  disabled={isPlanning}
+                />
+              </div>
             )}
 
             {activeTab === 'stations' && (
@@ -896,6 +911,16 @@ function HomeContent() {
                   onMinArrivalChange={setMinArrival}
                   onRangeSafetyFactorChange={handleRSFChange}
                   disabled={isPlanning}
+                />
+
+                <DepartureTimePicker
+                  value={departAt}
+                  onChange={setDepartAt}
+                  i18n={{
+                    label: t('trip_departure_picker_label' as Parameters<typeof t>[0]),
+                    resetButton: t('trip_departure_picker_reset' as Parameters<typeof t>[0]),
+                    helperFuture: t('trip_departure_picker_helper' as Parameters<typeof t>[0]),
+                  }}
                 />
 
                 {planButton}
