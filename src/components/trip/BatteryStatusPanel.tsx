@@ -60,7 +60,7 @@ export default function BatteryStatusPanel({
         variant: vehicle.variant ?? null,
         officialRangeKm: vehicle.officialRangeKm,
       }
-    : null, [vehicle?.brand, vehicle?.model, vehicle?.variant, vehicle?.officialRangeKm]);
+    : null, [vehicle]);
 
   const rangeResult = useMemo(() => {
     if (!vehicleForCalc) return null;

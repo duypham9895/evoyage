@@ -143,7 +143,10 @@ function RecentTrips({ onSelect }: { readonly onSelect: (start: string, end: str
         (t: unknown): t is { start: string; end: string; vehicleName?: string | null; timestamp: number } =>
           typeof t === 'object' && t !== null && typeof (t as Record<string, unknown>).start === 'string' && typeof (t as Record<string, unknown>).end === 'string'
       );
+      // localStorage is an external system; reading on mount via useEffect is the
+      // hydration-safe pattern in 'use client' (a useState initializer would mismatch SSR).
       if (valid.length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setTrips(valid.slice(0, 3));
       }
     } catch { /* ignore corrupted localStorage */ }
