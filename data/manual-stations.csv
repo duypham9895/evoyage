@@ -1,0 +1,4 @@
+name,address,latitude,longitude,province,provider,connectorTypes,maxPowerKw,stationType,sourceUrl
+# Hand-curated long-tail stations (mall, hotel, dealer chargers).
+# Edit this file, commit, push — the daily GitHub Actions cron picks it up automatically.
+# Schema and rules: see data/manual-stations.csv.example.

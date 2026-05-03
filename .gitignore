@@ -50,9 +50,10 @@ next-env.d.ts
 .playwright-mcp/
 .superpowers/
 
-# data artifacts (allow the manual-stations CSV template — see Tier A seeding)
+# data artifacts (allow the manual-stations CSV — daily cron picks it up from git)
 /data/*
 !/data/.gitkeep
+!/data/manual-stations.csv
 !/data/manual-stations.csv.example
 .gstack/
 

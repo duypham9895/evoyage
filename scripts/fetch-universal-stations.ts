@@ -95,6 +95,7 @@ async function main() {
         stationType: 'public',
         isVinFastOnly: isVinFast,
         provider,
+        dataSource: 'ocm',
         scrapedAt: new Date(),
       },
       create: {
@@ -113,6 +114,7 @@ async function main() {
         stationType: 'public',
         isVinFastOnly: isVinFast,
         provider,
+        dataSource: 'ocm',
         scrapedAt: new Date(),
       },
     });
