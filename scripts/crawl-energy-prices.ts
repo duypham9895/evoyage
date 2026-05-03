@@ -14,7 +14,6 @@
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
 import { parsePetrolimexProducts, type PetrolimexPrices } from '../src/lib/energy-prices/parse-petrolimex';
 import { parseVGreenFaq, type VGreenPrice } from '../src/lib/energy-prices/parse-vgreen';
 import {
@@ -27,6 +26,20 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = resolve(ROOT, 'src/data/energy-prices.json');
 
 const PETROLIMEX_URL = 'https://www.petrolimex.com.vn/index.html';
+// Internal CMS endpoint that hydrates `__vieapps.prices.products` on the homepage.
+// The three UUIDs identify the "fuel prices" collection. If they ever change,
+// the homepage `__vieapps` global is the canonical fallback (see git history).
+const PETROLIMEX_API_URL =
+  'https://portals.petrolimex.com.vn/~apis/portals/cms.item/search';
+const PETROLIMEX_FILTER = {
+  FilterBy: {
+    And: [
+      { SystemID: { Equals: '6783dc1271ff449e95b74a9520964169' } },
+      { RepositoryID: { Equals: 'a95451e23b474fe5886bfb7cf843f53c' } },
+      { RepositoryEntityID: { Equals: '3801378fe1e045b1afa10de7c5776124' } },
+    ],
+  },
+};
 const VGREEN_URL = 'https://vgreen.net/vi/cau-hoi-thuong-gap';
 const EVN_URL = 'https://en.evn.com.vn/d6/news/RETAIL-ELECTRICITY-TARIFF-9-28-252.aspx';
 const EVN_DECISIONS_URL = 'https://www.evn.com.vn/c3/gia-dien/Bieu-gia-ban-le-dien-9-28.aspx';
@@ -56,34 +69,15 @@ interface EnergyPricesFile {
 }
 
 async function fetchPetrolimex(): Promise<PetrolimexPrices> {
-  const browser = await chromium.launch({ headless: true });
-  try {
-    const ctx = await browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
-    });
-    const page = await ctx.newPage();
-    await page.goto(PETROLIMEX_URL, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await page.waitForFunction(
-      () =>
-        Array.isArray(
-          (window as unknown as { __vieapps?: { prices?: { products?: unknown[] } } })
-            .__vieapps?.prices?.products,
-        ) &&
-        ((window as unknown as { __vieapps: { prices: { products: unknown[] } } })
-          .__vieapps.prices.products.length > 0),
-      { timeout: 60_000 },
-    );
-    const products = await page.evaluate(() => {
-      const w = window as unknown as {
-        __vieapps: { prices: { products: unknown[] } };
-      };
-      return w.__vieapps.prices.products;
-    });
-    return parsePetrolimexProducts(products);
-  } finally {
-    await browser.close();
+  const xRequest = Buffer.from(JSON.stringify(PETROLIMEX_FILTER)).toString('base64url');
+  const url = `${PETROLIMEX_API_URL}?x-request=${xRequest}`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  if (!res.ok) throw new Error(`Petrolimex fetch failed: HTTP ${res.status}`);
+  const body = (await res.json()) as { Objects?: unknown };
+  if (!Array.isArray(body.Objects)) {
+    throw new Error('Petrolimex fetch: response missing Objects array');
   }
+  return parsePetrolimexProducts(body.Objects);
 }
 
 async function fetchVGreen(): Promise<VGreenPrice> {
