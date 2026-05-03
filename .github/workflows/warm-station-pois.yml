@@ -1,0 +1,40 @@
+name: Warm Station POIs
+
+# Pre-populates the StationPois cache for top 50 VinFast stations so
+# first-time visitors hit a warm cache (<50ms) instead of waiting for
+# Overpass round-trip (~1.5s). Daily cadence is plenty — POIs don't
+# change weekly.
+
+on:
+  schedule:
+    # Daily at 04:00 UTC (11:00 AM Vietnam, after the morning rush)
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DIRECT_URL: ${{ secrets.DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Warm POI cache for top 50 stations
+        run: npx tsx scripts/warm-station-pois.ts
