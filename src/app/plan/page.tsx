@@ -482,7 +482,7 @@ function HomeContent() {
         setIsPlanning(false);
       }
     }
-  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt]);
 
   // Cancel an in-flight calculation — reverts to previous tripPlan (if any).
   const handleCancelPlanTrip = useCallback(() => {
