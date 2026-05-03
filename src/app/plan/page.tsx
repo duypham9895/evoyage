@@ -435,6 +435,12 @@ function HomeContent() {
         throw new Error(data.error ?? 'Route calculation failed');
       }
 
+      // Stale-fetch guard: if the in-flight controller was cancelled or replaced
+      // while this fetch was resolving, don't apply its data. The AbortSignal
+      // normally rejects the fetch first, but a network proxy or mocked fetch
+      // could still resolve after abort — never let stale data clobber state.
+      if (planAbortRef.current !== controller) return;
+
       setTripPlan(data as TripPlan);
       // Analytics: aggregate-only payload (city labels + km), no coords/PII.
       try {
