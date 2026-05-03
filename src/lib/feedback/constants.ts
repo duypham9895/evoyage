@@ -8,6 +8,7 @@ export const FEEDBACK_CATEGORIES = [
   'CONTACT_SUPPORT',
   'STATION_DATA_ERROR',
   'MISSING_STATION',
+  'STATION_AMENITY_MISSING',
   'ROUTE_FEEDBACK',
   'GENERAL_FEEDBACK',
 ] as const;
@@ -28,6 +29,7 @@ export const CATEGORY_LABEL_KEYS: Record<FeedbackCategory, string> = {
   CONTACT_SUPPORT: 'feedback_cat_contact_support',
   STATION_DATA_ERROR: 'feedback_cat_station_data_error',
   MISSING_STATION: 'feedback_cat_missing_station',
+  STATION_AMENITY_MISSING: 'feedback_cat_station_amenity_missing',
   ROUTE_FEEDBACK: 'feedback_cat_route_feedback',
   GENERAL_FEEDBACK: 'feedback_cat_general_feedback',
 };
@@ -39,6 +41,7 @@ export const CATEGORY_LABELS_VI: Record<FeedbackCategory, string> = {
   CONTACT_SUPPORT: 'Liên hệ hỗ trợ',
   STATION_DATA_ERROR: 'Lỗi dữ liệu trạm sạc',
   MISSING_STATION: 'Trạm chưa có trong eVoyage',
+  STATION_AMENITY_MISSING: 'Thiếu địa điểm gần trạm sạc',
   ROUTE_FEEDBACK: 'Phản hồi tuyến đường',
   GENERAL_FEEDBACK: 'Góp ý chung',
 };

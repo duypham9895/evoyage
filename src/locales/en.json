@@ -270,6 +270,8 @@
   "feedback_cat_contact_support": "Get help",
   "feedback_cat_station_data_error": "Wrong station info",
   "feedback_cat_missing_station": "Missing station",
+  "feedback_cat_station_amenity_missing": "Missing nearby place",
+  "amenities_report_missing": "Report a missing place",
   "feedback_cat_route_feedback": "Route feedback",
   "feedback_cat_general_feedback": "General feedback",
   "feedback_field_description": "Description",

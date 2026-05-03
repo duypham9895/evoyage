@@ -270,6 +270,8 @@
   "feedback_cat_contact_support": "Cần hỗ trợ",
   "feedback_cat_station_data_error": "Sai thông tin trạm sạc",
   "feedback_cat_missing_station": "Trạm chưa có trong eVoyage",
+  "feedback_cat_station_amenity_missing": "Thiếu địa điểm gần trạm sạc",
+  "amenities_report_missing": "Báo cáo địa điểm thiếu",
   "feedback_cat_route_feedback": "Góp ý tuyến đường",
   "feedback_cat_general_feedback": "Góp ý chung",
   "feedback_field_description": "Mô tả",
