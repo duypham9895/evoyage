@@ -141,6 +141,47 @@ model VinFastStationDetail {
   @@index([fetchedAt])
 }
 
+// Time-series log of station chargingStatus observations from the hourly poller.
+// Distinct from StationStatusReport (crowdsourced user reports). Phase 3 of the
+// Trust Intelligence Roadmap aggregates this into StationPopularity heatmaps.
+// Dedup-on-change: only INSERT when status differs from the prior observation.
+model StationStatusObservation {
+  id         BigInt   @id @default(autoincrement())
+  stationId  String
+  status     String // ACTIVE | BUSY | INACTIVE | UNAVAILABLE | OUTOFSERVICE
+  observedAt DateTime @default(now())
+
+  @@index([stationId, observedAt(sort: Desc)])
+  @@index([observedAt]) // for retention pruning > 90 days
+}
+
+// Per-station busy-probability heatmap, 168 cells (24h × 7d), rebuilt nightly
+// from StationStatusObservation. Times in Asia/Ho_Chi_Minh because Vietnamese
+// drivers reason in VN local time.
+model StationPopularity {
+  stationId       String
+  dayOfWeek       Int // 0 = Sunday, 6 = Saturday (Asia/Ho_Chi_Minh)
+  hour            Int // 0-23 (Asia/Ho_Chi_Minh)
+  busyProbability Decimal  @db.Decimal(3, 2) // 0.00 - 1.00
+  sampleCount     Int
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@id([stationId, dayOfWeek, hour])
+  @@index([stationId])
+}
+
+// Cached Cloudflare-protected cookies for vinfastauto.com /get-locators API.
+// Refreshed weekly by a Playwright job on GitHub Actions; consumed by the
+// hourly Vercel polling endpoint so the hot path stays Playwright-free.
+model VinfastApiCookies {
+  id          Int      @id @default(autoincrement())
+  cookieJson  String // serialized cookie array from Playwright
+  refreshedAt DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
 model ShortUrl {
   id          String    @id @default(cuid())
   code        String    @unique
