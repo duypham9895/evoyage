@@ -72,6 +72,7 @@ model EVVehicle {
 model ChargingStation {
   id             String   @id @default(cuid())
   ocmId          String?  @unique
+  evpowerId      String?  @unique // EVPower internal station ID, when sourced from evpower.vn
   name           String
   address        String
   province       String
@@ -85,6 +86,8 @@ model ChargingStation {
   isVinFastOnly  Boolean  @default(false)
   operatingHours String?
   provider       String
+  // Origin of this row. Values: vinfast | osm | ocm | evpower | manual | crowdsourced
+  dataSource     String   @default("vinfast")
   scrapedAt      DateTime @default(now())
 
   // VinFast-specific fields (from finaldivision API)
@@ -113,6 +116,7 @@ model ChargingStation {
   @@index([chargingStatus])
   @@index([entityId])
   @@index([lastVerifiedAt])
+  @@index([dataSource])
 }
 
 model StationStatusReport {
@@ -140,7 +144,7 @@ model VinFastStationDetail {
 model ShortUrl {
   id          String    @id @default(cuid())
   code        String    @unique
-  params      String    // URL search params string
+  params      String // URL search params string
   accessCount Int       @default(0)
   createdAt   DateTime  @default(now())
   expiresAt   DateTime? // reserved for future use
