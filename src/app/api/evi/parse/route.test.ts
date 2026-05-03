@@ -282,6 +282,50 @@ describe('POST /api/evi/parse', () => {
     expect(data.error).toBe('Invalid request');
   });
 
+  it('runs vehicle resolution and end-location geocoding in parallel', async () => {
+    const calls: string[] = [];
+    let unblockFindMany: (val: unknown[]) => void = () => {};
+    let unblockSearchPlaces: (val: unknown[]) => void = () => {};
+
+    mockFindMany.mockImplementation(() => {
+      calls.push('findMany');
+      return new Promise<never[]>((resolve) => {
+        unblockFindMany = resolve as (val: unknown[]) => void;
+      }) as never;
+    });
+    mockSearchPlaces.mockImplementation(() => {
+      calls.push('searchPlaces');
+      return new Promise((resolve) => {
+        unblockSearchPlaces = resolve as (val: unknown[]) => void;
+      }) as never;
+    });
+
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      startLocation: 'Saigon',
+      endLocation: 'Đà Lạt',
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+    }));
+
+    const responsePromise = POST(createRequest({
+      message: 'Đi Đà Lạt bằng VF8',
+      history: [],
+      userLocation: { lat: 10.77, lng: 106.70 },
+    }));
+
+    // Yield to let both async calls fire — if sequential, only the first would
+    // have started by now because neither has been allowed to resolve yet.
+    await new Promise((r) => setTimeout(r, 30));
+
+    expect(calls).toContain('findMany');
+    expect(calls).toContain('searchPlaces');
+
+    // Resolve both so the request can finish
+    unblockFindMany([]);
+    unblockSearchPlaces([]);
+    await responsePromise;
+  });
+
   it('defaults battery to 80 when currentBatteryPercent is null', async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       endLocation: 'Đà Lạt',

@@ -59,7 +59,10 @@ export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractio
           messages,
           response_format: { type: 'json_object' },
           temperature: 0.1,
-          max_tokens: 16384,
+          // M2.7 emits a <think>...</think> chain before the JSON answer.
+          // The JSON schema fits in ~350 tokens; 1024 leaves room for short
+          // reasoning without letting the chain run for thousands of tokens.
+          max_tokens: 1024,
         },
         { signal: controller.signal },
       );

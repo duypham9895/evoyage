@@ -95,12 +95,15 @@ export async function POST(request: NextRequest) {
     }));
   }
 
-  // Resolve vehicle — try AI extraction first, fall back to previous turn's vehicle
-  let vehicleResolution = await resolveVehicle(
-    extraction.vehicleBrand,
-    extraction.vehicleModel,
-  );
+  // Vehicle resolution + end-location geocoding are independent — run in parallel.
+  const [vehicleResolutionInitial, endPlaces] = await Promise.all([
+    resolveVehicle(extraction.vehicleBrand, extraction.vehicleModel),
+    extraction.endLocation
+      ? searchPlaces(extraction.endLocation).catch(() => [])
+      : Promise.resolve([]),
+  ]);
 
+  let vehicleResolution = vehicleResolutionInitial;
   if (vehicleResolution.type === 'not_found' && previousVehicleId) {
     const previousVehicle = VIETNAM_MODELS.find(v => v.id === previousVehicleId);
     if (previousVehicle) {
@@ -108,22 +111,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Geocode end location
   let endLat: number | null = null;
   let endLng: number | null = null;
   let endDisplay: string | null = extraction.endLocation;
-
-  if (extraction.endLocation) {
-    try {
-      const places = await searchPlaces(extraction.endLocation);
-      if (places.length > 0) {
-        endLat = places[0].lat;
-        endLng = places[0].lng;
-        endDisplay = places[0].displayName;
-      }
-    } catch {
-      // Geocoding failed — continue without coordinates
-    }
+  if (endPlaces.length > 0) {
+    endLat = endPlaces[0].lat;
+    endLng = endPlaces[0].lng;
+    endDisplay = endPlaces[0].displayName;
   }
 
   // Reverse geocode user location for readable address
