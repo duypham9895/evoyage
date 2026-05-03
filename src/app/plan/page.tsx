@@ -21,6 +21,8 @@ import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
 import TripSummary from '@/components/trip/TripSummary';
 import ShareButton from '@/components/trip/ShareButton';
 import EVi from '@/components/EVi';
+import EViFab from '@/components/trip/EViFab';
+import EViMobileSheet from '@/components/trip/EViMobileSheet';
 import EViNudge from '@/components/trip/EViNudge';
 import NearbyStations from '@/components/NearbyStations';
 import type { EViTripParams } from '@/lib/evi/types';
@@ -65,7 +67,8 @@ function HomeContent() {
   }, []);
 
   // Mobile tab state
-  const [activeTab, setActiveTab] = useState<MobileTab>('evi');
+  const [activeTab, setActiveTab] = useState<MobileTab>('route');
+  const [isEViOpen, setIsEViOpen] = useState(false);
 
   // Trip inputs
   const [start, setStart] = useState('');
@@ -240,9 +243,8 @@ function HomeContent() {
 
   const handleOpenEviFromNudge = useCallback(() => {
     setShowEviNudge(false);
-    setActiveTab('evi');
+    setIsEViOpen(true);
     handleDesktopTabChange('evi');
-    setBottomSheetSnap({ point: 'full', trigger: Date.now() });
   }, [handleDesktopTabChange]);
 
   const handleDismissEviNudge = useCallback(() => {
@@ -287,10 +289,9 @@ function HomeContent() {
 
   // "Back to eVi" — return to chat from trip detail view
   const handleBackToChat = useCallback(() => {
-    setActiveTab('evi'); // Mobile: switch tab
-    handleDesktopTabChange('evi'); // Desktop: switch sidebar back to EVi chat
-    setBottomSheetSnap({ point: 'full', trigger: Date.now() });
-  }, []);
+    setIsEViOpen(true);
+    handleDesktopTabChange('evi');
+  }, [handleDesktopTabChange]);
 
   // "Find nearby stations" — switch to stations tab on both mobile and desktop
   const handleFindNearbyStations = useCallback(() => {
@@ -361,12 +362,12 @@ function HomeContent() {
   // Swipe gesture handlers for mobile tab switching
   const handleSwipeLeft = useCallback(() => {
     hapticLight();
-    setActiveTab(prev => prev === 'evi' ? 'route' : prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev === 'battery' ? 'stations' : prev);
+    setActiveTab(prev => prev === 'route' ? 'vehicle' : prev === 'vehicle' ? 'battery' : prev === 'battery' ? 'stations' : prev);
   }, []);
 
   const handleSwipeRight = useCallback(() => {
     hapticLight();
-    setActiveTab(prev => prev === 'stations' ? 'battery' : prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev === 'route' ? 'evi' : prev);
+    setActiveTab(prev => prev === 'stations' ? 'battery' : prev === 'battery' ? 'vehicle' : prev === 'vehicle' ? 'route' : prev);
   }, []);
 
   // Plan trip — POST to /api/route
@@ -689,7 +690,7 @@ function HomeContent() {
           waypoints={waypointMarkers}
           nearbyStations={nearbyStations}
           userLocation={userLocationForMap}
-          onSwitchToEVi={() => { setActiveTab('evi'); handleDesktopTabChange('evi'); }}
+          onSwitchToEVi={() => { setIsEViOpen(true); handleDesktopTabChange('evi'); }}
         />
       )}
     </>
@@ -737,11 +738,7 @@ function HomeContent() {
           />
 
           {/* Tab content */}
-          <div className={`flex-1 min-h-0 ${activeTab === 'evi' ? 'flex flex-col' : 'overflow-y-auto'}`} role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
-            {activeTab === 'evi' && (
-              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
-            )}
-
+          <div className="flex-1 min-h-0 overflow-y-auto" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
             {activeTab === 'route' && (
               <>
                 <SampleTripChips start={start} end={end} onPick={handleSampleTripPick} disabled={isPlanning} />
@@ -805,12 +802,23 @@ function HomeContent() {
               />
             )}
 
-            {/* Plan button — only on route/vehicle/battery tabs (eVi has its own, stations doesn't need one) */}
-            {activeTab !== 'stations' && activeTab !== 'evi' && planButton}
-            {activeTab !== 'stations' && activeTab !== 'evi' && errorDisplay}
-            {activeTab !== 'stations' && activeTab !== 'evi' && timeoutBanner}
+            {/* Plan button — only on route/vehicle/battery tabs (stations doesn't need one) */}
+            {activeTab !== 'stations' && planButton}
+            {activeTab !== 'stations' && errorDisplay}
+            {activeTab !== 'stations' && timeoutBanner}
           </div>
         </MobileBottomSheet>
+
+        {/* eVi FAB + full-screen sheet (mobile only) */}
+        <EViFab onOpen={() => setIsEViOpen(true)} isOpen={isEViOpen} />
+        <EViMobileSheet
+          isOpen={isEViOpen}
+          onClose={() => setIsEViOpen(false)}
+          onTripParsed={handleTripParsed}
+          onPlanTrip={handleEViPlanTrip}
+          onFindNearbyStations={handleFindNearbyStations}
+          isPlanning={isPlanning}
+        />
 
         {/* Feedback FAB */}
         <FeedbackFAB />
