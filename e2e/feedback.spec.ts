@@ -19,7 +19,7 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
     const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
     await fab.click();
 
-    const modal = page.locator('[role="dialog"], [data-testid="feedback-modal"]');
+    const modal = page.locator('[role="dialog"][aria-label*="eedback"], [role="dialog"][aria-label*="góp ý"], [data-testid="feedback-modal"]');
     await expect(modal).toBeVisible({ timeout: 5_000 });
   });
 
@@ -64,7 +64,7 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
 
     // Verify modal is NOT visible (use expect.toPass for stability)
     await expect(async () => {
-      const modal = page.locator('[role="dialog"], [data-testid="feedback-modal"]');
+      const modal = page.locator('[role="dialog"][aria-label*="eedback"], [role="dialog"][aria-label*="góp ý"], [data-testid="feedback-modal"]');
       await expect(modal).not.toBeVisible();
     }).toPass({ timeout: 1_000 });
   });
@@ -107,7 +107,7 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
     const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
     await fab.click();
 
-    const modal = page.locator('[role="dialog"], [data-testid="feedback-modal"]');
+    const modal = page.locator('[role="dialog"][aria-label*="eedback"], [role="dialog"][aria-label*="góp ý"], [data-testid="feedback-modal"]');
     await expect(modal).toBeVisible({ timeout: 5_000 });
 
     // Step 7: Select "Report Issue" category
