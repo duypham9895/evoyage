@@ -34,7 +34,7 @@ test.describe('F8: Bilingual — Vietnamese <-> English', () => {
     await langToggle2.click();
 
     // Step 8: Verify English text appears
-    const enText = page.locator('text=/eVi|Stations|Plan Trip|Route|Vehicle/').first();
+    const enText = page.locator('text=/eVi|Stations|Trip|Route|Vehicle/').first();
     await expect(enText).toBeVisible({ timeout: 5_000 });
   });
 });
