@@ -57,14 +57,14 @@
   "stops": "điểm dừng",
   "start": "Xuất phát",
   "arrive": "Đến nơi",
-  "trip_arrival_battery_hero": "Còn pin {percent}% khi tới",
-  "trip_duration_with_eta": "~{time} · đến lúc {eta} nếu đi ngay",
-  "trip_duration_only": "~{time}",
-  "trip_totals_compact": "{distance}km · {stops} trạm sạc",
-  "trip_breakdown_drive_charge": "Lái {drive} · Sạc {charge}",
+  "trip_arrival_battery_hero": "Còn pin {{percent}}% khi tới",
+  "trip_duration_with_eta": "~{{time}} · đến lúc {{eta}} nếu đi ngay",
+  "trip_duration_only": "~{{time}}",
+  "trip_totals_compact": "{{distance}} km · {{stops}} trạm sạc",
+  "trip_breakdown_drive_charge": "Lái {{drive}} · Sạc {{charge}}",
   "trip_timeline_swipe_hint": "← Vuốt để xem thêm điểm dừng",
-  "trip_timeline_aria_stop": "Điểm dừng {n}: {name}, đến với pin {arrive}%, sạc lên {depart}%, mất {minutes} phút",
-  "trip_terrain_warning_pass": "Đường có {passName} — pin tốn nhanh ~{drainPercent}%",
+  "trip_timeline_aria_stop": "Điểm dừng {{n}}: {{name}}, đến với pin {{arrive}}%, sạc lên {{depart}}%, mất {{minutes}} phút",
+  "trip_terrain_warning_pass": "Đường có {{passName}} — pin tốn nhanh ~{{drainPercent}}%",
   "no_charging_needed": "Không cần sạc dọc đường — bạn đủ pin cho toàn bộ chuyến đi.",
   "charging_stops": "Điểm sạc",
   "navigate": "Chỉ đường",
@@ -436,6 +436,9 @@
   "evi_nudge_body": "Ví dụ: 'gợi ý chuyến đi cuối tuần'",
   "evi_nudge_cta": "Mở eVi",
   "evi_nudge_dismiss": "Để sau",
+
+  "evi_sheet_title": "eVi",
+  "evi_sheet_close": "Đóng",
 
   "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ."
 }

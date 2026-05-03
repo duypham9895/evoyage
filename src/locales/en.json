@@ -57,14 +57,14 @@
   "stops": "stops",
   "start": "Start",
   "arrive": "Arrive",
-  "trip_arrival_battery_hero": "{percent}% battery when you arrive",
-  "trip_duration_with_eta": "~{time} · arrive at {eta} if leaving now",
-  "trip_duration_only": "~{time}",
-  "trip_totals_compact": "{distance}km · {stops} stops",
-  "trip_breakdown_drive_charge": "Drive {drive} · Charge {charge}",
+  "trip_arrival_battery_hero": "{{percent}}% battery when you arrive",
+  "trip_duration_with_eta": "~{{time}} · arrive at {{eta}} if leaving now",
+  "trip_duration_only": "~{{time}}",
+  "trip_totals_compact": "{{distance}} km · {{stops}} stops",
+  "trip_breakdown_drive_charge": "Drive {{drive}} · Charge {{charge}}",
   "trip_timeline_swipe_hint": "← Swipe for more stops",
-  "trip_timeline_aria_stop": "Stop {n}: {name}, arrive {arrive}%, charge to {depart}%, {minutes} minutes",
-  "trip_terrain_warning_pass": "Route includes {passName} — battery drains ~{drainPercent}% faster",
+  "trip_timeline_aria_stop": "Stop {{n}}: {{name}}, arrive {{arrive}}%, charge to {{depart}}%, {{minutes}} minutes",
+  "trip_terrain_warning_pass": "Route includes {{passName}} — battery drains ~{{drainPercent}}% faster",
   "no_charging_needed": "No charging needed — you have enough range for the entire trip.",
   "charging_stops": "Charging stops",
   "navigate": "Navigate",
@@ -436,6 +436,9 @@
   "evi_nudge_body": "Try: 'suggest a weekend trip'",
   "evi_nudge_cta": "Open eVi",
   "evi_nudge_dismiss": "Later",
+
+  "evi_sheet_title": "eVi",
+  "evi_sheet_close": "Close",
 
   "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly."
 }
