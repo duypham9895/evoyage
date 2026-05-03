@@ -62,7 +62,7 @@ export default function EViNudge({ shouldShow, onOpenEvi, onDismiss }: EViNudgeP
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-[calc(55vh+64px)] right-3 lg:bottom-36 lg:right-6 z-[700] max-w-xs w-[calc(100vw-1.5rem)] sm:w-auto rounded-lg p-3 shadow-lg shadow-black/40 border border-[var(--color-accent-dim)] bg-[var(--color-surface)] animate-fadeIn"
+      className="fixed bottom-[calc(55vh+132px)] right-3 lg:bottom-36 lg:right-6 z-[700] max-w-xs w-[calc(100vw-1.5rem)] sm:w-auto rounded-lg p-3 shadow-lg shadow-black/40 border border-[var(--color-accent-dim)] bg-[var(--color-surface)] animate-fadeIn"
     >
       <p className="font-[family-name:var(--font-heading)] font-semibold text-sm text-[var(--color-accent)]">
         {t('evi_nudge_headline')}
