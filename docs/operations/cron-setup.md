@@ -92,7 +92,7 @@ After both jobs are configured, manually run each one from the cron-job.org dash
 |---|---|---|
 | Hourly poll success rate | cron-job.org execution history | ≥ 95% (occasional V-GREEN timeouts are OK) |
 | Daily aggregate success rate | cron-job.org execution history | 100% (this should never fail in normal operation) |
-| Cookie refresh success | GitHub Actions → workflow runs | 100% weekly (if it fails, run `workflow_dispatch` and investigate) |
+| Cookie refresh success | GitHub Actions → workflow runs | 100% hourly (if a single hour fails, polling tolerates a 1-hour gap; if multiple consecutive hours fail, run `workflow_dispatch` and investigate) |
 | Observation row growth | Supabase → SQL `SELECT COUNT(*) FROM "StationStatusObservation"` | ~3000-5000 new rows/day after dedup |
 | Popularity table size | Supabase → SQL `SELECT COUNT(*) FROM "StationPopularity"` | Stabilizes at ~station_count × 168 cells |
 
@@ -126,6 +126,6 @@ All zero-cost as of 2026-05-03. Verify quarterly:
 | cron-job.org | Free tier | 2 jobs of ~744+30 = 774 invocations/month total — well within free limits |
 | Vercel functions | Hobby | Hourly poll: ~5s × 744/month = ~62 min compute; daily aggregate: ~10s × 30 = 5 min. Well under 100 GB-hours/month |
 | Supabase Postgres | Free tier | ~63 MB steady-state for both tables — < 13% of 500 MB free quota |
-| GitHub Actions | Free tier (public repo unlimited; private 2000 min/month) | Cookie refresh ~5 min/week × 4 = 20 min/month |
+| GitHub Actions | Free tier (public repo unlimited; private 2000 min/month) | Cookie refresh ~2 min × 720/month = ~1440 min/month + existing crawl-stations.yml ~600 min/month = ~2040 min/month — tight against the 2000-minute limit. If exceeded, options: (a) make repo public (unlimited GHA), (b) reduce crawl-stations.yml to every 2 days, (c) refresh cookies every 90 min instead of hourly. |
 
 If any tier is approached: see decisions log in the design spec for upgrade paths.
