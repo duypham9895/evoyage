@@ -70,6 +70,25 @@ jobs:
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
+      - name: Check Prisma schema vs production DB
+        run: |
+          set -a
+          source .vercel/.env.production.local
+          set +a
+          if [ -z "${DIRECT_URL:-}" ]; then
+            echo "::error::DIRECT_URL is not set in the Vercel project env. Add the Supabase direct-connection URL (port 5432) so the deploy pipeline can detect schema drift."
+            exit 1
+          fi
+          if ! npx prisma migrate diff \
+            --from-url "$DIRECT_URL" \
+            --to-schema-datamodel prisma/schema.prisma \
+            --exit-code; then
+            echo ""
+            echo "::error::Schema drift detected — prisma/schema.prisma does not match the production DB."
+            echo "::error::Run 'npx prisma db push' against Supabase before pushing schema changes."
+            exit 1
+          fi
+
       - name: Build
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
