@@ -21,6 +21,10 @@ export const feedbackRequestSchema = z.object({
   useCase: z.string().max(1000).optional().or(z.literal('')),
   correctInfo: z.string().max(1000).optional().or(z.literal('')),
   rating: z.number().int().min(1).max(5).optional(),
+  // MISSING_STATION specific — coordinates of the station the user wants to add.
+  proposedLatitude: z.number().min(-90).max(90).optional(),
+  proposedLongitude: z.number().min(-180).max(180).optional(),
+  proposedProvider: z.string().max(100).optional().or(z.literal('')),
 
   // Context (auto-captured)
   pageUrl: z.string().max(2000).optional().or(z.literal('')),

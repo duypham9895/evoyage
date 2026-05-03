@@ -167,7 +167,7 @@ model RouteCache {
 
 model Feedback {
   id               String    @id @default(cuid())
-  category         String // REPORT_ISSUE, REQUEST_FEATURE, CONTACT_SUPPORT, STATION_DATA_ERROR, ROUTE_FEEDBACK, GENERAL_FEEDBACK
+  category         String // REPORT_ISSUE, REQUEST_FEATURE, CONTACT_SUPPORT, STATION_DATA_ERROR, ROUTE_FEEDBACK, GENERAL_FEEDBACK, MISSING_STATION
   description      String
   email            String?
   name             String?
@@ -177,7 +177,11 @@ model Feedback {
   correctInfo      String? // for STATION_DATA_ERROR
   rating           Int? // 1-5 for ROUTE_FEEDBACK
   stationId        String? // for STATION_DATA_ERROR
-  stationName      String? // for STATION_DATA_ERROR
+  stationName      String? // for STATION_DATA_ERROR / MISSING_STATION (proposed name)
+  // MISSING_STATION fields — proposed station coordinates and provider hint.
+  proposedLatitude  Float?
+  proposedLongitude Float?
+  proposedProvider  String? // free-text operator hint (e.g. "EBOOST", "Hotel Saigon")
   imageUrl         String? // Phase 2
   pageUrl          String?
   userAgent        String?

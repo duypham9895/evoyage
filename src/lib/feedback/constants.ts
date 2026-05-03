@@ -7,6 +7,7 @@ export const FEEDBACK_CATEGORIES = [
   'REQUEST_FEATURE',
   'CONTACT_SUPPORT',
   'STATION_DATA_ERROR',
+  'MISSING_STATION',
   'ROUTE_FEEDBACK',
   'GENERAL_FEEDBACK',
 ] as const;
@@ -17,6 +18,7 @@ export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
 export const URGENT_CATEGORIES: ReadonlySet<FeedbackCategory> = new Set([
   'REPORT_ISSUE',
   'STATION_DATA_ERROR',
+  'MISSING_STATION',
 ]);
 
 /** i18n key mapping for category labels */
@@ -25,6 +27,7 @@ export const CATEGORY_LABEL_KEYS: Record<FeedbackCategory, string> = {
   REQUEST_FEATURE: 'feedback_cat_request_feature',
   CONTACT_SUPPORT: 'feedback_cat_contact_support',
   STATION_DATA_ERROR: 'feedback_cat_station_data_error',
+  MISSING_STATION: 'feedback_cat_missing_station',
   ROUTE_FEEDBACK: 'feedback_cat_route_feedback',
   GENERAL_FEEDBACK: 'feedback_cat_general_feedback',
 };
@@ -35,6 +38,7 @@ export const CATEGORY_LABELS_VI: Record<FeedbackCategory, string> = {
   REQUEST_FEATURE: 'Đề xuất tính năng',
   CONTACT_SUPPORT: 'Liên hệ hỗ trợ',
   STATION_DATA_ERROR: 'Lỗi dữ liệu trạm sạc',
+  MISSING_STATION: 'Trạm chưa có trong eVoyage',
   ROUTE_FEEDBACK: 'Phản hồi tuyến đường',
   GENERAL_FEEDBACK: 'Góp ý chung',
 };

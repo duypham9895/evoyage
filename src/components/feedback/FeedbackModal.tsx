@@ -21,6 +21,7 @@ const CATEGORIES: readonly FeedbackCategory[] = [
   'REQUEST_FEATURE',
   'CONTACT_SUPPORT',
   'STATION_DATA_ERROR',
+  'MISSING_STATION',
   'ROUTE_FEEDBACK',
   'GENERAL_FEEDBACK',
 ];
@@ -48,6 +49,9 @@ export default function FeedbackModal({
   const [correctInfo, setCorrectInfo] = useState('');
   const [rating, setRating] = useState<number | undefined>(undefined);
   const [stationName, setStationName] = useState(stationContext?.stationName ?? '');
+  const [proposedLatitude, setProposedLatitude] = useState('');
+  const [proposedLongitude, setProposedLongitude] = useState('');
+  const [proposedProvider, setProposedProvider] = useState('');
   const [honeypot, setHoneypot] = useState('');
 
   // UI state
@@ -165,6 +169,18 @@ export default function FeedbackModal({
           useCase: useCase.trim() || undefined,
           correctInfo: correctInfo.trim() || undefined,
           rating,
+          proposedLatitude:
+            category === 'MISSING_STATION' && proposedLatitude.trim()
+              ? Number(proposedLatitude)
+              : undefined,
+          proposedLongitude:
+            category === 'MISSING_STATION' && proposedLongitude.trim()
+              ? Number(proposedLongitude)
+              : undefined,
+          proposedProvider:
+            category === 'MISSING_STATION' && proposedProvider.trim()
+              ? proposedProvider.trim()
+              : undefined,
           pageUrl: window.location.href,
           userAgent: navigator.userAgent,
           viewport: `${window.innerWidth}x${window.innerHeight}`,
@@ -200,6 +216,7 @@ export default function FeedbackModal({
   }, [
     category, description, email, name, phone, stationContext,
     stationName, stepsToReproduce, useCase, correctInfo, rating,
+    proposedLatitude, proposedLongitude, proposedProvider,
     honeypot, validate, t,
   ]);
 
@@ -211,6 +228,7 @@ export default function FeedbackModal({
       case 'REQUEST_FEATURE': return t('feedback_ph_feature');
       case 'CONTACT_SUPPORT': return t('feedback_ph_support');
       case 'STATION_DATA_ERROR': return t('feedback_ph_station');
+      case 'MISSING_STATION': return t('feedback_ph_missing_station');
       case 'ROUTE_FEEDBACK': return t('feedback_ph_route');
       case 'GENERAL_FEEDBACK': return t('feedback_ph_general');
       default: return t('feedback_ph_general');
@@ -320,8 +338,8 @@ export default function FeedbackModal({
                 />
               </div>
 
-              {/* Station name (STATION_DATA_ERROR) */}
-              {category === 'STATION_DATA_ERROR' && (
+              {/* Station name (STATION_DATA_ERROR or MISSING_STATION) */}
+              {(category === 'STATION_DATA_ERROR' || category === 'MISSING_STATION') && (
                 <div>
                   <label htmlFor="fb-station" className="block text-sm font-medium text-[var(--color-foreground)] mb-1.5">
                     {t('feedback_field_station')}
@@ -416,6 +434,61 @@ export default function FeedbackModal({
                     maxLength={1000}
                     className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors resize-y"
                   />
+                </div>
+              )}
+
+              {/* Proposed coordinates + provider (MISSING_STATION) */}
+              {category === 'MISSING_STATION' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="fb-lat" className="block text-sm font-medium text-[var(--color-foreground)] mb-1.5">
+                        {t('feedback_field_proposed_lat')}
+                      </label>
+                      <input
+                        id="fb-lat"
+                        type="text"
+                        inputMode="decimal"
+                        value={proposedLatitude}
+                        onChange={(e) => setProposedLatitude(e.target.value)}
+                        placeholder="10.7626"
+                        maxLength={20}
+                        className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="fb-lng" className="block text-sm font-medium text-[var(--color-foreground)] mb-1.5">
+                        {t('feedback_field_proposed_lng')}
+                      </label>
+                      <input
+                        id="fb-lng"
+                        type="text"
+                        inputMode="decimal"
+                        value={proposedLongitude}
+                        onChange={(e) => setProposedLongitude(e.target.value)}
+                        placeholder="106.6602"
+                        maxLength={20}
+                        className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-[var(--color-muted)]">
+                    {t('feedback_help_proposed_coords')}
+                  </p>
+                  <div>
+                    <label htmlFor="fb-provider" className="block text-sm font-medium text-[var(--color-foreground)] mb-1.5">
+                      {t('feedback_field_proposed_provider')}
+                    </label>
+                    <input
+                      id="fb-provider"
+                      type="text"
+                      value={proposedProvider}
+                      onChange={(e) => setProposedProvider(e.target.value)}
+                      placeholder={t('feedback_ph_proposed_provider')}
+                      maxLength={100}
+                      className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                    />
+                  </div>
                 </div>
               )}
 

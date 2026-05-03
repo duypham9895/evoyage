@@ -41,6 +41,7 @@ describe('feedbackRequestSchema', () => {
         'REQUEST_FEATURE',
         'CONTACT_SUPPORT',
         'STATION_DATA_ERROR',
+        'MISSING_STATION',
         'ROUTE_FEEDBACK',
         'GENERAL_FEEDBACK',
       ] as const;
@@ -334,6 +335,54 @@ describe('feedbackRequestSchema', () => {
         userAgent: 'A'.repeat(501),
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe('MISSING_STATION coordinate fields', () => {
+    it('accepts valid latitude/longitude pair', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        category: 'MISSING_STATION',
+        proposedLatitude: 10.7626,
+        proposedLongitude: 106.6602,
+        proposedProvider: 'EBOOST',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects latitude outside [-90, 90]', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        category: 'MISSING_STATION',
+        proposedLatitude: 91,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects longitude outside [-180, 180]', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        category: 'MISSING_STATION',
+        proposedLongitude: 181,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects proposedProvider over 100 chars', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        category: 'MISSING_STATION',
+        proposedProvider: 'A'.repeat(101),
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('accepts MISSING_STATION submission with no coordinates (optional)', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        category: 'MISSING_STATION',
+      });
+      expect(result.success).toBe(true);
     });
   });
 
