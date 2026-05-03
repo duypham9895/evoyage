@@ -8,11 +8,11 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
   });
 
   test('sends chat message and receives AI response', async ({ page, isMobile }) => {
-    // eVi tab should be active by default on desktop
+    // On mobile, eVi is opened via FAB (no longer a tab)
     if (isMobile) {
-      const eviTab = page.locator('[role="tab"]:has-text("eVi")');
-      if (await eviTab.isVisible()) {
-        await eviTab.click();
+      const eviFab = page.getByRole('button', { name: /Mở trợ lý eVi|Open eVi assistant/ });
+      if (await eviFab.isVisible()) {
+        await eviFab.click();
       }
     }
 
