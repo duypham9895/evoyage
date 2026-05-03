@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { useDesktopSidebarTab } from '@/hooks/useDesktopSidebarTab';
 import { useUrlState, parseUrlState } from '@/hooks/useUrlState';
 import Header from '@/components/layout/Header';
+import ErrorBanner from '@/components/layout/ErrorBanner';
 import TripInput from '@/components/trip/TripInput';
 import SampleTripChips from '@/components/trip/SampleTripChips';
 import BrandModelSelector from '@/components/trip/BrandModelSelector';
@@ -618,6 +619,7 @@ function HomeContent() {
     return (
       <div className="h-[100dvh] flex flex-col relative">
         <Header />
+        <ErrorBanner />
 
         {/* Full-screen map — isolate stacking context so Leaflet z-indexes don't escape */}
         <main className="flex-1 relative isolate z-0">
@@ -735,6 +737,7 @@ function HomeContent() {
   return (
     <div className="h-screen flex flex-col">
       <Header />
+      <ErrorBanner />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Sidebar — 3-tab switcher + content */}

@@ -110,6 +110,7 @@
   "share_rate_limited": "You've created too many links. Please wait a moment.",
   "share_or_image": "or share as image",
   "share_qr_code": "QR Code",
+  "dismiss": "Dismiss",
 
   "station_status_active": "Available",
   "station_status_busy": "In use",
