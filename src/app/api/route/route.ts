@@ -16,7 +16,6 @@ import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/routing/station-ranker';
 import { estimateDetourTimeSec, type StationWithRouteInfo } from '@/lib/routing/station-finder';
-import { cacheTripPlan } from '@/lib/routing/trip-cache';
 import { safeJsonArray } from '@/lib/safe-json';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
 import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
@@ -536,9 +535,6 @@ export async function POST(request: NextRequest) {
       ...(departAt ? { departureAtIso: departAt } : {}),
       ...(trafficMetadata ? { traffic: trafficMetadata } : {}),
     };
-
-    // Cache trip plan for share card generation
-    cacheTripPlan(tripId, tripPlan);
 
     return NextResponse.json(tripPlan);
   } catch (error) {
