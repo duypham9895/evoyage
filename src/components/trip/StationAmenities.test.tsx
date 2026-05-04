@@ -220,7 +220,6 @@ describe('StationAmenities', () => {
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.stringContaining('/api/stations/my-station-42/amenities'),
-        expect.anything(),
       );
     });
   });

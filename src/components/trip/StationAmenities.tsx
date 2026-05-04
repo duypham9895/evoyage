@@ -81,7 +81,11 @@ export default function StationAmenities({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/stations/${stationId}/amenities`, { cache: 'force-cache' })
+    // Don't use cache: 'force-cache' — when the server cache row content
+    // changes (e.g. tiered-radius patch invalidating the v1 envelope), a
+    // browser-cached empty response would mask the new data forever for
+    // returning users. Server-side Postgres cache already gives 30-day TTL.
+    fetch(`/api/stations/${stationId}/amenities`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`status ${res.status}`);
         return (await res.json()) as ApiResponse;
