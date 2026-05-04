@@ -158,4 +158,17 @@ describe('queryNearbyPois', () => {
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>)['Content-Type']).toContain('text/plain');
   });
+
+  it('sends a User-Agent header (Overpass returns 406 without one — regression for prod bug)', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ elements: [] }), { status: 200 }),
+    );
+
+    await queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 });
+
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const ua = (init.headers as Record<string, string>)['User-Agent'];
+    expect(ua).toBeTruthy();
+    expect(ua).toContain('eVoyage');
+  });
 });

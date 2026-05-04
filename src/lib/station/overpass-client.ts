@@ -84,7 +84,14 @@ export async function queryNearbyPois(
   try {
     response = await fetch(OVERPASS_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+        // Overpass returns 406 to requests with the Node default UA;
+        // a real-looking UA satisfies their content-negotiation. Identify
+        // ourselves so OSM operators can reach us if usage spikes.
+        'User-Agent': 'eVoyage/1.0 (+https://evoyagevn.vercel.app)',
+        Accept: 'application/json',
+      },
       body,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
