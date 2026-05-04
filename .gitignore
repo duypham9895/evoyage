@@ -67,3 +67,6 @@ next-env.d.ts
 # Playwright run artifacts
 /test-results/
 
+
+# Git worktrees (isolated branches for parallel work)
+.worktrees/
