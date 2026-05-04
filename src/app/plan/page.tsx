@@ -914,10 +914,26 @@ function HomeContent() {
               />
             )}
 
-            {/* Plan button — only on route/vehicle/battery tabs (stations doesn't need one) */}
-            {activeTab !== 'stations' && planButton}
-            {activeTab !== 'stations' && errorDisplay}
-            {activeTab !== 'stations' && timeoutBanner}
+            {activeTab === 'notebook' && (
+              <TripNotebook
+                store={notebook}
+                resolveVehicleName={(vehicleId) => {
+                  if (!vehicleId) return customVehicle ? `${customVehicle.brand} ${customVehicle.model}` : null;
+                  if (selectedVehicle?.id === vehicleId) return `${selectedVehicle.brand} ${selectedVehicle.model}`;
+                  return null;
+                }}
+                onReplan={(trip) => {
+                  handleReplanFromNotebook(trip);
+                  setActiveTab('route');
+                }}
+                i18n={notebookI18n}
+              />
+            )}
+
+            {/* Plan button — only on route/vehicle/battery tabs (stations + notebook don't need one) */}
+            {activeTab !== 'stations' && activeTab !== 'notebook' && planButton}
+            {activeTab !== 'stations' && activeTab !== 'notebook' && errorDisplay}
+            {activeTab !== 'stations' && activeTab !== 'notebook' && timeoutBanner}
           </div>
         </MobileBottomSheet>
 

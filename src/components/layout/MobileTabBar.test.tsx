@@ -26,7 +26,7 @@ describe('MobileTabBar', () => {
     vi.clearAllMocks();
   });
 
-  it('renders exactly 4 tabs (no eVi)', () => {
+  it('renders exactly 5 tabs (route, vehicle, battery, stations, notebook)', () => {
     render(
       <MobileTabBar
         activeTab="route"
@@ -36,9 +36,9 @@ describe('MobileTabBar', () => {
       />,
     );
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(5);
     const labels = tabs.map(t => t.textContent?.trim());
-    expect(labels).toEqual(['Tuyến đường', 'Xe', 'Pin', 'Trạm sạc']);
+    expect(labels).toEqual(['Tuyến đường', 'Xe', 'Pin', 'Trạm sạc', 'Đã lưu']);
   });
 
   it('does not render an eVi tab', () => {
