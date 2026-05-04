@@ -102,6 +102,8 @@ function isHardInfrastructureError(err: unknown): boolean {
   if (/returned empty response|returned only thinking/i.test(err.message)) {
     return true;
   }
+  // Missing API key on a provider — try the other one.
+  if (/is not set/i.test(err.message)) return true;
   return false;
 }
 

@@ -217,3 +217,40 @@ describe('callJsonLLM — non-fallback paths', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('callJsonLLM — missing API keys', () => {
+  it('falls back to Minimax when XIAOMI_MIMO_API_KEY is missing', async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv('MINIMAX_API_KEY', 'minimax-test-key');
+    // XIAOMI_MIMO_API_KEY deliberately not set
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"from":"minimax"}' } }],
+    });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.provider).toBe('minimax');
+    expect(mockCreate).toHaveBeenCalledTimes(1); // primary never reached the SDK
+    expect(constructorCalls).toHaveLength(1);
+    expect(constructorCalls[0].baseURL).toBe('https://api.minimax.io/v1');
+  });
+
+  it('throws clear error when both keys missing', async () => {
+    vi.unstubAllEnvs();
+    // Neither key set
+
+    await expect(callJsonLLM(SAMPLE_INPUT)).rejects.toThrow(/Both providers failed/);
+  });
+
+  it('still completes if MIMO key is present but Minimax key is missing (no fallback needed)', async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv('XIAOMI_MIMO_API_KEY', 'mimo-test-key');
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"ok":true}' } }],
+    });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.provider).toBe('mimo');
+  });
+});
