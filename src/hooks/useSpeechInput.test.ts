@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/* eslint-disable @typescript-eslint/no-explicit-any -- mock callbacks are dynamic by design */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSpeechInput } from './useSpeechInput';
@@ -206,6 +207,55 @@ describe('useSpeechInput', () => {
     expect(result.current.isListening).toBe(false);
     expect(mockCreateWebSpeech).not.toHaveBeenCalled();
     expect(mockCreateWhisper).not.toHaveBeenCalled();
+  });
+
+  it('whisper error clears both isListening and isProcessing (no contradictory UI)', () => {
+    mockIsWhisperSupported.mockReturnValue(true);
+
+    let whisperCallbacks: any = null;
+    mockCreateWhisper.mockImplementation((cb: any) => {
+      whisperCallbacks = cb;
+      return makeMockEngine('whisper');
+    });
+
+    const { result } = renderHook(() => useSpeechInput());
+    act(() => { result.current.startListening(); });
+    expect(result.current.isListening).toBe(true);
+
+    // Simulate getUserMedia rejection: onError then onEnd (current engine behavior)
+    act(() => { whisperCallbacks.onError('not_allowed'); });
+    act(() => { whisperCallbacks.onEnd(); });
+
+    expect(result.current.error).toBe('not_allowed');
+    expect(result.current.isListening).toBe(false);
+    expect(result.current.isProcessing).toBe(false);
+  });
+
+  it('whisper success: processing toggles true during upload, false after onEnd', () => {
+    mockIsWhisperSupported.mockReturnValue(true);
+
+    let whisperCallbacks: any = null;
+    mockCreateWhisper.mockImplementation((cb: any) => {
+      whisperCallbacks = cb;
+      return makeMockEngine('whisper');
+    });
+
+    const { result } = renderHook(() => useSpeechInput());
+    act(() => { result.current.startListening(); });
+
+    // Recording stops, upload starts
+    act(() => { whisperCallbacks.onProcessingStart(); });
+    expect(result.current.isProcessing).toBe(true);
+
+    // Transcript arrives
+    act(() => { whisperCallbacks.onTranscript('xin chào', true); });
+    expect(result.current.isProcessing).toBe(false);
+    expect(result.current.transcript).toBe('xin chào');
+
+    // Engine signals fully done
+    act(() => { whisperCallbacks.onEnd(); });
+    expect(result.current.isListening).toBe(false);
+    expect(result.current.isProcessing).toBe(false);
   });
 
   it('clears transcript and error on new startListening', () => {

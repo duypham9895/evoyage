@@ -14,6 +14,9 @@ export interface SpeechEngineCallbacks {
   readonly onTranscript: (text: string, isFinal: boolean) => void;
   readonly onError: (error: NonNullable<SpeechError>) => void;
   readonly onEnd: () => void;
+  /** Whisper-only: fired between recording-stop and upload-complete so the UI
+   *  can show a transcribing indicator. Web Speech has no separate phase. */
+  readonly onProcessingStart?: () => void;
 }
 
 export interface SpeechEngine {

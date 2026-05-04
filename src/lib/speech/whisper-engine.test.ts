@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/* eslint-disable @typescript-eslint/no-explicit-any -- MediaRecorder/AudioContext mocks are dynamic */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createWhisperEngine, isWhisperSupported } from './whisper-engine';
 import type { SpeechEngineCallbacks } from './types';
@@ -13,17 +14,24 @@ function makeCallbacks(): SpeechEngineCallbacks & {
   transcripts: Array<{ text: string; isFinal: boolean }>;
   errors: string[];
   endCount: number;
+  processingStartCount: number;
+  events: string[];
 } {
   const transcripts: Array<{ text: string; isFinal: boolean }> = [];
   const errors: string[] = [];
+  const events: string[] = [];
   let endCount = 0;
+  let processingStartCount = 0;
   return {
     transcripts,
     errors,
+    events,
     get endCount() { return endCount; },
-    onTranscript: (text, isFinal) => { transcripts.push({ text, isFinal }); },
-    onError: (err) => { errors.push(err); },
-    onEnd: () => { endCount++; },
+    get processingStartCount() { return processingStartCount; },
+    onTranscript: (text, isFinal) => { transcripts.push({ text, isFinal }); events.push('transcript'); },
+    onError: (err) => { errors.push(err); events.push('error'); },
+    onEnd: () => { endCount++; events.push('end'); },
+    onProcessingStart: () => { processingStartCount++; events.push('processingStart'); },
   };
 }
 
@@ -53,7 +61,6 @@ function setupMediaRecorderGlobal() {
 function makeFakeGetUserMedia(shouldReject = false) {
   const stopFn = vi.fn();
   const mockStream = { getTracks: () => [{ stop: stopFn }] } as unknown as MediaStream;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fn: any = shouldReject
     ? vi.fn().mockRejectedValue(new DOMException('Permission denied'))
     : vi.fn().mockResolvedValue(mockStream);
@@ -359,5 +366,52 @@ describe('createWhisperEngine (with injected deps)', () => {
     await flushPromises();
 
     expect(cb.endCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('fires onProcessingStart between recording-stop and onEnd (success path)', async () => {
+    const { fn: gum } = makeFakeGetUserMedia();
+    const { ctx } = makeFakeAudioContext();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ text: 'hello' }),
+    });
+
+    const cb = makeCallbacks();
+    const engine = createWhisperEngine(cb, {
+      getUserMedia: gum,
+      createAudioContext: () => ctx,
+    });
+
+    engine.start('vi');
+    await flushPromises();
+
+    const largeBlob = new Blob([new ArrayBuffer(2048)], { type: 'audio/webm' });
+    recorderInstances[0].stop = vi.fn().mockImplementation(() => {
+      recorderInstances[0].state = 'inactive';
+      recorderInstances[0].ondataavailable?.({ data: largeBlob });
+      recorderInstances[0].onstop?.();
+    });
+
+    engine.stop();
+    await flushPromises();
+    await flushPromises();
+
+    expect(cb.processingStartCount).toBe(1);
+    // Order: processingStart → transcript → end (NOT processingStart after end)
+    expect(cb.events).toEqual(['processingStart', 'transcript', 'end']);
+  });
+
+  it('does NOT fire onProcessingStart when getUserMedia rejects (no recording happened)', async () => {
+    const cb = makeCallbacks();
+    const engine = createWhisperEngine(cb, {
+      getUserMedia: () => Promise.reject(new Error('NotAllowedError')),
+      createAudioContext: () => makeFakeAudioContext().ctx,
+    });
+
+    engine.start('vi');
+    await flushPromises();
+
+    expect(cb.processingStartCount).toBe(0);
+    expect(cb.errors).toContain('not_allowed');
   });
 });

@@ -214,7 +214,8 @@ export function createWhisperEngine(
               audioContext = null;
             }
 
-            // Upload and transcribe, then signal end
+            // Recording stopped, upload starting — UI shows transcribing indicator
+            callbacks.onProcessingStart?.();
             uploadAndTranscribe(blob, currentLocale).finally(() => {
               callbacks.onEnd();
             });

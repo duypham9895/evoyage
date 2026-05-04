@@ -62,10 +62,17 @@ export function useSpeechInput(locale: string = 'vi'): UseSpeechInputReturn {
   const engineRef = useRef<SpeechEngine | null>(null);
   const fallbackAttempted = useRef(false);
   const localeRef = useRef(locale);
-  localeRef.current = locale;
-
-  // Detect support after mount (client-only)
   useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
+
+  // Forward-reference holder so onError below can recurse without tripping
+  // react-hooks/immutability (startEngine reading itself before assignment).
+  const startEngineRef = useRef<((engineName: EngineName) => void) | null>(null);
+
+  // Detect support after mount (client-only — feature detection requires window).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsSupported(isWebSpeechSupported() || isWhisperSupported());
   }, []);
 
@@ -105,7 +112,7 @@ export function useSpeechInput(locale: string = 'vi'): UseSpeechInputReturn {
             ) {
               fallbackAttempted.current = true;
               // Synchronous switch — preserves iOS gesture context
-              startEngine('whisper');
+              startEngineRef.current?.('whisper');
               return;
             }
             setError(err);
@@ -124,11 +131,13 @@ export function useSpeechInput(locale: string = 'vi'): UseSpeechInputReturn {
           onError: (err) => {
             setError(err);
             setIsProcessing(false);
+            setIsListening(false);
           },
           onEnd: () => {
             setIsListening(false);
-            // Whisper engine: "processing" starts when recording stops
-            // and ends when transcript/error arrives
+            setIsProcessing(false);
+          },
+          onProcessingStart: () => {
             setIsProcessing(true);
           },
         });
@@ -137,6 +146,10 @@ export function useSpeechInput(locale: string = 'vi'): UseSpeechInputReturn {
     engine.start(localeRef.current);
     setIsListening(true);
   }, []);
+
+  useEffect(() => {
+    startEngineRef.current = startEngine;
+  }, [startEngine]);
 
   const startListening = useCallback(() => {
     if (!isWebSpeechSupported() && !isWhisperSupported()) return;
