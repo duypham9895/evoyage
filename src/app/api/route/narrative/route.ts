@@ -3,6 +3,10 @@ import { z } from 'zod';
 import OpenAI from 'openai';
 import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
 
+// MiniMax-M2.7 chain-of-thought + JSON generation routinely exceeds the
+// Vercel default (10s) for this prompt; align with the eVi parse route.
+export const maxDuration = 60;
+
 // ── Schema ──
 
 const chargingStopSchema = z.object({
@@ -34,7 +38,10 @@ export interface NarrativeResponse {
 // ── AI Client ──
 
 const MODEL = 'MiniMax-M2.7';
-const REQUEST_TIMEOUT_MS = 10_000;
+// Thinking model: a chain-of-thought block precedes the JSON output. Sit
+// just under maxDuration so we control the response (clean 500 with logged
+// reason) instead of letting the Vercel platform kill the function.
+const REQUEST_TIMEOUT_MS = 55_000;
 
 function getClient(): OpenAI {
   const apiKey = process.env.MINIMAX_API_KEY?.trim();
@@ -135,7 +142,11 @@ export async function POST(request: NextRequest) {
         ],
         response_format: { type: 'json_object' },
         temperature: 0.4,
-        max_tokens: 1024,
+        // M2.7's <think> block alone routinely runs 1k–2k tokens; the JSON
+        // narrative on top adds ~300–500. 1024 truncated the JSON mid-string
+        // (observed in prod 2026-05-04). 4096 leaves headroom without
+        // bloating cost — Vercel function still completes well under 60s.
+        max_tokens: 4096,
       },
       { signal: controller.signal },
     );
@@ -147,8 +158,15 @@ export async function POST(request: NextRequest) {
       throw new Error('Minimax returned empty response');
     }
 
-    // Strip MiniMax thinking tags
-    const content = rawContent.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+    // MiniMax-M2.7 wraps responses in two layers we need to peel off before
+    // JSON.parse: a `<think>...</think>` chain-of-thought block, and a
+    // markdown ```json ... ``` fence (returned even when response_format is
+    // json_object — observed in prod 2026-05-04).
+    const content = rawContent
+      .replace(/<think>[\s\S]*?<\/think>\s*/g, '')
+      .replace(/^\s*```(?:json)?\s*\n?/, '')
+      .replace(/\n?\s*```\s*$/, '')
+      .trim();
     if (!content) {
       throw new Error('Minimax returned only thinking tags');
     }

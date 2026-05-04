@@ -91,6 +91,43 @@ describe('POST /api/route/narrative', () => {
     expect(data.narrative).toBe(AI_RESPONSE.narrative);
   });
 
+  it('strips markdown ```json code fences MiniMax wraps the response in', async () => {
+    // Observed in prod 2026-05-04: MiniMax-M2.7 returns
+    //   ```json\n{"overview": ...}\n```
+    // even when response_format is json_object. Without stripping the fence
+    // JSON.parse throws and the user sees a silent 500.
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: '```json\n' + JSON.stringify(AI_RESPONSE) + '\n```',
+        },
+      }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.overview).toBe(AI_RESPONSE.overview);
+    expect(data.narrative).toBe(AI_RESPONSE.narrative);
+  });
+
+  it('strips both thinking tags AND markdown fences (combined)', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: `<think>...thinking...</think>\n\`\`\`json\n${JSON.stringify(AI_RESPONSE)}\n\`\`\``,
+        },
+      }],
+    });
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.overview).toBe(AI_RESPONSE.overview);
+  });
+
   it('returns 429 when rate limited', async () => {
     vi.mocked(checkRateLimit).mockResolvedValueOnce({
       allowed: false,
@@ -194,7 +231,7 @@ describe('POST /api/route/narrative', () => {
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         temperature: 0.4,
-        max_tokens: 1024,
+        max_tokens: 4096,
         response_format: { type: 'json_object' },
       }),
       expect.any(Object),
