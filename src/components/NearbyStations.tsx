@@ -14,6 +14,9 @@ import type { ChargingStationData, LatLng } from '@/types';
 interface NearbyStationsProps {
   readonly onNavigateToStation?: (station: ChargingStationData) => void;
   readonly initialLocation?: { readonly lat: number; readonly lng: number } | null;
+  /** Triggers a fresh GPS poll on the parent's lifted geolocation. When omitted,
+   *  falls back to the internal `useGeolocation` hook. */
+  readonly onRequestLocation?: () => void;
 }
 
 interface StationWithDistance extends ChargingStationData {
@@ -315,7 +318,7 @@ function StationCard({
 
 // ── Main Component ──
 
-export default function NearbyStations({ onNavigateToStation, initialLocation }: NearbyStationsProps) {
+export default function NearbyStations({ onNavigateToStation, initialLocation, onRequestLocation }: NearbyStationsProps) {
   const { t } = useLocale();
   const internalGeo = useGeolocation();
 
@@ -359,8 +362,13 @@ export default function NearbyStations({ onNavigateToStation, initialLocation }:
     const center: LatLng = { lat: latitude, lng: longitude };
     const bounds = boundsFromRadius(center, radius);
 
+    // Pre-existing fetch-loading pattern. Newer Next ESLint flags this as
+    // `react-hooks/set-state-in-effect`, but flipping loading=true before an
+    // async fetch is intentional here. Cleanup tracked separately.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setFetchLoading(true);
     setFetchError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     fetch(`/api/stations?bounds=${bounds}`, { signal: controller.signal })
       .then((res) => {
@@ -444,11 +452,17 @@ export default function NearbyStations({ onNavigateToStation, initialLocation }:
     hapticLight();
     setSearchLocation(null);
     setSearchQuery('');
-  }, []);
+    // Refresh GPS — prefer the parent's lifted geolocation when wired,
+    // otherwise fall back to the internal hook.
+    if (onRequestLocation) {
+      onRequestLocation();
+    } else {
+      requestLocation();
+    }
+  }, [onRequestLocation, requestLocation]);
 
   const isLoading = geoLoading || fetchLoading;
   const hasLocation = latitude !== null && longitude !== null;
-  const isUsingSearch = searchLocation !== null;
 
   // Geolocation error messages
   const geoErrorMessage = useMemo(() => {
@@ -513,7 +527,7 @@ export default function NearbyStations({ onNavigateToStation, initialLocation }:
       {/* Main content (after location acquired) */}
       {hasLocation && !isLoading && (
         <div className="space-y-4">
-          {/* Search-by-address (active state) + reset button */}
+          {/* Search-by-address (active state) + persistent locate-me button */}
           <div className="space-y-2">
             <PlaceAutocomplete
               value={searchQuery}
@@ -522,14 +536,12 @@ export default function NearbyStations({ onNavigateToStation, initialLocation }:
               placeholder={t('nearby_empty_search_placeholder' as Parameters<typeof t>[0])}
               label={t('nearby_empty_or_search' as Parameters<typeof t>[0])}
             />
-            {isUsingSearch && (
-              <button
-                onClick={handleResetToGps}
-                className="text-xs text-[var(--color-accent)] hover:underline transition-colors"
-              >
-                {t('nearby_empty_use_location' as Parameters<typeof t>[0])}
-              </button>
-            )}
+            <button
+              onClick={handleResetToGps}
+              className="w-full py-2 rounded-lg text-xs font-medium border border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 active:scale-[0.98] transition-all"
+            >
+              {t('nearby_empty_use_location' as Parameters<typeof t>[0])}
+            </button>
           </div>
 
           {/* Radius selector */}

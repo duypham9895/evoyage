@@ -292,6 +292,49 @@ describe('NearbyStations', () => {
     });
   });
 
+  it('shows persistent "Use my location" button when GPS is already resolved', async () => {
+    // Regression: previously the locate-me CTA only rendered in the empty state,
+    // so once GPS resolved the user had no visible re-locate control in the panel.
+    mockGeoState = {
+      latitude: 10.800,
+      longitude: 106.700,
+      accuracy: 50,
+      loading: false,
+      error: null,
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ stations: [] }),
+    });
+
+    render(<NearbyStations />);
+
+    // Button must be visible inside the active panel (not just the empty state).
+    const locateButton = await screen.findByText('Use my location');
+    expect(locateButton).toBeInTheDocument();
+  });
+
+  it('calls onRequestLocation when locate-me button is clicked in active state', async () => {
+    mockGeoState = {
+      latitude: 10.800,
+      longitude: 106.700,
+      accuracy: 50,
+      loading: false,
+      error: null,
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ stations: [] }),
+    });
+    const onRequestLocation = vi.fn();
+
+    render(<NearbyStations onRequestLocation={onRequestLocation} />);
+
+    const locateButton = await screen.findByText('Use my location');
+    fireEvent.click(locateButton);
+    expect(onRequestLocation).toHaveBeenCalledTimes(1);
+  });
+
   it('shows radius selector with default 5 km', async () => {
     mockGeoState = {
       latitude: 10.800,

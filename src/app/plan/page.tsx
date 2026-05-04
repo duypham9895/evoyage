@@ -911,6 +911,7 @@ function HomeContent() {
             {activeTab === 'stations' && (
               <NearbyStations
                 initialLocation={geo.latitude != null && geo.longitude != null ? { lat: geo.latitude, lng: geo.longitude } : null}
+                onRequestLocation={geo.requestLocation}
               />
             )}
 
@@ -1002,6 +1003,7 @@ function HomeContent() {
               <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-stations" aria-labelledby="desktop-tab-stations">
                 <NearbyStations
                   initialLocation={geo.latitude != null && geo.longitude != null ? { lat: geo.latitude, lng: geo.longitude } : null}
+                  onRequestLocation={geo.requestLocation}
                 />
               </div>
             ) : desktopSidebarTab === 'planTrip' ? (
