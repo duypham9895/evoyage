@@ -1,18 +1,24 @@
 /**
- * Build a deep-link to V-GREEN's reservation page for a specific station.
+ * Build a link to VinFast's station locator page, scoped to a specific
+ * station via query params.
  *
- * V-GREEN's reservation flow lives on their consumer site; we punt the
- * actual booking experience there rather than embedding (the OAuth +
- * payment + slot-picking flow is its own multi-week scope).
- *
- * The returned URL is opened in a new tab by the caller so the user
- * doesn't lose their trip-planning context.
+ * Why locator and not deep-link to V-GREEN's reservation flow:
+ * the actual reservation URL pattern on V-GREEN's site isn't publicly
+ * documented and changes without notice; a 404 in production breaks user
+ * trust. The locator page is the same source of truth that our crawler
+ * uses (vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac) — known-stable.
+ * From there the user can tap the station and follow VinFast's own UI to
+ * the reservation flow if available.
  *
  * Returns null for stations missing the VinFast `storeId` (i.e. non-
  * VinFast stations or rows that haven't been enriched yet).
+ *
+ * The caller is responsible for the user-facing label — the spec ships
+ * "Mở trên VinFast" (open on VinFast) rather than "Đặt trước qua V-GREEN"
+ * to honestly match what the link actually does.
  */
 
-const RESERVATION_BASE = 'https://shop.vinfastauto.com/vn_vi/charging-station-search';
+const VINFAST_LOCATOR = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
 
 export interface ReservableStation {
   readonly storeId: string | null;
@@ -26,5 +32,5 @@ export function buildVinfastReservationUrl(station: ReservableStation): string |
   if (station.stationCode) {
     params.set('station_code', station.stationCode);
   }
-  return `${RESERVATION_BASE}?${params}`;
+  return `${VINFAST_LOCATOR}?${params}`;
 }

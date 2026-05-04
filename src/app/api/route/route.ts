@@ -472,24 +472,34 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     // Phase 3b — enrich each stop with a popularity verdict for the user's
-    // expected arrival hour at THAT stop. Arrival = departure (or now) + the
-    // adjusted travel time *up to* that stop. Charging stops are sequential
-    // so we accumulate their drive times to anchor each stop's arrival
-    // moment correctly.
+    // expected arrival hour at THAT stop. Arrival = departure + drive time
+    // to this stop + cumulative charging time at all PRIOR stops. Driving
+    // uses uniform-speed (fraction of total × adjusted duration) so traffic
+    // and peak-hour adjustments propagate; charging is the explicit per-stop
+    // estimate.
     const departureMomentMs = departureMoment.getTime();
-    let cumulativeDriveSec = 0;
+    const arrivalOffsetSecPerStop: number[] = [];
+    let cumulativeChargeSec = 0;
+    for (const stop of plan.chargingStops) {
+      const distFromStart =
+        'selected' in stop ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
+      const fraction = totalDistanceKm > 0 ? distFromStart / totalDistanceKm : 0;
+      const driveSec = (adjustedDurationMin * 60) * fraction;
+      arrivalOffsetSecPerStop.push(driveSec + cumulativeChargeSec);
+      // After this stop's arrival, the user spends THIS stop's charge time
+      // before continuing to the next stop's drive.
+      const chargeMin = 'selected' in stop
+        ? stop.selected.estimatedChargeTimeMin
+        : stop.estimatedChargingTimeMin;
+      cumulativeChargeSec += chargeMin * 60;
+    }
+
     const enrichedChargingStops = await Promise.all(
-      plan.chargingStops.map(async (stop) => {
+      plan.chargingStops.map(async (stop, idx) => {
         const station = 'selected' in stop ? stop.selected.station : stop.station;
-        // distanceFromStart is the only positional anchor we have; convert to
-        // a fraction of the total trip and apply the heuristic-adjusted total
-        // duration so traffic shows up in arrival predictions.
-        const distFromStart =
-          'selected' in stop ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
-        const fraction = totalDistanceKm > 0 ? distFromStart / totalDistanceKm : 0;
-        const driveSec = (adjustedDurationMin * 60) * fraction;
-        cumulativeDriveSec = driveSec; // sequential anchor against total — not additive across stops
-        const arrivalAtIso = new Date(departureMomentMs + driveSec * 1000).toISOString();
+        const arrivalAtIso = new Date(
+          departureMomentMs + arrivalOffsetSecPerStop[idx]! * 1000,
+        ).toISOString();
         try {
           const popularity = await queryStationPopularity({
             prisma,
@@ -503,7 +513,6 @@ export async function POST(request: NextRequest) {
         }
       }),
     );
-    void cumulativeDriveSec;
 
     const tripPlan: TripPlan = {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,

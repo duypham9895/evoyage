@@ -290,7 +290,15 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
   );
 
   // ── Greeting text ──
-  const greetingKey = getGreetingKey(isFirstVisit);
+  // Hydration-safe: SSR renders the first-visit greeting (no time/locale
+  // branching). After mount, the time-aware greeting takes over. Without
+  // this guard, server and client pick different keys when hours differ
+  // between SSR render time and hydration time, producing the React
+  // "hydration failed because text didn't match" warning.
+  const [greetingKey, setGreetingKey] = useState<string>('evi_greeting_first');
+  useEffect(() => {
+    setGreetingKey(getGreetingKey(isFirstVisit));
+  }, [isFirstVisit]);
   const greetingText = t(greetingKey as Parameters<typeof t>[0]);
 
   const isIdle = state === 'idle' && messages.length === 0;
