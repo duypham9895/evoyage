@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
 import { trackTripPlanned, trackDeparturePicked } from '@/lib/analytics';
+import { createNotebookStore, type SavedTrip } from '@/lib/trip/notebook-store';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
@@ -101,6 +102,9 @@ function HomeContent() {
       trackDeparturePicked(leadHours);
     }
   }, []);
+
+  /** Phase 5 — saved-trip notebook (localStorage). One instance per page lifetime. */
+  const notebook = useMemo(() => createNotebookStore(), []);
 
   // Trip result
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
@@ -473,6 +477,26 @@ function HomeContent() {
         const updated = [recentTrip, ...saved.filter((t: { start: string; end: string }) => t.start !== start || t.end !== end)].slice(0, 5);
         localStorage.setItem('ev-recent-trips', JSON.stringify(updated));
       } catch { /* localStorage unavailable */ }
+
+      // Phase 5 — persist into the notebook (richer schema, dedup-aware)
+      try {
+        notebook.save({
+          start,
+          end,
+          startCoords: startCoords ?? undefined,
+          endCoords: endCoords ?? undefined,
+          waypoints: waypoints
+            .filter((wp) => wp.coords)
+            .map((wp) => ({ lat: wp.coords!.lat, lng: wp.coords!.lng, name: wp.name })),
+          isLoopTrip,
+          vehicleId: selectedVehicle?.id ?? null,
+          customVehicle,
+          currentBattery,
+          minArrival,
+          rangeSafetyFactor,
+          departAt,
+        });
+      } catch { /* notebook never breaks the planning flow */ }
     } catch (err) {
       // Aborted (Cancel or timeout): the abort path already set state — no-op here.
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -489,7 +513,50 @@ function HomeContent() {
         setIsPlanning(false);
       }
     }
-  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt, notebook]);
+
+  // Phase 5 — Re-plan from a saved trip in the notebook. Loads every saved
+  // param into page state, bumps lastViewedAt, and triggers handlePlanTrip
+  // (always re-fetches — never serves a stale plan because conditions like
+  // traffic/popularity/holiday may have changed since the original plan).
+  const handleReplanFromNotebook = useCallback(
+    (trip: SavedTrip) => {
+      setStart(trip.start);
+      setEnd(trip.end);
+      setStartCoords(trip.startCoords ?? null);
+      setEndCoords(trip.endCoords ?? null);
+      setWaypoints(
+        trip.waypoints.map((wp) => ({
+          name: wp.name ?? '',
+          coords: { lat: wp.lat, lng: wp.lng },
+        })),
+      );
+      setIsLoopTrip(trip.isLoopTrip);
+      // Vehicle: try to fetch fresh data so naming/efficiency stays in sync
+      if (trip.vehicleId) {
+        fetch(`/api/vehicles?id=${encodeURIComponent(trip.vehicleId)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data) {
+              setSelectedVehicle(data);
+              setCustomVehicle(null);
+            }
+          })
+          .catch(() => { /* user can re-pick from the vehicle tab */ });
+      } else if (trip.customVehicle) {
+        setCustomVehicle(trip.customVehicle);
+        setSelectedVehicle(null);
+      }
+      setCurrentBattery(trip.currentBattery);
+      setMinArrival(trip.minArrival);
+      setRangeSafetyFactor(trip.rangeSafetyFactor);
+      setDepartAtRaw(trip.departAt); // skip the picker tracker — this is system-driven, not user choice
+      notebook.touch(trip.id);
+      // The plan auto-fires once state settles — caller can opt to navigate
+      // to the route tab so the user lands on the result, not the form
+    },
+    [notebook],
+  );
 
   // Cancel an in-flight calculation — reverts to previous tripPlan (if any).
   const handleCancelPlanTrip = useCallback(() => {
