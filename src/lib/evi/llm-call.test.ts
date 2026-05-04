@@ -71,4 +71,41 @@ describe('callJsonLLM — primary success', () => {
     expect(callArgs.temperature).toBe(0.1);
     expect(callArgs.response_format).toEqual({ type: 'json_object' });
   });
+
+  it('strips <think>...</think> blocks before JSON.parse', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: '<think>let me think about this...</think>\n{"answer":42}',
+        },
+      }],
+    });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.json).toEqual({ answer: 42 });
+  });
+
+  it('strips ```json ... ``` markdown fences before JSON.parse', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: { content: '```json\n{"wrapped":true}\n```' },
+      }],
+    });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.json).toEqual({ wrapped: true });
+  });
+
+  it('strips both <think> AND ```json fences in one response', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{
+        message: {
+          content: '<think>thinking...</think>\n```json\n{"both":"stripped"}\n```',
+        },
+      }],
+    });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.json).toEqual({ both: 'stripped' });
+  });
 });

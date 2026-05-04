@@ -63,7 +63,22 @@ async function callProvider(
       throw new Error(`${provider.name} returned empty response`);
     }
 
-    return JSON.parse(rawContent);
+    // M2.7 wraps responses in two layers we peel off before JSON.parse:
+    // a <think>...</think> reasoning block (M2.7) and a markdown ```json
+    // fence (returned even when response_format is json_object — observed
+    // in prod 2026-05-04). MiMo Flash is non-thinking, but we keep the
+    // strip defensively in case Xiaomi adds a thinking-Flash variant.
+    const cleaned = rawContent
+      .replace(/<think>[\s\S]*?<\/think>\s*/g, '')
+      .replace(/^\s*```(?:json)?\s*\n?/, '')
+      .replace(/\n?\s*```\s*$/, '')
+      .trim();
+
+    if (!cleaned) {
+      throw new Error(`${provider.name} returned only thinking tags / fences`);
+    }
+
+    return JSON.parse(cleaned);
   } finally {
     clearTimeout(timer);
   }
