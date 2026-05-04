@@ -18,6 +18,7 @@ import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import RouteTimeline, { type RouteTimelineStop } from './RouteTimeline';
 import WhatIfCards, { type WhatIfOption } from './WhatIfCards';
 import StationAmenities from './StationAmenities';
+import StopPopularity, { type StopPopularityI18n } from './StopPopularity';
 import StationDetailExpander from './StationDetailExpander';
 import StationStatusReporter from './StationStatusReporter';
 import StationTrustChip from './StationTrustChip';
@@ -653,9 +654,32 @@ function TripOverviewCard({
 // ── Main Component ──
 
 export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime }: TripSummaryProps) {
-  const { t, tBi } = useLocale();
+  const { t, tBi, locale } = useLocale();
   const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
   const narrativeState = useRouteNarrative(tripPlan);
+
+  // Phase 3b — popularity i18n bag, locale-aware. Dependencies match the
+  // component contract: tests can supply their own bag, runtime uses t().
+  const popularityI18n: StopPopularityI18n = {
+    insufficient: t('popularity_insufficient' as Parameters<typeof t>[0]),
+    formatBusy: (probability, dayOfWeek, hour, isHolidayBoosted) => {
+      const day = t(`popularity_day_${dayOfWeek}` as Parameters<typeof t>[0]);
+      const base = t('popularity_typically_busy' as Parameters<typeof t>[0], {
+        day,
+        hour: String(hour),
+        percent: String(Math.round(probability * 100)),
+      });
+      return isHolidayBoosted
+        ? base + t('popularity_holiday_boosted' as Parameters<typeof t>[0])
+        : base;
+    },
+    formatFree: (dayOfWeek, hour) => {
+      const day = t(`popularity_day_${dayOfWeek}` as Parameters<typeof t>[0]);
+      return t('popularity_typically_free' as Parameters<typeof t>[0], { day, hour: String(hour) });
+    },
+    reserveCta: t('popularity_reserve_cta' as Parameters<typeof t>[0]),
+  };
+  void locale;
 
   const toggleExpanded = (index: number) => {
     setExpandedStops(prev => {
@@ -901,6 +925,15 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
 
                     {/* Station detail expander */}
                     <StationDetailExpander stationId={station.id} stationProvider={station.provider} />
+
+                    {/* Phase 3b — popularity callout for THIS arrival hour.
+                        Until ~end of May 2026 every verdict will be
+                        insufficient-data; the honest copy fills that gap. */}
+                    <StopPopularity
+                      verdict={stop.popularity}
+                      station={{ storeId: station.storeId, stationCode: station.stationCode }}
+                      i18n={popularityI18n}
+                    />
 
                     {/* Phase 4 — nearby amenities (food, ATM, WC, fuel, pharmacy)
                         within walking distance, lazy-fetched on first expand */}

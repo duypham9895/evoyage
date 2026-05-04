@@ -215,6 +215,8 @@ export interface ChargingStopWithAlternatives {
   readonly distanceAlongRouteKm: number;
   readonly batteryPercentAtArrival: number;
   readonly batteryPercentAfterCharge: number;
+  /** Phase 3b — popularity verdict for arrival at this stop. */
+  readonly popularity?: PopularityVerdict;
 }
 
 export interface ScoreStationInput {
