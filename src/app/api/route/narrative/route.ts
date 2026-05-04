@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import OpenAI from 'openai';
 import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
+import { callJsonLLM } from '@/lib/evi/llm-call';
 
-// MiniMax-M2.7 chain-of-thought + JSON generation routinely exceeds the
-// Vercel default (10s) for this prompt; align with the eVi parse route.
-export const maxDuration = 60;
-
-// ── Schema ──
+// Worst case = primaryTimeoutMs (15s, MiMo Flash) + fallbackTimeoutMs (50s,
+// M2.7) + a few seconds of platform overhead. 70s leaves headroom.
+export const maxDuration = 70;
 
 const chargingStopSchema = z.object({
   stationName: z.string().min(1).max(200),
@@ -35,24 +33,10 @@ export interface NarrativeResponse {
   readonly error?: string;
 }
 
-// ── AI Client ──
-
-const MODEL = 'MiniMax-M2.7';
-// Thinking model: a chain-of-thought block precedes the JSON output. Sit
-// just under maxDuration so we control the response (clean 500 with logged
-// reason) instead of letting the Vercel platform kill the function.
-const REQUEST_TIMEOUT_MS = 55_000;
-
-function getClient(): OpenAI {
-  const apiKey = process.env.MINIMAX_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('MINIMAX_API_KEY is not set');
-  }
-  return new OpenAI({
-    apiKey,
-    baseURL: 'https://api.minimax.io/v1',
-  });
-}
+const narrativeResponseSchema = z.object({
+  overview: z.string().min(1),
+  narrative: z.string().min(1),
+});
 
 function buildNarrativePrompt(data: NarrativeRequest): string {
   const stopsText = data.chargingStops.length === 0
@@ -86,10 +70,7 @@ Keep it concise but informative. Use Vietnamese naturally.
 Return as JSON: {"overview": "2-3 sentence summary", "narrative": "full detailed narrative"}`;
 }
 
-// ── Handler ──
-
 export async function POST(request: NextRequest) {
-  // Rate limit: 10 req/min per IP
   const ip = getClientIp(request);
   const limit = await checkRateLimit(`narrative:${ip}`, 10, 60_000, routeLimiter);
   if (!limit.allowed) {
@@ -103,7 +84,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Parse body
   let body: unknown;
   try {
     body = await request.json();
@@ -126,74 +106,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Call Minimax
   try {
     const prompt = buildNarrativePrompt(parsed.data);
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const { json, provider } = await callJsonLLM({
+      systemPrompt: 'You are a Vietnamese EV trip assistant. Always respond with valid JSON.',
+      userMessages: [{ role: 'user', content: prompt }],
+      maxTokens: 4096,
+      temperature: 0.4,
+      primaryTimeoutMs: 15_000,
+      fallbackTimeoutMs: 50_000,
+      callerTag: 'narrative',
+    });
 
-    const response = await getClient().chat.completions.create(
-      {
-        model: MODEL,
-        messages: [
-          { role: 'system', content: 'You are a Vietnamese EV trip assistant. Always respond with valid JSON.' },
-          { role: 'user', content: prompt },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.4,
-        // M2.7's <think> block alone routinely runs 1k–2k tokens; the JSON
-        // narrative on top adds ~300–500. 1024 truncated the JSON mid-string
-        // (observed in prod 2026-05-04). 4096 leaves headroom without
-        // bloating cost — Vercel function still completes well under 60s.
-        max_tokens: 4096,
-      },
-      { signal: controller.signal },
-    );
-
-    clearTimeout(timeout);
-
-    const rawContent = response.choices[0]?.message?.content;
-    if (!rawContent) {
-      throw new Error('Minimax returned empty response');
+    if (provider === 'minimax') {
+      console.warn('[narrative] served via Minimax fallback');
     }
 
-    // MiniMax-M2.7 wraps responses in two layers we need to peel off before
-    // JSON.parse: a `<think>...</think>` chain-of-thought block, and a
-    // markdown ```json ... ``` fence (returned even when response_format is
-    // json_object — observed in prod 2026-05-04).
-    const content = rawContent
-      .replace(/<think>[\s\S]*?<\/think>\s*/g, '')
-      .replace(/^\s*```(?:json)?\s*\n?/, '')
-      .replace(/\n?\s*```\s*$/, '')
-      .trim();
-    if (!content) {
-      throw new Error('Minimax returned only thinking tags');
-    }
-
-    const result = JSON.parse(content);
-
-    const narrativeResult = z.object({
-      overview: z.string().min(1),
-      narrative: z.string().min(1),
-    }).safeParse(result);
-
-    if (!narrativeResult.success) {
+    const result = narrativeResponseSchema.safeParse(json);
+    if (!result.success) {
       throw new Error('AI response missing overview or narrative fields');
     }
 
     return NextResponse.json({
-      overview: narrativeResult.data.overview,
-      narrative: narrativeResult.data.narrative,
+      overview: result.data.overview,
+      narrative: result.data.narrative,
     } satisfies NarrativeResponse);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[narrative] AI generation failed:', message);
 
-    // Don't expose internal errors
-    if (message.includes('MINIMAX_API_KEY is not set')) {
+    if (/Both providers failed/i.test(message)) {
       return NextResponse.json(
-        { overview: null, narrative: null, error: 'AI service not configured' } satisfies NarrativeResponse,
+        { overview: null, narrative: null, error: 'AI service unavailable' } satisfies NarrativeResponse,
         { status: 503 },
       );
     }

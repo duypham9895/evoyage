@@ -9,11 +9,11 @@ vi.mock('@/lib/rate-limit', () => ({
   routeLimiter: null,
 }));
 
-const mockCreate = vi.fn();
-vi.mock('openai', () => ({
-  default: class {
-    chat = { completions: { create: mockCreate } };
-  },
+const { mockCallJsonLLM } = vi.hoisted(() => ({
+  mockCallJsonLLM: vi.fn(),
+}));
+vi.mock('@/lib/evi/llm-call', () => ({
+  callJsonLLM: mockCallJsonLLM,
 }));
 
 // ── Imports (after mocks) ──
@@ -57,14 +57,12 @@ const AI_RESPONSE = {
 
 describe('POST /api/route/narrative', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.MINIMAX_API_KEY = 'test-key';
+    vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, retryAfterSec: 0 });
+    mockCallJsonLLM.mockReset();
   });
 
   it('returns narrative on success', async () => {
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: JSON.stringify(AI_RESPONSE) } }],
-    });
+    mockCallJsonLLM.mockResolvedValueOnce({ json: AI_RESPONSE, provider: 'mimo' });
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
@@ -72,60 +70,6 @@ describe('POST /api/route/narrative', () => {
     expect(res.status).toBe(200);
     expect(data.overview).toBe(AI_RESPONSE.overview);
     expect(data.narrative).toBe(AI_RESPONSE.narrative);
-  });
-
-  it('strips MiniMax thinking tags from response', async () => {
-    mockCreate.mockResolvedValueOnce({
-      choices: [{
-        message: {
-          content: `<think>Let me think about this route...</think>\n${JSON.stringify(AI_RESPONSE)}`,
-        },
-      }],
-    });
-
-    const res = await POST(makeRequest(VALID_BODY));
-    const data = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(data.overview).toBe(AI_RESPONSE.overview);
-    expect(data.narrative).toBe(AI_RESPONSE.narrative);
-  });
-
-  it('strips markdown ```json code fences MiniMax wraps the response in', async () => {
-    // Observed in prod 2026-05-04: MiniMax-M2.7 returns
-    //   ```json\n{"overview": ...}\n```
-    // even when response_format is json_object. Without stripping the fence
-    // JSON.parse throws and the user sees a silent 500.
-    mockCreate.mockResolvedValueOnce({
-      choices: [{
-        message: {
-          content: '```json\n' + JSON.stringify(AI_RESPONSE) + '\n```',
-        },
-      }],
-    });
-
-    const res = await POST(makeRequest(VALID_BODY));
-    const data = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(data.overview).toBe(AI_RESPONSE.overview);
-    expect(data.narrative).toBe(AI_RESPONSE.narrative);
-  });
-
-  it('strips both thinking tags AND markdown fences (combined)', async () => {
-    mockCreate.mockResolvedValueOnce({
-      choices: [{
-        message: {
-          content: `<think>...thinking...</think>\n\`\`\`json\n${JSON.stringify(AI_RESPONSE)}\n\`\`\``,
-        },
-      }],
-    });
-
-    const res = await POST(makeRequest(VALID_BODY));
-    const data = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(data.overview).toBe(AI_RESPONSE.overview);
   });
 
   it('returns 429 when rate limited', async () => {
@@ -168,10 +112,8 @@ describe('POST /api/route/narrative', () => {
     expect(data.error).toContain('Validation failed');
   });
 
-  it('returns 500 when AI returns empty response', async () => {
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '' } }],
-    });
+  it('returns 500 when AI response is missing required fields (schema fails)', async () => {
+    mockCallJsonLLM.mockResolvedValueOnce({ json: { overview: 'ok' }, provider: 'mimo' });
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
@@ -181,26 +123,27 @@ describe('POST /api/route/narrative', () => {
     expect(data.error).toBe('Failed to generate route narrative');
   });
 
-  it('returns 500 when AI response is malformed JSON', async () => {
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: '{"overview": "ok"}' } }],
-    });
+  it('returns 500 when callJsonLLM throws a generic error', async () => {
+    mockCallJsonLLM.mockRejectedValueOnce(new Error('Unexpected internal error'));
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
 
     expect(res.status).toBe(500);
     expect(data.overview).toBeNull();
+    expect(data.error).toBe('Failed to generate route narrative');
   });
 
-  it('returns 503 when MINIMAX_API_KEY is not set', async () => {
-    delete process.env.MINIMAX_API_KEY;
+  it('returns 503 when both LLM providers fail', async () => {
+    mockCallJsonLLM.mockRejectedValueOnce(
+      new Error('Both providers failed. mimo: ECONNREFUSED. minimax: ECONNREFUSED.'),
+    );
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
 
     expect(res.status).toBe(503);
-    expect(data.error).toBe('AI service not configured');
+    expect(data.error).toBe('AI service unavailable');
   });
 
   it('handles trip with no charging stops', async () => {
@@ -210,9 +153,7 @@ describe('POST /api/route/narrative', () => {
       narrative: 'Bạn đủ pin cho toàn bộ chuyến đi.',
     };
 
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: JSON.stringify(noStopsResponse) } }],
-    });
+    mockCallJsonLLM.mockResolvedValueOnce({ json: noStopsResponse, provider: 'mimo' });
 
     const res = await POST(makeRequest(noStopsBody));
     const data = await res.json();
@@ -221,20 +162,19 @@ describe('POST /api/route/narrative', () => {
     expect(data.overview).toBe(noStopsResponse.overview);
   });
 
-  it('passes correct temperature and max_tokens to AI', async () => {
-    mockCreate.mockResolvedValueOnce({
-      choices: [{ message: { content: JSON.stringify(AI_RESPONSE) } }],
-    });
+  it('passes correct temperature, maxTokens, callerTag to callJsonLLM', async () => {
+    mockCallJsonLLM.mockResolvedValueOnce({ json: AI_RESPONSE, provider: 'mimo' });
 
     await POST(makeRequest(VALID_BODY));
 
-    expect(mockCreate).toHaveBeenCalledWith(
+    expect(mockCallJsonLLM).toHaveBeenCalledWith(
       expect.objectContaining({
         temperature: 0.4,
-        max_tokens: 4096,
-        response_format: { type: 'json_object' },
+        maxTokens: 4096,
+        primaryTimeoutMs: 15_000,
+        fallbackTimeoutMs: 50_000,
+        callerTag: 'narrative',
       }),
-      expect.any(Object),
     );
   });
 });

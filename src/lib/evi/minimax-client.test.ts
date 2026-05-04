@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockCreate = vi.fn();
-vi.mock('openai', () => ({
-  default: class MockOpenAI {
-    chat = { completions: { create: mockCreate } };
-  },
+const mockCallJsonLLM = vi.hoisted(() => vi.fn());
+vi.mock('./llm-call', () => ({
+  callJsonLLM: mockCallJsonLLM,
 }));
 
 import { parseTrip } from './minimax-client';
@@ -26,14 +24,12 @@ const VALID_EXTRACTION = {
 
 describe('parseTrip', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.MINIMAX_API_KEY = 'test-key';
-    mockCreate.mockResolvedValue({
-      choices: [{ message: { content: JSON.stringify(VALID_EXTRACTION) } }],
-    });
+    mockCallJsonLLM.mockReset();
   });
 
-  it('caps max_tokens at 1024 to bound the M2.7 reasoning chain', async () => {
+  it('passes maxTokens=1024 to bound any thinking-model reasoning chain', async () => {
+    mockCallJsonLLM.mockResolvedValueOnce({ json: VALID_EXTRACTION, provider: 'mimo' });
+
     await parseTrip({
       message: 'Đi Đà Lạt',
       history: [],
@@ -41,9 +37,36 @@ describe('parseTrip', () => {
       accumulatedParams: null,
     });
 
-    expect(mockCreate).toHaveBeenCalledOnce();
-    const callArgs = mockCreate.mock.calls[0][0] as { max_tokens?: number };
-    expect(callArgs.max_tokens).toBeDefined();
-    expect(callArgs.max_tokens!).toBeLessThanOrEqual(1024);
+    expect(mockCallJsonLLM).toHaveBeenCalledOnce();
+    const callArgs = mockCallJsonLLM.mock.calls[0][0] as { maxTokens: number };
+    expect(callArgs.maxTokens).toBeLessThanOrEqual(1024);
+  });
+
+  it('returns parsed extraction on success', async () => {
+    mockCallJsonLLM.mockResolvedValueOnce({ json: VALID_EXTRACTION, provider: 'mimo' });
+
+    const result = await parseTrip({
+      message: 'Đi Đà Lạt',
+      history: [],
+      vehicleListText: 'VinFast VF 8 (87.7 kWh, 471 km)',
+      accumulatedParams: null,
+    });
+
+    expect(result.endLocation).toBe('Đà Lạt');
+    expect(result.confidence).toBe(0.9);
+  });
+
+  it('tags caller as eVi-parse for log diagnostics', async () => {
+    mockCallJsonLLM.mockResolvedValueOnce({ json: VALID_EXTRACTION, provider: 'mimo' });
+
+    await parseTrip({
+      message: 'test',
+      history: [],
+      vehicleListText: 'VinFast VF 8',
+      accumulatedParams: null,
+    });
+
+    const callArgs = mockCallJsonLLM.mock.calls[0][0] as { callerTag: string };
+    expect(callArgs.callerTag).toBe('eVi-parse');
   });
 });
