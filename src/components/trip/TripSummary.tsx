@@ -865,7 +865,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                   <QuickStats
                     station={station}
                     navigateUrl={navigateUrl}
-                    navigateLabel={t('navigate')}
+                    navigateLabel={t('trip_stop_navigate')}
                   />
                 </div>
 

@@ -119,7 +119,7 @@
   "trip_departure_picker_helper": "(within 7 days)",
   "no_charging_needed": "No charging needed — you have enough range for the entire trip.",
   "charging_stops": "Charging stops",
-  "navigate": "Navigate",
+  "trip_stop_navigate": "Just to this stop",
   "disclaimer": "Actual range depends on speed, AC use, terrain, and cargo. eVoyage uses 80% of published range by default for a realistic estimate.",
 
   "add_vehicle": "Add your vehicle",
