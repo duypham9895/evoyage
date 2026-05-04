@@ -68,7 +68,7 @@ function extractAssistantContent(response: EViParseResponse): string {
 
 // ── Hook ──
 
-export function useEVi(): UseEViReturn {
+export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
   const [state, setState] = useState<EViState>('idle');
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   const [lastResponse, setLastResponse] = useState<EViParseResponse | null>(null);
@@ -199,6 +199,7 @@ export function useEVi(): UseEViReturn {
         content: m.content,
       })),
       tripContext,
+      locale,
     };
 
     fetch('/api/evi/suggestions', {

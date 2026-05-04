@@ -19,6 +19,7 @@ const SuggestionsRequest = z.object({
     currentBattery: z.number().nullable().default(null),
     isComplete: z.boolean().default(false),
   }).nullable().default(null),
+  locale: z.enum(['vi', 'en']).default('vi'),
 });
 
 export type SuggestionsRequestData = z.infer<typeof SuggestionsRequest>;
@@ -53,10 +54,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<Suggestio
     );
   }
 
-  const { messages, tripContext } = parsed.data;
+  const { messages, tripContext, locale } = parsed.data;
 
   try {
-    const suggestions = await generateSuggestions(messages, tripContext);
+    const suggestions = await generateSuggestions(messages, tripContext, locale);
     return NextResponse.json({ suggestions, error: null });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);

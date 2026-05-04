@@ -154,7 +154,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
     isSuggestionsLoading,
     sendMessage,
     reset,
-  } = useEVi();
+  } = useEVi(locale);
   const {
     isSupported,
     isListening,
