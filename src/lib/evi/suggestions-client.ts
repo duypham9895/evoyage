@@ -7,6 +7,8 @@
 import { z } from 'zod';
 import { callJsonLLM } from './llm-call';
 
+type Locale = 'vi' | 'en';
+
 interface ConversationMessage {
   readonly role: 'user' | 'assistant';
   readonly content: string;
@@ -27,6 +29,7 @@ const SuggestionsSchema = z.object({
 function buildSuggestionsPrompt(
   messages: readonly ConversationMessage[],
   tripContext: TripContext | null,
+  locale: Locale,
 ): string {
   const conversationHistory = messages
     .map(m => `${m.role === 'user' ? 'User' : 'eVi'}: ${m.content}`)
@@ -34,16 +37,25 @@ function buildSuggestionsPrompt(
 
   const contextParts: string[] = [];
   if (tripContext) {
-    if (tripContext.start) contextParts.push(`Điểm đi: ${tripContext.start}`);
-    if (tripContext.end) contextParts.push(`Điểm đến: ${tripContext.end}`);
-    if (tripContext.vehicleName) contextParts.push(`Xe: ${tripContext.vehicleName}`);
-    if (tripContext.currentBattery != null) contextParts.push(`Pin: ${tripContext.currentBattery}%`);
-    if (tripContext.isComplete) contextParts.push('Trạng thái: Đã đủ thông tin');
+    if (tripContext.start) contextParts.push(`${locale === 'vi' ? 'Điểm đi' : 'Start'}: ${tripContext.start}`);
+    if (tripContext.end) contextParts.push(`${locale === 'vi' ? 'Điểm đến' : 'Destination'}: ${tripContext.end}`);
+    if (tripContext.vehicleName) contextParts.push(`${locale === 'vi' ? 'Xe' : 'Vehicle'}: ${tripContext.vehicleName}`);
+    if (tripContext.currentBattery != null) contextParts.push(`${locale === 'vi' ? 'Pin' : 'Battery'}: ${tripContext.currentBattery}%`);
+    if (tripContext.isComplete) {
+      contextParts.push(locale === 'vi' ? 'Trạng thái: Đã đủ thông tin' : 'Status: All info collected');
+    }
   }
 
-  const tripContextText = contextParts.length > 0
-    ? contextParts.join('\n')
-    : 'Chưa có thông tin chuyến đi';
+  const noContextText = locale === 'vi' ? 'Chưa có thông tin chuyến đi' : 'No trip info yet';
+  const tripContextText = contextParts.length > 0 ? contextParts.join('\n') : noContextText;
+
+  // MiMo Flash is a Chinese-trained model and tends to leak Chinese characters
+  // into Vietnamese output (observed in prod 2026-05-04). The explicit guard
+  // forces single-language output. M2.7 fallback already respects this naturally.
+  const langName = locale === 'vi' ? 'Vietnamese' : 'English';
+  const langGuard = locale === 'vi'
+    ? 'Quan trọng: Phản hồi PHẢI hoàn toàn bằng tiếng Việt. KHÔNG dùng ký tự tiếng Trung hoặc tiếng Anh trong câu hỏi.'
+    : 'Important: Response MUST be entirely in English. Do NOT mix in Vietnamese or Chinese characters.';
 
   return `You are eVi, an EV road trip assistant for Vietnam.
 
@@ -53,10 +65,12 @@ ${conversationHistory}
 Trip context so far:
 ${tripContextText}
 
-Generate exactly 3 short follow-up questions (in Vietnamese) the user would most likely want to ask next. Each question should be:
+Generate exactly 3 short follow-up questions (in ${langName}) the user would most likely want to ask next. Each question should be:
 - Contextually relevant to what was just discussed
 - Actionable (leads to useful information)
-- Short enough to fit in a button (max 40 characters Vietnamese)
+- Short enough to fit in a button (max 40 characters)
+
+${langGuard}
 
 Return as JSON: {"suggestions": ["question1", "question2", "question3"]}`;
 }
@@ -64,14 +78,19 @@ Return as JSON: {"suggestions": ["question1", "question2", "question3"]}`;
 export async function generateSuggestions(
   messages: readonly ConversationMessage[],
   tripContext: TripContext | null,
+  locale: Locale = 'vi',
 ): Promise<readonly string[]> {
-  const systemPrompt = buildSuggestionsPrompt(messages, tripContext);
+  const systemPrompt = buildSuggestionsPrompt(messages, tripContext, locale);
 
   try {
     const { json, provider } = await callJsonLLM({
       systemPrompt,
       userMessages: [{ role: 'user', content: 'Generate the chips now.' }],
-      maxTokens: 512,
+      // 2048 instead of 512: M2.7's chain-of-thought routinely runs 1-2k tokens;
+      // a 512-token cap truncates it before the JSON is emitted, causing silent
+      // empty chips on every fallback. MiMo Flash is non-thinking and uses only
+      // what it needs, so the bigger ceiling has no perf cost on the primary path.
+      maxTokens: 2048,
       temperature: 0.3,
       primaryTimeoutMs: 3000,
       fallbackTimeoutMs: 3000,
