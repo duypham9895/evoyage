@@ -190,3 +190,30 @@ describe('callJsonLLM — fallback on hard errors', () => {
     await expect(callJsonLLM(SAMPLE_INPUT)).rejects.toThrow(/both providers failed/i);
   });
 });
+
+describe('callJsonLLM — non-fallback paths', () => {
+  it('does not fall back when MiMo returns malformed JSON', async () => {
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: 'not json at all' } }],
+    });
+
+    await expect(callJsonLLM(SAMPLE_INPUT)).rejects.toThrow();
+    expect(mockCreate).toHaveBeenCalledTimes(1); // no fallback
+  });
+
+  it('does not fall back on HTTP 400 (caller bug, not infrastructure)', async () => {
+    const apiErr = Object.assign(new Error('Bad Request'), { status: 400 });
+    mockCreate.mockRejectedValueOnce(apiErr);
+
+    await expect(callJsonLLM(SAMPLE_INPUT)).rejects.toThrow(/Bad Request/);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fall back on HTTP 401 (auth issue, fallback would also fail)', async () => {
+    const apiErr = Object.assign(new Error('Unauthorized'), { status: 401 });
+    mockCreate.mockRejectedValueOnce(apiErr);
+
+    await expect(callJsonLLM(SAMPLE_INPUT)).rejects.toThrow(/Unauthorized/);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+});
