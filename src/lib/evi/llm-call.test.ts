@@ -109,3 +109,84 @@ describe('callJsonLLM — primary success', () => {
     expect(result.json).toEqual({ both: 'stripped' });
   });
 });
+
+describe('callJsonLLM — fallback on hard errors', () => {
+  function expectMimoThenMinimaxCalled() {
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(constructorCalls).toHaveLength(2);
+    expect(constructorCalls[0].baseURL).toBe('https://api.xiaomimimo.com/v1');
+    expect(constructorCalls[1].baseURL).toBe('https://api.minimax.io/v1');
+  }
+
+  it('falls back to Minimax when MiMo throws a network error', async () => {
+    mockCreate
+      .mockRejectedValueOnce(new Error('ECONNREFUSED 127.0.0.1:443'))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.json).toEqual({ from: 'minimax' });
+    expect(result.provider).toBe('minimax');
+    expectMimoThenMinimaxCalled();
+  });
+
+  it('falls back when MiMo is aborted by timeout', async () => {
+    const abortErr = Object.assign(new Error('Request was aborted.'), { name: 'AbortError' });
+    mockCreate
+      .mockRejectedValueOnce(abortErr)
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.provider).toBe('minimax');
+    expectMimoThenMinimaxCalled();
+  });
+
+  it('falls back on HTTP 5xx', async () => {
+    const apiErr = Object.assign(new Error('Internal Server Error'), { status: 500 });
+    mockCreate
+      .mockRejectedValueOnce(apiErr)
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.provider).toBe('minimax');
+    expectMimoThenMinimaxCalled();
+  });
+
+  it('falls back on HTTP 429 rate limit', async () => {
+    const apiErr = Object.assign(new Error('Too Many Requests'), { status: 429 });
+    mockCreate
+      .mockRejectedValueOnce(apiErr)
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.provider).toBe('minimax');
+    expectMimoThenMinimaxCalled();
+  });
+
+  it('falls back when MiMo returns empty content', async () => {
+    mockCreate
+      .mockResolvedValueOnce({ choices: [{ message: { content: '' } }] })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callJsonLLM(SAMPLE_INPUT);
+    expect(result.provider).toBe('minimax');
+    expectMimoThenMinimaxCalled();
+  });
+
+  it('throws aggregate error when both providers fail', async () => {
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 503 }))
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+    await expect(callJsonLLM(SAMPLE_INPUT)).rejects.toThrow(/both providers failed/i);
+  });
+});

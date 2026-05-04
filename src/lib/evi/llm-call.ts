@@ -84,11 +84,52 @@ async function callProvider(
   }
 }
 
-export async function callJsonLLM(input: CallJsonLLMInput): Promise<CallJsonLLMResult> {
-  const json = await callProvider(PRIMARY_PROVIDER, input, input.primaryTimeoutMs);
-  return { json, provider: PRIMARY_PROVIDER.name };
+function isHardInfrastructureError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  // Aborts (timeout)
+  if (err.name === 'AbortError') return true;
+  if (/abort/i.test(err.message)) return true;
+  // OpenAI APIError shape — surfaces .status
+  const status = (err as { status?: number }).status;
+  if (typeof status === 'number') {
+    if (status === 429 || status >= 500) return true;
+  }
+  // Network / connection errors (ECONNRESET, ECONNREFUSED, ENOTFOUND, ETIMEDOUT)
+  if (/(ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|network)/i.test(err.message)) {
+    return true;
+  }
+  // Empty content (we throw this ourselves above)
+  if (/returned empty response|returned only thinking/i.test(err.message)) {
+    return true;
+  }
+  return false;
 }
 
-// FALLBACK_PROVIDER is referenced here to prevent tree-shaking; Task 5 will
-// wire it into the orchestration logic.
-void FALLBACK_PROVIDER;
+export async function callJsonLLM(input: CallJsonLLMInput): Promise<CallJsonLLMResult> {
+  let primaryError: Error | null = null;
+
+  try {
+    const json = await callProvider(PRIMARY_PROVIDER, input, input.primaryTimeoutMs);
+    return { json, provider: PRIMARY_PROVIDER.name };
+  } catch (err) {
+    primaryError = err instanceof Error ? err : new Error(String(err));
+
+    if (!isHardInfrastructureError(primaryError)) {
+      throw primaryError;
+    }
+
+    console.warn(
+      `[llm-call] callerTag=${input.callerTag} primary=${PRIMARY_PROVIDER.name} failed: ${primaryError.message} — falling back to ${FALLBACK_PROVIDER.name}`,
+    );
+  }
+
+  try {
+    const json = await callProvider(FALLBACK_PROVIDER, input, input.fallbackTimeoutMs);
+    return { json, provider: FALLBACK_PROVIDER.name };
+  } catch (fallbackErr) {
+    const fallbackMessage = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+    throw new Error(
+      `Both providers failed. ${PRIMARY_PROVIDER.name}: ${primaryError?.message ?? 'unknown'}. ${FALLBACK_PROVIDER.name}: ${fallbackMessage}`,
+    );
+  }
+}
