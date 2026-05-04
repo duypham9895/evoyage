@@ -9,6 +9,7 @@ import { fetchDirectionsMapbox } from '@/lib/routing/mapbox-directions';
 import { fetchTrafficAwareDirections, MapboxTrafficError } from '@/lib/routing/mapbox-traffic';
 import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import { isHoliday } from '@/lib/trip/vietnam-holidays';
+import { queryStationPopularity } from '@/lib/station/popularity-query';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/routing/route-planner';
 import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
@@ -470,10 +471,44 @@ export async function POST(request: NextRequest) {
         }
       : undefined;
 
+    // Phase 3b — enrich each stop with a popularity verdict for the user's
+    // expected arrival hour at THAT stop. Arrival = departure (or now) + the
+    // adjusted travel time *up to* that stop. Charging stops are sequential
+    // so we accumulate their drive times to anchor each stop's arrival
+    // moment correctly.
+    const departureMomentMs = departureMoment.getTime();
+    let cumulativeDriveSec = 0;
+    const enrichedChargingStops = await Promise.all(
+      plan.chargingStops.map(async (stop) => {
+        const station = 'selected' in stop ? stop.selected.station : stop.station;
+        // distanceFromStart is the only positional anchor we have; convert to
+        // a fraction of the total trip and apply the heuristic-adjusted total
+        // duration so traffic shows up in arrival predictions.
+        const distFromStart =
+          'selected' in stop ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
+        const fraction = totalDistanceKm > 0 ? distFromStart / totalDistanceKm : 0;
+        const driveSec = (adjustedDurationMin * 60) * fraction;
+        cumulativeDriveSec = driveSec; // sequential anchor against total — not additive across stops
+        const arrivalAtIso = new Date(departureMomentMs + driveSec * 1000).toISOString();
+        try {
+          const popularity = await queryStationPopularity({
+            prisma,
+            stationId: station.id,
+            arrivalAtIso,
+          });
+          return { ...stop, popularity };
+        } catch {
+          // Heatmap lookup failure must never break the trip plan
+          return stop;
+        }
+      }),
+    );
+    void cumulativeDriveSec;
+
     const tripPlan: TripPlan = {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
       totalDurationMin: adjustedDurationMin,
-      chargingStops: plan.chargingStops,
+      chargingStops: enrichedChargingStops,
       warnings: plan.warnings,
       batterySegments: plan.batterySegments,
       arrivalBatteryPercent: plan.arrivalBatteryPercent,

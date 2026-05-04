@@ -91,6 +91,9 @@ export interface ChargingStationData {
   readonly parkingFee: boolean | null;
   /** Crowdsourced verification timestamp — set when latest report is WORKING. */
   readonly lastVerifiedAt?: string | Date | null;
+  /** VinFast-specific identifiers used by Phase 3b's reservation deep-link. */
+  readonly storeId?: string | null;
+  readonly stationCode?: string | null;
 }
 
 // ── Route Planning Types ──
@@ -99,12 +102,32 @@ export interface LatLng {
   readonly lng: number;
 }
 
+/**
+ * Phase 3b — Per-stop popularity verdict. Mirrors the shape returned by
+ * src/lib/station/popularity-query.ts so the type can be consumed without
+ * importing from server-only modules.
+ */
+export interface PopularityReadyVerdict {
+  readonly kind: 'ready';
+  readonly busyProbability: number;
+  readonly sampleCount: number;
+  readonly dayOfWeek: number;
+  readonly hour: number;
+  readonly isHolidayBoosted: boolean;
+}
+export interface PopularityInsufficientVerdict {
+  readonly kind: 'insufficient-data';
+}
+export type PopularityVerdict = PopularityReadyVerdict | PopularityInsufficientVerdict;
+
 export interface ChargingStop {
   readonly station: ChargingStationData;
   readonly distanceFromStartKm: number;
   readonly arrivalBatteryPercent: number;
   readonly departureBatteryPercent: number;
   readonly estimatedChargingTimeMin: number;
+  /** Phase 3b — populated when the heatmap has data for this arrival hour. */
+  readonly popularity?: PopularityVerdict;
 }
 
 export interface NoStationWarning {
