@@ -51,6 +51,7 @@ export default function MapLocateButton({
   // When location is acquired, fetch nearby stations
   useEffect(() => {
     if (loading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Tracked in docs/specs/2026-05-04-react-hooks-set-state-cleanup.md (Category B)
       setButtonState('loading');
       return;
     }
@@ -155,7 +156,7 @@ export default function MapLocateButton({
         onClick={handleTap}
         disabled={loading}
         aria-label={t('nearby_locate_button')}
-        className={`absolute bottom-20 right-4 z-10 w-11 h-11 rounded-xl bg-[var(--color-surface)] border-[1.5px] ${borderColor} flex items-center justify-center transition-all active:scale-95 shadow-lg`}
+        className={`absolute bottom-20 right-4 z-10 w-11 h-11 rounded-xl bg-white border-[1.5px] ${borderColor} flex items-center justify-center transition-all active:scale-95 shadow-lg`}
       >
         {buttonState === 'loading' ? (
           <span className="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
