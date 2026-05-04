@@ -209,17 +209,6 @@
   "landing_hero_stat_provinces": "Provinces & cities",
   "landing_hero_stats_freshness": "Charging-station count auto-updated daily · last sync {{date}}",
 
-  "landing_prices_heading": "Today's prices in Vietnam",
-  "landing_prices_gasoline": "Gasoline RON 95-III",
-  "landing_prices_diesel": "Diesel DO 0,05S",
-  "landing_prices_electric_home": "Electricity at home (EVN)",
-  "landing_prices_electric_home_caption": "tier 4 · 201–300 kWh/month",
-  "landing_prices_vgreen": "V-GREEN public charging",
-  "landing_prices_vgreen_caption": "free for VinFast owners until 2029",
-  "landing_prices_unit_liter": "/ liter",
-  "landing_prices_unit_kwh": "/ kWh",
-  "landing_prices_freshness": "Auto-updated daily · last sync {{date}} · Petrolimex, EVN, V-GREEN",
-
   "landing_how_title": "How it works",
   "landing_step1_title": "Choose your vehicle",
   "landing_step1_desc": "Pick from dozens of EVs sold in Vietnam — or enter your own battery and range specs.",
