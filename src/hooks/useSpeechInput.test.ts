@@ -134,6 +134,32 @@ describe('useSpeechInput', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it('falls back to Whisper when Web Speech reports network (Brave de-Googles Web Speech)', () => {
+    mockIsWebSpeechSupported.mockReturnValue(true);
+    mockIsWhisperSupported.mockReturnValue(true);
+
+    let webSpeechCallbacks: any = null;
+    const webEngine = makeMockEngine('web-speech');
+    mockCreateWebSpeech.mockImplementation((cb: any) => {
+      webSpeechCallbacks = cb;
+      return webEngine;
+    });
+
+    const whisperEngine = makeMockEngine('whisper');
+    mockCreateWhisper.mockReturnValue(whisperEngine);
+
+    const { result } = renderHook(() => useSpeechInput('vi'));
+    act(() => { result.current.startListening(); });
+
+    // Brave's Web Speech can't reach Google → fires 'network'
+    act(() => { webSpeechCallbacks.onError('network'); });
+
+    expect(mockCreateWhisper).toHaveBeenCalled();
+    expect(whisperEngine.start).toHaveBeenCalledWith('vi');
+    // Error should NOT be surfaced to UI — fallback handled it
+    expect(result.current.error).toBeNull();
+  });
+
   it('falls back to Whisper when Web Speech reports not_allowed', () => {
     mockIsWebSpeechSupported.mockReturnValue(true);
     mockIsWhisperSupported.mockReturnValue(true);

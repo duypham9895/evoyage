@@ -104,9 +104,13 @@ export function useSpeechInput(locale: string = 'vi'): UseSpeechInputReturn {
             }
           },
           onError: (err) => {
-            // If Web Speech fails with not_allowed, auto-switch to Whisper
+            // Auto-switch to Whisper when Web Speech can't run for browser-specific
+            // reasons. 'network' covers Brave: Web Speech in Chromium calls Google's
+            // speech-recognition backend, and Brave blocks Google by default — the API
+            // surfaces this as a generic 'network' error. Whisper hits our own
+            // /api/transcribe so it's unaffected.
             if (
-              (err === 'not_allowed' || err === 'recognition_failed') &&
+              (err === 'not_allowed' || err === 'recognition_failed' || err === 'network') &&
               !fallbackAttempted.current &&
               isWhisperSupported()
             ) {
