@@ -17,10 +17,21 @@ function makeAudioFormData(locale = 'vi-VN', audioSize = 2048): FormData {
   return fd;
 }
 
-describe('POST /api/transcribe', () => {
+// Helper: build a fake fetch Response object
+function makeResponse(status: number, body: unknown): Response {
+  return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+describe('POST /api/transcribe (Groq Whisper)', () => {
+  let fetchSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
-    vi.stubEnv('MINIMAX_API_KEY', 'test-api-key');
-    global.fetch = vi.fn();
+    vi.stubEnv('GROQ_API_KEY', 'test-groq-key');
+    fetchSpy = vi.fn();
+    global.fetch = fetchSpy as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -28,8 +39,8 @@ describe('POST /api/transcribe', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns 503 when MINIMAX_API_KEY is not set', async () => {
-    vi.stubEnv('MINIMAX_API_KEY', '');
+  it('returns 503 when GROQ_API_KEY is not set', async () => {
+    vi.stubEnv('GROQ_API_KEY', '');
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
@@ -73,18 +84,8 @@ describe('POST /api/transcribe', () => {
     expect(data.error).toBe('file_too_large');
   });
 
-  it('returns transcription on successful MiniMax flow', async () => {
-    // Mock create response
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ generation_id: 'gen-123' }),
-      })
-      // Mock poll response (succeeded)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: 'succeeded', text: 'Đi Đà Lạt cuối tuần' }),
-      });
+  it('returns transcription on successful Groq response', async () => {
+    fetchSpy.mockResolvedValue(makeResponse(200, { text: 'Đi Đà Lạt cuối tuần' }));
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
@@ -92,120 +93,62 @@ describe('POST /api/transcribe', () => {
 
     expect(response.status).toBe(200);
     expect(data.text).toBe('Đi Đà Lạt cuối tuần');
+    // OpenAI SDK may make 1+ internal fetch calls; we only care that the route
+    // returned the Groq transcript correctly.
   });
 
-  it('polls multiple times until succeeded', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ generation_id: 'gen-456' }),
-      })
-      // First poll: still processing
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: 'processing' }),
-      })
-      // Second poll: succeeded
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: 'succeeded', text: 'Hà Nội đi Đà Nẵng' }),
-      });
+  it('hits the Groq audio transcriptions endpoint with Bearer auth', async () => {
+    fetchSpy.mockResolvedValue(makeResponse(200, { text: 'hi' }));
+
+    const fd = makeAudioFormData();
+    await POST(makeRequest(fd));
+
+    // OpenAI SDK makes internal fetch() calls (e.g. data: URIs to wrap the file).
+    // Grab the call that actually hit Groq.
+    const groqCall = fetchSpy.mock.calls.find(([url]) =>
+      String(url).includes('api.groq.com'),
+    );
+    expect(groqCall, 'expected a fetch to api.groq.com').toBeDefined();
+
+    const [url, init] = groqCall!;
+    expect(String(url)).toContain('api.groq.com/openai/v1/audio/transcriptions');
+    const headers = init?.headers as Headers | Record<string, string> | undefined;
+    const authValue = headers instanceof Headers
+      ? headers.get('authorization')
+      : (headers?.['Authorization'] ?? headers?.['authorization']);
+    expect(authValue).toBe('Bearer test-groq-key');
+  });
+
+  it('returns 500 with transcription_failed on generic Groq error', async () => {
+    fetchSpy.mockResolvedValue(makeResponse(500, { error: 'server error' }));
+
+    const fd = makeAudioFormData();
+    const response = await POST(makeRequest(fd));
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toBe('transcription_failed');
+  });
+
+  it('returns 503 with provider_unavailable when Groq returns 401', async () => {
+    fetchSpy.mockResolvedValue(makeResponse(401, { error: { message: 'Invalid API Key' } }));
+
+    const fd = makeAudioFormData();
+    const response = await POST(makeRequest(fd));
+    const data = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(data.error).toBe('provider_unavailable');
+  });
+
+  it('returns empty text when Groq returns null transcript', async () => {
+    fetchSpy.mockResolvedValue(makeResponse(200, { text: null }));
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.text).toBe('Hà Nội đi Đà Nẵng');
-    // 1 create + 2 polls = 3 fetch calls
-    expect(global.fetch).toHaveBeenCalledTimes(3);
-  });
-
-  it('returns 500 when MiniMax create request fails', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    });
-
-    const fd = makeAudioFormData();
-    const response = await POST(makeRequest(fd));
-    const data = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(data.error).toBe('transcription_failed');
-  });
-
-  it('returns 500 when MiniMax returns no generation_id', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ base_resp: { status_code: 0 } }),
-    });
-
-    const fd = makeAudioFormData();
-    const response = await POST(makeRequest(fd));
-    const data = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(data.error).toBe('transcription_failed');
-  });
-
-  it('returns 500 when transcription job fails', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ generation_id: 'gen-789' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
-          status: 'failed',
-          base_resp: { status_msg: 'Invalid audio format' },
-        }),
-      });
-
-    const fd = makeAudioFormData();
-    const response = await POST(makeRequest(fd));
-    const data = await response.json();
-
-    expect(response.status).toBe(500);
-    expect(data.error).toBe('transcription_failed');
-  });
-
-  it('sends correct Authorization header to MiniMax', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ generation_id: 'gen-auth' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: 'succeeded', text: 'test' }),
-      });
-
-    const fd = makeAudioFormData();
-    await POST(makeRequest(fd));
-
-    const createCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(createCall[0]).toContain('/stt/create');
-    expect(createCall[1].headers.Authorization).toBe('Bearer test-api-key');
-  });
-
-  it('passes language code extracted from locale', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ generation_id: 'gen-lang' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: 'succeeded', text: 'Go to Da Lat' }),
-      });
-
-    const fd = makeAudioFormData('en-US');
-    await POST(makeRequest(fd));
-
-    // The create call should include model and language in FormData
-    const createCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(createCall[0]).toContain('/stt/create');
+    expect(data.text).toBe('');
   });
 });

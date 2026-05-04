@@ -1,35 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-// MiniMax STT is async (create job → poll up to 15s) plus upload + parse;
-// the Vercel default (10s) would kill the function mid-poll. 30s leaves
-// headroom above POLL_TIMEOUT_MS without bloating cost.
-export const maxDuration = 30;
+// Groq's Whisper-large-v3 typically returns in <1s. 15s is plenty of headroom
+// for cold starts or large files; default Vercel 10s would be tight on the
+// upper end. Cheaper than the 30s we needed for MiniMax's async polling.
+export const maxDuration = 15;
 
-const MINIMAX_API_BASE = 'https://api.minimax.io/v1';
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+const STT_MODEL = 'whisper-large-v3';
 const MAX_AUDIO_SIZE = 5 * 1024 * 1024; // 5MB
-const POLL_INTERVAL_MS = 500;
-const POLL_TIMEOUT_MS = 15_000;
-
-interface MiniMaxCreateResponse {
-  readonly generation_id?: string;
-  readonly base_resp?: { readonly status_code?: number; readonly status_msg?: string };
-}
-
-interface MiniMaxResultResponse {
-  readonly status?: string;
-  readonly text?: string;
-  readonly base_resp?: { readonly status_code?: number; readonly status_msg?: string };
-}
 
 function getApiKey(): string | null {
-  return process.env.MINIMAX_API_KEY?.trim() || null;
+  return process.env.GROQ_API_KEY?.trim() || null;
 }
 
 /**
  * POST /api/transcribe
  *
- * Accepts audio file + locale, transcribes via MiniMax STT API.
- * Handles MiniMax's async pattern: create job → poll for result.
+ * Accepts audio file + locale, transcribes via Groq's Whisper-large-v3.
+ * Single synchronous call — Groq's LPU returns sub-second so no polling needed.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const apiKey = getApiKey();
@@ -67,7 +56,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // Validate MIME type — only accept audio formats
   const allowedTypes = ['audio/webm', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm;codecs=opus'];
   if (audioFile.type && !allowedTypes.some(t => audioFile.type.startsWith(t.split(';')[0]))) {
     return NextResponse.json(
@@ -84,81 +72,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    // Step 1: Create transcription job
-    const createForm = new FormData();
-    createForm.append('file', audioFile, audioFile.name);
-    createForm.append('model', 'g1_whisper-large');
-    createForm.append('language', locale.split('-')[0]); // 'vi' or 'en'
+    const client = new OpenAI({ apiKey, baseURL: GROQ_BASE_URL });
 
-    const createResponse = await fetch(`${MINIMAX_API_BASE}/stt/create`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: createForm,
+    const result = await client.audio.transcriptions.create({
+      file: audioFile,
+      model: STT_MODEL,
+      language: locale.split('-')[0], // 'vi' or 'en'
     });
 
-    if (!createResponse.ok) {
-      console.error('[transcribe] MiniMax create failed:', createResponse.status);
-      return NextResponse.json(
-        { error: 'transcription_failed', message: 'Failed to start transcription' },
-        { status: 500 },
-      );
-    }
-
-    const createData = await createResponse.json() as MiniMaxCreateResponse;
-    const generationId = createData.generation_id;
-
-    if (!generationId) {
-      console.error('[transcribe] MiniMax create response missing generation_id:', createData);
-      return NextResponse.json(
-        { error: 'transcription_failed', message: 'Transcription service returned invalid response' },
-        { status: 500 },
-      );
-    }
-
-    // Step 2: Poll for result
-    const startTime = Date.now();
-    while (Date.now() - startTime < POLL_TIMEOUT_MS) {
-      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-
-      const pollResponse = await fetch(`${MINIMAX_API_BASE}/stt/${generationId}`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      });
-
-      if (!pollResponse.ok) {
-        console.error('[transcribe] MiniMax poll failed:', pollResponse.status);
-        continue;
-      }
-
-      const pollData = await pollResponse.json() as MiniMaxResultResponse;
-
-      if (pollData.status === 'succeeded') {
-        return NextResponse.json({ text: pollData.text ?? '' });
-      }
-
-      if (pollData.status === 'failed') {
-        console.error('[transcribe] MiniMax transcription failed:', pollData.base_resp?.status_msg);
-        return NextResponse.json(
-          { error: 'transcription_failed', message: 'Transcription failed' },
-          { status: 500 },
-        );
-      }
-
-      // Still processing — continue polling
-    }
-
-    // Timeout
-    return NextResponse.json(
-      { error: 'transcription_failed', message: 'Transcription timed out' },
-      { status: 504 },
-    );
+    return NextResponse.json({ text: result.text ?? '' });
   } catch (err) {
-    console.error('[transcribe] Unexpected error:', err);
+    console.error('[transcribe] Groq Whisper error:', err);
+    if (err instanceof OpenAI.APIError && err.status === 401) {
+      return NextResponse.json(
+        { error: 'provider_unavailable', message: 'Transcription auth failed' },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
-      { error: 'transcription_failed', message: 'Internal server error' },
+      { error: 'transcription_failed', message: 'Transcription failed' },
       { status: 500 },
     );
   }
