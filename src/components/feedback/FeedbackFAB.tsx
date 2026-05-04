@@ -14,6 +14,10 @@ const BUTTON_SIZE = 44;
 const EDGE_PADDING = 12;
 const DRAG_THRESHOLD = 5;
 const SNAP_DURATION = 200;
+// MapLocateButton on desktop is `absolute bottom-20 right-4` inside the map.
+// When FAB snaps to the right edge, push it above this zone so it never re-covers Locate.
+const LOCATE_BOTTOM_OFFSET = 80; // bottom-20 = 5rem = 80px
+const LOCATE_AVOIDANCE_GAP = 20;
 
 interface SavedPosition {
   readonly x: number;
@@ -107,19 +111,29 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
         ? EDGE_PADDING
         : vw - BUTTON_SIZE - EDGE_PADDING;
 
-      const clampedY = clampY(currentY);
+      let snapY = clampY(currentY);
+
+      // Avoid covering MapLocateButton when snapping to right edge on desktop
+      if (edge === 'right' && breakpoint === 'desktop') {
+        const locateTop = window.innerHeight - LOCATE_BOTTOM_OFFSET - BUTTON_SIZE;
+        const locateBottom = window.innerHeight - LOCATE_BOTTOM_OFFSET;
+        const fabBottom = snapY + BUTTON_SIZE;
+        if (fabBottom > locateTop && snapY < locateBottom) {
+          snapY = clampY(locateTop - LOCATE_AVOIDANCE_GAP - BUTTON_SIZE);
+        }
+      }
 
       setIsDragging(false);
       isDraggingRef.current = false;
 
       requestAnimationFrame(() => {
-        const pos = { x: snapX, y: clampedY };
+        const pos = { x: snapX, y: snapY };
         setDragPosition(pos);
         hapticLight();
 
         safeSetItem('evoyage-fab-position', {
           x: snapX,
-          y: clampedY,
+          y: snapY,
           edge,
           breakpoint,
         } satisfies SavedPosition);
@@ -244,7 +258,7 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
         title={t('feedback_title')}
         style={inlineStyle}
         className={`
-          ${dragPosition ? '' : 'fixed z-[800] right-3 bottom-[calc(55vh+8px)] lg:bottom-20 lg:right-6'}
+          ${dragPosition ? '' : 'fixed z-[800] right-3 bottom-[calc(55vh+8px)] lg:bottom-36 lg:right-4'}
           w-11 h-11
           rounded-full
           bg-[var(--color-accent)] border border-[var(--color-accent-dim)]

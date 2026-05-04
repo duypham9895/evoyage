@@ -115,4 +115,43 @@ describe('FeedbackFAB', () => {
     const button = screen.getByRole('button', { name: /feedback/i });
     expect(button.className).toContain('touch-none');
   });
+
+  // T29: dragging FAB to a Y that would cover MapLocateButton snaps it above
+  it('T29: snap-to-right pushes FAB above MapLocateButton zone on desktop', () => {
+    // jsdom lacks setPointerCapture; stub it on every element to avoid TypeError
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+
+    const VH = 900;
+    const VW = 1440;
+    setViewport(VW, VH);
+
+    render(<FeedbackFAB />);
+    const button = screen.getByRole('button', { name: /feedback/i });
+
+    // Default CSS position has zero rect in jsdom — start drag from a known origin
+    const startX = 100;
+    const startY = 100;
+    // Target Y inside the MapLocateButton zone: bottom-20 = 80px from bottom,
+    // so locate occupies y ∈ [VH-124, VH-80]. Pick mid-zone Y = 786.
+    const targetY = VH - 100; // 800 — clearly inside locate zone
+    const targetX = VW - 30;  // right side, will snap to right edge
+
+    fireEvent.pointerDown(button, { pointerId: 1, clientX: startX, clientY: startY });
+    fireEvent.pointerMove(button, { pointerId: 1, clientX: targetX, clientY: targetY });
+    fireEvent.pointerUp(button, { pointerId: 1, clientX: targetX, clientY: targetY });
+
+    // Wait one rAF tick — snapToEdge defers state via requestAnimationFrame
+    return new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        const saved = JSON.parse(localStorage.getItem('evoyage-fab-position') || 'null');
+        expect(saved).not.toBeNull();
+        expect(saved.edge).toBe('right');
+        // Locate zone bottom = VH - 80 = 820. FAB top must be above locate top (VH-124=776) minus gap.
+        // Expected snapY = clamp(776 - 20 - 44) = 712
+        expect(saved.y).toBeLessThanOrEqual(776 - 20 - 44 + 1);
+        resolve();
+      });
+    });
+  });
 });
