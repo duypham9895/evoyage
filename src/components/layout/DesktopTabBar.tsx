@@ -13,6 +13,7 @@ const TABS: readonly { readonly id: DesktopSidebarTab; readonly labelKey: string
   { id: 'evi', labelKey: 'desktop_tab_evi', panelId: 'desktop-tabpanel-evi' },
   { id: 'planTrip', labelKey: 'desktop_tab_plan', panelId: 'desktop-tabpanel-plan' },
   { id: 'stations', labelKey: 'desktop_tab_stations', panelId: 'desktop-tabpanel-stations' },
+  { id: 'notebook', labelKey: 'notebook_tab', panelId: 'desktop-tabpanel-notebook' },
 ];
 
 export default function DesktopTabBar({ activeTab, onTabChange }: DesktopTabBarProps) {

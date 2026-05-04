@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
 import { trackTripPlanned, trackDeparturePicked } from '@/lib/analytics';
 import { createNotebookStore, type SavedTrip } from '@/lib/trip/notebook-store';
+import TripNotebook, { type TripNotebookI18n } from '@/components/trip/TripNotebook';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
@@ -105,6 +106,26 @@ function HomeContent() {
 
   /** Phase 5 — saved-trip notebook (localStorage). One instance per page lifetime. */
   const notebook = useMemo(() => createNotebookStore(), []);
+
+  /** Phase 5 — TripNotebook i18n. Memoised so the child doesn't re-render on every page render. */
+  const notebookI18n: TripNotebookI18n = useMemo(() => ({
+    heading: t('notebook_heading' as Parameters<typeof t>[0]),
+    empty: t('notebook_empty' as Parameters<typeof t>[0]),
+    replan: t('notebook_replan' as Parameters<typeof t>[0]),
+    pin: t('notebook_pin' as Parameters<typeof t>[0]),
+    unpin: t('notebook_unpin' as Parameters<typeof t>[0]),
+    remove: t('notebook_remove' as Parameters<typeof t>[0]),
+    vehicleMissing: t('notebook_vehicle_missing' as Parameters<typeof t>[0]),
+    savedAgo: t('notebook_saved_ago' as Parameters<typeof t>[0], { when: '{{when}}' }),
+    formatRelative: (iso: string) => {
+      const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+      if (diffMin < 1) return t('notebook_relative_just_now' as Parameters<typeof t>[0]);
+      if (diffMin < 60) return t('notebook_relative_minutes' as Parameters<typeof t>[0], { count: String(diffMin) });
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return t('notebook_relative_hours' as Parameters<typeof t>[0], { count: String(diffHr) });
+      return t('notebook_relative_days' as Parameters<typeof t>[0], { count: String(Math.floor(diffHr / 24)) });
+    },
+  }), [t]);
 
   // Trip result
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
@@ -943,7 +964,23 @@ function HomeContent() {
 
           {/* Sidebar content — 150ms fade-in transition on tab switch */}
           <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-            {desktopSidebarTab === 'stations' ? (
+            {desktopSidebarTab === 'notebook' ? (
+              <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-notebook" aria-labelledby="desktop-tab-notebook">
+                <TripNotebook
+                  store={notebook}
+                  resolveVehicleName={(vehicleId) => {
+                    if (!vehicleId) return customVehicle ? `${customVehicle.brand} ${customVehicle.model}` : null;
+                    if (selectedVehicle?.id === vehicleId) return `${selectedVehicle.brand} ${selectedVehicle.model}`;
+                    return null;
+                  }}
+                  onReplan={(trip) => {
+                    handleReplanFromNotebook(trip);
+                    handleDesktopTabChange('planTrip');
+                  }}
+                  i18n={notebookI18n}
+                />
+              </div>
+            ) : desktopSidebarTab === 'stations' ? (
               <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-stations" aria-labelledby="desktop-tab-stations">
                 <NearbyStations
                   initialLocation={geo.latitude != null && geo.longitude != null ? { lat: geo.latitude, lng: geo.longitude } : null}

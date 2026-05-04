@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -13,6 +12,7 @@ vi.mock('@/lib/locale', () => ({
         desktop_tab_evi: 'eVi',
         desktop_tab_plan: 'Plan Trip',
         desktop_tab_stations: 'Stations',
+        notebook_tab: 'Saved',
       };
       return labels[key] ?? key;
     },
@@ -60,7 +60,7 @@ describe('DesktopTabBar', () => {
     expect(tablist).toBeInTheDocument();
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
 
     // Active tab should have tabindex 0, inactive tabs -1
     const planTab = screen.getByText('Plan Trip');
@@ -78,11 +78,12 @@ describe('DesktopTabBar', () => {
 
     onTabChange.mockClear();
     fireEvent.keyDown(tablist, { key: 'End' });
-    expect(onTabChange).toHaveBeenCalledWith('stations');
+    expect(onTabChange).toHaveBeenCalledWith('notebook');
   });
 
   it('wraps around on arrow key at edges', () => {
-    render(<DesktopTabBar activeTab="stations" onTabChange={onTabChange} />);
+    // Last tab (notebook) → ArrowRight wraps to first (evi)
+    render(<DesktopTabBar activeTab="notebook" onTabChange={onTabChange} />);
     const tablist = screen.getByRole('tablist');
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' });
