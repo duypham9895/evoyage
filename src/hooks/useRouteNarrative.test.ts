@@ -26,6 +26,8 @@ function makeTripPlan(overrides?: Partial<TripPlan>): TripPlan {
     polyline: '',
     startAddress: 'Ho Chi Minh City',
     endAddress: 'Da Lat',
+    startCoord: { lat: 10.776, lng: 106.700 },
+    endCoord: { lat: 11.940, lng: 108.443 },
     tripId: `trip-${testCounter}-${Date.now()}`,
     ...overrides,
   };

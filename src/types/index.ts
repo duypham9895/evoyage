@@ -172,6 +172,11 @@ export interface TripPlan {
   readonly polyline: string;
   readonly startAddress: string;
   readonly endAddress: string;
+  /** Geocoded coordinate of startAddress. Used for the Google Maps handoff so
+   *  GMaps doesn't re-geocode an ambiguous label (e.g. "Đà Lạt" → restaurant in HCMC). */
+  readonly startCoord: { readonly lat: number; readonly lng: number };
+  /** Geocoded coordinate of endAddress. Same rationale as startCoord. */
+  readonly endCoord: { readonly lat: number; readonly lng: number };
   readonly tripId?: string;
   /** Which routing engine produced this plan. Set ONLY on the OSRM-default
    *  code path so the UI can show a fallback note when 'mapbox' was used.

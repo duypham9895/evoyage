@@ -11,6 +11,7 @@ import {
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import { calculateSavings, formatVnd } from '@/lib/trip/cost';
 import { computeTripCost } from '@/lib/trip-cost';
+import { buildGoogleMapsUrl } from '@/lib/trip/google-maps-url';
 import { extractCityName } from '@/lib/trip/extract-city';
 import { extractStationShortName } from '@/lib/trip/extract-station-name';
 import { detectPasses } from '@/lib/trip/detect-passes';
@@ -82,31 +83,6 @@ const STATUS_LOCALE_KEY: Record<StatusKey, string> = {
 
 function isStatusKey(val: string): val is StatusKey {
   return val in STATUS_DOT_COLOR;
-}
-
-/** Build a Google Maps directions URL with all charging stops as waypoints */
-function buildGoogleMapsUrl(plan: TripPlan): string {
-  const origin = `${plan.startAddress}`;
-  const destination = `${plan.endAddress}`;
-
-  // Add charging stops as waypoints
-  const waypoints = plan.chargingStops.map((stop) => {
-    const station = 'selected' in stop ? stop.selected.station : stop.station;
-    return `${station.latitude},${station.longitude}`;
-  }).join('|');
-
-  const params = new URLSearchParams({
-    api: '1',
-    origin,
-    destination,
-    travelmode: 'driving',
-  });
-
-  if (waypoints) {
-    params.set('waypoints', waypoints);
-  }
-
-  return `https://www.google.com/maps/dir/?${params}`;
 }
 
 // ── BatteryGauge ──
@@ -1043,6 +1019,9 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         </svg>
         {t('open_in_google_maps')}
       </a>
+      <p className="text-[11px] text-[var(--color-muted)] leading-relaxed px-2 -mt-1">
+        {t('open_in_google_maps_caption')}
+      </p>
     </div>
   );
 }

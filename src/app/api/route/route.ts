@@ -177,6 +177,8 @@ export async function POST(request: NextRequest) {
           durationSeconds: cached.durationSeconds,
           startAddress: start,
           endAddress: end,
+          startCoord: { lat: startLat!, lng: startLng! },
+          endCoord: { lat: endLat!, lng: endLng! },
         };
       } else {
         const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
@@ -201,6 +203,8 @@ export async function POST(request: NextRequest) {
           durationSeconds: mapboxResult.durationSeconds,
           startAddress: mapboxResult.startAddress,
           endAddress: mapboxResult.endAddress,
+          startCoord: mapboxResult.startCoord,
+          endCoord: mapboxResult.endCoord,
         };
         if (!hasWaypoints) {
           await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox', {
@@ -525,6 +529,8 @@ export async function POST(request: NextRequest) {
       polyline: directions.polyline,
       startAddress: directions.startAddress,
       endAddress: directions.endAddress,
+      startCoord: directions.startCoord,
+      endCoord: directions.endCoord,
       tripId,
       ...(routeProvider !== undefined ? { routeProvider } : {}),
       ...(departAt ? { departureAtIso: departAt } : {}),

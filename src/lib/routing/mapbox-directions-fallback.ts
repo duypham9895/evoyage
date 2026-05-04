@@ -25,6 +25,10 @@ interface DirectionsResult {
   readonly durationSeconds: number;
   readonly startAddress: string;
   readonly endAddress: string;
+  /** Origin coordinate (already known on this path — passed as input). */
+  readonly startCoord: { readonly lat: number; readonly lng: number };
+  /** Destination coordinate (already known on this path — passed as input). */
+  readonly endCoord: { readonly lat: number; readonly lng: number };
 }
 
 const DIRECTIONS_BASE = 'https://api.mapbox.com/directions/v5/mapbox/driving';
@@ -75,5 +79,7 @@ export async function fetchDirectionsMapboxFromCoords(
     durationSeconds: Math.round(route.duration),
     startAddress,
     endAddress,
+    startCoord: { lat: originLat, lng: originLng },
+    endCoord: { lat: destLat, lng: destLng },
   };
 }

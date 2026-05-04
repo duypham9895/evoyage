@@ -102,6 +102,8 @@ function makeTripPlan(overrides: Partial<TripPlan> = {}): TripPlan {
     polyline: '',
     startAddress: 'A',
     endAddress: 'B',
+    startCoord: { lat: 10.776, lng: 106.700 },
+    endCoord: { lat: 11.940, lng: 108.443 },
     ...overrides,
   };
 }

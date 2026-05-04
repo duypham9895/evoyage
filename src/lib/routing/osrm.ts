@@ -19,6 +19,11 @@ interface DirectionsResult {
   readonly durationSeconds: number;
   readonly startAddress: string;
   readonly endAddress: string;
+  /** Geocoded origin coordinate. Surfaced so downstream (GMaps handoff URL)
+   *  can pass exact lat/lng instead of letting GMaps re-geocode the label. */
+  readonly startCoord: { readonly lat: number; readonly lng: number };
+  /** Geocoded destination coordinate. Same rationale as startCoord. */
+  readonly endCoord: { readonly lat: number; readonly lng: number };
   /** Which routing engine produced this result. Present on the OSRM-default
    *  code path so the UI can show a fallback note when 'mapbox' was used. */
   readonly provider: 'osrm' | 'mapbox';
@@ -146,6 +151,8 @@ export async function fetchDirections(
       ...route,
       startAddress: origin,
       endAddress: destination,
+      startCoord,
+      endCoord,
       provider: 'osrm',
     };
   } catch (osrmError) {
@@ -171,7 +178,7 @@ export async function fetchDirections(
       origin,
       destination,
     );
-    return { ...result, provider: 'mapbox' };
+    return { ...result, startCoord, endCoord, provider: 'mapbox' };
   }
 }
 
@@ -210,6 +217,8 @@ export async function fetchDirectionsWithWaypoints(
       ...route,
       startAddress: origin,
       endAddress: destination,
+      startCoord,
+      endCoord,
       provider: 'osrm',
     };
   } catch (osrmError) {
@@ -250,6 +259,8 @@ export async function fetchDirectionsWithWaypoints(
       durationSeconds: Math.round(route.duration),
       startAddress: origin,
       endAddress: destination,
+      startCoord,
+      endCoord,
       provider: 'mapbox',
     };
   }
