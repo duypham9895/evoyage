@@ -48,5 +48,7 @@
   "totalChargingTimeMin": 32,
   "polyline": "k~umAqbtiSdC{E",
   "startAddress": "Thành phố Hồ Chí Minh, Việt Nam",
-  "endAddress": "Đà Lạt, Lâm Đồng, Việt Nam"
+  "endAddress": "Đà Lạt, Lâm Đồng, Việt Nam",
+  "startCoord": { "lat": 10.7769, "lng": 106.7009 },
+  "endCoord": { "lat": 11.9404, "lng": 108.4583 }
 }

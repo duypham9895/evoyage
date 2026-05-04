@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// MiniMax STT is async (create job → poll up to 15s) plus upload + parse;
+// the Vercel default (10s) would kill the function mid-poll. 30s leaves
+// headroom above POLL_TIMEOUT_MS without bloating cost.
+export const maxDuration = 30;
+
 const MINIMAX_API_BASE = 'https://api.minimax.io/v1';
 const MAX_AUDIO_SIZE = 5 * 1024 * 1024; // 5MB
 const POLL_INTERVAL_MS = 500;
