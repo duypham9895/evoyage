@@ -156,7 +156,7 @@ export default function MapLocateButton({
         onClick={handleTap}
         disabled={loading}
         aria-label={t('nearby_locate_button')}
-        className={`absolute bottom-20 right-4 z-10 w-11 h-11 rounded-xl bg-white border-[1.5px] ${borderColor} flex items-center justify-center transition-all active:scale-95 shadow-lg`}
+        className={`absolute bottom-20 right-4 z-[800] w-11 h-11 rounded-xl bg-white border-[1.5px] ${borderColor} flex items-center justify-center transition-all active:scale-95 shadow-lg`}
       >
         {buttonState === 'loading' ? (
           <span className="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
@@ -179,7 +179,7 @@ export default function MapLocateButton({
 
       {/* GPS error toast */}
       {errorMessage && (
-        <div className="absolute bottom-32 right-4 left-4 z-10 p-3 bg-[var(--color-surface)] border border-[var(--color-danger)] rounded-xl text-sm text-[var(--color-text-secondary)] shadow-lg flex items-center justify-between gap-2">
+        <div className="absolute bottom-32 right-4 left-4 z-[800] p-3 bg-[var(--color-surface)] border border-[var(--color-danger)] rounded-xl text-sm text-[var(--color-text-secondary)] shadow-lg flex items-center justify-between gap-2">
           <span>{errorMessage}</span>
           <button
             onClick={handleTap}
@@ -192,7 +192,7 @@ export default function MapLocateButton({
 
       {/* Fetch error toast */}
       {fetchError && !errorMessage && (
-        <div className="absolute bottom-32 right-4 left-4 z-10 p-3 bg-[var(--color-surface)] border border-[var(--color-danger)] rounded-xl text-sm text-[var(--color-text-secondary)] shadow-lg flex items-center justify-between gap-2">
+        <div className="absolute bottom-32 right-4 left-4 z-[800] p-3 bg-[var(--color-surface)] border border-[var(--color-danger)] rounded-xl text-sm text-[var(--color-text-secondary)] shadow-lg flex items-center justify-between gap-2">
           <span>{t('nearby_fetch_error')}</span>
           <button
             onClick={handleTap}
@@ -205,7 +205,7 @@ export default function MapLocateButton({
 
       {/* Info bar at bottom of map */}
       {infoBar && (
-        <div className="absolute bottom-0 left-0 right-0 z-10 px-4 py-3 bg-[var(--color-surface)]/85 backdrop-blur-md flex items-center justify-between">
+        <div className="absolute bottom-0 left-0 right-0 z-[800] px-4 py-3 bg-[var(--color-surface)]/85 backdrop-blur-md flex items-center justify-between">
           <span className="text-sm text-[var(--color-text)]">
             {infoBar.count > 0
               ? t('nearby_info_bar')
