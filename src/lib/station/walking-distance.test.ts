@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { haversineMeters, walkingTimeMinutes } from './walking-distance';
+import { haversineMeters, walkingTimeMinutes, drivingTimeMinutes } from './walking-distance';
 
 describe('haversineMeters', () => {
   it('returns 0 for identical points', () => {
@@ -52,5 +52,37 @@ describe('walkingTimeMinutes', () => {
     expect(walkingTimeMinutes(159)).toBe(2);
     expect(walkingTimeMinutes(160)).toBe(2);
     expect(walkingTimeMinutes(161)).toBe(3);
+  });
+});
+
+describe('drivingTimeMinutes', () => {
+  // Reference pace: 600 m/min ≈ 36 km/h — conservative for VN urban/QL roads
+  // with traffic lights. Always rounds up; minimum 1 so a 100 m drive doesn't
+  // display as "0 min" (which would imply teleporting).
+  it('returns 1 for 0 meters (minimum displayable drive time)', () => {
+    expect(drivingTimeMinutes(0)).toBe(1);
+  });
+
+  it('returns 1 for any distance under 600 meters (one minute floor)', () => {
+    expect(drivingTimeMinutes(100)).toBe(1);
+    expect(drivingTimeMinutes(599)).toBe(1);
+  });
+
+  it('rounds 600 meters to 1 minute (exact)', () => {
+    expect(drivingTimeMinutes(600)).toBe(1);
+  });
+
+  it('rounds 601 meters to 2 minutes', () => {
+    expect(drivingTimeMinutes(601)).toBe(2);
+  });
+
+  it('rounds 1500 meters to 3 minutes (the spec drive-tier outer band)', () => {
+    // 1500 / 600 = 2.5 → ceil 3
+    expect(drivingTimeMinutes(1500)).toBe(3);
+  });
+
+  it('rounds up to nearest minute (never returns fractional)', () => {
+    expect(drivingTimeMinutes(1200)).toBe(2);
+    expect(drivingTimeMinutes(1201)).toBe(3);
   });
 });

@@ -10,6 +10,9 @@ const translations: Record<string, string> = {
   amenities_empty: 'No nearby place data for this station yet',
   amenities_google_maps_fallback: 'Search on Google Maps',
   amenities_walking_minutes: '{{minutes}} min walk',
+  amenities_driving_minutes: '{{minutes}} min drive',
+  amenities_section_walk: 'Within walking distance',
+  amenities_section_drive: 'Just up the road',
   amenities_category_quick_bite: 'Quick bite',
   amenities_category_sit_down: 'Sit-down meal',
   amenities_category_essentials: 'Essentials',
@@ -48,6 +51,7 @@ const SAMPLE_OK = {
       name: null, // unnamed → uses category fallback label
       amenity: 'atm',
       category: 'essentials',
+      tier: 'walk',
       walkingMinutes: 1,
       distanceMeters: 60,
       lat: 10.7785,
@@ -58,10 +62,60 @@ const SAMPLE_OK = {
       name: 'Phở 24',
       amenity: 'restaurant',
       category: 'sit-down',
+      tier: 'walk',
       walkingMinutes: 3,
       distanceMeters: 240,
       lat: 10.7794,
       lng: 106.7009,
+    },
+  ],
+  cachedAt: new Date().toISOString(),
+  fromCache: false,
+};
+
+const SAMPLE_DRIVE_ONLY = {
+  pois: [
+    {
+      id: 11,
+      name: 'Thung lũng xanh',
+      amenity: 'restaurant',
+      category: 'sit-down',
+      tier: 'drive',
+      walkingMinutes: 9,
+      drivingMinutes: 2,
+      distanceMeters: 700,
+      lat: 11.395,
+      lng: 107.5421,
+    },
+  ],
+  cachedAt: new Date().toISOString(),
+  fromCache: false,
+};
+
+const SAMPLE_MIXED = {
+  pois: [
+    {
+      id: 1,
+      name: 'Cafe ABC',
+      amenity: 'cafe',
+      category: 'quick-bite',
+      tier: 'walk',
+      walkingMinutes: 2,
+      distanceMeters: 150,
+      lat: 10.78,
+      lng: 106.7,
+    },
+    {
+      id: 2,
+      name: 'Bach hoa XANH',
+      amenity: 'fuel',
+      category: 'fuel',
+      tier: 'drive',
+      walkingMinutes: 11,
+      drivingMinutes: 2,
+      distanceMeters: 900,
+      lat: 10.79,
+      lng: 106.71,
     },
   ],
   cachedAt: new Date().toISOString(),
@@ -169,5 +223,53 @@ describe('StationAmenities', () => {
         expect.anything(),
       );
     });
+  });
+
+  // ── Tiered radius (2026-05-04 patch) ──
+
+  it('shows the walk section heading when only walk-tier rows are present', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_OK), { status: 200 }));
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Within walking distance')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Just up the road')).not.toBeInTheDocument();
+  });
+
+  it('shows the drive section + "X min drive" labels for drive-tier rows', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify(SAMPLE_DRIVE_ONLY), { status: 200 }),
+    );
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Just up the road')).toBeInTheDocument();
+    });
+    expect(screen.getByText('2 min drive')).toBeInTheDocument();
+    // Walk section should NOT render when there are no walk-tier rows
+    expect(screen.queryByText('Within walking distance')).not.toBeInTheDocument();
+    // Drive-tier rows must NOT use the walking-time label
+    expect(screen.queryByText('9 min walk')).not.toBeInTheDocument();
+  });
+
+  it('renders both sections with their own headings when mixed tiers are returned', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_MIXED), { status: 200 }));
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Within walking distance')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Just up the road')).toBeInTheDocument();
+
+    // Walk section appears above drive section in the DOM
+    const allText = document.body.textContent ?? '';
+    const walkIdx = allText.indexOf('Within walking distance');
+    const driveIdx = allText.indexOf('Just up the road');
+    expect(walkIdx).toBeLessThan(driveIdx);
+
+    // Each row uses its tier-appropriate label
+    expect(screen.getByText('2 min walk')).toBeInTheDocument();
+    expect(screen.getByText('2 min drive')).toBeInTheDocument();
   });
 });

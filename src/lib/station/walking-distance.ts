@@ -18,6 +18,7 @@ export interface LatLng {
 
 const EARTH_RADIUS_METERS = 6_371_000;
 const WALKING_METERS_PER_MIN = 80; // conservative pace, accommodates older drivers
+const DRIVING_METERS_PER_MIN = 600; // ≈ 36 km/h; conservative for VN urban/QL with traffic lights
 
 function toRadians(deg: number): number {
   return (deg * Math.PI) / 180;
@@ -38,4 +39,10 @@ export function haversineMeters(a: LatLng, b: LatLng): number {
 export function walkingTimeMinutes(meters: number): number {
   if (meters <= 0) return 0;
   return Math.ceil(meters / WALKING_METERS_PER_MIN);
+}
+
+export function drivingTimeMinutes(meters: number): number {
+  // Floor of 1: a "0 min drive" label would imply teleporting; even an
+  // adjacent driveway costs you a minute of getting in/out and turning.
+  return Math.max(1, Math.ceil(meters / DRIVING_METERS_PER_MIN));
 }
