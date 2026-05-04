@@ -43,17 +43,14 @@ export async function POST(request: NextRequest) {
   const { message, history, userLocation, previousVehicleId, accumulatedParams } = parsed.data;
   const followUpCount = Math.floor(history.length / 2);
 
-  // Call Minimax
+  // Call eVi parser (MiMo primary, Minimax fallback — see lib/evi/llm-call.ts)
   let extraction;
   try {
     extraction = await parseTrip({ message, history, vehicleListText, accumulatedParams: accumulatedParams ?? null });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorType = errorMessage.includes('abort') ? 'timeout'
-      : errorMessage.includes('API_KEY') ? 'config'
-      : errorMessage.includes('401') || errorMessage.includes('403') ? 'auth'
-      : 'api_error';
-    console.error(`[eVi] Minimax call failed (${errorType}):`, errorMessage);
+    const errorType = /Both providers failed/i.test(errorMessage) ? 'both_providers_failed' : 'unexpected';
+    console.error(`[eVi] parseTrip failed (${errorType}):`, errorMessage);
     return NextResponse.json(
       buildErrorResponse('service_unavailable', followUpCount),
       { status: 503 },

@@ -68,7 +68,7 @@ export async function generateSuggestions(
   const systemPrompt = buildSuggestionsPrompt(messages, tripContext);
 
   try {
-    const { json } = await callJsonLLM({
+    const { json, provider } = await callJsonLLM({
       systemPrompt,
       userMessages: [{ role: 'user', content: 'Generate the chips now.' }],
       maxTokens: 512,
@@ -77,6 +77,10 @@ export async function generateSuggestions(
       fallbackTimeoutMs: 3000,
       callerTag: 'eVi-suggestions',
     });
+
+    if (provider === 'minimax') {
+      console.warn('[eVi-suggestions] served via Minimax fallback');
+    }
 
     const validated = SuggestionsSchema.safeParse(json);
     if (!validated.success) {
