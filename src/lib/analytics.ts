@@ -170,3 +170,22 @@ export function trackAmenityTapped(category: string, walkingMinutes: number): vo
     walking_minutes: walkingMinutes,
   });
 }
+
+// ── Phase 5 — Trip Notebook events ───────────────────────────────────────
+
+/** Trip Notebook view rendered. */
+export function trackNotebookOpened(entryCount: number): void {
+  safeCapture('notebook_opened', { entry_count: entryCount });
+}
+
+/** User re-planned a trip from the notebook. */
+export function trackTripReplannedFromNotebook(daysSinceSaved: number): void {
+  safeCapture('trip_replanned_from_notebook', {
+    days_since_saved: Math.round(daysSinceSaved * 10) / 10,
+  });
+}
+
+/** User pinned or unpinned a saved trip. */
+export function trackTripPinToggle(pinned: boolean): void {
+  safeCapture('trip_pin_toggle', { pinned });
+}

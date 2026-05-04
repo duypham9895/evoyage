@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
-import { trackTripPlanned, trackDeparturePicked } from '@/lib/analytics';
+import { trackTripPlanned, trackDeparturePicked, trackTripReplannedFromNotebook } from '@/lib/analytics';
 import { createNotebookStore, type SavedTrip } from '@/lib/trip/notebook-store';
 import TripNotebook, { type TripNotebookI18n } from '@/components/trip/TripNotebook';
 import { LocaleProvider } from '@/lib/locale';
@@ -573,6 +573,8 @@ function HomeContent() {
       setRangeSafetyFactor(trip.rangeSafetyFactor);
       setDepartAtRaw(trip.departAt); // skip the picker tracker — this is system-driven, not user choice
       notebook.touch(trip.id);
+      const daysSinceSaved = (Date.now() - new Date(trip.savedAt).getTime()) / (24 * 60 * 60 * 1000);
+      trackTripReplannedFromNotebook(daysSinceSaved);
       // The plan auto-fires once state settles — caller can opt to navigate
       // to the route tab so the user lands on the result, not the form
     },

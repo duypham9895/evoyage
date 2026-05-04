@@ -11,9 +11,10 @@
  * bubbles up — TripNotebook doesn't know how to load a saved trip into the
  * page; that's the parent's job.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import TripNotebookEntry, { type TripNotebookEntryI18n } from './TripNotebookEntry';
 import type { NotebookStore, SavedTrip } from '@/lib/trip/notebook-store';
+import { trackNotebookOpened, trackTripPinToggle } from '@/lib/analytics';
 
 export interface TripNotebookI18n extends TripNotebookEntryI18n {
   readonly heading: string;
@@ -43,9 +44,17 @@ export default function TripNotebook({
   // even though we re-read from store on every render.
   void version;
 
+  // Mount-once impression event: how many entries did the user see when
+  // they opened the notebook? Re-fires on entry-count changes so churn
+  // (delete-then-reopen) is captured.
+  useEffect(() => {
+    trackNotebookOpened(entries.length);
+  }, [entries.length]);
+
   const handlePin = useCallback(
     (id: string, pinned: boolean) => {
       store.pin(id, pinned);
+      trackTripPinToggle(pinned);
       bump();
     },
     [store, bump],
