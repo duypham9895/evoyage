@@ -47,6 +47,42 @@ When writing Vietnamese copy, refer to the creator as "Duy" (not "Mình" or "Tô
 
 - **Disaster recovery:** If the production DB is paused, deleted, or corrupted, follow [docs/RECOVERY.md](./docs/RECOVERY.md). Schema lives in `prisma/schema.prisma`; reference data lives in `scripts/seed-*.ts` and `scripts/crawl-vinfast-stations.ts`. Never edit the schema in the Supabase UI.
 
+## Agent skills
+
+### Skill priority — Matt Pocock first
+
+When multiple installed skills match the same trigger, **prefer Matt Pocock's skill**. Specifically:
+
+| Intent | Use this | Not these |
+|---|---|---|
+| Test-driven development | `tdd` (Matt) | `superpowers:test-driven-development`, `everything-claude-code:tdd`, `everything-claude-code:tdd-workflow` |
+| Debugging a hard bug or perf regression | `diagnose` (Matt) | `superpowers:systematic-debugging` |
+| Interviewing user before any creative work | `grill-me` (Matt) for non-code, `grill-with-docs` (Matt) for code | `superpowers:brainstorming` |
+| Breaking a plan into issues | `to-issues` (Matt) | (no real overlap) |
+| Turning conversation into a PRD | `to-prd` (Matt) | (no real overlap) |
+| Triaging incoming issues | `triage` (Matt) | (no real overlap) |
+| Architectural review / refactoring | `improve-codebase-architecture` (Matt) | (no real overlap) |
+| Reading code in broader system context | `zoom-out` (Matt) | (no real overlap) |
+
+**Exceptions** — don't replace these with Matt's lighter equivalents:
+
+- `gsd-debug` — when the bug investigation needs to survive context resets (multi-session debugging). Matt's `diagnose` is a single-shot loop; gsd's persists state.
+- `gsd-discuss-phase` / `gsd-plan-phase` / etc. — full GSD project-management workflow. Matt's `grill-me` is one interview; gsd is a full phase lifecycle.
+
+For everything else not listed above (e.g. `gsd-*`, `everything-claude-code:*` patterns/refs, `claude-md-management:*`), use the existing skill — they don't conflict with Matt's set.
+
+### Issue tracker
+
+GitHub issues at [duypham9895/evoyage](https://github.com/duypham9895/evoyage) via the `gh` CLI. See [docs/agents/issue-tracker.md](./docs/agents/issue-tracker.md).
+
+### Triage labels
+
+Canonical 5-role vocabulary, no overrides: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See [docs/agents/triage-labels.md](./docs/agents/triage-labels.md).
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at repo root. See [docs/agents/domain.md](./docs/agents/domain.md).
+
 ## Coding Behavior — Karpathy Guidelines (Mandatory)
 
 Apply [.claude/skills/karpathy-guidelines/SKILL.md](./.claude/skills/karpathy-guidelines/SKILL.md) on every code change. Invoke the `karpathy-guidelines` skill before writing, reviewing, or refactoring code.
