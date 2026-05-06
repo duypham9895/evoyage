@@ -3,6 +3,7 @@ import { checkRateLimit, getClientIp, eviLimiter } from '@/lib/rate-limit';
 import { EViParseRequest } from '@/lib/evi/types';
 import type { EViParseResponse, FollowUpType, SuggestedOption, EViTripParams } from '@/lib/evi/types';
 import { parseTrip } from '@/lib/evi/minimax-client';
+import { LLMUnavailableError } from '@/lib/evi/llm-module';
 import { resolveVehicle } from '@/lib/evi/vehicle-resolver';
 import { searchPlaces } from '@/lib/geo/nominatim';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     extraction = await parseTrip({ message, history, vehicleListText, accumulatedParams: accumulatedParams ?? null });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorType = /Both providers failed/i.test(errorMessage) ? 'both_providers_failed' : 'unexpected';
+    const errorType = err instanceof LLMUnavailableError ? 'both_providers_failed' : 'unexpected';
     console.error(`[eVi] parseTrip failed (${errorType}):`, errorMessage);
     return NextResponse.json(
       buildErrorResponse('service_unavailable', followUpCount),

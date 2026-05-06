@@ -1,13 +1,14 @@
 // src/lib/evi/minimax-client.ts
 //
-// eVi trip parser. Despite the file name, this delegates to callJsonLLM
-// which uses MiMo Flash as primary and Minimax M2.7 as fallback. We keep
-// the filename to avoid churning every import; rename is a follow-up.
+// eVi trip parser. Builds the system prompt + history-threaded user
+// payload, then delegates to the deepened LLM Module (callLLM), which
+// owns provider chain, response cleaning, schema validation, and
+// telemetry. See docs/adr/0002-llm-call-module.md.
 
 import { MinimaxTripExtraction } from './types';
 import type { MinimaxTripExtractionResult } from './types';
 import { buildSystemPrompt } from './prompt';
-import { callJsonLLM } from './llm-call';
+import { callLLM } from './llm-module';
 
 interface AccumulatedParams {
   readonly start: string | null;
@@ -24,26 +25,24 @@ interface ParseInput {
   readonly accumulatedParams: AccumulatedParams | null;
 }
 
+// callLLM takes a single `user` string. Flatten conversation turns into
+// labeled lines so multi-turn context survives the Seam without leaking
+// chat-message shape into the Module.
+function buildUserPayload(
+  history: ParseInput['history'],
+  message: string,
+): string {
+  if (history.length === 0) return message;
+  const transcript = history.map(t => `${t.role}: ${t.content}`).join('\n');
+  return `${transcript}\nuser: ${message}`;
+}
+
 export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractionResult> {
-  const systemPrompt = buildSystemPrompt(input.vehicleListText, input.accumulatedParams);
-  const userMessages = [
-    ...input.history,
-    { role: 'user' as const, content: input.message },
-  ];
-
-  const { json, provider } = await callJsonLLM({
-    systemPrompt,
-    userMessages,
+  return callLLM({
+    schema: MinimaxTripExtraction,
+    system: buildSystemPrompt(input.vehicleListText, input.accumulatedParams),
+    user: buildUserPayload(input.history, input.message),
     maxTokens: 1024,
-    temperature: 0.1,
-    primaryTimeoutMs: 8000,
-    fallbackTimeoutMs: 25000,
-    callerTag: 'eVi-parse',
+    timeoutMs: 8000,
   });
-
-  if (provider === 'minimax') {
-    console.warn('[eVi-parse] served via Minimax fallback');
-  }
-
-  return MinimaxTripExtraction.parse(json);
 }
