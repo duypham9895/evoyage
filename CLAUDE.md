@@ -142,16 +142,16 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **813 unit/integration tests** across **63 files** (vitest, ~9 seconds)
+- **1197 unit/integration tests** across **103 files** (vitest, ~12 seconds)
 - **18 E2E tests** across **10 spec files** (Playwright, ~43 seconds on Desktop Chrome)
-- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar, energy-price parsers (Petrolimex / V-GREEN / EVN), trip-cost calculator, HomeEnergyPrices block
+- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar, energy-price parsers (Petrolimex / V-GREEN / EVN), trip-cost calculator, HomeEnergyPrices block, eVi LLM module (provider chain, fallback, telemetry — see ADR-0002)
 - E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state
 - These counts should only go UP — never delete tests unless the feature is removed
 
 ### Pre-Commit Checklist
 
 Before every commit, verify:
-- [ ] `npm test` passes (all 813+ tests green)
+- [ ] `npm test` passes (all 1197+ tests green)
 - [ ] `npx next build` succeeds (no TypeScript errors)
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
