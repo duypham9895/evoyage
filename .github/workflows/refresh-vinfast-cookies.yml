@@ -19,7 +19,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DIRECT_URL: ${{ secrets.DIRECT_URL }}
@@ -39,7 +39,16 @@ jobs:
         run: npx prisma generate
 
       - name: Install Playwright Chromium
-        run: npx playwright install chromium --with-deps
+        # Skip --with-deps: ubuntu-latest already preinstalls every shared
+        # library Chromium dlopen()s (libpango, libx11, libxcb, libfontconfig,
+        # libfreetype, etc. — see cancelled-run logs where every dep showed
+        # "already the newest version"). The only "newly installed" packages
+        # under --with-deps were CJK/cyrillic fonts (fonts-wqy-zenhei,
+        # fonts-ipafont-gothic, fonts-unifont…) which this script never
+        # renders — it only calls page.goto() and context.cookies().
+        # Pulling those from Azure mirrors blew past the job timeout
+        # whenever the mirror was slow and silently broke the polling cron.
+        run: npx playwright install chromium
 
       - name: Refresh cookies
         run: npx tsx scripts/refresh-vinfast-cookies.ts
