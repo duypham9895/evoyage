@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
-import { callJsonLLM } from '@/lib/evi/llm-call';
+import { callLLM, LLMUnavailableError } from '@/lib/evi/llm-module';
 
-// Worst case = primaryTimeoutMs (15s, MiMo Flash) + fallbackTimeoutMs (50s,
-// M2.7) + a few seconds of platform overhead. 70s leaves headroom.
+// callLLM applies timeoutMs per provider attempt. 30s × 2 providers = 60s,
+// leaving 10s of headroom inside Vercel's maxDuration cap.
 export const maxDuration = 70;
 
 const chargingStopSchema = z.object({
@@ -109,40 +109,32 @@ export async function POST(request: NextRequest) {
   try {
     const prompt = buildNarrativePrompt(parsed.data);
 
-    const { json, provider } = await callJsonLLM({
-      systemPrompt: 'You are a Vietnamese EV trip assistant. Always respond with valid JSON.',
-      userMessages: [{ role: 'user', content: prompt }],
+    const result = await callLLM({
+      schema: narrativeResponseSchema,
+      system: 'You are a Vietnamese EV trip assistant. Always respond with valid JSON.',
+      user: prompt,
       maxTokens: 4096,
-      temperature: 0.4,
-      primaryTimeoutMs: 15_000,
-      fallbackTimeoutMs: 50_000,
-      callerTag: 'narrative',
+      timeoutMs: 30_000,
     });
 
-    if (provider === 'minimax') {
-      console.warn('[narrative] served via Minimax fallback');
-    }
-
-    const result = narrativeResponseSchema.safeParse(json);
-    if (!result.success) {
-      throw new Error('AI response missing overview or narrative fields');
-    }
-
     return NextResponse.json({
-      overview: result.data.overview,
-      narrative: result.data.narrative,
+      overview: result.overview,
+      narrative: result.narrative,
     } satisfies NarrativeResponse);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[narrative] AI generation failed:', message);
 
-    if (/Both providers failed/i.test(message)) {
+    if (err instanceof LLMUnavailableError) {
       return NextResponse.json(
         { overview: null, narrative: null, error: 'AI service unavailable' } satisfies NarrativeResponse,
         { status: 503 },
       );
     }
 
+    // LLMSchemaError, LLMAbortedError, and any other Error all map to a generic
+    // 500 — the client doesn't need to distinguish reasoning-chain truncation
+    // from request cancellation.
     return NextResponse.json(
       { overview: null, narrative: null, error: 'Failed to generate route narrative' } satisfies NarrativeResponse,
       { status: 500 },

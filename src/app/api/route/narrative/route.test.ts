@@ -9,16 +9,19 @@ vi.mock('@/lib/rate-limit', () => ({
   routeLimiter: null,
 }));
 
-const { mockCallJsonLLM } = vi.hoisted(() => ({
-  mockCallJsonLLM: vi.fn(),
-}));
-vi.mock('@/lib/evi/llm-call', () => ({
-  callJsonLLM: mockCallJsonLLM,
-}));
+const mockCallLLM = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/evi/llm-module', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/evi/llm-module')>('@/lib/evi/llm-module');
+  return {
+    ...actual,
+    callLLM: mockCallLLM,
+  };
+});
 
 // ── Imports (after mocks) ──
 import { POST } from './route';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { LLMSchemaError, LLMUnavailableError, LLMAbortedError } from '@/lib/evi/llm-module';
 
 // ── Helpers ──
 
@@ -58,11 +61,11 @@ const AI_RESPONSE = {
 describe('POST /api/route/narrative', () => {
   beforeEach(() => {
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 9, retryAfterSec: 0 });
-    mockCallJsonLLM.mockReset();
+    mockCallLLM.mockReset();
   });
 
   it('returns narrative on success', async () => {
-    mockCallJsonLLM.mockResolvedValueOnce({ json: AI_RESPONSE, provider: 'mimo' });
+    mockCallLLM.mockResolvedValueOnce(AI_RESPONSE);
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
@@ -112,8 +115,10 @@ describe('POST /api/route/narrative', () => {
     expect(data.error).toContain('Validation failed');
   });
 
-  it('returns 500 when AI response is missing required fields (schema fails)', async () => {
-    mockCallJsonLLM.mockResolvedValueOnce({ json: { overview: 'ok' }, provider: 'mimo' });
+  it('returns 500 when AI response fails schema validation (LLMSchemaError)', async () => {
+    mockCallLLM.mockRejectedValueOnce(
+      new LLMSchemaError('missing narrative field', '{"overview":"ok"}'),
+    );
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
@@ -123,8 +128,8 @@ describe('POST /api/route/narrative', () => {
     expect(data.error).toBe('Failed to generate route narrative');
   });
 
-  it('returns 500 when callJsonLLM throws a generic error', async () => {
-    mockCallJsonLLM.mockRejectedValueOnce(new Error('Unexpected internal error'));
+  it('returns 500 when callLLM throws a non-typed Error', async () => {
+    mockCallLLM.mockRejectedValueOnce(new Error('Unexpected internal error'));
 
     const res = await POST(makeRequest(VALID_BODY));
     const data = await res.json();
@@ -134,9 +139,20 @@ describe('POST /api/route/narrative', () => {
     expect(data.error).toBe('Failed to generate route narrative');
   });
 
-  it('returns 503 when both LLM providers fail', async () => {
-    mockCallJsonLLM.mockRejectedValueOnce(
-      new Error('Both providers failed. mimo: ECONNREFUSED. minimax: ECONNREFUSED.'),
+  it('returns 500 when callLLM aborts mid-flight (LLMAbortedError)', async () => {
+    mockCallLLM.mockRejectedValueOnce(new LLMAbortedError());
+
+    const res = await POST(makeRequest(VALID_BODY));
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.overview).toBeNull();
+    expect(data.error).toBe('Failed to generate route narrative');
+  });
+
+  it('returns 503 when both LLM providers fail (LLMUnavailableError)', async () => {
+    mockCallLLM.mockRejectedValueOnce(
+      new LLMUnavailableError('All LLM providers exhausted. Last error: ECONNREFUSED'),
     );
 
     const res = await POST(makeRequest(VALID_BODY));
@@ -153,7 +169,7 @@ describe('POST /api/route/narrative', () => {
       narrative: 'Bạn đủ pin cho toàn bộ chuyến đi.',
     };
 
-    mockCallJsonLLM.mockResolvedValueOnce({ json: noStopsResponse, provider: 'mimo' });
+    mockCallLLM.mockResolvedValueOnce(noStopsResponse);
 
     const res = await POST(makeRequest(noStopsBody));
     const data = await res.json();
@@ -162,19 +178,27 @@ describe('POST /api/route/narrative', () => {
     expect(data.overview).toBe(noStopsResponse.overview);
   });
 
-  it('passes correct temperature, maxTokens, callerTag to callJsonLLM', async () => {
-    mockCallJsonLLM.mockResolvedValueOnce({ json: AI_RESPONSE, provider: 'mimo' });
+  it('passes schema, system, maxTokens=4096, timeoutMs=30_000 to callLLM', async () => {
+    mockCallLLM.mockResolvedValueOnce(AI_RESPONSE);
 
     await POST(makeRequest(VALID_BODY));
 
-    expect(mockCallJsonLLM).toHaveBeenCalledWith(
+    expect(mockCallLLM).toHaveBeenCalledWith(
       expect.objectContaining({
-        temperature: 0.4,
+        system: 'You are a Vietnamese EV trip assistant. Always respond with valid JSON.',
         maxTokens: 4096,
-        primaryTimeoutMs: 15_000,
-        fallbackTimeoutMs: 50_000,
-        callerTag: 'narrative',
+        timeoutMs: 30_000,
       }),
     );
+
+    const call = mockCallLLM.mock.calls[0][0] as {
+      schema: { safeParse: (v: unknown) => { success: boolean } };
+      user: string;
+    };
+    expect(call.schema).toBeDefined();
+    expect(call.schema.safeParse({ overview: 'a', narrative: 'b' }).success).toBe(true);
+    expect(call.schema.safeParse({ overview: 'a' }).success).toBe(false);
+    expect(call.user).toContain('Ho Chi Minh City');
+    expect(call.user).toContain('Da Lat');
   });
 });
