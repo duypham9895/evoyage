@@ -2,10 +2,12 @@
 //
 // Generates 3 short follow-up question chips for the eVi UI based on
 // the recent conversation. Tight 3s budget — chips are nice-to-have,
-// so we silently return [] on any failure.
+// so we silently return [] on any failure (LLMSchemaError,
+// LLMUnavailableError, LLMAbortedError all collapse to []).
+// See docs/adr/0002-llm-call-module.md.
 
 import { z } from 'zod';
-import { callJsonLLM } from './llm-call';
+import { callLLM } from './llm-module';
 
 type Locale = 'vi' | 'en';
 
@@ -83,31 +85,20 @@ export async function generateSuggestions(
   const systemPrompt = buildSuggestionsPrompt(messages, tripContext, locale);
 
   try {
-    const { json, provider } = await callJsonLLM({
-      systemPrompt,
-      userMessages: [{ role: 'user', content: 'Generate the chips now.' }],
-      // 2048 instead of 512: M2.7's chain-of-thought routinely runs 1-2k tokens;
-      // a 512-token cap truncates it before the JSON is emitted, causing silent
-      // empty chips on every fallback. MiMo Flash is non-thinking and uses only
-      // what it needs, so the bigger ceiling has no perf cost on the primary path.
+    const result = await callLLM({
+      schema: SuggestionsSchema,
+      system: systemPrompt,
+      user: 'Generate the chips now.',
+      // 2048 instead of the Module default: M2.7's chain-of-thought routinely
+      // runs 1-2k tokens; a smaller cap truncates it before the JSON is emitted,
+      // causing silent empty chips on every fallback. MiMo Flash is non-thinking
+      // and uses only what it needs, so the bigger ceiling has no perf cost on
+      // the primary path.
       maxTokens: 2048,
-      temperature: 0.3,
-      primaryTimeoutMs: 3000,
-      fallbackTimeoutMs: 3000,
-      callerTag: 'eVi-suggestions',
+      timeoutMs: 3000,
     });
 
-    if (provider === 'minimax') {
-      console.warn('[eVi-suggestions] served via Minimax fallback');
-    }
-
-    const validated = SuggestionsSchema.safeParse(json);
-    if (!validated.success) {
-      console.error('[eVi-suggestions] response validation failed:', validated.error.message);
-      return [];
-    }
-
-    return validated.data.suggestions
+    return result.suggestions
       .map(s => s.trim())
       .filter(s => s.length > 0 && s.length <= 40)
       .slice(0, 3);
