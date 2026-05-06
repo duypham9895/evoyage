@@ -4,7 +4,7 @@
 // the recent conversation. Tight 3s budget — chips are nice-to-have,
 // so we silently return [] on any failure (LLMSchemaError,
 // LLMUnavailableError, LLMAbortedError all collapse to []).
-// See docs/adr/0002-llm-call-module.md.
+// See ADR-0002.
 
 import { z } from 'zod';
 import { callLLM } from './llm-module';

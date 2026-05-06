@@ -3,7 +3,7 @@
 // eVi trip parser. Builds the system prompt + history-threaded user
 // payload, then delegates to the deepened LLM Module (callLLM), which
 // owns provider chain, response cleaning, schema validation, and
-// telemetry. See docs/adr/0002-llm-call-module.md.
+// telemetry. See ADR-0002.
 
 import { MinimaxTripExtraction } from './types';
 import type { MinimaxTripExtractionResult } from './types';

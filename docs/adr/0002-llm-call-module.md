@@ -1,6 +1,7 @@
 # Deepened LLM call Module owns provider chain, response cleaning, and error classification
 
 Decided 2026-05-06 during architectural review (`/improve-codebase-architecture`).
+Implemented 2026-05-06 across PRs 1/4 (deepened module) → 4/4 (legacy `callJsonLLM` deletion).
 
 ## Context
 

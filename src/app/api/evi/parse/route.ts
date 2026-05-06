@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   const { message, history, userLocation, previousVehicleId, accumulatedParams } = parsed.data;
   const followUpCount = Math.floor(history.length / 2);
 
-  // Call eVi parser (MiMo primary, Minimax fallback — see lib/evi/llm-call.ts)
+  // Call eVi parser (provider chain owned by lib/evi/llm-module.ts; see ADR-0002)
   let extraction;
   try {
     extraction = await parseTrip({ message, history, vehicleListText, accumulatedParams: accumulatedParams ?? null });
