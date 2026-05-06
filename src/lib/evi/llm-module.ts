@@ -44,11 +44,24 @@ function isInfrastructureError(err: unknown): boolean {
   if (err.name === 'AbortError') return true;
   const status = (err as { status?: number }).status;
   if (typeof status === 'number' && (status === 429 || status >= 500)) return true;
+  // Network / TCP errors. The OpenAI SDK wraps these with no `.status`, so
+  // pattern-match on the message. These are the same patterns the legacy
+  // callJsonLLM treated as fallback-eligible (regression caught after PR 4/4).
+  if (/(ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|network)/i.test(err.message)) {
+    return true;
+  }
+  // Empty / quirk-only content from primary — try the next provider.
+  if (/returned empty response|returned only thinking/i.test(err.message)) return true;
+  // Missing API key on a provider — try the other one rather than crashing.
+  if (/is not set/i.test(err.message)) return true;
   return false;
 }
 
 async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): Promise<T> {
-  const apiKey = process.env[provider.envVar]!;
+  const apiKey = process.env[provider.envVar]?.trim();
+  if (!apiKey) {
+    throw new Error(`${provider.envVar} is not set`);
+  }
   const client = new OpenAI({ apiKey, baseURL: provider.baseURL });
 
   const controller = new AbortController();
@@ -73,10 +86,18 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
     clearTimeout(timer);
   }
 
-  const content = response.choices[0]!.message!.content!;
-  const parsed = input.schema.safeParse(JSON.parse(stripProviderQuirks(content)));
+  const rawContent = response.choices[0]?.message?.content;
+  if (!rawContent) {
+    throw new Error(`${provider.name} returned empty response`);
+  }
+  const cleaned = stripProviderQuirks(rawContent);
+  if (!cleaned) {
+    throw new Error(`${provider.name} returned only thinking tags / fences`);
+  }
+
+  const parsed = input.schema.safeParse(JSON.parse(cleaned));
   if (!parsed.success) {
-    throw new LLMSchemaError(parsed.error.message, content);
+    throw new LLMSchemaError(parsed.error.message, rawContent);
   }
   return parsed.data;
 }

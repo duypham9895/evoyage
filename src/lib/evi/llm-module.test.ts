@@ -2,18 +2,25 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { z } from 'zod';
 
 const mockCreate = vi.fn();
+const constructorCalls: Array<{ apiKey: string | undefined; baseURL: string }> = [];
 
 vi.mock('openai', () => ({
   default: class MockOpenAI {
-    constructor(_opts: { apiKey: string; baseURL: string }) {}
+    constructor(opts: { apiKey: string; baseURL: string }) {
+      constructorCalls.push(opts);
+    }
     chat = { completions: { create: mockCreate } };
   },
 }));
 
 import { callLLM, LLMSchemaError, LLMUnavailableError, LLMAbortedError } from './llm-module';
 
+const MIMO_BASE_URL = 'https://api.xiaomimimo.com/v1';
+const MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
+
 beforeEach(() => {
   mockCreate.mockReset();
+  constructorCalls.length = 0;
   vi.stubEnv('XIAOMI_MIMO_API_KEY', 'mimo-test-key');
   vi.stubEnv('MINIMAX_API_KEY', 'minimax-test-key');
 });
@@ -157,6 +164,115 @@ describe('callLLM — caller overrides', () => {
 
     expect(result).toEqual({ from: 'minimax' });
     vi.useRealTimers();
+  });
+});
+
+describe('callLLM — network error fallback (regression coverage from PR 4/4)', () => {
+  it('falls back to Minimax when primary throws ECONNREFUSED', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:443'))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    // Chain order: MiMo first (rejected), Minimax second (accepted).
+    expect(constructorCalls.map(c => c.baseURL)).toEqual([MIMO_BASE_URL, MINIMAX_BASE_URL]);
+  });
+
+  it('falls back on ENOTFOUND (DNS failure)', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND api.xiaomimimo.com'))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+    expect(result).toEqual({ from: 'minimax' });
+  });
+
+  it('falls back on generic "fetch failed" error (undici wraps TCP errors this way)', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockRejectedValueOnce(new Error('fetch failed'))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+    expect(result).toEqual({ from: 'minimax' });
+  });
+});
+
+describe('callLLM — empty response fallback (regression coverage from PR 4/4)', () => {
+  it('falls back to Minimax when primary returns empty content', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockResolvedValueOnce({ choices: [{ message: { content: '' } }] })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back when primary returns only think tags (no actual JSON)', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '<think>thinking out loud</think>' } }],
+      })
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+    expect(result).toEqual({ from: 'minimax' });
+  });
+});
+
+describe('callLLM — missing API key fallback (regression coverage from PR 4/4)', () => {
+  it('falls back to Minimax when XIAOMI_MIMO_API_KEY is unset (primary skipped, not failed)', async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv('MINIMAX_API_KEY', 'minimax-test-key');
+    // XIAOMI_MIMO_API_KEY deliberately not set
+
+    const schema = z.object({ from: z.string() });
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"from":"minimax"}' } }],
+    });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    // Strict: only Minimax should have been instantiated. MiMo's baseURL must
+    // not appear in constructorCalls — proves the missing key was detected
+    // before the SDK was constructed.
+    expect(constructorCalls).toHaveLength(1);
+    expect(constructorCalls[0].baseURL).toBe(MINIMAX_BASE_URL);
+  });
+
+  it('throws LLMUnavailableError when both API keys are unset', async () => {
+    vi.unstubAllEnvs();
+
+    const schema = z.object({ from: z.string() });
+
+    await expect(callLLM({ schema, system: 's', user: 'u' }))
+      .rejects.toBeInstanceOf(LLMUnavailableError);
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });
 
