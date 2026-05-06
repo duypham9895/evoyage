@@ -276,6 +276,112 @@ describe('callLLM — missing API key fallback (regression coverage from PR 4/4)
   });
 });
 
+describe('callLLM — telemetry (closes #11)', () => {
+  let infoSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    infoSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    infoSpy.mockRestore();
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it('logs an info line with provider name and latency on success', async () => {
+    const schema = z.object({ ok: z.boolean() });
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"ok":true}' } }],
+    });
+
+    await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(infoSpy).toHaveBeenCalledOnce();
+    const logged = infoSpy.mock.calls[0][0] as string;
+    expect(logged).toMatch(/^\[llm\] provider=mimo latency_ms=\d+/);
+    expect(logged).toMatch(/schema=ok/);
+  });
+
+  it('includes total_tokens in the success log when usage is present', async () => {
+    const schema = z.object({ ok: z.boolean() });
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"ok":true}' } }],
+      usage: { total_tokens: 512 },
+    });
+
+    await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(infoSpy.mock.calls[0][0]).toMatch(/tokens=512/);
+  });
+
+  it('omits tokens from the success log when usage is absent', async () => {
+    const schema = z.object({ ok: z.boolean() });
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"ok":true}' } }],
+    });
+
+    await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(infoSpy.mock.calls[0][0]).not.toMatch(/tokens=/);
+  });
+
+  it('logs a warn line on each fallback transition (provider name + reason + next provider)', async () => {
+    const schema = z.object({ from: z.string() });
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 503 }))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    const warned = warnSpy.mock.calls[0][0] as string;
+    expect(warned).toMatch(/^\[llm\] provider=mimo failed=/);
+    expect(warned).toMatch(/falling back to minimax/);
+  });
+
+  it('logs an error line when all providers fail (chain exhausted)', async () => {
+    const schema = z.object({ x: z.string() });
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 503 }))
+      .mockRejectedValueOnce(Object.assign(new Error('Bad gateway'), { status: 502 }));
+
+    await expect(callLLM({ schema, system: 's', user: 'u' })).rejects.toBeInstanceOf(LLMUnavailableError);
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(errorSpy.mock.calls[0][0]).toMatch(/^\[llm\] all_providers_failed/);
+  });
+
+  it('logs an error line when schema validation fails', async () => {
+    const schema = z.object({ greeting: z.string() });
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: '{"wrong":"shape"}' } }],
+    });
+
+    await expect(callLLM({ schema, system: 's', user: 'u' })).rejects.toBeInstanceOf(LLMSchemaError);
+
+    expect(errorSpy).toHaveBeenCalledOnce();
+    expect(errorSpy.mock.calls[0][0]).toMatch(/^\[llm\] provider=mimo schema_error=/);
+  });
+
+  it('emits no log lines on caller errors (401, 400) — provider not degrading', async () => {
+    const schema = z.object({ ok: z.boolean() });
+    mockCreate.mockRejectedValueOnce(Object.assign(new Error('Unauthorized'), { status: 401 }));
+
+    await expect(callLLM({ schema, system: 's', user: 'u' })).rejects.toThrow(/Unauthorized/);
+
+    expect(infoSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('callLLM — no fallback on caller errors', () => {
   it('does not fall back on HTTP 401 (auth issue — fallback would also fail)', async () => {
     const schema = z.object({ ok: z.boolean() });

@@ -67,6 +67,7 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
+  const start = performance.now();
   let response;
   try {
     response = await client.chat.completions.create(
@@ -85,6 +86,7 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
   } finally {
     clearTimeout(timer);
   }
+  const latencyMs = Math.round(performance.now() - start);
 
   const rawContent = response.choices[0]?.message?.content;
   if (!rawContent) {
@@ -97,8 +99,13 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
 
   const parsed = input.schema.safeParse(JSON.parse(cleaned));
   if (!parsed.success) {
+    console.error(`[llm] provider=${provider.name} schema_error=${parsed.error.message} latency_ms=${latencyMs}`);
     throw new LLMSchemaError(parsed.error.message, rawContent);
   }
+
+  const tokens = (response as { usage?: { total_tokens?: number } }).usage?.total_tokens;
+  const tokenSuffix = typeof tokens === 'number' ? ` tokens=${tokens}` : '';
+  console.log(`[llm] provider=${provider.name} latency_ms=${latencyMs}${tokenSuffix} schema=ok`);
   return parsed.data;
 }
 
@@ -119,15 +126,22 @@ export async function callLLM<T>(input: CallLLMInput<T>): Promise<T> {
   if (input.signal?.aborted) throw new LLMAbortedError();
 
   let lastError: unknown;
-  for (const provider of PROVIDER_CHAIN) {
+  for (let i = 0; i < PROVIDER_CHAIN.length; i++) {
+    const provider = PROVIDER_CHAIN[i];
     if (input.signal?.aborted) throw new LLMAbortedError();
     try {
       return await callProvider(provider, input);
     } catch (e) {
       if (!isInfrastructureError(e)) throw e;
       lastError = e;
+      const next = PROVIDER_CHAIN[i + 1];
+      if (next) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`[llm] provider=${provider.name} failed=${msg} — falling back to ${next.name}`);
+      }
     }
   }
   const lastMessage = lastError instanceof Error ? lastError.message : String(lastError);
+  console.error(`[llm] all_providers_failed last=${lastMessage}`);
   throw new LLMUnavailableError(`All LLM providers exhausted. Last error: ${lastMessage}`);
 }
