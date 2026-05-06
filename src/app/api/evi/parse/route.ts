@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { checkRateLimit, getClientIp, eviLimiter } from '@/lib/rate-limit';
 import { EViParseRequest } from '@/lib/evi/types';
 import type { EViParseResponse, FollowUpType, SuggestedOption, EViTripParams } from '@/lib/evi/types';
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   const parsed = EViParseRequest.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Invalid request', details: parsed.error.flatten() },
+      { error: 'Invalid request', details: z.flattenError(parsed.error) },
       { status: 400 },
     );
   }
