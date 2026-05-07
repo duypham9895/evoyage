@@ -180,6 +180,62 @@ describe('analytics', () => {
       initAnalytics();
       expect(() => trackPageView('/plan')).not.toThrow();
     });
+
+    // ── ADR-0006 backup events ──
+
+    it('trackBackupAlternativesDistribution captures counts + derived aggregates', async () => {
+      const { initAnalytics, trackBackupAlternativesDistribution } = await loadAnalytics();
+      initAnalytics();
+      trackBackupAlternativesDistribution([3, 2, 0, 1]);
+      expect(captureMock).toHaveBeenCalledWith('backup_alternatives_distribution', {
+        stop_count: 4,
+        alt_counts: [3, 2, 0, 1],
+        no_backup_stops: 1,
+        mean_alt_count: 1.5,
+      });
+    });
+
+    it('trackBackupAlternativesDistribution handles empty array', async () => {
+      const { initAnalytics, trackBackupAlternativesDistribution } = await loadAnalytics();
+      initAnalytics();
+      trackBackupAlternativesDistribution([]);
+      expect(captureMock).toHaveBeenCalledWith('backup_alternatives_distribution', {
+        stop_count: 0,
+        alt_counts: [],
+        no_backup_stops: 0,
+        mean_alt_count: 0,
+      });
+    });
+
+    it('trackAlternativeMarkerClicked captures stop and alt indices', async () => {
+      const { initAnalytics, trackAlternativeMarkerClicked } = await loadAnalytics();
+      initAnalytics();
+      trackAlternativeMarkerClicked(2, 0);
+      expect(captureMock).toHaveBeenCalledWith('alternative_marker_clicked', {
+        stop_idx: 2,
+        alt_idx: 0,
+      });
+    });
+
+    it('trackAlternativeListItemClicked captures stop and alt indices', async () => {
+      const { initAnalytics, trackAlternativeListItemClicked } = await loadAnalytics();
+      initAnalytics();
+      trackAlternativeListItemClicked(0, 2);
+      expect(captureMock).toHaveBeenCalledWith('alternative_list_item_clicked', {
+        stop_idx: 0,
+        alt_idx: 2,
+      });
+    });
+
+    it('trackAlternativeNavigateClicked captures stop and alt indices', async () => {
+      const { initAnalytics, trackAlternativeNavigateClicked } = await loadAnalytics();
+      initAnalytics();
+      trackAlternativeNavigateClicked(1, 1);
+      expect(captureMock).toHaveBeenCalledWith('alternative_navigate_clicked', {
+        stop_idx: 1,
+        alt_idx: 1,
+      });
+    });
   });
 
   describe('PII hygiene', () => {

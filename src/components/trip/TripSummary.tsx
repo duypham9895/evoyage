@@ -7,6 +7,8 @@ import {
   trackTerrainWarningShown,
   trackTrafficCalloutShown,
   trackWhatIfPicked,
+  trackBackupAlternativesDistribution,
+  trackAlternativeListItemClicked,
 } from '@/lib/analytics';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import { calculateSavings, formatVnd } from '@/lib/trip/cost';
@@ -657,6 +659,17 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
   };
   void locale;
 
+  // ADR-0006 — once per TripPlan, log the distribution of alternative counts
+  // so we can validate the 5-signal pressure score's bucket boundaries against
+  // real usage data within the 2-4 week calibration window.
+  useEffect(() => {
+    if (!tripPlan) return;
+    const altCounts = tripPlan.chargingStops.map((stop) =>
+      'selected' in stop ? stop.alternatives.length : 0,
+    );
+    trackBackupAlternativesDistribution(altCounts);
+  }, [tripPlan?.tripId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleExpanded = (index: number) => {
     setExpandedStops(prev => {
       const next = new Set(prev);
@@ -956,6 +969,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                                 aria-selected={false}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  trackAlternativeListItemClicked(i, j);
                                   onSelectAlternativeStation?.(i, alt);
                                 }}
                                 className="w-full flex items-center justify-between px-3 py-2.5 min-h-[48px] hover:bg-[var(--color-surface-hover)] transition-colors border-b border-[var(--color-surface-hover)] last:border-b-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-accent)]"

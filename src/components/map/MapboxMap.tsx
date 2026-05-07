@@ -7,6 +7,10 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import type { TripPlan, ChargingStop, ChargingStopWithAlternatives, RankedStation } from '@/types';
 import { getStopStation } from '@/types';
 import { useLocale } from '@/lib/locale';
+import {
+  trackAlternativeMarkerClicked,
+  trackAlternativeNavigateClicked,
+} from '@/lib/analytics';
 import { decodePolyline } from '@/lib/geo/polyline';
 import {
   VIETNAM_CENTER,
@@ -186,6 +190,7 @@ function AlternativeMarker({
         anchor="center"
         onClick={(e: { originalEvent: MouseEvent }) => {
           e.originalEvent.stopPropagation();
+          if (!isSelected) trackAlternativeMarkerClicked(stopIdx, altIdx);
           onSelect(isSelected ? null : { stopIdx, altIdx });
         }}
       >
@@ -228,6 +233,7 @@ function AlternativeMarker({
               href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => trackAlternativeNavigateClicked(stopIdx, altIdx)}
               style={{
                 display: 'inline-block',
                 marginTop: 8,

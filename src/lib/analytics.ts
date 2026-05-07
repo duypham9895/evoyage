@@ -189,3 +189,54 @@ export function trackTripReplannedFromNotebook(daysSinceSaved: number): void {
 export function trackTripPinToggle(pinned: boolean): void {
   safeCapture('trip_pin_toggle', { pinned });
 }
+
+// ── ADR-0006 — Backup Station Selection events ───────────────────────────
+// Calibration window: 2-4 weeks post-ship. Validates the 8 magic numbers
+// in ADR-0006 (pressure thresholds + bucket boundaries) and measures
+// whether users click alternatives at all.
+
+/**
+ * For each TripPlan rendered, log the per-stop alternative count.
+ * Fires once per (tripId, locale) — useEffect-gated client-side.
+ *
+ * Aggregates needed for calibration:
+ *   - Distribution of N values (0/1/2/3) across stops → validates buckets
+ *   - % of stops with N=0 → measures filter aggressiveness
+ *   - Mean N per trip → measures average backup richness
+ */
+export function trackBackupAlternativesDistribution(
+  altCounts: readonly number[],
+): void {
+  const noBackupCount = altCounts.filter((c) => c === 0).length;
+  const sum = altCounts.reduce((a, b) => a + b, 0);
+  safeCapture('backup_alternatives_distribution', {
+    stop_count: altCounts.length,
+    alt_counts: altCounts,
+    no_backup_stops: noBackupCount,
+    mean_alt_count: altCounts.length > 0 ? Math.round((sum / altCounts.length) * 100) / 100 : 0,
+  });
+}
+
+/** User clicked an alternative marker on the map (curiosity signal). */
+export function trackAlternativeMarkerClicked(stopIdx: number, altIdx: number): void {
+  safeCapture('alternative_marker_clicked', {
+    stop_idx: stopIdx,
+    alt_idx: altIdx,
+  });
+}
+
+/** User clicked an alternative row in the TripSummary list (consideration signal). */
+export function trackAlternativeListItemClicked(stopIdx: number, altIdx: number): void {
+  safeCapture('alternative_list_item_clicked', {
+    stop_idx: stopIdx,
+    alt_idx: altIdx,
+  });
+}
+
+/** User clicked Navigate from an alternative's popup (commitment signal). */
+export function trackAlternativeNavigateClicked(stopIdx: number, altIdx: number): void {
+  safeCapture('alternative_navigate_clicked', {
+    stop_idx: stopIdx,
+    alt_idx: altIdx,
+  });
+}
