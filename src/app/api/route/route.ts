@@ -11,6 +11,8 @@ import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import { isHoliday } from '@/lib/trip/vietnam-holidays';
 import { queryStationPopularity } from '@/lib/station/popularity-query';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/routing/route-planner';
+import { applyBackupPressure } from '@/lib/routing/apply-backup-pressure';
+import { calculateUsableRange } from '@/lib/routing/range-calculator';
 import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
@@ -19,6 +21,7 @@ import { estimateDetourTimeSec, type StationWithRouteInfo } from '@/lib/routing/
 import { safeJsonArray } from '@/lib/safe-json';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
 import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
+import { CHARGE_TARGET_PERCENT } from '@/types';
 
 const routeRequestSchema = z.object({
   start: z.string().min(1).max(200),
@@ -474,6 +477,29 @@ export async function POST(request: NextRequest) {
         }
       : undefined;
 
+    // ADR-0006: trim each stop's alternatives based on Backup Pressure Score
+    // (5-signal composite of tight margin / low buffer / sparse downstream /
+    // peak window / holiday). Runs after traffic adjustment so adjustedDurationMin
+    // feeds the arrival-hour computation for the peakWindow signal.
+    const usableRangeAfterChargeKm = calculateUsableRange(
+      vehicle,
+      CHARGE_TARGET_PERCENT,
+      minArrivalPercent,
+      rangeSafetyFactor,
+    ).usableRangeKm;
+    const chargingTimePerStopMin = plan.chargingStops.map(
+      (s: ChargingStop | ChargingStopWithAlternatives) =>
+        'selected' in s ? s.selected.estimatedChargeTimeMin : s.estimatedChargingTimeMin,
+    );
+    const stopsWithBackupPressure = applyBackupPressure(plan.chargingStops, {
+      departureMoment,
+      totalDistanceKm,
+      totalDurationMin: adjustedDurationMin,
+      chargingTimePerStopMin,
+      stations: availableStations,
+      usableRangeAfterChargeKm,
+    });
+
     // Phase 3b — enrich each stop with a popularity verdict for the user's
     // expected arrival hour at THAT stop. Arrival = departure + drive time
     // to this stop + cumulative charging time at all PRIOR stops. Driving
@@ -483,7 +509,7 @@ export async function POST(request: NextRequest) {
     const departureMomentMs = departureMoment.getTime();
     const arrivalOffsetSecPerStop: number[] = [];
     let cumulativeChargeSec = 0;
-    for (const stop of plan.chargingStops) {
+    for (const stop of stopsWithBackupPressure) {
       const distFromStart =
         'selected' in stop ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
       const fraction = totalDistanceKm > 0 ? distFromStart / totalDistanceKm : 0;
@@ -498,7 +524,7 @@ export async function POST(request: NextRequest) {
     }
 
     const enrichedChargingStops = await Promise.all(
-      plan.chargingStops.map(async (stop, idx) => {
+      stopsWithBackupPressure.map(async (stop, idx) => {
         const station = 'selected' in stop ? stop.selected.station : stop.station;
         const arrivalAtIso = new Date(
           departureMomentMs + arrivalOffsetSecPerStop[idx]! * 1000,
