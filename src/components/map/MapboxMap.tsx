@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import MapGL, { Source, Layer, Marker, Popup, useMap } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import type { TripPlan, ChargingStop, ChargingStopWithAlternatives } from '@/types';
+import type { TripPlan, ChargingStop, ChargingStopWithAlternatives, RankedStation } from '@/types';
 import { getStopStation } from '@/types';
 import { decodePolyline } from '@/lib/geo/polyline';
 import {
@@ -157,6 +157,95 @@ function StopMarker({
   );
 }
 
+function AlternativeMarker({
+  alt,
+  stopIdx,
+  altIdx,
+  isSelected,
+  onSelect,
+}: {
+  readonly alt: RankedStation;
+  readonly stopIdx: number;
+  readonly altIdx: number;
+  readonly isSelected: boolean;
+  readonly onSelect: (sel: { stopIdx: number; altIdx: number } | null) => void;
+}) {
+  const station = alt.station;
+  const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
+  const detourMin = Math.round((alt.detourDriveTimeSec * 2) / 60);
+  const chargeTimeMin = Math.round(alt.estimatedChargeTimeMin);
+
+  return (
+    <>
+      <Marker
+        latitude={station.latitude}
+        longitude={station.longitude}
+        anchor="center"
+        onClick={(e: { originalEvent: MouseEvent }) => {
+          e.originalEvent.stopPropagation();
+          onSelect(isSelected ? null : { stopIdx, altIdx });
+        }}
+      >
+        <div
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            background: color,
+            border: '2px solid #0F0F11',
+            opacity: isSelected ? 1 : 0.55,
+            cursor: 'pointer',
+            transition: 'opacity 150ms ease-out',
+          }}
+          aria-label={`Backup station ${altIdx + 1} for stop ${stopIdx + 1}`}
+        />
+      </Marker>
+      {isSelected && (
+        <Popup
+          latitude={station.latitude}
+          longitude={station.longitude}
+          offset={12}
+          closeOnClick={false}
+          onClose={() => onSelect(null)}
+        >
+          <div style={{ fontFamily: 'system-ui', maxWidth: 250 }}>
+            <div style={{ fontSize: 10, fontWeight: 'bold', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              Backup for stop {stopIdx + 1}
+            </div>
+            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(station.name)}</h3>
+            <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(station.address)}</p>
+            <p style={{ fontSize: 11, margin: '0 0 4px', color: '#888' }}>
+              {station.maxPowerKw}kW | {station.connectorTypes.join(', ')} | {station.provider}
+            </p>
+            <p style={{ fontSize: 12, margin: 0 }}>
+              <span style={{ color: '#FFAB40', fontWeight: 'bold' }}>+{detourMin}m detour</span>
+              {` | ~${chargeTimeMin}m charge`}
+            </p>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                marginTop: 8,
+                padding: '4px 12px',
+                background: '#00D4AA',
+                color: '#0F0F11',
+                borderRadius: 4,
+                textDecoration: 'none',
+                fontSize: 12,
+                fontWeight: 'bold',
+              }}
+            >
+              Navigate
+            </a>
+          </div>
+        </Popup>
+      )}
+    </>
+  );
+}
+
 function WaypointMarker({ lat, lng, label }: { readonly lat: number; readonly lng: number; readonly label: string }) {
   return (
     <Marker latitude={lat} longitude={lng} anchor="center">
@@ -185,6 +274,7 @@ function WaypointMarker({ lat, lng, label }: { readonly lat: number; readonly ln
 function TripOverlay({ tripPlan, waypoints }: { readonly tripPlan: TripPlan; readonly waypoints?: readonly WaypointMarkerData[] }) {
   const { current: mapRef } = useMap();
   const [selectedStop, setSelectedStop] = useState<number | null>(null);
+  const [selectedAlt, setSelectedAlt] = useState<{ stopIdx: number; altIdx: number } | null>(null);
 
   const path = useMemo(() => decodePolyline(tripPlan.polyline), [tripPlan.polyline]);
 
@@ -220,7 +310,16 @@ function TripOverlay({ tripPlan, waypoints }: { readonly tripPlan: TripPlan; rea
 
   const handleStopSelect = useCallback((index: number | null) => {
     setSelectedStop(index);
+    if (index !== null) setSelectedAlt(null);
   }, []);
+
+  const handleAltSelect = useCallback(
+    (sel: { stopIdx: number; altIdx: number } | null) => {
+      setSelectedAlt(sel);
+      if (sel !== null) setSelectedStop(null);
+    },
+    [],
+  );
 
   return (
     <>
@@ -250,6 +349,22 @@ function TripOverlay({ tripPlan, waypoints }: { readonly tripPlan: TripPlan; rea
           onSelect={handleStopSelect}
         />
       ))}
+
+      {/* Alternative station markers (smaller, dimmed) — ADR-0006 */}
+      {tripPlan.chargingStops.flatMap((stop, stopIdx) =>
+        'selected' in stop
+          ? stop.alternatives.map((alt, altIdx) => (
+              <AlternativeMarker
+                key={`alt-${stopIdx}-${alt.station.id}`}
+                alt={alt}
+                stopIdx={stopIdx}
+                altIdx={altIdx}
+                isSelected={selectedAlt?.stopIdx === stopIdx && selectedAlt?.altIdx === altIdx}
+                onSelect={handleAltSelect}
+              />
+            ))
+          : [],
+      )}
     </>
   );
 }
