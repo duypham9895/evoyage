@@ -19,11 +19,11 @@ A physical location with one or more chargers, owned by an Operator. Independent
 _Avoid_: charger (a charger is one connector at a Station), point, location.
 
 **Alternative Station** (or **Alternative**):
-A Station attached to a Stop as a pre-computed fallback. Selected at plan time, ranked by detour cost + charger count + operator diversity. Each Stop carries 0–3 Alternatives (ADR-0006). Different from "a Station you could detour to" — an Alternative is explicitly endorsed by `TripPlanner`.
+A Station attached to a Stop as a pre-computed fallback. Each Stop carries 0–3 Alternatives (ADR-0006), with the count driven by `BackupPressureScore`. Ranking is delegated to the existing `scoreStation` (detour drive-time + charge-time + VinFast affinity). Different from "a Station you could detour to" — an Alternative is explicitly endorsed by `TripPlanner`.
 _Avoid_: backup, fallback (in code). Vietnamese user-facing copy uses "trạm dự phòng".
 
 **Operator**:
-The brand running a Station — primarily VinFast, V-GREEN, EVN. Affects connector type, payment method, and app required. Used as a backup-ranking signal because operator diversity reduces correlated failures (e.g. a VinFast network outage hits all VinFast Stations together).
+The brand running a Station — primarily VinFast, V-GREEN, EVN. Affects connector type, payment method, and app required. Same-Operator continuity (e.g. a VinFast vehicle charging at a VinFast Station) earns a ranking-score bonus in `scoreStation`, reflecting same-app payment + membership and VinFast's ~80% DC fast-charger market share in VN.
 
 ### Range
 

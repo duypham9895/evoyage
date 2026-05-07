@@ -1,18 +1,24 @@
-# Backup station selection uses dynamic 0–3 Alternatives ranked by pressure + detour
+# Backup station Alternatives — dynamic 0–3 count on top of existing ranker
 
-Decided 2026-05-07 during architectural design discussion (`grill-with-docs` session).
+Decided 2026-05-07. Revised same-day after codebase review revealed existing infrastructure that the original ADR draft ignored.
 
 ## Context
 
-`TripPlanner` (ADR-0004) returns one charging Stop per leg. When that Stop fails — broken charger, full queue, closed for maintenance — the user has no fallback prepared. VinFast SSE provides per-station real-time status only on click, not bulk, so reactive in-trip rerouting isn't viable yet.
+`TripPlanner` (ADR-0004) **already** returns one charging Stop per leg with up to 2 Alternatives attached to each Stop:
 
-Vietnam has wide variance in station density: HN–HP corridor has 5+ Stations within 10km of any planned Stop; QL14 (Buôn Ma Thuột → Pleiku) may have exactly one usable Station for 50km. A static `N = 2` rule generates fake Alternatives in sparse zones and over-clutters the map in dense ones.
+- `src/types/index.ts:217` — `ChargingStopWithAlternatives` carries `selected: RankedStation` + `alternatives: readonly RankedStation[]` + battery context. Type is fully wired through the API.
+- `src/lib/routing/station-ranker.ts:76` — `scoreStation` ranks candidates by *detour drive time (sec) + estimated charge time (min) + VinFast↔VinFast affinity bonus*. Tiebreakers prefer higher `portCount`, known operating hours, non-VinFast-only.
+- `src/lib/routing/route-planner.ts:286` — `planChargingStops` returns `rankedStations.slice(1, 3)` as alternatives — a **hardcoded top-2 cutoff** with no risk awareness.
+
+So the *type*, the *ranking*, and the *delivery* already work. What's missing is **count adaptivity** (when does a Stop need 0/1/2/3 Alternatives?) and a **detour budget filter** that drops far-off-route junk before it reaches the ranker.
+
+VN has wide variance in station density: HN–HP corridor has 5+ Stations within 10km of any planned Stop; QL14 may have one usable Station for 50km. The hardcoded `slice(1, 3)` (always N ≤ 2) surfaces fake Alternatives in sparse zones — the corridor search returns *whatever* it can find, sometimes 25 km off-route — and clips opportunity in dense, high-risk situations (Tết, peak hour) that warrant a 3rd alternative.
 
 ## Decision
 
-Each `Stop` in the returned `TripPlan` carries `alternatives: AlternativeStation[]` where `N` ∈ [0, 3], computed at plan time on the server.
+Replace the hardcoded `slice(1, 3)` with a `BackupPressureScore`-driven slice. Add a detour-budget filter applied **before** `scoreStation`. Ranking itself is **unchanged** — `scoreStation` and its tiebreakers are correct.
 
-### Count
+### Count (new)
 
 ```
 BackupPressureScore = sum of:
@@ -27,53 +33,82 @@ Pressure 0–1  → N_max = 1
 Pressure 2–3  → N_max = 2
 Pressure 4–5  → N_max = 3
 
-N = min(N_max, candidates_within_radius)
+N = min(N_max, ranked_candidates_remaining_after_top)
 ```
 
-### Filter (hard, applied before ranking)
+### Filter (new — applied between corridor search and ranker)
 
-A Station is a candidate iff all hold:
+A candidate Station survives iff:
+- Connector + power compatible with `Vehicle` (existing check, unchanged)
+- Round-trip detour ≤ 10 km off-route (new)
+- Round-trip detour ≤ 20% of remaining Usable Range at primary Stop (new)
 
-- Connector + power compatible with `Vehicle`
-- Detour ≤ 10km off-route from primary Stop
-- Detour ≤ 20% of remaining Usable Range at primary Stop
+The 5km / 10km / 15km corridor cascade in `findChargingDecisionPoints` is unchanged; the new budget filter narrows the candidate set before scoring.
 
-### Ranking (top N selected from candidates)
+### Ranking — unchanged
 
-```
-score = 0.60 × (−detour_km)
-      + 0.25 × charger_count_bonus       (>2 chargers ⇒ bonus)
-      + 0.15 × operator_diversity        (Operator ≠ primary's ⇒ bonus)
-```
+`scoreStation` continues to rank by:
+- `score = detour_drive_time_min + estimated_charge_time_min`
+- VinFast↔VinFast affinity bonus (up to 50% off score) — **kept as-is**
+- Tiebreakers: `portCount`, known operating hours, non-VinFast-only
 
-`AlternativeStation` is owned by `TripPlanner`. Selection runs after the primary Stop is picked, before HTTP serialization.
+No new ranking signals in v1.
 
 ## Why
 
-Splitting "should this Stop have backup?" (count) from "which Stations are best?" (ranking) is the central insight. Both questions have different signals: count = risk, ranking = quality. A weighted-sum-everything approach blurs them and makes calibration impossible — a future developer staring at the score function can't separate "we picked this Station because the route is risky" from "we picked it because it's a good Station."
+Splitting "should this Stop have backup?" (count) from "which Stations are best?" (ranking) is the central insight. The ranker already does its job; the bug is only in *how many* of its results we surface and *which candidates* even reach it. Touching `scoreStation` would expand blast radius without proportional value.
 
-Five count signals were chosen as the **smallest set computable today**. Three (distance, battery, downstream density) come from data already in `TripPlanner`. Two (Peak Window, holiday) leverage `src/lib/trip/vietnam-holidays.ts` and a hardcoded peak heuristic — no new data sources, no new API costs.
+Five count signals chosen as the **smallest set computable today**. Three (distance, battery, downstream density) come from data already in `TripPlanner`. Two (Peak Window, holiday) leverage `src/lib/trip/vietnam-holidays.ts` and a hardcoded peak heuristic — no new data sources, no new API costs.
 
-`N = 0` is a feature, not a bug. Forcing a fake Alternative in a sparse zone (e.g. one VinFast Station and 25km to anything else) misleads the user into thinking they have a fallback they don't. UI must surface "no backup available in this area — sạc đầy hơn 80% trước khi rời", not silently omit.
+`N = 0` is a feature, not a bug. Forcing fake Alternatives in a sparse zone misleads the user into thinking they have a fallback they don't. UI must surface "no backup available — sạc đầy hơn 80% trước khi rời", not silently drop alternatives.
 
-Reliability score is the strongest *theoretical* ranking signal for backup ("backup must itself be reliable"), but requires accumulated station-status data the system isn't yet collecting at scale (Phase 3b spec). v1 ships without it; ranking is weaker than it could be. This is accepted: the alternative is to block the entire feature for months.
+**Drive-time, not detour-km.** The first draft of this ADR specified detour-km as the dominant ranking signal. Code review showed `scoreStation` already uses detour drive time (sec), which is strictly better — accounts for road class, traffic, and pass elevation. ADR amended; ranker unchanged.
+
+**VinFast bonus kept; operator diversity dropped.** The first draft proposed a +bonus for "different Operator from primary" (hedge against systemic VinFast outage). Code review found the existing rule is the **opposite**: same-Operator (VinFast↔VinFast) gets a bonus. Resolved in favour of the existing code:
+
+- VinFast operates ~80% of usable DC fast chargers in VN. Same-Operator continuity (same app, same payment, same membership) is concrete UX value, every trip.
+- Systemic VinFast outages do happen, but rarely (≈once-a-year scale) and are usually localized. Hedge value is low.
+- Inverting to "diversity bonus" would degrade UX for the common case to insure against the rare case.
+
+Reliability score (Phase 3b) remains the deferred ranking improvement — strongest signal but needs accumulated data.
 
 ## Considered alternatives
 
-- **Fixed `N = 2` always.** Rejected: forces fake Alternatives in sparse zones and clutters dense ones. Same UI complexity as dynamic, weaker correctness.
-- **Real-time in-trip rerouting (option B in discussion).** Rejected for v1: VinFast SSE doesn't support bulk status; would require dedicated status crawl + push notification infrastructure. Pre-trip alternatives extracts most value at a fraction of the cost.
-- **Adding precautionary extra Stops to the route (option C in discussion).** Rejected: opposite of UX — each Stop is 30–60min and users avoid stopping more than necessary. C is appropriate only in extreme sparse zones (Tây Bắc, Tây Nguyên); the current pressure-driven approach captures that case via the downstream-density signal without forcing it elsewhere.
-- **Six count signals including pass-detection (`src/lib/trip/detect-passes.ts`).** Rejected: double-counts with downstream density (mountain passes correlate with sparse areas). Adds calibration burden without new information. Reconsider if downstream density proves an insufficient proxy.
-- **Reliability score in ranking.** **Deferred, not rejected.** Phase 3b will ship popularity-prediction + station-status history. At that point, reliability is added as the dominant ranking signal (weight ≈ 0.30–0.40), redistributing detour to ≈ 0.40 and dropping operator diversity. A new ADR will record the recalibration.
-- **Single weighted-sum across all 8+ factors.** Rejected: blurs count vs. ranking concerns, magic-number explosion, debug-impossible.
-- **Diversity within the N Alternatives** (force the 3 picks to span near/medium/far or different Operators). Rejected for v1: complex to implement, hard to debug, marginal UX value when N is already small.
+- **Keep fixed `N = 2` (status quo).** Rejected: surfaces fake Alternatives in sparse zones (corridor returns far-off-route junk) and clips opportunity in high-pressure ones. Hardcoded threshold fails in both directions.
+- **Detour-km in ranker instead of drive-time.** Rejected: drive-time captures road class and traffic, which km doesn't. Existing code is correct; my first draft was wrong.
+- **Operator diversity bonus** (override existing VinFast affinity). Rejected — see Why §"VinFast bonus kept". 80% market share + same-app continuity beats systemic-failure hedge for VN.
+- **Real-time in-trip rerouting** (the original "option B" of the design discussion). Rejected for v1: VinFast SSE doesn't support bulk status; would require dedicated crawl + push notification infrastructure. Pre-trip alternatives extracts most value at fraction of the cost.
+- **Precautionary extra Stops** (the original "option C"). Rejected: each Stop is 30–60 min; users avoid stopping more than necessary. Captured indirectly via downstream-density signal.
+- **Six count signals including pass-detection** (`src/lib/trip/detect-passes.ts`). Rejected: double-counts with downstream density. Reconsider if density proves insufficient proxy.
+- **Reliability score in ranking.** **Deferred, not rejected.** Phase 3b ships popularity-prediction + station-status history. Then reliability becomes the dominant signal; a successor ADR will record the recalibration.
+- **Single weighted-sum across all 8+ factors.** Rejected: blurs count vs ranking, magic-number explosion.
+- **Diversity within the N Alternatives** (force the 3 picks to span near/medium/far). Rejected for v1: complex, marginal UX value at small N.
 
 ## Consequences
 
-- `TripPlan` response shape extends: each `Stop` gains `alternatives: AlternativeStation[]`. Existing clients reading `.stops` continue to work; `alternatives` is additive.
-- `TripPlanner` Module grows. Internal helpers `computeBackupPressure`, `filterCandidates`, `rankAlternatives` are private — not part of the external Interface (see ADR-0004 on Interface depth).
-- v1 ships with **8 magic numbers**: `0.70` (next-stop range threshold), `25` (low-battery %), `3` (downstream-station count), `100` (downstream km radius), `10` (detour km), `20` (detour as % range), weights `0.60 / 0.25 / 0.15`, Peak Windows `11–13h / 17–20h`, bucket boundaries `0–1 / 2–3 / 4–5`. All exposed via `TripPlanner` config so they're A/B-tunable post-launch — none should be considered "right" until calibrated against telemetry.
-- Edge case: high-pressure dense corridor (Tết on HN–HP) → every Stop has `N = 3` → many secondary markers. UI may need to dim Alternatives below an "interest threshold" or hide on zoom-out. Discovered post-launch.
-- Edge case: `N = 0` Stop. UI must surface a "no backup available — charge to ≥ 90%" banner, not silent omission.
-- Calibration debt is real. Required telemetry to recalibrate within 2–4 weeks of ship: which Alternative did the user click? Did they reach destination? Did they switch from primary? Without this, the magic numbers ossify.
-- Phase 3b (popularity-prediction) will add `reliability` to `Station` and a `congestion_forecast` API. A successor ADR will record the recalibration: weights shift, Peak Window heuristic is replaced by data, bucket thresholds may not change.
+- `src/lib/routing/route-planner.ts:286` — `slice(1, 3)` replaced with a slice driven by computed `N`. `ChargingStopWithAlternatives` shape unchanged, so existing consumers (UI, eVi, tests) keep working.
+- New module: `src/lib/routing/backup-pressure.ts` exporting `computeBackupPressure(input)` returning `0–5`. Unit-tested in isolation.
+- New filter step inside `planChargingStops`: candidates exceeding 10 km detour or 20% remaining-range detour are dropped *before* `scoreStation`. This drops far-off-route junk that today survives into the alternatives slice.
+- v1 magic numbers (delta only — ranker constants `CHARGING_EFFICIENCY_FACTOR`, `VINFAST_BONUS_CAP`, `OK_RANK_THRESHOLD` unchanged):
+  - `0.70` next-stop range threshold
+  - `25` low-battery %
+  - `3` downstream-station count threshold
+  - `100` km downstream radius
+  - `10` km detour budget
+  - `20` % detour-as-range budget
+  - Peak Windows `11–13h` / `17–20h`
+  - Bucket boundaries `0–1` / `2–3` / `4–5`
+- Edge case: `N = 0` Stop. UI must surface "no backup available — charge to ≥ 90%" banner. New locale keys needed in `messages/{vi,en}.json`.
+- Edge case: Tết on dense corridor → many Stops at `N = 3` → marker clutter. UI may need zoom-dependent alternative dimming. Discovered post-launch.
+- Calibration debt: peak windows and bucket thresholds are guesses. Need post-ship telemetry (which Alternative was clicked? did the user switch from primary?) within 2–4 weeks.
+- Phase 3b (popularity-prediction) will add `reliability` and `congestion_forecast`. A successor ADR will record the recalibration: weights shift, Peak Window heuristic replaced by data, bucket thresholds may not change.
+
+## Implementation outline
+
+| Layer | Files touched | Net delta |
+|---|---|---|
+| Pressure calc | new `backup-pressure.ts` + colocated test | ~80 LOC + ~15 tests |
+| Wire into planner | edit `route-planner.ts` (`slice` site + filter step) | ~30 LOC, modifies 1 function |
+| Locale keys for `N=0` banner | `messages/{vi,en}.json` + `locale-keys.test.ts` covers parity | ~6 lines |
+| UI dimming for marker clutter | deferred to post-ship after observing real Tết data | — |
+| Telemetry | deferred to its own phase (Phase 3b boundary) | — |
