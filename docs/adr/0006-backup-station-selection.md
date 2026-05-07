@@ -36,14 +36,13 @@ Pressure 4–5  → N_max = 3
 N = min(N_max, ranked_candidates_remaining_after_top)
 ```
 
-### Filter (new — applied between corridor search and ranker)
+### Filter (new — applied to alternatives after ranking)
 
-A candidate Station survives iff:
-- Connector + power compatible with `Vehicle` (existing check, unchanged)
-- Round-trip detour ≤ 10 km off-route (new)
-- Round-trip detour ≤ 20% of remaining Usable Range at primary Stop (new)
+`scoreStation` runs on all corridor candidates as today and produces a sorted list. The filter then drops alternatives whose **round-trip detour drive time exceeds 12 minutes** (≈10 km at 50 km/h — a proxy for the original km budget that reuses the existing `detourDriveTimeSec` field on `RankedStation`, avoiding a new metric in the public type).
 
-The 5km / 10km / 15km corridor cascade in `findChargingDecisionPoints` is unchanged; the new budget filter narrows the candidate set before scoring.
+A range-aware filter (originally "≤ 20% of remaining Usable Range") is **deferred** to post-launch. Reasoning: the 12-minute time budget already eliminates the worst far-off-route junk in practice; the range-aware variant would require piping `Vehicle` + `currentBatteryPercent` into the trim helper, expanding API surface for marginal additional gain. Reconsider once Phase 3b telemetry shows real usage.
+
+Compatibility filter on connector + power is unchanged — still runs before scoring as today.
 
 ### Ranking — unchanged
 
@@ -94,10 +93,10 @@ Reliability score (Phase 3b) remains the deferred ranking improvement — strong
   - `25` low-battery %
   - `3` downstream-station count threshold
   - `100` km downstream radius
-  - `10` km detour budget
-  - `20` % detour-as-range budget
+  - `720` sec (12 min) detour drive-time budget
   - Peak Windows `11–13h` / `17–20h`
   - Bucket boundaries `0–1` / `2–3` / `4–5`
+  - Range-aware detour budget (`≤ 20%` of remaining range) deferred to post-launch
 - Edge case: `N = 0` Stop. UI must surface "no backup available — charge to ≥ 90%" banner. New locale keys needed in `messages/{vi,en}.json`.
 - Edge case: Tết on dense corridor → many Stops at `N = 3` → marker clutter. UI may need zoom-dependent alternative dimming. Discovered post-launch.
 - Calibration debt: peak windows and bucket thresholds are guesses. Need post-ship telemetry (which Alternative was clicked? did the user switch from primary?) within 2–4 weeks.

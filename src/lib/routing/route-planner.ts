@@ -28,6 +28,12 @@ const PRIMARY_CORRIDOR_KM = 5;      // First try: 5km from route
 const FALLBACK_CORRIDOR_KM = 10;    // Second try: 10km from route
 const FALLBACK_RADIUS_KM = 15;      // Last resort: 15km circle (old behavior)
 
+// ── Alternative Selection Constants (ADR-0006) ──
+// Drop alternatives whose round-trip detour drive time exceeds this budget.
+// 720 sec ≈ 12 min ≈ 10 km at 50 km/h average — proxy for the km budget
+// in ADR-0006, reusing the existing `detourDriveTimeSec` on RankedStation.
+const ALTERNATIVE_DETOUR_BUDGET_SEC = 720;
+
 interface VehicleForPlanning {
   readonly brand: string;
   readonly model: string;
@@ -283,7 +289,11 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
 
     if (rankedStations && rankedStations.length > 0) {
       const best = rankedStations[0];
-      const alternatives = rankedStations.slice(1, 3);
+      // ADR-0006: drop far-detour alternatives, return all within budget;
+      // applyBackupPressure (called post-planning) trims to per-stop nMax.
+      const alternatives = rankedStations
+        .slice(1)
+        .filter((r) => r.detourDriveTimeSec <= ALTERNATIVE_DETOUR_BUDGET_SEC);
 
       // Account for detour: station may be off-route, add round-trip distance
       const detourKm = getStationDetourKm(best.station, dp);
