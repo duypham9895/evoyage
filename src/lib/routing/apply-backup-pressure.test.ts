@@ -72,7 +72,10 @@ describe('applyBackupPressure', () => {
 
   it('trims a stop with 5 alternatives down to nMax (=1 under baseline pressure)', () => {
     const stop = makeStopWithAlts('A', 100, 5);
-    const result = applyBackupPressure([stop], BASE_CONTEXT);
+    const result = applyBackupPressure([stop], {
+      ...BASE_CONTEXT,
+      chargingTimePerStopMin: [30],
+    });
 
     expect(result).toHaveLength(1);
     const trimmed = result[0] as ChargingStopWithAlternatives;
@@ -108,10 +111,24 @@ describe('applyBackupPressure', () => {
       estimatedChargingTimeMin: 30,
     };
 
-    const result = applyBackupPressure([legacyStop], BASE_CONTEXT);
+    const result = applyBackupPressure([legacyStop], {
+      ...BASE_CONTEXT,
+      chargingTimePerStopMin: [30],
+    });
 
     expect(result).toHaveLength(1);
     expect(result[0]).toBe(legacyStop); // identity — unchanged reference
+  });
+
+  it('throws when chargingTimePerStopMin length does not match stops length', () => {
+    const stop = makeStopWithAlts('A', 100, 5);
+
+    expect(() =>
+      applyBackupPressure([stop], {
+        ...BASE_CONTEXT,
+        chargingTimePerStopMin: [30, 30], // 2 entries, but 1 stop → mismatch
+      }),
+    ).toThrow(/length 2 but stops has length 1/);
   });
 
   it('computes pressure independently per stop — different nMax for different stops', () => {

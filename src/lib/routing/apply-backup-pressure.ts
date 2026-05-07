@@ -49,6 +49,15 @@ export function applyBackupPressure(
   stops: readonly (ChargingStop | ChargingStopWithAlternatives)[],
   context: ApplyBackupPressureContext,
 ): readonly (ChargingStop | ChargingStopWithAlternatives)[] {
+  // Invariant: caller must provide one charging-time entry per stop.
+  // Misalignment yields garbage arrival times → silently wrong nMax. Fail loud.
+  if (context.chargingTimePerStopMin.length !== stops.length) {
+    throw new Error(
+      `applyBackupPressure: chargingTimePerStopMin has length ` +
+        `${context.chargingTimePerStopMin.length} but stops has length ${stops.length}`,
+    );
+  }
+
   const totalDriveSec = context.totalDurationMin * 60;
   const departureMs = context.departureMoment.getTime();
   let cumulativeChargeSec = 0;
@@ -58,7 +67,7 @@ export function applyBackupPressure(
     const fraction = context.totalDistanceKm > 0 ? stopKm / context.totalDistanceKm : 0;
     const driveSec = totalDriveSec * fraction;
     const arrivalAt = new Date(departureMs + (driveSec + cumulativeChargeSec) * 1000);
-    cumulativeChargeSec += (context.chargingTimePerStopMin[i] ?? 0) * 60;
+    cumulativeChargeSec += context.chargingTimePerStopMin[i] * 60;
 
     const isLastStop = i === stops.length - 1;
     const distanceToNextStopKm = isLastStop ? null : getStopDistance(stops[i + 1]) - stopKm;
