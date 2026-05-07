@@ -6,6 +6,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import type { TripPlan, ChargingStop, ChargingStopWithAlternatives, RankedStation } from '@/types';
 import { getStopStation } from '@/types';
+import { useLocale } from '@/lib/locale';
 import { decodePolyline } from '@/lib/geo/polyline';
 import {
   VIETNAM_CENTER,
@@ -74,6 +75,7 @@ function StopMarker({
   readonly isSelected: boolean;
   readonly onSelect: (index: number | null) => void;
 }) {
+  const { t } = useLocale();
   const station = getStopStation(stop);
   const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
 
@@ -148,7 +150,7 @@ function StopMarker({
                 fontWeight: 'bold',
               }}
             >
-              Navigate
+              {t('popup_navigate')}
             </a>
           </div>
         </Popup>
@@ -170,6 +172,7 @@ function AlternativeMarker({
   readonly isSelected: boolean;
   readonly onSelect: (sel: { stopIdx: number; altIdx: number } | null) => void;
 }) {
+  const { t } = useLocale();
   const station = alt.station;
   const color = PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR;
   const detourMin = Math.round((alt.detourDriveTimeSec * 2) / 60);
@@ -210,7 +213,7 @@ function AlternativeMarker({
         >
           <div style={{ fontFamily: 'system-ui', maxWidth: 250 }}>
             <div style={{ fontSize: 10, fontWeight: 'bold', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
-              Backup for stop {stopIdx + 1}
+              {t('popup_backup_for_stop', { n: String(stopIdx + 1) })}
             </div>
             <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(station.name)}</h3>
             <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(station.address)}</p>
@@ -237,7 +240,7 @@ function AlternativeMarker({
                 fontWeight: 'bold',
               }}
             >
-              Navigate
+              {t('popup_navigate')}
             </a>
           </div>
         </Popup>
