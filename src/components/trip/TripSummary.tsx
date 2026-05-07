@@ -925,7 +925,12 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       lastVerifiedAt={station.lastVerifiedAt}
                     />
 
-                    {/* Alternatives */}
+                    {/* Alternatives — render list when present, banner when N=0 (ADR-0006) */}
+                    {hasAlternatives && alternatives.length === 0 && (
+                      <div className="mt-2 px-3 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] italic">
+                        {t('stations_no_alternatives')}
+                      </div>
+                    )}
                     {alternatives.length > 0 && (
                       <div className="mt-2">
                         <div className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
