@@ -1,5 +1,6 @@
 import { test, expect } from 'playwright/test';
 import { mockAPIs, waitForAppReady, switchToTab } from './helpers/app';
+import routeWithAlternativesFixture from './fixtures/route-with-alternatives.json';
 
 test.describe('F1: Trip Planning — Happy Path', () => {
   test.beforeEach(async ({ page }) => {
@@ -59,6 +60,59 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     // Verify map is still rendered
     const mapContainer = page.locator('.leaflet-container');
     await expect(mapContainer).toBeVisible();
+  });
+
+  test('shows alternatives list when a Stop has alternatives (ADR-0006)', async ({ page, isMobile }) => {
+    // Override the /api/route mock with a fixture that has ChargingStopWithAlternatives.
+    // page.route() applies last-defined handler first, so this overrides mockAPIs above.
+    await page.route('**/api/route', (route) => {
+      if (route.request().method() === 'POST') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(routeWithAlternativesFixture),
+        });
+      }
+      return route.continue();
+    });
+
+    await page.goto('/plan');
+    await waitForAppReady(page);
+    await switchToTab(page, isMobile ? 'Route' : 'Plan Trip');
+
+    // Fill route form (same flow as the happy-path test)
+    const startInput = page.locator('[role="combobox"]').first();
+    await startInput.fill('Ho Chi Minh City');
+    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
+    await page.locator('[role="option"]').first().click({ force: true });
+
+    const endInput = page.locator('[role="combobox"]').nth(1);
+    await endInput.fill('Da Lat');
+    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
+    await page.locator('[role="option"]').first().click({ force: true });
+
+    if (isMobile) await switchToTab(page, 'Vehicle');
+    await page.locator('button:has-text("VF 8")').first().click();
+    if (isMobile) await switchToTab(page, 'Route');
+
+    await page
+      .locator('button:has-text("Calculate route"), button:has-text("Tính lộ trình"), button:has-text("Plan this trip"), button:has-text("Xem lịch trình")')
+      .click();
+
+    await page.waitForResponse((resp) => resp.url().includes('/api/route') && resp.status() === 200);
+
+    // Expand the stop card so the alternatives section is rendered
+    const stopHeader = page.locator('text=/Bảo Lộc/').first();
+    await expect(stopHeader).toBeVisible({ timeout: 10_000 });
+    await stopHeader.click();
+
+    // Assert the alternatives list is visible (locale-key text in either lang)
+    const altsHeader = page.locator('text=/lựa chọn khác|more options/').first();
+    await expect(altsHeader).toBeVisible({ timeout: 5_000 });
+
+    // Assert the alternative station name is rendered
+    const altStationName = page.locator(`text=/Đa R'Sác/`).first();
+    await expect(altStationName).toBeVisible();
   });
 
   test('landing page renders and links to /plan', async ({ page }) => {

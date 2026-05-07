@@ -1,0 +1,87 @@
+{
+  "totalDistanceKm": 310.5,
+  "totalDurationMin": 360,
+  "chargingStops": [
+    {
+      "selected": {
+        "station": {
+          "id": "station-bao-loc",
+          "name": "VinFast Charging - Bảo Lộc",
+          "address": "Quốc lộ 20, Bảo Lộc, Lâm Đồng",
+          "province": "Lâm Đồng",
+          "latitude": 11.5474,
+          "longitude": 107.8088,
+          "chargerTypes": ["DC"],
+          "connectorTypes": ["CCS2"],
+          "portCount": 4,
+          "maxPowerKw": 150,
+          "stationType": "public",
+          "isVinFastOnly": true,
+          "operatingHours": "24/7",
+          "provider": "VinFast",
+          "chargingStatus": "available",
+          "parkingFee": false
+        },
+        "detourDriveTimeSec": 60,
+        "estimatedChargeTimeMin": 32,
+        "totalStopTimeMin": 33,
+        "rank": "best",
+        "score": 33
+      },
+      "alternatives": [
+        {
+          "station": {
+            "id": "station-da-rsac",
+            "name": "EverCharge - Đa R'Sác",
+            "address": "Tỉnh lộ 725, Lâm Đồng",
+            "province": "Lâm Đồng",
+            "latitude": 11.5612,
+            "longitude": 107.7901,
+            "chargerTypes": ["DC"],
+            "connectorTypes": ["CCS2"],
+            "portCount": 2,
+            "maxPowerKw": 60,
+            "stationType": "public",
+            "isVinFastOnly": false,
+            "operatingHours": "06:00-22:00",
+            "provider": "EverCharge",
+            "chargingStatus": "available",
+            "parkingFee": false
+          },
+          "detourDriveTimeSec": 300,
+          "estimatedChargeTimeMin": 38,
+          "totalStopTimeMin": 43,
+          "rank": "ok",
+          "score": 43
+        }
+      ],
+      "distanceAlongRouteKm": 180.2,
+      "batteryPercentAtArrival": 22,
+      "batteryPercentAfterCharge": 80
+    }
+  ],
+  "warnings": [],
+  "batterySegments": [
+    {
+      "startKm": 0,
+      "endKm": 180.2,
+      "startBatteryPercent": 80,
+      "endBatteryPercent": 22,
+      "label": "HCM → Bảo Lộc"
+    },
+    {
+      "startKm": 180.2,
+      "endKm": 310.5,
+      "startBatteryPercent": 80,
+      "endBatteryPercent": 35,
+      "label": "Bảo Lộc → Đà Lạt"
+    }
+  ],
+  "arrivalBatteryPercent": 35,
+  "totalChargingTimeMin": 32,
+  "polyline": "k~umAqbtiSdC{E",
+  "startAddress": "Thành phố Hồ Chí Minh, Việt Nam",
+  "endAddress": "Đà Lạt, Lâm Đồng, Việt Nam",
+  "startCoord": { "lat": 10.7769, "lng": 106.7009 },
+  "endCoord": { "lat": 11.9404, "lng": 108.4583 }
+}
