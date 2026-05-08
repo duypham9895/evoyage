@@ -51,6 +51,9 @@ Count of Stations within 100km along the remaining route after a given Stop. Low
 **Peak Window**:
 Hardcoded local-time ranges 11h–13h and 17h–20h. A Stop whose charging session overlaps a Peak Window earns +1 Pressure. Heuristic — to be replaced by data-driven `congestion_forecast` in Phase 3b.
 
+**Reliability**:
+Per-Station score in [0, 1] = fraction of `StationStatusObservation` records over the last 30 days where `status ∈ {ACTIVE, BUSY}`. Computed nightly, gated by a 100-observation minimum (below the gate, `scoreStation` skips the reliability layer). Used as a multiplicative penalty `score *= (2 - reliability)` in ranking (ADR-0007). Distinct from `lastVerifiedAt` — the crowdsourced "verified 2h ago" trust chip — which serves recency UX, not ranking.
+
 ## Relationships
 
 - A **Trip Plan** has one or more **Stop**s. Each **Stop** has 0–3 **Alternative**s.
