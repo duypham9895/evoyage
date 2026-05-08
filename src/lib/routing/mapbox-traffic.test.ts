@@ -40,7 +40,7 @@ describe('fetchTrafficAwareDirections', () => {
       origin: HCM,
       destination: DALAT,
       accessToken: ACCESS_TOKEN,
-      departAt: new Date('2026-05-08T10:00:00+07:00'),
+      departAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     const url = fetchSpy.mock.calls[0]![0] as string;
@@ -53,7 +53,7 @@ describe('fetchTrafficAwareDirections', () => {
       new Response(JSON.stringify(SAMPLE_OK_RESPONSE), { status: 200 }),
     );
 
-    const departAt = new Date('2026-05-08T10:00:00+07:00');
+    const departAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await fetchTrafficAwareDirections({
       origin: HCM,
       destination: DALAT,
