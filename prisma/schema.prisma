@@ -155,6 +155,17 @@ model StationStatusObservation {
   @@index([observedAt]) // for retention pruning > 90 days
 }
 
+// Per-station 30-day uptime score, rebuilt nightly from StationStatusObservation
+// for ADR-0007 reliability ranking. reliability = (ACTIVE+BUSY count) / total
+// observations in the window. Stations below the 100-observation threshold are
+// gated by scoreStation (no penalty applied) — see ADR-0007.
+model StationReliability {
+  stationId        String   @id
+  reliability      Decimal  @db.Decimal(3, 2) // 0.00 - 1.00
+  observationCount Int
+  computedAt       DateTime @default(now()) @updatedAt
+}
+
 // Per-station busy-probability heatmap, 168 cells (24h × 7d), rebuilt nightly
 // from StationStatusObservation. Times in Asia/Ho_Chi_Minh because Vietnamese
 // drivers reason in VN local time.
