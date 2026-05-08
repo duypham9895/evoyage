@@ -236,6 +236,28 @@ describe('analytics', () => {
         alt_idx: 1,
       });
     });
+
+    it('trackReliabilityCalibration captures candidate / gated / mean fields', async () => {
+      const { initAnalytics, trackReliabilityCalibration } = await loadAnalytics();
+      initAnalytics();
+      trackReliabilityCalibration({ candidateCount: 50, gatedCount: 20, meanReliability: 0.92 });
+      expect(captureMock).toHaveBeenCalledWith('reliability_calibration', {
+        candidate_count: 50,
+        gated_count: 20,
+        mean_reliability: 0.92,
+      });
+    });
+
+    it('trackReliabilityCalibration accepts null meanReliability when all gated', async () => {
+      const { initAnalytics, trackReliabilityCalibration } = await loadAnalytics();
+      initAnalytics();
+      trackReliabilityCalibration({ candidateCount: 10, gatedCount: 10, meanReliability: null });
+      expect(captureMock).toHaveBeenCalledWith('reliability_calibration', {
+        candidate_count: 10,
+        gated_count: 10,
+        mean_reliability: null,
+      });
+    });
   });
 
   describe('PII hygiene', () => {

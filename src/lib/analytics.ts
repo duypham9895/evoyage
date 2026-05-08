@@ -240,3 +240,27 @@ export function trackAlternativeNavigateClicked(stopIdx: number, altIdx: number)
     alt_idx: altIdx,
   });
 }
+
+// ── ADR-0007 — Station reliability ranking events ─────────────────────────
+// Calibration window: 2-4 weeks post-ship. Validates the 100-observation
+// threshold and the linear (2 - r) penalty curve against real distributions.
+
+/**
+ * Per-request reliability summary across all candidate stations.
+ * Captures gating ratio (how many stations fell below the 100-obs threshold)
+ * and mean reliability across the non-gated set.
+ *
+ * `meanReliability` is `null` when every candidate is gated — typical until
+ * Phase 3 data accumulates enough per-station coverage.
+ */
+export function trackReliabilityCalibration(data: {
+  readonly candidateCount: number;
+  readonly gatedCount: number;
+  readonly meanReliability: number | null;
+}): void {
+  safeCapture('reliability_calibration', {
+    candidate_count: data.candidateCount,
+    gated_count: data.gatedCount,
+    mean_reliability: data.meanReliability,
+  });
+}

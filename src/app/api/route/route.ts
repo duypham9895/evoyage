@@ -13,6 +13,8 @@ import { queryStationPopularity } from '@/lib/station/popularity-query';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/routing/route-planner';
 import { applyBackupPressure } from '@/lib/routing/apply-backup-pressure';
 import { calculateUsableRange } from '@/lib/routing/range-calculator';
+import { RELIABILITY_THRESHOLD } from '@/lib/routing/reliability-score';
+import { trackReliabilityCalibration } from '@/lib/analytics';
 import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
@@ -313,6 +315,49 @@ export async function POST(request: NextRequest) {
       ? findChargingDecisionPoints(planInput)
       : [];
 
+    // ADR-0007 — load reliability for every candidate station in one query.
+    // Stations missing from the map (no Phase 3 data yet, or below threshold)
+    // get default `null` and the ranker's reliability layer is a no-op.
+    const reliabilityMap = new Map<string, { reliability: number; observationCount: number }>();
+    if (decisionPoints.length > 0) {
+      const allCandidateIds = Array.from(
+        new Set(decisionPoints.flatMap((dp) => dp.candidates.map((c) => c.id))),
+      );
+      if (allCandidateIds.length > 0) {
+        try {
+          const records = await prisma.stationReliability.findMany({
+            where: { stationId: { in: allCandidateIds } },
+          });
+          for (const r of records) {
+            reliabilityMap.set(r.stationId, {
+              reliability: Number(r.reliability),
+              observationCount: r.observationCount,
+            });
+          }
+        } catch (err) {
+          // Reliability lookup is best-effort — never block the trip plan
+          console.warn('Reliability map load failed; falling back to no-op', err);
+        }
+
+        // ADR-0007 calibration telemetry — tracks gating ratio + mean reliability
+        // so we can validate the 100-observation threshold and (2 - r) curve.
+        let nonGated = 0;
+        let reliabilitySum = 0;
+        for (const id of allCandidateIds) {
+          const rec = reliabilityMap.get(id);
+          if (rec && rec.observationCount >= RELIABILITY_THRESHOLD) {
+            nonGated += 1;
+            reliabilitySum += rec.reliability;
+          }
+        }
+        trackReliabilityCalibration({
+          candidateCount: allCandidateIds.length,
+          gatedCount: allCandidateIds.length - nonGated,
+          meanReliability: nonGated > 0 ? reliabilitySum / nonGated : null,
+        });
+      }
+    }
+
     if (decisionPoints.length > 0) {
       const isVinFast = vehicle.brand.toLowerCase() === 'vinfast';
       const vehicleMaxChargeKw = ('dcMaxChargingPowerKw' in vehicle && vehicle.dcMaxChargingPowerKw)
@@ -344,6 +389,7 @@ export async function POST(request: NextRequest) {
                 isVinFastVehicle: isVinFast,
                 vehicleMaxChargeKw,
                 station,
+                reliability: reliabilityMap.get(station.id) ?? null,
               });
             });
 
@@ -366,6 +412,7 @@ export async function POST(request: NextRequest) {
                 isVinFastVehicle: isVinFast,
                 vehicleMaxChargeKw,
                 station,
+                reliability: reliabilityMap.get(station.id) ?? null,
               }),
             );
 
