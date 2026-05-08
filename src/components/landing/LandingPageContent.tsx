@@ -8,6 +8,7 @@ import {
   LandingWrapper,
   useLandingLocale,
 } from './LandingClient';
+import LandingTitleSync from './LandingTitleSync';
 import VietnamMap from './VietnamMap';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
@@ -451,6 +452,7 @@ function LandingContent() {
 export default function LandingPageContent() {
   return (
     <LandingWrapper>
+      <LandingTitleSync titleKey="meta_title_default" />
       <LandingContent />
     </LandingWrapper>
   );

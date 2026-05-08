@@ -486,5 +486,8 @@
   "evi_sheet_title": "eVi",
   "evi_sheet_close": "Đóng",
 
-  "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ."
+  "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ.",
+
+  "meta_title_default": "eVoyage — Lên kế hoạch chuyến đi xe điện tại Việt Nam",
+  "meta_title_plan": "Lên lộ trình · eVoyage"
 }

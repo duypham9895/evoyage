@@ -486,5 +486,8 @@
   "evi_sheet_title": "eVi",
   "evi_sheet_close": "Close",
 
-  "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly."
+  "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly.",
+
+  "meta_title_default": "eVoyage — Plan your EV road trip across Vietnam",
+  "meta_title_plan": "Plan your EV trip · eVoyage"
 }

@@ -9,6 +9,7 @@ import { createNotebookStore, type SavedTrip } from '@/lib/trip/notebook-store';
 import TripNotebook, { type TripNotebookI18n } from '@/components/trip/TripNotebook';
 import { LocaleProvider } from '@/lib/locale';
 import { useLocale } from '@/lib/locale';
+import LocaleTitleSync from '@/components/LocaleTitleSync';
 import { MapModeProvider, useMapMode } from '@/lib/map-mode';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useDesktopSidebarTab } from '@/hooks/useDesktopSidebarTab';
@@ -1108,6 +1109,7 @@ export default function Home() {
   return (
     <LocaleProvider>
       <MapModeProvider>
+        <LocaleTitleSync titleKey="meta_title_plan" />
         <HomeContent />
       </MapModeProvider>
     </LocaleProvider>
