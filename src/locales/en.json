@@ -142,6 +142,7 @@
   "stations_no_alternatives": "No backup stations in this area — charge above 80% before leaving to be safe.",
   "popup_navigate": "Navigate",
   "popup_backup_for_stop": "Backup for stop {{n}}",
+  "popup_charge_time": "~{{minutes}} min charge",
   "stations_total_time": "{{time}} min total",
   "stations_detour": "+{{time}} min detour",
   "stations_no_stations": "No charging stations found along this route",

@@ -226,8 +226,11 @@ function AlternativeMarker({
               {station.maxPowerKw}kW | {station.connectorTypes.join(', ')} | {station.provider}
             </p>
             <p style={{ fontSize: 12, margin: 0 }}>
-              <span style={{ color: '#FFAB40', fontWeight: 'bold' }}>+{detourMin}m detour</span>
-              {` | ~${chargeTimeMin}m charge`}
+              <span style={{ color: '#FFAB40', fontWeight: 'bold' }}>
+                {t('stations_detour', { time: String(detourMin) })}
+              </span>
+              {' | '}
+              {t('popup_charge_time', { minutes: String(chargeTimeMin) })}
             </p>
             <a
               href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}

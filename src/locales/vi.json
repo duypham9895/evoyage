@@ -142,6 +142,7 @@
   "stations_no_alternatives": "Khu vực này không có trạm sạc dự phòng — sạc trên 80% trước khi rời để an toàn.",
   "popup_navigate": "Đi đến trạm",
   "popup_backup_for_stop": "Trạm dự phòng cho điểm sạc {{n}}",
+  "popup_charge_time": "~{{minutes}} phút sạc",
   "stations_total_time": "{{time}} phút tổng",
   "stations_detour": "+{{time}} phút đi vòng",
   "stations_no_stations": "Không tìm thấy trạm sạc dọc tuyến đường này",
