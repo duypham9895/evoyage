@@ -232,6 +232,8 @@ export interface ScoreStationInput {
   readonly isVinFastVehicle: boolean;
   readonly vehicleMaxChargeKw?: number;
   readonly station: ChargingStationData;
+  /** ADR-0007 — optional reliability record. Absent = no penalty. */
+  readonly reliability?: { readonly reliability: number; readonly observationCount: number } | null;
 }
 
 /** Extract station data from either ChargingStop or ChargingStopWithAlternatives */

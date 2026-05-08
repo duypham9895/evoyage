@@ -4,6 +4,7 @@ import type {
   ScoreStationInput,
   ScoredStation,
 } from '@/types';
+import { reliabilityMultiplier } from './reliability-score';
 
 // ── Constants ──
 const CHARGING_EFFICIENCY_FACTOR = 1.15;
@@ -93,6 +94,10 @@ export function scoreStation(input: ScoreStationInput): ScoredStation {
     const bonus = Math.min(score * VINFAST_BONUS_CAP, score * VINFAST_BONUS_CAP);
     score = score - bonus;
   }
+
+  // ADR-0007 — reliability penalty layer. Multiplier = 1.0 when no record
+  // or below threshold; (2 - reliability) when above. Stacks after VinFast.
+  score *= reliabilityMultiplier(input.reliability);
 
   return {
     station: input.station,

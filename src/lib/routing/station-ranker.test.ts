@@ -227,6 +227,97 @@ describe('scoreStation', () => {
     const expectedChargeTime = (50 / 50) * 60 * 1.15; // 69
     expect(result.estimatedChargeTimeMin).toBeCloseTo(expectedChargeTime);
   });
+
+  // ── ADR-0007 reliability layer ──
+
+  it('applies no reliability penalty when reliability is absent', () => {
+    const baseInput: ScoreStationInput = {
+      detourDriveTimeSec: 300,
+      stationPowerKw: 100,
+      energyNeededKwh: 50,
+      isVinFastStation: false,
+      isVinFastVehicle: false,
+      station: makeStation(),
+    };
+    const baseScore = scoreStation(baseInput).score;
+    const explicitNullScore = scoreStation({ ...baseInput, reliability: null }).score;
+
+    expect(explicitNullScore).toBeCloseTo(baseScore);
+  });
+
+  it('applies no penalty for reliability=1.0', () => {
+    const baseInput: ScoreStationInput = {
+      detourDriveTimeSec: 300,
+      stationPowerKw: 100,
+      energyNeededKwh: 50,
+      isVinFastStation: false,
+      isVinFastVehicle: false,
+      station: makeStation(),
+    };
+    const baseScore = scoreStation(baseInput).score;
+    const reliableScore = scoreStation({
+      ...baseInput,
+      reliability: { reliability: 1.0, observationCount: 200 },
+    }).score;
+
+    expect(reliableScore).toBeCloseTo(baseScore);
+  });
+
+  it('multiplies score by 1.5 for reliability=0.5 (above threshold)', () => {
+    const baseInput: ScoreStationInput = {
+      detourDriveTimeSec: 300,
+      stationPowerKw: 100,
+      energyNeededKwh: 50,
+      isVinFastStation: false,
+      isVinFastVehicle: false,
+      station: makeStation(),
+    };
+    const baseScore = scoreStation(baseInput).score;
+    const penalizedScore = scoreStation({
+      ...baseInput,
+      reliability: { reliability: 0.5, observationCount: 200 },
+    }).score;
+
+    expect(penalizedScore).toBeCloseTo(baseScore * 1.5);
+  });
+
+  it('skips reliability penalty when observationCount is below threshold', () => {
+    const baseInput: ScoreStationInput = {
+      detourDriveTimeSec: 300,
+      stationPowerKw: 100,
+      energyNeededKwh: 50,
+      isVinFastStation: false,
+      isVinFastVehicle: false,
+      station: makeStation(),
+    };
+    const baseScore = scoreStation(baseInput).score;
+    const gatedScore = scoreStation({
+      ...baseInput,
+      reliability: { reliability: 0.5, observationCount: 50 }, // below 100
+    }).score;
+
+    expect(gatedScore).toBeCloseTo(baseScore);
+  });
+
+  it('stacks reliability penalty after VinFast bonus', () => {
+    const baseInput: ScoreStationInput = {
+      detourDriveTimeSec: 300,
+      stationPowerKw: 100,
+      energyNeededKwh: 50,
+      isVinFastStation: true,
+      isVinFastVehicle: true,
+      station: makeStation({ isVinFastOnly: true }),
+    };
+    // VinFast bonus alone: score = totalStopTime * 0.5
+    const vinfastOnly = scoreStation(baseInput).score;
+    // VinFast bonus + reliability 0.5: score = totalStopTime * 0.5 * 1.5
+    const stacked = scoreStation({
+      ...baseInput,
+      reliability: { reliability: 0.5, observationCount: 200 },
+    }).score;
+
+    expect(stacked).toBeCloseTo(vinfastOnly * 1.5);
+  });
 });
 
 // ── rankStations ──
