@@ -1,36 +1,36 @@
 {
-  "lastSyncedAt": "2026-05-07T04:19:40.824Z",
+  "lastSyncedAt": "2026-05-08T04:07:57.450Z",
   "petrolimex": {
     "source": "https://www.petrolimex.com.vn/index.html",
-    "effectiveAt": "2026-04-29T08:00:08.855Z",
+    "effectiveAt": "2026-05-07T08:00:00.000Z",
     "products": {
       "e10ron95iii": {
         "label": "Xăng E10 RON 95-III",
-        "vndPerLiter": 23190
+        "vndPerLiter": 23730
       },
       "ron95v": {
         "label": "Xăng RON 95-V",
-        "vndPerLiter": 24650
+        "vndPerLiter": 25250
       },
       "do0001s": {
         "label": "DO 0,001S-V",
-        "vndPerLiter": 29430
+        "vndPerLiter": 28750
       },
       "e5ron92": {
         "label": "Xăng E5 RON 92-II",
-        "vndPerLiter": 22620
+        "vndPerLiter": 23790
       },
       "kerosene": {
         "label": "Dầu hỏa 2-K",
-        "vndPerLiter": 31980
+        "vndPerLiter": 30450
       },
       "do005s": {
         "label": "DO 0,05S-II",
-        "vndPerLiter": 28170
+        "vndPerLiter": 27490
       },
       "ron95iii": {
         "label": "Xăng RON 95-III",
-        "vndPerLiter": 23750
+        "vndPerLiter": 24350
       }
     }
   },
