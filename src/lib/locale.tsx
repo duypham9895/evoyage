@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Locale } from '@/types';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
@@ -40,6 +40,15 @@ const LocaleContext = createContext<LocaleContextType>({
 
 export function LocaleProvider({ children }: { readonly children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>('vi');
+
+  // Keep <html lang> in sync with the current locale. The root layout
+  // hardcodes lang="vi" (see src/app/layout.tsx) because it can't read
+  // client state during SSR. Without this effect, screen readers pronounce
+  // English content with Vietnamese phonetics — EVOYAGE_AUDIT_PLAN.md F5.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const toggleLocale = useCallback(() => {
     setLocale((prev) => (prev === 'vi' ? 'en' : 'vi'));
