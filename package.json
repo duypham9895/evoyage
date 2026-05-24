@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
-    "@sparticuz/chromium": "^143.0.4",
+    "@sparticuz/chromium": "^148.0.0",
     "@types/leaflet": "^1.9.21",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
