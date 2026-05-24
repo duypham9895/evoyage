@@ -3,9 +3,31 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 2026-05-03 → 2026-05-24
+## [0.9.0] — 2026-05-24
 
-Catch-up entry covering the Trust Intelligence Roadmap + architectural deepening sessions that landed after v0.8.0. Granular history lives in git; this entry exists so future readers don't have to reconstruct three weeks from commit messages.
+Three weeks of Trust Intelligence Roadmap work (Phases 1-5, ADR-0006 + ADR-0007) followed by a five-phase audit cycle hardening security, telemetry, retention, and CI. Reference: [EVOYAGE_AUDIT_PLAN.md](./EVOYAGE_AUDIT_PLAN.md) (1586-line discovery + plan) and [docs/qa/2026-05-24-phase4-qa-report.md](./docs/qa/2026-05-24-phase4-qa-report.md) (235-line QA report with 6 findings).
+
+### Audit cycle — added in 2026-05-24
+
+- **Feedback admin panel** at `/admin/feedback` — list / detail / status PATCH (NEW → IN_REVIEW → RESOLVED → CLOSED). Gated by HTTP Basic Auth in `src/middleware.ts` with `ADMIN_TOKEN` env var (fail-safe default: 401 when unset). 16 colocated tests. (D.4)
+- **Per-request CSP nonce** — `src/middleware.ts` generates a base64 nonce per request and applies `Content-Security-Policy: script-src 'self' 'nonce-<n>' 'strict-dynamic' …`. Root layout calls `await headers()` to force dynamic rendering so the nonce reaches every page's HTML. `style-src` deliberately keeps `'unsafe-inline'` because Mapbox + Leaflet inject inline styles via DOM mutation. (D.8b)
+- **Feedback image attachments** — Vercel Blob upload endpoint at `/api/feedback/upload` with magic-byte sniffing (JPEG/PNG/WEBP/HEIC), 5 MB cap, 5/hr per-IP rate limit, EXIF-respectful direct-write. `<FeedbackImageUpload>` mounted in `FeedbackModal` for REPORT_ISSUE / STATION_DATA_ERROR / MISSING_STATION / STATION_AMENITY_MISSING categories. Schema gated to Vercel Blob host (anti-shortener-abuse). 18 colocated tests. (D.3)
+- **Rate limit on `/api/transcribe`** (10 req/min/IP) — caps cost-abuse on the paid Groq Whisper endpoint. (D.8a)
+- **PostHog `trackPageView` + `trackEviMessage` callers wired** — both helpers had been defined but never called since the Phase 1 multi-agent build. (D.1, D.2)
+- **Dependabot config** at `.github/dependabot.yml` — weekly npm + github-actions checks, minor+patch grouped, Next/React majors ignored. (D.9f)
+- **Branch protection on `main`** — `Deploy to Vercel` required, force-push and deletions blocked. `enforce_admins: false` so direct pushes still work for the solo maintainer. (D.9a)
+- **Vercel cron handlers documented** in `docs/operations/cron-setup.md` — added `aggregate-reliability.yml` row that was missing from the v2 architecture decision. GHA stays the scheduler. (D.7f, re-scoped from `vercel.json crons:`)
+- **Retention pruning** — RouteCache and VinFastStationDetail rows > 30 days are deleted nightly in the aggregate-popularity cron handler via the new `src/lib/maintenance/prune-stale-caches.ts` helper. ShortUrl gains a 1-year `expiresAt` default at creation. (D.7a, D.7d, D.7e)
+- **9 GitHub Actions workflows hardened** — Node 20 → 22, `engines.node: ">=20"` in `package.json`, `concurrency:` groups on `deploy.yml` / `crawl-stations.yml` / `crawl-energy-prices.yml`, `workflow_dispatch:` on `deploy.yml` for manual replays. (D.9d, D.9e)
+- **Cookie-refresh resilience** — `scripts/refresh-vinfast-cookies.ts` swaps `networkidle` for `domcontentloaded` + 2s settle and wraps `main()` in a 3-attempt retry with 5s/10s backoff. (D.9b)
+- **Poll-status workflow** downgrades `cookies_expired` derivative failures to `::warning::` when the latest `refresh-vinfast-cookies` run is also failed — cuts duplicated alarms from 28 to ~14 of last 50 repo failures. (D.9c)
+- **`db:push` → `db:push:local`** — renamed and wrapped in `scripts/db-push-local.ts` which refuses to push to a Supabase pooler URL without `FORCE_DB_PUSH_TO_PROD=1`. RECOVERY.md updated to match. (D.7g)
+- **`docs/RECOVERY.md` finished** — adds EVPower / energy-prices / manual-station seed steps (6a/6b/6c) and a cold-start degradation table for the 3 intelligence layers that rebuild from observations over 30-60 days. (D.7b)
+- **`.env.example` fully documented** — 11 required vars (DATABASE_URL, DIRECT_URL, MAPBOX_*, UPSTASH_REDIS_*, CRON_SECRET, RESEND_API_KEY, etc.) plus new ADMIN_TOKEN and BLOB_READ_WRITE_TOKEN. (D.7c)
+- **ADR status audit** — 3 new docs (`docs/adr/{0003,0004,0005}-status.md`) declaring all three 2026-05-06 deepening ADRs NOT SHIPPED with file:line evidence and execution preconditions. Defers ADR-0004 (the 646-line `/api/route` refactor) to its own milestone post-Phase 4. (D.5)
+- **Phase 4 QA report** at `docs/qa/2026-05-24-phase4-qa-report.md` — coverage matrix walking every P0/P1 in `EVOYAGE_AUDIT_PLAN.md §E`, 6 findings (4 open + 1 fixed mid-Phase + 1 self-correction).
+
+### Trust Intelligence Roadmap — added in 2026-05-03 → 2026-05-08
 
 ### Added
 - **Phase 1 — Trip overview timeline redesign** (spec: `2026-05-03-trip-overview-timeline-design.md`). New `RouteTimeline.tsx` + refreshed `TripSummary.tsx` (~45KB) anchored to stops with departure/arrival anchors and per-stop arrival battery.
@@ -34,12 +56,7 @@ Catch-up entry covering the Trust Intelligence Roadmap + architectural deepening
 - Mapbox-traffic test no longer relies on a hardcoded past date.
 
 ### Tests
-- Vitest baseline ~728 (v0.8.0) → 1258+ across 109+ files. Notable additions: ADR-0006 telemetry + alternatives shaping, ADR-0007 reliability scoring + aggregation, MiMo/MiniMax provider chain + telemetry, Groq Whisper transcribe path, popularity aggregation + query, station amenities + overpass client, traffic adjustment, departure-time picker. E2E suite at 19 tests / 10 spec files.
-
-### Operational
-- **9 GitHub Actions workflows** now wire the full pipeline: `deploy`, `crawl-stations`, `crawl-energy-prices`, `refresh-vinfast-cookies`, `poll-station-status`, `aggregate-popularity`, `aggregate-reliability`, `warm-station-pois`, `release`. Cron rationale lives in `docs/operations/cron-setup.md`.
-- **Branch protection on `main`** — requires `Deploy to Vercel` check, blocks force-push and deletions.
-- **Rate limit added to `/api/transcribe`** (10 req/min/IP) — caps cost-abuse risk on the paid Groq endpoint.
+- Vitest baseline ~728 (v0.8.0) → **1304** across 115 files. Phase 1-4 audit cycle added 46 tests across `prune-stale-caches`, `AnalyticsProvider`, `useEVi-telemetry`, `middleware` (Basic Auth), `admin/feedback/[id]` (PATCH), `feedback/upload` (Vercel Blob), `feedback schema imageUrl`, and `transcribe` (rate-limit boundary). E2E suite at **22** tests across 10 spec files on Desktop Chrome.
 
 ## [0.8.0] — 2026-05-01
 

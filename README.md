@@ -35,7 +35,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - **Data:** VinFast API as the primary source (SSE streaming, daily refresh via GitHub Actions cron), augmented by OpenStreetMap, EVPower, and crowdsourced station promotion per ADR-0001.
 - **Database:** Prisma + Supabase Postgres (region `ap-southeast-1`)
 - **Analytics:** PostHog (gated on `NEXT_PUBLIC_POSTHOG_KEY` — no-op without it)
-- **Testing:** Vitest (1258+ tests, 109+ files), Playwright for E2E (19 tests, 10 spec files)
+- **Testing:** Vitest (1304 tests, 115 files), Playwright for E2E (22 tests, 10 spec files on Desktop Chrome)
 - **Quality gate:** husky + lint-staged pre-commit hook runs ESLint on staged `.ts/.tsx` files
 - **Design System:** [DESIGN.md](./DESIGN.md) — colors, typography, spacing, component rules
 - **Deployment:** Vercel
