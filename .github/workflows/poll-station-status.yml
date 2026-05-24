@@ -22,6 +22,9 @@ on:
 
 permissions:
   contents: read
+  # Needed so `gh run list` can query refresh-vinfast-cookies status for the
+  # derivative-failure check below.
+  actions: read
 
 jobs:
   poll:
@@ -31,14 +34,34 @@ jobs:
       - name: POST poll-station-status
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           response=$(curl -s -X POST https://evoyagevn.vercel.app/api/cron/poll-station-status \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             --max-time 60 \
             --fail-with-body)
           echo "Response: $response"
-          # Surface ok=false so the workflow turns red and email-notifies
-          if echo "$response" | grep -q '"ok":false'; then
-            echo "::error::Polling endpoint returned ok=false"
-            exit 1
+
+          if echo "$response" | grep -q '"ok":true'; then
+            exit 0
           fi
+
+          # ok=false. If the failure is cookies_expired / cookies_missing AND the
+          # latest refresh-vinfast-cookies run also failed, this is a derivative
+          # symptom — warn but don't fail the workflow. The cookie-refresh job
+          # is the real signal; pairing both failures doubles the alarm volume
+          # without adding information.
+          if echo "$response" | grep -qE '"reason":"cookies_(expired|missing)"'; then
+            latest_refresh=$(gh run list \
+              --workflow=refresh-vinfast-cookies.yml \
+              --limit=1 \
+              --json conclusion \
+              --jq '.[0].conclusion // ""' 2>/dev/null || echo "")
+            if [ "$latest_refresh" = "failure" ]; then
+              echo "::warning::Polling skipped — derivative of failed cookie refresh (latest conclusion: $latest_refresh)"
+              exit 0
+            fi
+          fi
+
+          echo "::error::Polling endpoint returned ok=false"
+          exit 1

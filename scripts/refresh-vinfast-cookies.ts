@@ -44,7 +44,15 @@ async function fetchFreshCookies(): Promise<FreshCookies> {
     const page = await context.newPage();
 
     console.log('Navigating to locator page (resolving CF challenge)...');
-    await page.goto(LOCATOR_PAGE, { waitUntil: 'networkidle', timeout: 30_000 });
+    // `networkidle` is famously flaky on sites that long-poll or fire analytics
+    // beacons (vinfastauto.com does both) — see GHA failures 2026-05-17 → 23
+    // where networkidle timed out at 30s on otherwise-healthy pages. The actual
+    // signal that the CF challenge has passed is the verification fetch below,
+    // not network quiescence. Use `domcontentloaded` so we move on once HTML
+    // is parsed; the verification step is the real gate.
+    await page.goto(LOCATOR_PAGE, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    // Brief settle for any inline CF challenge script that runs post-DCL.
+    await page.waitForTimeout(2000);
 
     console.log('Verifying API access with current cookies...');
     const verification = await page.evaluate(async () => {
@@ -105,11 +113,31 @@ async function persist(fresh: FreshCookies): Promise<void> {
   }
 }
 
+const MAX_ATTEMPTS = 3;
+
 async function main(): Promise<void> {
   console.log('=== VinFast Cookie Refresh ===');
-  const fresh = await fetchFreshCookies();
-  await persist(fresh);
-  console.log('Done.');
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const fresh = await fetchFreshCookies();
+      await persist(fresh);
+      console.log(`Done (attempt ${attempt}/${MAX_ATTEMPTS}).`);
+      return;
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`Attempt ${attempt}/${MAX_ATTEMPTS} failed: ${msg}`);
+      if (attempt < MAX_ATTEMPTS) {
+        const delaySec = 5 * attempt; // 5s, 10s
+        console.log(`Retrying in ${delaySec}s...`);
+        await new Promise((resolve) => setTimeout(resolve, delaySec * 1000));
+      }
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`Cookie refresh exhausted ${MAX_ATTEMPTS} attempts`);
 }
 
 main()
