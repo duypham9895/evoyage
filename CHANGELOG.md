@@ -3,6 +3,44 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — 2026-05-03 → 2026-05-24
+
+Catch-up entry covering the Trust Intelligence Roadmap + architectural deepening sessions that landed after v0.8.0. Granular history lives in git; this entry exists so future readers don't have to reconstruct three weeks from commit messages.
+
+### Added
+- **Phase 1 — Trip overview timeline redesign** (spec: `2026-05-03-trip-overview-timeline-design.md`). New `RouteTimeline.tsx` + refreshed `TripSummary.tsx` (~45KB) anchored to stops with departure/arrival anchors and per-stop arrival battery.
+- **Phase 2 — Departure intelligence + real-time traffic** (spec: `2026-05-03-phase-2-departure-intelligence-design.md`). `DepartureTimePicker.tsx`, `WhatIfCards.tsx`, `mapbox-traffic.ts` integration.
+- **Phase 3a — Station status data collection** (spec: `2026-05-03-station-status-data-collection-design.md`). New `StationStatusObservation` schema + `/api/cron/poll-station-status` hourly poller + dedup-on-change semantics.
+- **Phase 3b — Popularity prediction UI** (spec: `2026-05-03-phase-3b-popularity-prediction-design.md`). `StopPopularity.tsx` + `/api/cron/aggregate-popularity` nightly heatmap rebuilder. Verdict cold-starts at "insufficient-data" until ~60 days of observations accumulate.
+- **Phase 4 — Charging-stop amenities** (spec: `2026-05-03-phase-4-charging-stop-amenities-design.md`, tuning: `2026-05-04-amenities-tiered-radius.md`). `StationAmenities.tsx`, `/api/stations/[id]/amenities`, `overpass-client.ts` + `categorize-poi.ts` + `walking-distance.ts`, and a daily warm cron (`warm-station-pois.yml`).
+- **Phase 5 — Trip notebook** (spec: `2026-05-03-phase-5-trip-notebook-design.md`). `TripNotebook.tsx`, `TripNotebookEntry.tsx`, `notebook-store.ts`.
+- **ADR-0006 — Dynamic backup-station selection.** Per-stop 0–3 alternatives driven by a 5-signal `BackupPressureScore`. New `backup-pressure.ts`, `apply-backup-pressure.ts`, AlternativeMarker on map, N=0 banner, locale parity (vi/en `stations_no_alternatives`), 4 PostHog telemetry events (`backup_alternatives_distribution`, `alternative_marker_clicked`, `alternative_list_item_clicked`, `alternative_navigate_clicked`).
+- **ADR-0007 — Station reliability ranking.** `StationReliability` schema, nightly `/api/cron/aggregate-reliability` job, reliability multiplier in `scoreStation` (`score *= (2 - reliability)`), 100-observation gate to avoid penalising thinly-observed stations.
+- **MiMo primary + MiniMax fallback** for the eVi LLM (ADR-0002, spec `2026-05-04-mimo-primary-minimax-fallback-design.md`). New `src/lib/evi/llm-module.ts` + `llm-providers.ts`. Provider telemetry via server log + GitHub issue #11.
+- **Groq Whisper-large-v3 STT migration** (spec `2026-05-04-stt-groq-whisper-migration.md`). Replaces deprecated MiniMax STT; falls back automatically when Web Speech fires `network` (Brave compat).
+- **Mobile tab redesign + eVi FAB** (spec `2026-05-03-mobile-tab-redesign-evi-fab-design.md`). `EViFab.tsx`, `EViMobileSheet.tsx`, refreshed `MobileTabBar.tsx`.
+- **UX writing audit** (spec `2026-05-03-ux-writing-audit.md`) — approved and implemented across both locales.
+
+### Changed
+- **TripSummary trim alternatives per stop** (commit `b16e4f3`) — asserts `chargingTimePerStopMin.length` matches the stops array; addresses ADR-0006 QA finding #3.
+- **localized `StopMarker` + `AlternativeMarker` popups** — fixes ADR-0006 QA finding #1.
+- **Document.title syncs with locale toggle** (commit `4cb834c`) — title no longer stays stuck on initial language after toggle.
+
+### Fixed
+- eVi voice processing indicator getting stuck on while colliding with the error banner.
+- Microphone permission via `permissions: microphone=(self)` (commit `d1c383e`).
+- eVi suggestions now respect the user locale (vi/en) and the MiniMax M2.7 fallback budget was raised (#10).
+- Cookie-refresh GHA timing out on the Azure apt mirror — dropped `--with-deps` from the Playwright install (commit `533999f`).
+- Mapbox-traffic test no longer relies on a hardcoded past date.
+
+### Tests
+- Vitest baseline ~728 (v0.8.0) → 1258+ across 109+ files. Notable additions: ADR-0006 telemetry + alternatives shaping, ADR-0007 reliability scoring + aggregation, MiMo/MiniMax provider chain + telemetry, Groq Whisper transcribe path, popularity aggregation + query, station amenities + overpass client, traffic adjustment, departure-time picker. E2E suite at 19 tests / 10 spec files.
+
+### Operational
+- **9 GitHub Actions workflows** now wire the full pipeline: `deploy`, `crawl-stations`, `crawl-energy-prices`, `refresh-vinfast-cookies`, `poll-station-status`, `aggregate-popularity`, `aggregate-reliability`, `warm-station-pois`, `release`. Cron rationale lives in `docs/operations/cron-setup.md`.
+- **Branch protection on `main`** — requires `Deploy to Vercel` check, blocks force-push and deletions.
+- **Rate limit added to `/api/transcribe`** (10 req/min/IP) — caps cost-abuse risk on the paid Groq endpoint.
+
 ## [0.8.0] — 2026-05-01
 
 Audit-driven UI/UX pass. The full audit lives at [docs/design/uiux-audit-2026-05-01.md](./docs/design/uiux-audit-2026-05-01.md) and the staged plan at [docs/plans/2026-05-01-uiux-improvements.md](./docs/plans/2026-05-01-uiux-improvements.md). Phases 1 → 5 + a bonus locale-interpolation fix all landed in this release.

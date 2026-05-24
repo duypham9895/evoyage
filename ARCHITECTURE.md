@@ -21,17 +21,23 @@ eVoyage is a Next.js App Router application for planning EV road trips across Vi
 ┌────────────────────────┼─────────────────────────┐
 │              Next.js API Routes                   │
 │                                                   │
-│  /api/route          → Route planning + stations  │
-│  /api/route/narrative → AI route briefing         │
-│  /api/evi/parse      → Natural language → trip    │
-│  /api/evi/suggestions → AI follow-up chips        │
-│  /api/stations       → Station list + search      │
-│  /api/stations/[id]  → Station detail + VinFast   │
-│  /api/vehicles       → EV model database          │
-│  /api/feedback       → User feedback collection   │
-│  /api/short-url      → Trip sharing via short URLs│
-│  /api/share-card     → OG image generation        │
-│  /api/cron           → Scheduled data refresh     │
+│  /api/route                       → Route planning + stations  │
+│  /api/route/narrative             → AI route briefing          │
+│  /api/evi/parse                   → Natural language → trip    │
+│  /api/evi/suggestions             → AI follow-up chips         │
+│  /api/transcribe                  → Voice → text (Groq Whisper)│
+│  /api/stations                    → Station list + search      │
+│  /api/stations/nearby             → Distance-sorted nearby list│
+│  /api/stations/[id]/vinfast-detail→ Real-time SSE detail       │
+│  /api/stations/[id]/amenities     → OSM POIs around station    │
+│  /api/stations/[id]/status-report → Crowdsourced status report │
+│  /api/vehicles                    → EV model database          │
+│  /api/feedback                    → User feedback collection   │
+│  /api/short-url                   → Trip sharing via short URLs│
+│  /api/share-card                  → OG image generation        │
+│  /api/cron/poll-station-status    → Hourly status observations │
+│  /api/cron/aggregate-popularity   → Nightly heatmap rebuild    │
+│  /api/cron/aggregate-reliability  → Nightly reliability rebuild│
 └────────────────────────┬─────────────────────────┘
                          │
 ┌────────────────────────┼─────────────────────────┐
@@ -70,11 +76,13 @@ src/
 │
 ├── lib/
 │   ├── evi/                # AI assistant logic
-│   │   ├── prompt.ts       # System prompt construction
+│   │   ├── llm-module.ts        # Deepened LLM call module (ADR-0002)
+│   │   ├── llm-providers.ts     # MiMo (primary) + MiniMax (fallback) chain
+│   │   ├── prompt.ts            # System prompt construction
 │   │   ├── vehicle-resolver.ts  # NL → vehicle model
 │   │   ├── suggestions-client.ts # Follow-up generation
-│   │   ├── minimax-client.ts     # MiniMax API client
-│   │   └── types.ts        # Trip parsing types + Zod schemas
+│   │   ├── minimax-client.ts    # OpenAI-compatible client for both providers
+│   │   └── types.ts             # Trip parsing types + Zod schemas
 │   │
 │   ├── routing/            # Route planning engine
 │   │   ├── route-planner.ts     # Orchestrator
@@ -152,8 +160,8 @@ User taps station → /api/stations/[id]/vinfast-detail
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Map provider | Mapbox (primary), OSRM (fallback) | Mapbox has superior Vietnamese coverage; OSRM as free fallback |
-| AI model | MiniMax M2.7 via OpenAI-compatible API | Cost-effective, good Vietnamese understanding, streaming support |
-| Station data | VinFast API + SSE | Only reliable source for Vietnam charging data |
+| AI model | Xiaomi MiMo (primary) + MiniMax M2.7 (fallback) via OpenAI-compatible API | Cost-effective, good Vietnamese understanding, streaming support, provider redundancy per ADR-0002 |
+| Station data | VinFast API + SSE primary; OSM, EVPower, manual CSV, and crowdsourced promotion as secondary | Multi-source coverage per ADR-0001; SSE used only for real-time VinFast detail (ADR-0003) |
 | Mobile layout | Bottom sheet over full-screen map | Matches driver mental model (Google Maps, Grab) |
 | i18n | JSON key-based with runtime locale | Simple, type-safe, auto-tested for key sync |
 | Styling | Tailwind CSS with DESIGN.md tokens | Consistent design system, no CSS drift |

@@ -9,7 +9,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 ## What it does
 
 - Plan routes between any two points in Vietnam with EV-specific constraints
-- See real-time charging station availability from VinFast's network (<!-- STATIONS_COUNT_START -->19,588+<!-- STATIONS_COUNT_END --> stations, 63 provinces — auto-updated daily after the crawl)
+- See real-time charging station availability from VinFast's network plus OSM, EVPower, and crowdsourced sources (<!-- STATIONS_COUNT_START -->19,588+<!-- STATIONS_COUNT_END --> stations across all 34 Vietnamese provinces & cities — auto-updated daily after the crawl)
 - See **trip cost** in VND — gasoline vs diesel vs electric, scaled to your route, with V-GREEN free charging applied for VinFast owners through 2029
 - Live energy prices auto-updated daily from authoritative sources:
 <!-- ENERGY_PRICES_START -->
@@ -31,11 +31,11 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS
 - **Maps:** Mapbox + OpenStreetMap via Leaflet
 - **Routing:** OSRM (primary) with Mapbox Directions fallback
-- **AI:** MiniMax M2.7 for eVi trip assistant (route narratives, follow-up suggestions)
-- **Data:** VinFast API for real-time charging station data (SSE streaming, daily refresh via GitHub Actions cron)
+- **AI:** Xiaomi MiMo (primary) + MiniMax M2.7 (fallback) for the eVi trip assistant — provider chain per ADR-0002. Groq Whisper-large-v3 powers voice input as a fallback to Web Speech.
+- **Data:** VinFast API as the primary source (SSE streaming, daily refresh via GitHub Actions cron), augmented by OpenStreetMap, EVPower, and crowdsourced station promotion per ADR-0001.
 - **Database:** Prisma + Supabase Postgres (region `ap-southeast-1`)
 - **Analytics:** PostHog (gated on `NEXT_PUBLIC_POSTHOG_KEY` — no-op without it)
-- **Testing:** Vitest (728 tests, 54 files), Playwright for E2E (10 spec files)
+- **Testing:** Vitest (1258+ tests, 109+ files), Playwright for E2E (19 tests, 10 spec files)
 - **Quality gate:** husky + lint-staged pre-commit hook runs ESLint on staged `.ts/.tsx` files
 - **Design System:** [DESIGN.md](./DESIGN.md) — colors, typography, spacing, component rules
 - **Deployment:** Vercel
