@@ -4,7 +4,12 @@ import { createShortUrl, validateParams } from '@/lib/short-url';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+// Recognise both the Upstash-native env names and Vercel KV's KV_REST_API_*
+// fallbacks — Redis.fromEnv() accepts either, our guard must too.
+const hasRedis = !!(
+  (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+  (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
+);
 
 // Two-tier rate limiting: 10/min and 50/hr
 const shortUrlMinuteLimiter = hasRedis

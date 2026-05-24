@@ -22,7 +22,12 @@ import { normalizeStationStatus } from '@/lib/stations/station-status-validation
 const STATUS_REPORT_LIMIT = 5;
 const STATUS_REPORT_WINDOW_MS = 60_000;
 
-const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+// Recognise both the Upstash-native env names and Vercel KV's KV_REST_API_*
+// fallbacks — Redis.fromEnv() accepts either, our guard must too.
+const hasRedis = !!(
+  (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+  (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
+);
 
 const statusReportLimiter = hasRedis
   ? new Ratelimit({

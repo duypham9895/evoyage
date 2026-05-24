@@ -13,7 +13,12 @@ import {
   type FeedbackCategory,
 } from '@/lib/feedback/constants';
 
-const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+// Recognise both the Upstash-native env names and Vercel KV's KV_REST_API_*
+// fallbacks — Redis.fromEnv() accepts either, our guard must too.
+const hasRedis = !!(
+  (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+  (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
+);
 const feedbackLimiter = hasRedis
   ? new Ratelimit({
       redis: Redis.fromEnv(),

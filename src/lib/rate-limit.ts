@@ -48,10 +48,18 @@ function checkLocalRateLimit(
   return { allowed: true, remaining: maxRequests - existing.count - 1, retryAfterSec: 0 };
 }
 
-const hasRedis = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+// Accept either the Upstash-native env-var names or the Vercel KV naming
+// convention. The Vercel Marketplace integration for Upstash for Redis
+// adds `KV_REST_API_URL` / `KV_REST_API_TOKEN`; `Redis.fromEnv()` falls back
+// to those automatically (see @upstash/redis nodejs.js:fromEnv), but our
+// own guards need to recognise both forms.
+const hasRedis = !!(
+  (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
+  (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)
+);
 
 if (process.env.NODE_ENV === 'production' && !hasRedis) {
-  console.error('[SECURITY] Rate limiting is disabled — UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are not set');
+  console.error('[SECURITY] Rate limiting is disabled — set UPSTASH_REDIS_REST_URL/_TOKEN or KV_REST_API_URL/_TOKEN');
 }
 
 // Pre-configured rate limiters
