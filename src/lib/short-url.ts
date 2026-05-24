@@ -9,6 +9,11 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 const CODE_LENGTH = 7;
 const MAX_RETRIES = 3;
 const MAX_PARAMS_LENGTH = 4000;
+// 1-year TTL — long enough that real share links don't surprise-expire on
+// the recipient, short enough that abandoned codes don't accumulate forever.
+// resolveShortUrl already enforces the expiry on read; pre-Phase-2 rows have
+// expiresAt = NULL and remain valid until manually pruned.
+const SHORT_URL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 const generateCode = customAlphabet(ALPHABET, CODE_LENGTH);
 
@@ -55,7 +60,11 @@ export async function createShortUrl(params: string, baseUrl: string): Promise<C
 
     try {
       await prisma.shortUrl.create({
-        data: { code, params },
+        data: {
+          code,
+          params,
+          expiresAt: new Date(Date.now() + SHORT_URL_TTL_MS),
+        },
       });
 
       return {
