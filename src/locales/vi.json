@@ -337,6 +337,18 @@
   "feedback_back": "Quay lại",
   "feedback_station_report": "Báo lỗi",
 
+  "feedback_upload_label": "Đính kèm ảnh (không bắt buộc)",
+  "feedback_upload_pick": "Chọn ảnh…",
+  "feedback_upload_uploading": "Đang tải lên…",
+  "feedback_upload_remove": "Xoá",
+  "feedback_upload_preview_alt": "Xem trước ảnh đính kèm",
+  "feedback_upload_hint": "JPEG, PNG, WEBP hoặc HEIC. Tối đa 5 MB.",
+  "feedback_upload_too_large": "Ảnh quá lớn (tối đa 5 MB).",
+  "feedback_upload_invalid_type": "Tệp này không phải định dạng ảnh được hỗ trợ.",
+  "feedback_upload_rate_limited": "Quá nhiều lượt tải lên. Vui lòng thử lại sau.",
+  "feedback_upload_unavailable": "Tải ảnh chưa khả dụng.",
+  "feedback_upload_failed": "Không thể tải ảnh. Thử lại?",
+
   "evi_fab_label": "Mở trợ lý eVi",
   "evi_greeting_first": "Xin chào! Mình là eVi. Cho mình biết bạn muốn đi đâu nhé!",
   "evi_greeting_return": "Đi đâu hôm nay?",

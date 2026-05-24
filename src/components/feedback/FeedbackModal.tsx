@@ -3,7 +3,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useLocale } from '@/lib/locale';
 import StarRating from './StarRating';
+import FeedbackImageUpload from './FeedbackImageUpload';
 import type { FeedbackCategory } from '@/lib/feedback/constants';
+
+/** Categories where attaching a photo materially helps triage. */
+const UPLOAD_CATEGORIES: ReadonlySet<FeedbackCategory> = new Set([
+  'REPORT_ISSUE',
+  'STATION_DATA_ERROR',
+  'MISSING_STATION',
+  'STATION_AMENITY_MISSING',
+]);
 
 interface FeedbackModalProps {
   readonly isOpen: boolean;
@@ -52,6 +61,7 @@ export default function FeedbackModal({
   const [proposedLatitude, setProposedLatitude] = useState('');
   const [proposedLongitude, setProposedLongitude] = useState('');
   const [proposedProvider, setProposedProvider] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState('');
 
   // UI state
@@ -115,6 +125,10 @@ export default function FeedbackModal({
     setCategory(cat);
     setStep('form');
     formOpenedAt.current = Date.now();
+    // Drop any prior upload so it doesn't leak across category changes
+    // (e.g. user picks REPORT_ISSUE, attaches a photo, backs out, picks
+    // ROUTE_FEEDBACK — the photo would be irrelevant there).
+    setImageUrl(null);
   }, []);
 
   const handleBack = useCallback(() => {
@@ -181,6 +195,7 @@ export default function FeedbackModal({
             category === 'MISSING_STATION' && proposedProvider.trim()
               ? proposedProvider.trim()
               : undefined,
+          imageUrl: imageUrl ?? undefined,
           pageUrl: window.location.href,
           userAgent: navigator.userAgent,
           viewport: `${window.innerWidth}x${window.innerHeight}`,
@@ -216,7 +231,7 @@ export default function FeedbackModal({
   }, [
     category, description, email, name, phone, stationContext,
     stationName, stepsToReproduce, useCase, correctInfo, rating,
-    proposedLatitude, proposedLongitude, proposedProvider,
+    proposedLatitude, proposedLongitude, proposedProvider, imageUrl,
     honeypot, validate, t,
   ]);
 
@@ -417,6 +432,12 @@ export default function FeedbackModal({
                     className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors resize-y"
                   />
                 </div>
+              )}
+
+              {/* Photo upload (REPORT_ISSUE / STATION_DATA_ERROR /
+                  MISSING_STATION / STATION_AMENITY_MISSING) */}
+              {UPLOAD_CATEGORIES.has(category) && (
+                <FeedbackImageUpload value={imageUrl} onChange={setImageUrl} />
               )}
 
               {/* Use case (REQUEST_FEATURE) */}

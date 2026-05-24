@@ -337,6 +337,18 @@
   "feedback_back": "Back",
   "feedback_station_report": "Report error",
 
+  "feedback_upload_label": "Attach a photo (optional)",
+  "feedback_upload_pick": "Choose photo…",
+  "feedback_upload_uploading": "Uploading…",
+  "feedback_upload_remove": "Remove",
+  "feedback_upload_preview_alt": "Attached photo preview",
+  "feedback_upload_hint": "JPEG, PNG, WEBP, or HEIC. Up to 5 MB.",
+  "feedback_upload_too_large": "Photo is too large (5 MB max).",
+  "feedback_upload_invalid_type": "That file isn't a supported image format.",
+  "feedback_upload_rate_limited": "Too many uploads. Please wait before trying again.",
+  "feedback_upload_unavailable": "Photo uploads aren't available right now.",
+  "feedback_upload_failed": "Couldn't upload that photo. Try again?",
+
   "evi_fab_label": "Open eVi assistant",
   "evi_greeting_first": "Hi! I'm eVi. Tell me where you'd like to go!",
   "evi_greeting_return": "Where to today?",

@@ -386,6 +386,54 @@ describe('feedbackRequestSchema', () => {
     });
   });
 
+  describe('imageUrl validation', () => {
+    it('accepts a Vercel Blob URL on the public.blob.vercel-storage.com host', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        imageUrl: 'https://abc123.public.blob.vercel-storage.com/feedback/2026-05-24/xyz.jpg',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects an arbitrary external URL (prevents URL-shortener abuse)', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        imageUrl: 'https://example.com/image.jpg',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a non-HTTPS URL even if the host matches', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        imageUrl: 'http://abc.public.blob.vercel-storage.com/feedback/x.jpg',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects a malformed URL', () => {
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        imageUrl: 'not a url',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('accepts empty string and omitted field (optional)', () => {
+      expect(feedbackRequestSchema.safeParse({ ...validFeedback, imageUrl: '' }).success).toBe(true);
+      expect(feedbackRequestSchema.safeParse({ ...validFeedback }).success).toBe(true);
+    });
+
+    it('rejects imageUrl longer than 2000 characters', () => {
+      const long = 'https://abc.public.blob.vercel-storage.com/' + 'a'.repeat(2000);
+      const result = feedbackRequestSchema.safeParse({
+        ...validFeedback,
+        imageUrl: long,
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
   describe('spam prevention fields', () => {
     it('accepts honeypot field', () => {
       const result = feedbackRequestSchema.safeParse({

@@ -65,6 +65,10 @@ export const eviLimiter = hasRedis ? createRedisRatelimiter(20, 60) : null;
 // is generous for a real user (one voice message every ~6 s) and tight enough
 // to cap cost-abuse from anonymous scripted requests.
 export const transcribeLimiter = hasRedis ? createRedisRatelimiter(10, 60) : null;
+// Feedback image uploads hit Vercel Blob (paid storage). 5 uploads/hour per IP
+// caps storage abuse without blocking a real reporter who attaches 2-3 photos
+// to a single station-data-error submission.
+export const feedbackUploadLimiter = hasRedis ? createRedisRatelimiter(5, 3600) : null;
 
 export interface RateLimitResult {
   readonly allowed: boolean;

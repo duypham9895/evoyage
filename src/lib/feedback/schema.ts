@@ -26,6 +26,21 @@ export const feedbackRequestSchema = z.object({
   proposedLongitude: z.number().min(-180).max(180).optional(),
   proposedProvider: z.string().max(100).optional().or(z.literal('')),
 
+  // Optional attached photo — must be a URL we issued via /api/feedback/upload
+  // (Vercel Blob host). Schema only enforces the public.blob.vercel-storage.com
+  // host prefix; freeform user-supplied URLs are rejected to prevent the
+  // feedback inbox from being used as a free URL-shortener / referer.
+  imageUrl: z
+    .string()
+    .url()
+    .max(2000)
+    .refine(
+      (u) => u.startsWith('https://') && /\.public\.blob\.vercel-storage\.com\//.test(u),
+      'Image URL must come from our /api/feedback/upload endpoint',
+    )
+    .optional()
+    .or(z.literal('')),
+
   // Context (auto-captured)
   pageUrl: z.string().max(2000).optional().or(z.literal('')),
   userAgent: z.string().max(500).optional().or(z.literal('')),

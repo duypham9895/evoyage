@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
         proposedLatitude: data.proposedLatitude ?? null,
         proposedLongitude: data.proposedLongitude ?? null,
         proposedProvider: data.proposedProvider || null,
+        imageUrl: data.imageUrl || null,
         pageUrl: data.pageUrl || null,
         userAgent: data.userAgent || null,
         viewport: data.viewport || null,
