@@ -51,6 +51,10 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
 
   test('drag does NOT open modal', async ({ page }) => {
     const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
+    // Wait for the FAB to mount before measuring — on Mobile Chrome / Safari
+    // the boundingBox() call can race with hydration and return null, causing
+    // the historical flake (deploy run 26360945735 / docs(retro) commit).
+    await fab.first().waitFor({ state: 'visible', timeout: 5_000 });
     const initialBox = await fab.boundingBox();
     expect(initialBox).not.toBeNull();
 
@@ -71,6 +75,10 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
 
   test('position persists across page reload', async ({ page }) => {
     const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
+    // Wait for the FAB to mount before measuring — on Mobile Chrome / Safari
+    // the boundingBox() call can race with hydration and return null, causing
+    // the historical flake (deploy run 26360945735 / docs(retro) commit).
+    await fab.first().waitFor({ state: 'visible', timeout: 5_000 });
     const initialBox = await fab.boundingBox();
     expect(initialBox).not.toBeNull();
 
