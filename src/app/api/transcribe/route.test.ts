@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
+import { __resetRateLimitForTests } from '@/lib/rate-limit';
 
 function makeRequest(body: FormData): NextRequest {
   return new NextRequest('http://localhost:3000/api/transcribe', {
@@ -32,6 +33,7 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
     vi.stubEnv('GROQ_API_KEY', 'test-groq-key');
     fetchSpy = vi.fn();
     global.fetch = fetchSpy as unknown as typeof fetch;
+    __resetRateLimitForTests();
   });
 
   afterEach(() => {
@@ -150,5 +152,37 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
 
     expect(response.status).toBe(200);
     expect(data.text).toBe('');
+  });
+
+  it('returns 429 once the per-IP rate limit is exceeded', async () => {
+    // Limit is 10 req / 60s per IP. Exhaust the budget on the in-memory
+    // limiter (no Redis env vars in tests) and verify the 11th call 429s
+    // before any auth / validation / upstream work happens.
+    // Each Groq call must get a fresh Response — bodies are single-read.
+    fetchSpy.mockImplementation(() => Promise.resolve(makeResponse(200, { text: 'ok' })));
+
+    for (let i = 0; i < 10; i++) {
+      const ok = await POST(makeRequest(makeAudioFormData()));
+      expect(ok.status, `request #${i + 1} should succeed`).toBe(200);
+    }
+
+    const blocked = await POST(makeRequest(makeAudioFormData()));
+    expect(blocked.status).toBe(429);
+    const data = await blocked.json();
+    expect(data.error).toBe('rate_limited');
+    expect(blocked.headers.get('Retry-After')).toBeTruthy();
+  });
+
+  it('does not call Groq when rate limit kicks in (no cost-abuse)', async () => {
+    fetchSpy.mockImplementation(() => Promise.resolve(makeResponse(200, { text: 'ok' })));
+
+    // Exhaust limit
+    for (let i = 0; i < 10; i++) {
+      await POST(makeRequest(makeAudioFormData()));
+    }
+
+    const callsBeforeBlock = fetchSpy.mock.calls.length;
+    await POST(makeRequest(makeAudioFormData()));
+    expect(fetchSpy.mock.calls.length, 'rate-limited request must not reach Groq').toBe(callsBeforeBlock);
   });
 });

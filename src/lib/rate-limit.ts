@@ -18,6 +18,11 @@ function createRedisRatelimiter(maxRequests: number, windowSec: number): Ratelim
 // In-memory fallback for local development without Redis
 const localStore = new Map<string, { count: number; resetAt: number }>();
 
+/** Test-only: clear the in-memory rate-limit store between cases. */
+export function __resetRateLimitForTests(): void {
+  localStore.clear();
+}
+
 function checkLocalRateLimit(
   key: string,
   maxRequests: number,
@@ -56,6 +61,10 @@ export const stationsLimiter = hasRedis ? createRedisRatelimiter(30, 60) : null;
 export const vehiclesLimiter = hasRedis ? createRedisRatelimiter(30, 60) : null;
 export const shareCardLimiter = hasRedis ? createRedisRatelimiter(3, 60) : null;
 export const eviLimiter = hasRedis ? createRedisRatelimiter(20, 60) : null;
+// Groq Whisper is a paid endpoint billed per minute of audio. 10 req/min/IP
+// is generous for a real user (one voice message every ~6 s) and tight enough
+// to cap cost-abuse from anonymous scripted requests.
+export const transcribeLimiter = hasRedis ? createRedisRatelimiter(10, 60) : null;
 
 export interface RateLimitResult {
   readonly allowed: boolean;

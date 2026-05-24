@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { checkRateLimit, getClientIp, transcribeLimiter } from '@/lib/rate-limit';
 
 // Groq's Whisper-large-v3 typically returns in <1s. 15s is plenty of headroom
 // for cold starts or large files; default Vercel 10s would be tight on the
@@ -21,6 +22,15 @@ function getApiKey(): string | null {
  * Single synchronous call — Groq's LPU returns sub-second so no polling needed.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const ip = getClientIp(request);
+  const limit = await checkRateLimit(`transcribe:${ip}`, 10, 60_000, transcribeLimiter);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'rate_limited', message: 'Too many transcription requests', retryAfter: limit.retryAfterSec },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
+    );
+  }
+
   const apiKey = getApiKey();
   if (!apiKey) {
     return NextResponse.json(
