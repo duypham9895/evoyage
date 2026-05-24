@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+// Note: Content-Security-Policy moved out of next.config.ts to src/middleware.ts
+// in 2026-05-24 so the policy can carry a per-request nonce (script-src
+// 'nonce-…' instead of 'unsafe-inline'). Other static security headers stay
+// here because they don't need per-request data.
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -11,19 +16,6 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=(self)' },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' maps.googleapis.com",
-              "style-src 'self' 'unsafe-inline' api.mapbox.com",
-              "connect-src 'self' *.mapbox.com maps.googleapis.com nominatim.openstreetmap.org router.project-osrm.org overpass-api.de *.supabase.com",
-              "img-src 'self' data: blob: *.openstreetmap.org *.googleapis.com *.mapbox.com *.basemaps.cartocdn.com *.vinfastauto.com",
-              "font-src 'self'",
-              "worker-src 'self' blob:",
-              "frame-src 'self'",
-            ].join('; '),
-          },
         ],
       },
     ];

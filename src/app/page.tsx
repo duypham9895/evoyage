@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import LandingPageContent from '@/components/landing/LandingPageContent';
 
 export const metadata: Metadata = {
@@ -44,12 +45,24 @@ const jsonLd = {
   availableLanguage: ['vi', 'en'],
 };
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  // Middleware sets x-nonce on the request headers; read it here so the
+  // JSON-LD <script> below is allowed under the nonce-based CSP set by
+  // src/middleware.ts. Falls back to no nonce in environments where
+  // middleware is bypassed (dev SSR shortcut, test snapshot).
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
+
+  // Defense-in-depth: also escape any '</' in the JSON-LD payload so a
+  // future jsonLd field containing user data couldn't break out of the
+  // script tag. Today jsonLd is fully static, so this is paranoia.
+  const ldJson = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        nonce={nonce}
+        dangerouslySetInnerHTML={{ __html: ldJson }}
       />
       <LandingPageContent />
     </>
