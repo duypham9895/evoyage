@@ -15,16 +15,24 @@
  * pass on every map library's style-injection paths.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'node:crypto';
 
 const ADMIN_USERNAME = 'admin';
 const REALM = 'eVoyage Admin';
 
+/**
+ * Constant-time string compare suitable for Edge Runtime, which has no
+ * access to node:crypto's `timingSafeEqual`. The length-mismatch early-return
+ * leaks one bit of information (whether lengths match), which is acceptable
+ * here — ADMIN_USERNAME and ADMIN_TOKEN have known fixed lengths client-side,
+ * so an attacker varying input length learns nothing useful.
+ */
 function constantTimeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a);
-  const bBuf = Buffer.from(b);
-  if (aBuf.length !== bBuf.length) return false;
-  return timingSafeEqual(aBuf, bBuf);
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 function unauthorized(): NextResponse {
