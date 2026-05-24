@@ -62,7 +62,7 @@ The user can dismiss any precautionary stop with one tap. Dismissal is local (no
 
 16. As a keyboard-only user, I want to Tab to focus the dismiss button and press Enter to skip a precautionary stop, so that I can manage suggestions without a pointing device.
 
-17. As a driver who explicitly set Range Safety Factor to 0.70 (very safe), I want the planner to NOT add precautionary stops on top of my already-conservative setting, so that I am not over-protected to the point of plan unviability.
+17. As a driver who explicitly set Range Safety Factor to 0.70 (very safe), I want precautionary stops triggered only at the highest pressure (5/5), so that my conservative setting and the system's protection scale together without making my plan unviable. (Resolved per D2.)
 
 18. As a driver looking at trip arrival time, I want the displayed total duration to update immediately when I dismiss a precautionary stop, so that I see the time savings.
 
@@ -221,17 +221,40 @@ Existing `trackBackupAlternativesDistribution` event gets a sibling: `trackPreca
 
 Success criterion for v1: dismissal rate < 50% within 4 weeks of launch. If higher, expose the v2 toggle.
 
-### Open engineering questions (must resolve before implementation plan)
+### Resolved decisions (2026-05-24)
 
-1. **Cap interaction with backup pressure**: should a precautionary stop's own `BackupPressureScore` (and therefore its alternatives count) be force-zeroed to avoid "alternative of an alternative" recursion? Recommended yes — keeps the UI clean and matches the "this stop is itself optional" framing.
+The 5 previously-open engineering questions were resolved in a PM Q&A session. Decisions below override any conflicting language earlier in this PRD. Decision IDs (D1–D5) are referenced from §"Module architecture", §"Testing Decisions", and the upcoming ADR-0009.
 
-2. **Range safety factor floor**: confirmed 0.80 — users at 0.70 or lower are already conservative; piling precautionary stops on top creates plan-unviability. Q: is this the right floor, or should we instead scale pressure thresholds by safety factor?
+**D1 — Precautionary stops carry full alternatives (normal nMax 1–3).**
+Precautionary stops are NOT structurally distinct from required stops in their alternatives picker. The `BackupPressureScore` runs on them normally and `applyBackupPressure` trims their alternatives normally. The two user actions — "skip this entire stop" vs "swap the station at this stop" — must be visually distinguished. UI resolution: the dismiss control sits **outside** the alternatives picker (a "Bỏ qua điểm sạc nhẹ" link below the entire card), while the alternatives picker is identical to required stops. The dashed border, "ĐỀ XUẤT" chip, and 70% opacity convey optionality at the card level even while alternatives render inside.
 
-3. **Top-up charge target**: confirmed 60% for precautionary stops. Q: should this be vehicle-aware? A VinFast VF8 at 60% has ~250km usable range; a smaller battery vehicle has less.
+**D2 — Range Safety Factor scales pressure thresholds (not a hard floor).**
+The injection threshold varies by the user's `rangeSafetyFactor`:
 
-4. **Renumbering vs identity**: confirmed identity-preserved for shared URLs, renumbered for live view. Q: does any other view (saved trip, trip history) need the identity-preserved rendering?
+| Safety Factor range | Pressure threshold for injection | CONTEXT.md tier |
+|---|---|---|
+| ≤ 0.70 | 5 (highest pressure only) | "very safe" |
+| 0.71 – 0.80 | 4 (the original PRD value) | "recommended" |
+| 0.81 – 1.00 | 3 (more eager injection) | "risky" |
 
-5. **Cap interaction with N=0 banner from ADR-0006**: if a leg has `N=0` alternatives (sparse banner triggered) AND would also trigger a precautionary injection, do we show both? Recommended: precautionary stop replaces the N=0 banner — adding a stop *is* the protection the banner asked the user to perform manually.
+Step function, not linear interpolation — for testability and explainability. The 3 buckets align with the existing `getRangeSafetyWarning` tiers defined in CONTEXT.md. The threshold curve is reviewable in week-8 telemetry alongside the other ADR-0006 calibration.
+
+**D3 — Top-up charge target is vehicle-aware (step function by battery capacity).**
+
+| Battery capacity | Top-up target | Notes |
+|---|---|---|
+| ≥ 80 kWh (VF8, VF9) | 60% | original PRD value |
+| 60 – 79 kWh (VF7) | 65% | |
+| 40 – 59 kWh (VF6, future smaller models) | 70% | |
+| < 40 kWh | 75% | edge case; no current VinFast model |
+
+Rationale: larger batteries extract more usable range from the same percentage, so a smaller percentage suffices for a comparable real-world cushion. Step function (not linear) to match D2's testability discipline. The target enters the `top-up-target.ts` module as a pure function `topUpTargetForVehicle(batteryCapacityKwh) → number`. All four buckets exit with charge time ≤ 25 min on a 100 kW DC fast charger.
+
+**D4 — Saved trip notebook: save dismissal state, recompute fresh suggestions on reload.**
+Dismissals are scoped to `(tripId, stationId)` pairs and persist in the trip notebook. On reload, the planner runs as usual; suggestions matching a dismissed pair are silently filtered. If context changes (trip date moves to Tết, new offline-station data), new suggestions for *different* stations appear normally. Engineering: requires adding a `dismissedPrecautionaryStops: { tripId: string; stationId: string }[]` field to the saved-trip schema in `prisma/schema.prisma` (additive, no migration risk).
+
+**D5 — N=0 banner is suppressed when a precautionary stop is injected on the same leg.**
+When a leg's risk would trigger BOTH the N=0 "no backup, charge to ≥90%" banner (ADR-0006) AND a precautionary stop, the precautionary stop wins and the banner is suppressed. The precautionary stop IS the protection the banner asked the user to perform manually. `applyBackupPressure` must check whether a precautionary stop was injected on this leg before emitting the N=0 banner.
 
 ---
 
