@@ -83,8 +83,12 @@ function parseConnectorStandard(standard: string): string {
 
 /**
  * Parse the raw VinFast detail API response into a clean structure.
+ *
+ * Exported for testing — call sites still use the higher-level
+ * `fetchVinFastDetail*` wrappers that take care of impit/Playwright + CF
+ * detection. Direct callers shouldn't need this except in vinfast-client.test.ts.
  */
-function parseDetailResponse(raw: Record<string, unknown>): VinFastStationDetail | null {
+export function parseDetailResponse(raw: Record<string, unknown>): VinFastStationDetail | null {
   const outer = raw.data as Record<string, unknown> | undefined;
   if (!outer) return null;
 
@@ -259,7 +263,12 @@ async function fetchWithImpitInner(
   }
 }
 
-function parseResponse(text: string): VinFastStationDetail | null {
+/**
+ * Decode the raw upstream body. Returns null when Cloudflare's challenge
+ * page is served instead of JSON, or when the body isn't valid JSON.
+ * Exported for testing — see comment on `parseDetailResponse`.
+ */
+export function parseResponse(text: string): VinFastStationDetail | null {
   if (text.includes('::IM_UNDER_ATTACK_BOX::') || text.includes('challenge-platform')) {
     console.error('VinFast detail: blocked by Cloudflare challenge');
     return null;
