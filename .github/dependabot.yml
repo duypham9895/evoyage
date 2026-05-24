@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # GitHub Actions used in .github/workflows/*.yml — SHA-pinned upstream, so
+  # Dependabot is the only sane way to notice when a v6→v7 bump exists.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '02:00'
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+
+  # npm — group minor + patch into a single weekly PR so reviews stay tractable.
+  # Major-version bumps land as individual PRs because they tend to need
+  # framework-level changes (Next, React, Prisma, Vitest, Tailwind).
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '02:00'
+      timezone: Asia/Ho_Chi_Minh
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - npm
+    groups:
+      production-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Pin Next + React majors — bumps require manual codemod work.
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]

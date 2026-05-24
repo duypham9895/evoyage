@@ -2,6 +2,9 @@
   "name": "evoyage",
   "version": "0.8.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -15,7 +18,7 @@
     "seed": "npx tsx scripts/seed-vietnam-models.ts",
     "seed:stations": "npx tsx scripts/seed-osm-stations.ts",
     "seed:all": "npm run seed && npm run seed:stations",
-    "db:push": "npx prisma db push",
+    "db:push:local": "npx tsx scripts/db-push-local.ts",
     "db:generate": "npx prisma generate",
     "prepare": "husky"
   },

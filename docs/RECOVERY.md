@@ -36,9 +36,13 @@ These steps assume Severity 2 — the Supabase project is gone and you're starti
 
 3. **Push the schema.**
    ```bash
-   npm run db:push
+   FORCE_DB_PUSH_TO_PROD=1 npm run db:push:local
    ```
    This creates all tables defined in `prisma/schema.prisma`. No data yet.
+   The `FORCE_DB_PUSH_TO_PROD` flag is required because the safety wrapper at
+   `scripts/db-push-local.ts` refuses to push to a Supabase pooler URL by
+   default — exactly the case here, but exactly the case you want it to catch
+   when you DIDN'T mean to point at prod.
 
 4. **Seed the EV vehicle catalog (15 models).**
    ```bash
