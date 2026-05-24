@@ -7,7 +7,13 @@ Operator runbook for the `/api/cron/poll-station-status` and `/api/cron/aggregat
 Production cadence:
 - Cookie refresh: every 2 hours (`refresh-vinfast-cookies.yml`)
 - Polling: every 2 hours, offset by 5 minutes (`poll-station-status.yml`)
-- Aggregation: daily at 02:00 AM Vietnam (`aggregate-popularity.yml`)
+- Popularity aggregation: daily at 02:00 AM Vietnam (`aggregate-popularity.yml`) — also prunes observations >90 days
+- Reliability aggregation: daily at 02:30 AM Vietnam (`aggregate-reliability.yml`) — staggered 30 min after popularity to avoid simultaneous DB load (ADR-0007 layer 2)
+- Energy prices: daily 03:00 AM Vietnam (`crawl-energy-prices.yml`) — commits the JSON + README markers back to the repo
+- Station crawls: daily 08:00 AM Vietnam (`crawl-stations.yml`) — VinFast + EVPower + OSM + OCM + manual + crowdsourced; auto-commits station count
+- POI warm: daily 11:00 AM Vietnam (`warm-station-pois.yml`) — pre-populates `StationPois` for top 50 stations
+
+**Why GHA over Vercel cron:** keeps the whole pipeline inside one source-controlled tree (`.github/workflows/`), avoids Vercel Hobby's 2-daily-cron cap, and lets long-running jobs (Playwright cookie refresh, station crawls) run on GHA-class runners with longer timeouts than Vercel functions allow.
 
 ## Prerequisites
 
@@ -62,6 +68,7 @@ The polling and aggregation are invoked by three workflows that live alongside t
 | `refresh-vinfast-cookies.yml` | every 2 hours | Playwright refreshes CF cookies into `VinfastApiCookies` |
 | `poll-station-status.yml` | every 2 hours, +5 min offset | curl `/api/cron/poll-station-status` |
 | `aggregate-popularity.yml` | daily 19:00 UTC (02:00 AM VN) | curl `/api/cron/aggregate-popularity` |
+| `aggregate-reliability.yml` | daily 19:30 UTC (02:30 AM VN) | curl `/api/cron/aggregate-reliability` (ADR-0007) |
 
 The polling and aggregation workflows authenticate via `${{ secrets.CRON_SECRET }}`. Set this in **GitHub repo settings → Secrets and variables → Actions** with the same value used in Vercel env vars.
 

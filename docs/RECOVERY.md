@@ -56,6 +56,21 @@ These steps assume Severity 2 — the Supabase project is gone and you're starti
    npx tsx scripts/crawl-vinfast-stations.ts
    ```
 
+6a. **Crawl EVPower stations** (non-VinFast operator coverage per ADR-0001).
+   ```bash
+   npx tsx scripts/crawl-evpower-stations.ts
+   ```
+
+6b. **Seed manually-curated stations** (a small CSV of high-quality non-crawled entries — e.g. hotels, parking lots).
+   ```bash
+   npx tsx scripts/seed-manual-stations.ts
+   ```
+
+6c. **Seed today's energy prices** (RON95, diesel, EVN tier 4, V-GREEN). The full daily refresh runs on GitHub Actions; this is the one-shot bootstrap so the trip-cost panel renders with real numbers immediately.
+   ```bash
+   npx tsx scripts/crawl-energy-prices.ts
+   ```
+
 7. **Update Vercel env vars.**
    ```bash
    vercel env rm DATABASE_URL production
@@ -78,15 +93,34 @@ These steps assume Severity 2 — the Supabase project is gone and you're starti
 
 ## Permanently-lost data
 
-A full rebuild restores everything that lives in code, but some tables hold user-generated data that cannot be regenerated.
+A full rebuild restores everything that lives in code, but some tables hold user-generated or accumulated-observation data that cannot be regenerated.
 
 | Table | What's lost | User-facing impact | Why it's acceptable |
 |-------|-------------|--------------------|---------------------|
 | `ShortUrl` | All previously-shared trip links | Old share links return 404 | Low traffic, links are ephemeral by nature |
 | `Feedback` | All submitted feedback messages | None visible to users (admin loses history) | Feedback is read once and acted on; not a long-lived record |
 | `RouteCache` | Cached route geometries | First request after recovery is slower | Cache rebuilds naturally on use |
+| `StationStatusReport` | Crowdsourced WORKING/BROKEN/BUSY reports | "Verified X min ago" chip disappears until users start reporting again | Reports re-accumulate within days; never a long-lived signal |
+| `StationStatusObservation` | Hourly poll history | See "Cold-start degradation" below | Aggregated cron rebuilds it over 30–60 days |
+| `StationReliability` | Per-station 30-day uptime score (ADR-0007) | Ranking multiplier silently gated off until 100 observations accumulate per station | See "Cold-start degradation" |
+| `StationPopularity` | 168-cell busy-probability heatmap | StopPopularity verdict reverts to "insufficient-data" | Rebuilds over 60 days |
+| `StationPois` | Cached OSM amenities | First amenity lookup per station is slow (Overpass round-trip) | Lazy refill on demand |
+| `VinFastStationDetail` | Cached VinFast SSE detail blobs | First detail tap per station is slow | Cache refills on demand |
+| `VinfastApiCookies` | Cached CF-bypass cookies | Hourly status poll fails until next cookie-refresh GHA run (every 2h) | Self-heals within ≤2h |
 
 If a user reports a broken share link after a recovery event, the right answer is "please re-share from the live trip" — not to attempt restoration.
+
+## Cold-start degradation (what looks broken but isn't)
+
+After a full rebuild, the app works immediately for trip planning, station lookup, and map rendering — but three intelligence layers need time to rebuild from observations:
+
+| Layer | Time to recover | What users see in the meantime |
+|-------|-----------------|--------------------------------|
+| **Reliability ranking** (ADR-0007) | ~30 days from first poll | Stations rank by detour + charge-time only; no reliability penalty. Ranking still useful, just less precise. |
+| **Popularity heatmap** (Phase 3b) | ~60 days from first poll | `StopPopularity.tsx` renders "insufficient-data" verdict. Trip plans still complete normally. |
+| **Crowdsourced verification chips** | Hours–days | "Verified X min ago" labels absent until users start reporting again. |
+
+None of these block normal use. Worth posting an honest banner ("we recently rebuilt our DB — accuracy improves over the next 30 days") if a recovery happens during a high-traffic period.
 
 ## Post-recovery checklist
 
