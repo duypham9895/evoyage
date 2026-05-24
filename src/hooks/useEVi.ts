@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ChatMessage, EViParseResponse, NearbyStationInfo } from '@/lib/evi/types';
+import { trackEviMessage } from '@/lib/analytics';
 
 // ── State Machine ──
 type EViState = 'idle' | 'processing' | 'complete' | 'follow_up' | 'error';
@@ -30,7 +31,7 @@ interface UseEViReturn {
   readonly recentTrips: readonly RecentTrip[];
   readonly followUpSuggestions: readonly string[];
   readonly isSuggestionsLoading: boolean;
-  readonly sendMessage: (text: string) => Promise<void>;
+  readonly sendMessage: (text: string, source?: 'text' | 'voice') => Promise<void>;
   readonly reset: () => void;
 }
 
@@ -228,9 +229,14 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
   }, []);
 
   // ── sendMessage ──
-  const sendMessage = useCallback(async (text: string): Promise<void> => {
+  const sendMessage = useCallback(async (text: string, source: 'text' | 'voice' = 'text'): Promise<void> => {
     const userMsg: ChatMessage = { role: 'user', content: text };
     const updatedMessages = [...messagesRef.current, userMsg];
+
+    // Telemetry — fire before the network call so we capture every attempted
+    // send even if the upstream parse fails. `trackEviMessage` is gated server-
+    // side (no-op in dev/test) so this is safe under the test environment.
+    trackEviMessage(source);
 
     // Clear suggestions when user sends a new message
     setFollowUpSuggestions([]);

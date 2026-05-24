@@ -188,7 +188,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
   // ── Send transcript when listening stops ──
   useEffect(() => {
     if (prevListeningRef.current && !isListening && transcript.trim()) {
-      sendMessage(transcript.trim());
+      sendMessage(transcript.trim(), 'voice');
     }
     prevListeningRef.current = isListening;
   }, [isListening, transcript, sendMessage]);
