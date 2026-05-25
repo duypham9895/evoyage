@@ -15,11 +15,17 @@
 import { PrismaClient } from '@prisma/client';
 import { chromium, type Cookie } from 'playwright';
 import { computeCookieExpiry } from '../src/lib/station/cookie-expiry';
+import { VinfastApiError } from '../src/lib/station/vinfast-api-client';
+import {
+  classifyVinfastCronError,
+  normalizeVinfastBrowserError,
+} from '../src/lib/station/vinfast-upstream-error';
 
 const prisma = new PrismaClient();
 
 const LOCATOR_PAGE = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
 const KEEP_LAST_N_ROWS = 3;
+const JOB_NAME = 'Refresh VinFast Cookies';
 
 interface FreshCookies {
   readonly cookies: readonly Cookie[];
@@ -50,30 +56,41 @@ async function fetchFreshCookies(): Promise<FreshCookies> {
     // signal that the CF challenge has passed is the verification fetch below,
     // not network quiescence. Use `domcontentloaded` so we move on once HTML
     // is parsed; the verification step is the real gate.
-    await page.goto(LOCATOR_PAGE, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    // Brief settle for any inline CF challenge script that runs post-DCL.
-    await page.waitForTimeout(2000);
-
-    console.log('Verifying API access with current cookies...');
-    const verification = await page.evaluate(async () => {
-      const res = await fetch('/vn_vi/get-locators', {
-        headers: {
-          Accept: 'application/json, text/javascript, */*; q=0.01',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
+    let verification: { status: number; challenged: boolean };
+    try {
+      await page.goto(LOCATOR_PAGE, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
       });
-      const text = await res.text();
-      return {
-        status: res.status,
-        challenged:
-          text.includes('IM_UNDER_ATTACK') || text.includes('challenge-platform'),
-      };
-    });
+      // Brief settle for any inline CF challenge script that runs post-DCL.
+      await page.waitForTimeout(2000);
+
+      console.log('Verifying API access with current cookies...');
+      verification = await page.evaluate(async () => {
+        const res = await fetch('/vn_vi/get-locators', {
+          headers: {
+            Accept: 'application/json, text/javascript, */*; q=0.01',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        });
+        const text = await res.text();
+        return {
+          status: res.status,
+          challenged:
+            text.includes('IM_UNDER_ATTACK') ||
+            text.includes('challenge-platform'),
+        };
+      });
+    } catch (err) {
+      throw normalizeVinfastBrowserError(err);
+    }
 
     if (verification.challenged || verification.status !== 200) {
-      throw new Error(
+      throw new VinfastApiError(
+        verification.challenged ? 'cloudflare_blocked' : 'http_error',
         `Verification failed: status=${verification.status} challenged=${verification.challenged}`,
+        verification.status,
       );
     }
 
@@ -142,8 +159,15 @@ async function main(): Promise<void> {
 
 main()
   .catch((err) => {
+    const outcome = classifyVinfastCronError(JOB_NAME, err);
+    if (outcome.action === 'skip') {
+      console.warn(outcome.warning);
+      console.log(`Result: ${JSON.stringify(outcome.result)}`);
+      return;
+    }
+
     console.error('Cookie refresh failed:', err);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();

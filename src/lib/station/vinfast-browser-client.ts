@@ -3,6 +3,7 @@ import {
   VinfastApiError,
   type VinfastLocatorRaw,
 } from './vinfast-api-client';
+import { normalizeVinfastBrowserError } from './vinfast-upstream-error';
 
 export const VINFAST_LOCATOR_PAGE =
   'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
@@ -21,33 +22,37 @@ export interface VinfastLocatorPage {
 export async function fetchVinfastLocatorsFromPage(
   page: VinfastLocatorPage,
 ): Promise<readonly VinfastLocatorRaw[]> {
-  await page.goto(VINFAST_LOCATOR_PAGE, {
-    waitUntil: 'domcontentloaded',
-    timeout: 30_000,
-  });
-  await page.waitForTimeout(2000);
-
-  const response = await page.evaluate(async () => {
-    const res = await fetch('/vn_vi/get-locators', {
-      headers: {
-        Accept: 'application/json, text/javascript, */*; q=0.01',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      credentials: 'same-origin',
+  try {
+    await page.goto(VINFAST_LOCATOR_PAGE, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
     });
-    return {
-      status: res.status,
-      text: await res.text(),
-    };
-  });
+    await page.waitForTimeout(2000);
 
-  if (response.status !== 200) {
-    throw new VinfastApiError(
-      'http_error',
-      `Upstream returned ${response.status}`,
-      response.status,
-    );
+    const response = await page.evaluate(async () => {
+      const res = await fetch('/vn_vi/get-locators', {
+        headers: {
+          Accept: 'application/json, text/javascript, */*; q=0.01',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+      });
+      return {
+        status: res.status,
+        text: await res.text(),
+      };
+    });
+
+    if (response.status !== 200) {
+      throw new VinfastApiError(
+        'http_error',
+        `Upstream returned ${response.status}`,
+        response.status,
+      );
+    }
+
+    return parseVinfastLocatorsResponseText(response.text);
+  } catch (err) {
+    throw normalizeVinfastBrowserError(err);
   }
-
-  return parseVinfastLocatorsResponseText(response.text);
 }
