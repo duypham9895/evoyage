@@ -74,6 +74,38 @@ export interface FetchVinfastOptions {
   readonly timeoutMs?: number;
 }
 
+export function parseVinfastLocatorsResponseText(
+  text: string,
+): readonly VinfastLocatorRaw[] {
+  if (text.includes('IM_UNDER_ATTACK') || text.includes('challenge-platform')) {
+    throw new VinfastApiError(
+      'cloudflare_blocked',
+      'Response contained Cloudflare challenge markers; cookies likely expired',
+    );
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new VinfastApiError('parse_error', 'Response was not valid JSON');
+  }
+
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    !('data' in parsed) ||
+    !Array.isArray((parsed as { data: unknown }).data)
+  ) {
+    throw new VinfastApiError(
+      'parse_error',
+      'Response missing expected `data` array',
+    );
+  }
+
+  return (parsed as { data: VinfastLocatorRaw[] }).data;
+}
+
 export async function fetchVinfastLocators(
   cookies: readonly VinfastCookie[],
   options: FetchVinfastOptions = {},
@@ -118,32 +150,5 @@ export async function fetchVinfastLocators(
   }
 
   const text = await response.text();
-
-  if (text.includes('IM_UNDER_ATTACK') || text.includes('challenge-platform')) {
-    throw new VinfastApiError(
-      'cloudflare_blocked',
-      'Response contained Cloudflare challenge markers; cookies likely expired',
-    );
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new VinfastApiError('parse_error', 'Response was not valid JSON');
-  }
-
-  if (
-    typeof parsed !== 'object' ||
-    parsed === null ||
-    !('data' in parsed) ||
-    !Array.isArray((parsed as { data: unknown }).data)
-  ) {
-    throw new VinfastApiError(
-      'parse_error',
-      'Response missing expected `data` array',
-    );
-  }
-
-  return (parsed as { data: VinfastLocatorRaw[] }).data;
+  return parseVinfastLocatorsResponseText(text);
 }
