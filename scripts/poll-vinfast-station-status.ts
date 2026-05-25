@@ -16,10 +16,17 @@ import {
   fetchVinfastLocatorsFromPage,
   VINFAST_BROWSER_USER_AGENT,
 } from '../src/lib/station/vinfast-browser-client';
+import {
+  classifyVinfastCronError,
+  getErrorMessage,
+  isTransientVinfastUpstreamError,
+} from '../src/lib/station/vinfast-upstream-error';
 import type { VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
 
 const prisma = new PrismaClient();
 const KEEP_LAST_N_ROWS = 3;
+const JOB_NAME = 'Poll Station Status';
+const MAX_ATTEMPTS = 3;
 
 interface BrowserPollPayload {
   readonly cookies: readonly Cookie[];
@@ -59,6 +66,34 @@ async function fetchBrowserPollPayload(): Promise<BrowserPollPayload> {
   }
 }
 
+async function fetchBrowserPollPayloadWithRetry(): Promise<BrowserPollPayload> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fetchBrowserPollPayload();
+    } catch (err) {
+      lastErr = err;
+      console.error(
+        `Attempt ${attempt}/${MAX_ATTEMPTS} failed: ${getErrorMessage(err)}`,
+      );
+      if (
+        attempt < MAX_ATTEMPTS &&
+        isTransientVinfastUpstreamError(err)
+      ) {
+        const delaySec = 5 * attempt;
+        console.log(`Retrying in ${delaySec}s...`);
+        await new Promise((resolve) => setTimeout(resolve, delaySec * 1000));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`Browser poll exhausted ${MAX_ATTEMPTS} attempts`);
+}
+
 async function persistCookies(payload: BrowserPollPayload): Promise<void> {
   console.log(
     `Persisting ${payload.cookies.length} cookies, expires ${payload.expiresAt.toISOString()}`,
@@ -85,7 +120,7 @@ async function persistCookies(payload: BrowserPollPayload): Promise<void> {
 
 async function main(): Promise<void> {
   console.log('=== VinFast Browser Station Status Poll ===');
-  const payload = await fetchBrowserPollPayload();
+  const payload = await fetchBrowserPollPayloadWithRetry();
   console.log(`Fetched ${payload.locators.length} locator rows`);
   await persistCookies(payload);
 
@@ -102,8 +137,15 @@ async function main(): Promise<void> {
 
 main()
   .catch((err) => {
+    const outcome = classifyVinfastCronError(JOB_NAME, err);
+    if (outcome.action === 'skip') {
+      console.warn(outcome.warning);
+      console.log(`Result: ${JSON.stringify(outcome.result)}`);
+      return;
+    }
+
     console.error('Station status poll failed:', err);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
