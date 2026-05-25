@@ -11,12 +11,11 @@ permissions:
   contents: read
   deployments: write
 
-# Serialize prod deploys so a double-push can't race vercel deploy --prod.
-# cancel-in-progress=false because cancelling an in-flight deploy mid-upload
-# is worse than queueing.
+# Serialize prod deploys, but keep PR checks isolated per ref so Dependabot
+# bursts do not block or cancel unrelated validation runs.
 concurrency:
-  group: deploy-prod
-  cancel-in-progress: false
+  group: deploy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -39,6 +38,7 @@ jobs:
         run: npm ci
 
       - name: Check Prisma schema vs production DB
+        if: github.actor != 'dependabot[bot]'
         env:
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
         run: |
@@ -55,6 +55,10 @@ jobs:
             echo "::error::Run 'npx prisma db push' against Supabase before pushing schema changes."
             exit 1
           fi
+
+      - name: Skip Prisma drift check for Dependabot
+        if: github.actor == 'dependabot[bot]'
+        run: echo "Skipping production DB drift check because Dependabot pull_request runs cannot access Actions secrets."
 
       - name: Run unit tests
         run: npm test
