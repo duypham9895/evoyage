@@ -52,6 +52,14 @@ export async function mockAPIs(page: Page): Promise<void> {
     }),
   );
 
+  await page.route('**/api/stations/*/amenities', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ pois: [], cachedAt: null, fromCache: false }),
+    }),
+  );
+
   // Map-bounds station fetch (e.g. NearbyStations, MapLocateButton). Returning
   // an empty list keeps the dev server hermetic — no DATABASE_URL needed.
   await page.route(/\/api\/stations(\?|$)/, (route) =>
@@ -168,7 +176,14 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
   await vehicleSearch.fill('VF8');
   const vehicleOption = page.getByRole('button', { name: /VF 8 Plus/i });
   await vehicleOption.waitFor({ state: 'visible', timeout: 5_000 });
-  await vehicleOption.click();
+  const selectedVehicle = page.getByText('VinFast VF 8 Plus', { exact: true });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await vehicleOption.click({ force: true });
+    if (await selectedVehicle.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      break;
+    }
+  }
+  await expect(selectedVehicle).toBeVisible({ timeout: 5_000 });
 
   // On mobile, go back to Route tab to click Plan button
   if (isMobile) {
@@ -179,10 +194,11 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
   const planButton = page.getByRole('button', {
     name: /Calculate route|Tính lộ trình|Plan this trip|Xem lịch trình/i,
   });
-  await planButton.click();
-
-  // Wait for results
-  await page.waitForResponse((resp) => resp.url().includes('/api/route') && resp.status() === 200);
+  await expect(planButton).toBeEnabled({ timeout: 5_000 });
+  await Promise.all([
+    page.waitForResponse((resp) => resp.url().includes('/api/route') && resp.status() === 200),
+    planButton.click(),
+  ]);
 }
 
 /**
