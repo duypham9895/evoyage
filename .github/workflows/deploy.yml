@@ -3,6 +3,8 @@ name: Deploy to Vercel
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch: # allow manual replay (e.g. after a transient infra failure)
 
 permissions:
@@ -22,6 +24,7 @@ env:
 
 jobs:
   deploy:
+    name: Deploy to Vercel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -91,15 +94,19 @@ jobs:
           retention-days: 7
 
       - name: Install Vercel CLI
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm i -g vercel
 
       - name: Pull Vercel environment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Create GitHub deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: gh-deployment
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,13 +121,14 @@ jobs:
           echo "id=$deployment_id" >> "$GITHUB_OUTPUT"
 
       - name: Deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: vercel-deploy
         run: |
           url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} | tail -n1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Mark deployment success
-        if: success()
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -131,7 +139,7 @@ jobs:
             -f description="Deployed to Vercel"
 
       - name: Mark deployment failure
-        if: failure() && steps.gh-deployment.outputs.id != ''
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.gh-deployment.outputs.id != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

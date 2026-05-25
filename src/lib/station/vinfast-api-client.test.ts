@@ -82,7 +82,7 @@ describe('fetchVinfastLocators', () => {
     expect(stations[0]?.charging_status).toBe('ACTIVE');
   });
 
-  it('sends cached cookies in Cookie header', async () => {
+  it('sends cached cookies with browser-like request context', async () => {
     fetchSpy.mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [] }), { status: 200 }),
     );
@@ -94,7 +94,9 @@ describe('fetchVinfastLocators', () => {
     const headers = init.headers as Record<string, string>;
     expect(headers.Cookie).toBe('cf_clearance=abc123; PHPSESSID=sess789');
     expect(headers['X-Requested-With']).toBe('XMLHttpRequest');
-    expect(headers['User-Agent']).toContain('eVoyage');
+    expect(headers['User-Agent']).toContain('Mozilla/5.0');
+    expect(headers['Referer']).toBe('https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac');
+    expect(headers['Origin']).toBe('https://vinfastauto.com');
   });
 
   it('throws CloudflareBlocked when response contains challenge markers', async () => {

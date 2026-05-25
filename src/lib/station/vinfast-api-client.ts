@@ -7,9 +7,11 @@
  * (docs/specs/2026-05-03-station-status-data-collection-design.md §7).
  */
 
+const LOCATOR_PAGE = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
 const LOCATORS_ENDPOINT = 'https://vinfastauto.com/vn_vi/get-locators';
 const DEFAULT_TIMEOUT_MS = 25_000;
-const USER_AGENT = 'eVoyage/1.0 (+https://evoyage.app)';
+const USER_AGENT =
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export interface VinfastCookie {
   readonly name: string;
@@ -86,8 +88,11 @@ export async function fetchVinfastLocators(
       method: 'GET',
       headers: {
         Accept: 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
         'X-Requested-With': 'XMLHttpRequest',
         Cookie: serializeCookieHeader(cookies),
+        Referer: LOCATOR_PAGE,
+        Origin: 'https://vinfastauto.com',
         'User-Agent': USER_AGENT,
       },
       signal: controller.signal,

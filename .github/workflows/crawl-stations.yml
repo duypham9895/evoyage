@@ -8,9 +8,10 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
-# Serialize so a manual dispatch during the daily run can't race the auto-commit
-# rebase loop at the end of the job.
+# Serialize so a manual dispatch during the daily run can't race the automation
+# PR update at the end of the job.
 concurrency:
   group: crawl-stations
   cancel-in-progress: false
@@ -71,7 +72,9 @@ jobs:
       - name: Sync README station count
         run: npx tsx scripts/update-readme-stats.ts
 
-      - name: Commit station-stats + README
+      - name: Open station-stats sync PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -81,10 +84,21 @@ jobs:
             exit 0
           fi
           COUNT=$(node -e "console.log(require('./src/data/station-stats.json').count)")
-          git commit -m "chore(stations): sync VinFast count to ${COUNT} [skip ci]"
-          # Workflow runs for ~20 min; main may have advanced. Rebase before push.
-          for attempt in 1 2 3; do
-            git pull --rebase origin main && git push && break
-            echo "Push attempt $attempt failed — retrying after 5s…"
-            sleep 5
-          done
+
+          branch="automation/stations"
+          git checkout -b "$branch"
+          git commit -m "chore(stations): sync VinFast count to ${COUNT}"
+          git fetch origin "$branch:refs/remotes/origin/$branch" || true
+          git push --force-with-lease origin "$branch"
+
+          existing_pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // ""')
+          if [ -n "$existing_pr" ]; then
+            echo "Updated existing station sync PR #$existing_pr."
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(stations): sync VinFast count to ${COUNT}" \
+            --body "Automated station count sync from the scheduled GitHub Actions workflow."
