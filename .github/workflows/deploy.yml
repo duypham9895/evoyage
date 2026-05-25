@@ -83,7 +83,8 @@ jobs:
         run: npx playwright install-deps chromium webkit firefox
 
       - name: Run E2E tests
-        run: npx playwright test
+        timeout-minutes: 15
+        run: npx playwright test --workers=2
         env:
           NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.dummy_token_for_ci_build' }}
 

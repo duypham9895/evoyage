@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
-    "@sparticuz/chromium": "^143.0.4",
+    "@sparticuz/chromium": "^148.0.0",
     "@types/leaflet": "^1.9.21",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
@@ -37,7 +37,7 @@
     "impit": "^0.11.0",
     "leaflet": "^1.9.4",
     "mapbox-gl": "^3.20.0",
-    "nanoid": "^3.3.11",
+    "nanoid": "^5.1.11",
     "next": "16.1.7",
     "openai": "^6.32.0",
     "playwright-core": "^1.58.2",
@@ -55,7 +55,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/mapbox-gl": "^3.4.1",
-    "@types/node": "^20",
+    "@types/node": "^25.9.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -70,5 +70,8 @@
     "tsx": "^4.22.3",
     "typescript": "^5",
     "vitest": "^4.1.0"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.2.1"
   }
 }
