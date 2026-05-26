@@ -15,13 +15,13 @@ vi.mock('openai', () => ({
 
 import { callLLM, LLMSchemaError, LLMUnavailableError, LLMAbortedError } from './llm-module';
 
-const MIMO_BASE_URL = 'https://api.xiaomimimo.com/v1';
+const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const MINIMAX_BASE_URL = 'https://api.minimax.io/v1';
 
 beforeEach(() => {
   mockCreate.mockReset();
   constructorCalls.length = 0;
-  vi.stubEnv('XIAOMI_MIMO_API_KEY', 'mimo-test-key');
+  vi.stubEnv('OPENAI_API_KEY', 'openai-test-key');
   vi.stubEnv('MINIMAX_API_KEY', 'minimax-test-key');
 });
 
@@ -181,15 +181,15 @@ describe('callLLM — network error fallback (regression coverage from PR 4/4)',
 
     expect(result).toEqual({ from: 'minimax' });
     expect(mockCreate).toHaveBeenCalledTimes(2);
-    // Chain order: MiMo first (rejected), Minimax second (accepted).
-    expect(constructorCalls.map(c => c.baseURL)).toEqual([MIMO_BASE_URL, MINIMAX_BASE_URL]);
+    // Chain order: OpenAI first (rejected), Minimax second (accepted).
+    expect(constructorCalls.map(c => c.baseURL)).toEqual([OPENAI_BASE_URL, MINIMAX_BASE_URL]);
   });
 
   it('falls back on ENOTFOUND (DNS failure)', async () => {
     const schema = z.object({ from: z.string() });
 
     mockCreate
-      .mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND api.xiaomimimo.com'))
+      .mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND api.openai.com'))
       .mockResolvedValueOnce({
         choices: [{ message: { content: '{"from":"minimax"}' } }],
       });
@@ -245,10 +245,10 @@ describe('callLLM — empty response fallback (regression coverage from PR 4/4)'
 });
 
 describe('callLLM — missing API key fallback (regression coverage from PR 4/4)', () => {
-  it('falls back to Minimax when XIAOMI_MIMO_API_KEY is unset (primary skipped, not failed)', async () => {
+  it('falls back to Minimax when OPENAI_API_KEY is unset (primary skipped, not failed)', async () => {
     vi.unstubAllEnvs();
     vi.stubEnv('MINIMAX_API_KEY', 'minimax-test-key');
-    // XIAOMI_MIMO_API_KEY deliberately not set
+    // OPENAI_API_KEY deliberately not set
 
     const schema = z.object({ from: z.string() });
     mockCreate.mockResolvedValueOnce({
@@ -258,7 +258,7 @@ describe('callLLM — missing API key fallback (regression coverage from PR 4/4)
     const result = await callLLM({ schema, system: 's', user: 'u' });
 
     expect(result).toEqual({ from: 'minimax' });
-    // Strict: only Minimax should have been instantiated. MiMo's baseURL must
+    // Strict: only Minimax should have been instantiated. OpenAI's baseURL must
     // not appear in constructorCalls — proves the missing key was detected
     // before the SDK was constructed.
     expect(constructorCalls).toHaveLength(1);
@@ -303,7 +303,7 @@ describe('callLLM — telemetry (closes #11)', () => {
 
     expect(infoSpy).toHaveBeenCalledOnce();
     const logged = infoSpy.mock.calls[0][0] as string;
-    expect(logged).toMatch(/^\[llm\] provider=mimo latency_ms=\d+/);
+    expect(logged).toMatch(/^\[llm\] provider=openai latency_ms=\d+/);
     expect(logged).toMatch(/schema=ok/);
   });
 
@@ -342,7 +342,7 @@ describe('callLLM — telemetry (closes #11)', () => {
 
     expect(warnSpy).toHaveBeenCalledOnce();
     const warned = warnSpy.mock.calls[0][0] as string;
-    expect(warned).toMatch(/^\[llm\] provider=mimo failed=/);
+    expect(warned).toMatch(/^\[llm\] provider=openai failed=/);
     expect(warned).toMatch(/falling back to minimax/);
   });
 
@@ -367,7 +367,7 @@ describe('callLLM — telemetry (closes #11)', () => {
     await expect(callLLM({ schema, system: 's', user: 'u' })).rejects.toBeInstanceOf(LLMSchemaError);
 
     expect(errorSpy).toHaveBeenCalledOnce();
-    expect(errorSpy.mock.calls[0][0]).toMatch(/^\[llm\] provider=mimo schema_error=/);
+    expect(errorSpy.mock.calls[0][0]).toMatch(/^\[llm\] provider=openai schema_error=/);
   });
 
   it('emits no log lines on caller errors (401, 400) — provider not degrading', async () => {

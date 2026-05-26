@@ -31,7 +31,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS
 - **Maps:** Mapbox + OpenStreetMap via Leaflet
 - **Routing:** OSRM (primary) with Mapbox Directions fallback
-- **AI:** Xiaomi MiMo (primary) + MiniMax M2.7 (fallback) for the eVi trip assistant — provider chain per ADR-0002. Groq Whisper-large-v3 powers voice input as a fallback to Web Speech.
+- **AI:** OpenAI gpt-5 (primary) + MiniMax M2.7 (fallback) for the eVi trip assistant — provider chain per ADR-0002. Groq Whisper-large-v3 powers voice input as a fallback to Web Speech.
 - **Data:** VinFast API as the primary source (SSE streaming, daily refresh via GitHub Actions cron), augmented by OpenStreetMap, EVPower, and crowdsourced station promotion per ADR-0001.
 - **Database:** Prisma + Supabase Postgres (region `ap-southeast-1`)
 - **Analytics:** PostHog (gated on `NEXT_PUBLIC_POSTHOG_KEY` — no-op without it)

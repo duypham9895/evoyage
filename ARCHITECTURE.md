@@ -77,7 +77,7 @@ src/
 ├── lib/
 │   ├── evi/                # AI assistant logic
 │   │   ├── llm-module.ts        # Deepened LLM call module (ADR-0002)
-│   │   ├── llm-providers.ts     # MiMo (primary) + MiniMax (fallback) chain
+│   │   ├── llm-providers.ts     # OpenAI (primary) + MiniMax (fallback) chain
 │   │   ├── prompt.ts            # System prompt construction
 │   │   ├── vehicle-resolver.ts  # NL → vehicle model
 │   │   ├── suggestions-client.ts # Follow-up generation
@@ -160,7 +160,7 @@ User taps station → /api/stations/[id]/vinfast-detail
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Map provider | Mapbox (primary), OSRM (fallback) | Mapbox has superior Vietnamese coverage; OSRM as free fallback |
-| AI model | Xiaomi MiMo (primary) + MiniMax M2.7 (fallback) via OpenAI-compatible API | Cost-effective, good Vietnamese understanding, streaming support, provider redundancy per ADR-0002 |
+| AI model | OpenAI gpt-5 (primary) + MiniMax M2.7 (fallback) via OpenAI-compatible API | Strong JSON-mode reliability, good Vietnamese understanding, provider redundancy per ADR-0002 |
 | Station data | VinFast API + SSE primary; OSM, EVPower, manual CSV, and crowdsourced promotion as secondary | Multi-source coverage per ADR-0001; SSE used only for real-time VinFast detail (ADR-0003) |
 | Mobile layout | Bottom sheet over full-screen map | Matches driver mental model (Google Maps, Grab) |
 | i18n | JSON key-based with runtime locale | Simple, type-safe, auto-tested for key sync |

@@ -5,17 +5,17 @@
 // with each by swapping `apiKey` and `baseURL`.
 
 export interface LLMProvider {
-  readonly name: 'mimo' | 'minimax';
+  readonly name: 'openai' | 'minimax';
   readonly baseURL: string;
   readonly envVar: string;
   readonly defaultModel: string;
 }
 
-export const MIMO_PROVIDER: LLMProvider = {
-  name: 'mimo',
-  baseURL: 'https://api.xiaomimimo.com/v1',
-  envVar: 'XIAOMI_MIMO_API_KEY',
-  defaultModel: 'mimo-v2-flash',
+export const OPENAI_PROVIDER: LLMProvider = {
+  name: 'openai',
+  baseURL: 'https://api.openai.com/v1',
+  envVar: 'OPENAI_API_KEY',
+  defaultModel: 'gpt-5',
 };
 
 export const MINIMAX_PROVIDER: LLMProvider = {

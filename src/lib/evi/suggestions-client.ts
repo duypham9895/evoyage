@@ -51,9 +51,10 @@ function buildSuggestionsPrompt(
   const noContextText = locale === 'vi' ? 'Chưa có thông tin chuyến đi' : 'No trip info yet';
   const tripContextText = contextParts.length > 0 ? contextParts.join('\n') : noContextText;
 
-  // MiMo Flash is a Chinese-trained model and tends to leak Chinese characters
-  // into Vietnamese output (observed in prod 2026-05-04). The explicit guard
-  // forces single-language output. M2.7 fallback already respects this naturally.
+  // Explicit language guard. The M2.7 fallback is a Chinese-trained model and
+  // has been observed leaking Chinese characters into Vietnamese output without
+  // this guard (prod incident 2026-05-04). OpenAI gpt-5 respects locale natively;
+  // the guard is kept for defence-in-depth on the fallback path.
   const langName = locale === 'vi' ? 'Vietnamese' : 'English';
   const langGuard = locale === 'vi'
     ? 'Quan trọng: Phản hồi PHẢI hoàn toàn bằng tiếng Việt. KHÔNG dùng ký tự tiếng Trung hoặc tiếng Anh trong câu hỏi.'
@@ -89,11 +90,10 @@ export async function generateSuggestions(
       schema: SuggestionsSchema,
       system: systemPrompt,
       user: 'Generate the chips now.',
-      // 2048 instead of the Module default: M2.7's chain-of-thought routinely
-      // runs 1-2k tokens; a smaller cap truncates it before the JSON is emitted,
-      // causing silent empty chips on every fallback. MiMo Flash is non-thinking
-      // and uses only what it needs, so the bigger ceiling has no perf cost on
-      // the primary path.
+      // 2048 instead of the Module default: the M2.7 fallback's chain-of-thought
+      // routinely runs 1-2k tokens; a smaller cap truncates it before the JSON is
+      // emitted, causing silent empty chips on every fallback. OpenAI gpt-5 uses
+      // only what it needs, so the bigger ceiling has no perf cost on the primary.
       maxTokens: 2048,
       timeoutMs: 3000,
     });

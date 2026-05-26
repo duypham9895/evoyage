@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type { z } from 'zod';
-import { MIMO_PROVIDER, MINIMAX_PROVIDER, type LLMProvider } from './llm-providers';
+import { OPENAI_PROVIDER, MINIMAX_PROVIDER, type LLMProvider } from './llm-providers';
 
 export interface CallLLMInput<T> {
   readonly schema: z.ZodType<T>;
@@ -37,7 +37,7 @@ export class LLMAbortedError extends Error {
   }
 }
 
-const PROVIDER_CHAIN: ReadonlyArray<LLMProvider> = [MIMO_PROVIDER, MINIMAX_PROVIDER];
+const PROVIDER_CHAIN: ReadonlyArray<LLMProvider> = [OPENAI_PROVIDER, MINIMAX_PROVIDER];
 
 function isInfrastructureError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -109,11 +109,11 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
   return parsed.data;
 }
 
-// M2.7 wraps responses in two layers we peel off before JSON.parse:
-// a <think>...</think> reasoning block (M2.7) and a markdown ```json
-// fence (returned even when response_format is json_object — observed
-// in prod 2026-05-04). MiMo Flash is non-thinking, but we keep the
-// strip defensively in case Xiaomi adds a thinking-Flash variant.
+// M2.7 (the fallback provider) wraps responses in two layers we peel
+// off before JSON.parse: a <think>...</think> reasoning block and a
+// markdown ```json fence (returned even when response_format is
+// json_object — observed in prod 2026-05-04). OpenAI gpt-5 returns
+// clean JSON, so the strip is a no-op on the primary path.
 function stripProviderQuirks(content: string): string {
   return content
     .replace(/<think>[\s\S]*?<\/think>\s*/g, '')

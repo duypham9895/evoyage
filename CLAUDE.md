@@ -37,7 +37,7 @@ When writing Vietnamese copy, refer to the creator as "Duy" (not "Mình" or "Tô
 - Next.js (App Router), TypeScript, Tailwind CSS
 - Mapbox + OpenStreetMap for maps
 - VinFast API for charging station data (SSE streaming for real-time detail)
-- MiniMax M2.7 AI for eVi trip assistant (via OpenAI-compatible API)
+- OpenAI gpt-5 (primary) + MiniMax M2.7 (fallback) for eVi trip assistant (via OpenAI-compatible API)
 - Prisma + Supabase Postgres (region `ap-southeast-1`), deployed on Vercel
 - Bilingual: Vietnamese (vi) and English (en) via JSON locale files
 - Vitest for unit + integration tests
