@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, cleanup } from '@testing-library/react';
 import TripSummary from './TripSummary';
-import type { TripPlan } from '@/types';
+import type { ChargingStationData, RankedStation, TripPlan } from '@/types';
 
 // ── Mocks ──
 
@@ -28,6 +28,8 @@ const translations: Record<string, string> = {
   trip_terrain_warning_pass: 'Route includes {{passName}} — battery drains ~{{drainPercent}}% faster',
   no_charging_needed: 'No charging needed',
   charging_stops: 'Charging stops',
+  extra_stop_badge: 'Top-up · suggested',
+  extra_stop_duration: '~{{minutes}} min top-up',
   navigate: 'Navigate',
   open_in_google_maps: 'Open in Google Maps',
   disclaimer: 'Disclaimer text',
@@ -105,6 +107,38 @@ function makeTripPlan(overrides: Partial<TripPlan> = {}): TripPlan {
     startCoord: { lat: 10.776, lng: 106.700 },
     endCoord: { lat: 11.940, lng: 108.443 },
     ...overrides,
+  };
+}
+
+function makeStation(id: string): ChargingStationData {
+  return {
+    id,
+    name: id,
+    address: 'Test address',
+    province: 'Test',
+    latitude: 10.776,
+    longitude: 106.7,
+    chargerTypes: ['DC_60kW'],
+    connectorTypes: ['CCS2'],
+    portCount: 2,
+    maxPowerKw: 60,
+    stationType: 'public',
+    isVinFastOnly: false,
+    operatingHours: null,
+    provider: 'Test',
+    chargingStatus: null,
+    parkingFee: null,
+  };
+}
+
+function makeRankedStation(station: ChargingStationData): RankedStation {
+  return {
+    station,
+    detourDriveTimeSec: 60,
+    estimatedChargeTimeMin: 18,
+    totalStopTimeMin: 19,
+    rank: 'best',
+    score: 19,
   };
 }
 
@@ -282,5 +316,37 @@ describe('TripSummary — trip cost section', () => {
     );
     const section = screen.getByTestId('trip-cost-section');
     expect(section).toHaveTextContent(/more than gasoline/);
+  });
+});
+
+describe('TripSummary — precautionary stops', () => {
+  it('renders precautionary stops with suggested treatment and top-up duration copy', () => {
+    const station = makeStation('Precautionary Midpoint');
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({
+          chargingStops: [
+            {
+              selected: makeRankedStation(station),
+              alternatives: [],
+              distanceAlongRouteKm: 120,
+              batteryPercentAtArrival: 35,
+              batteryPercentAfterCharge: 60,
+              isPrecautionary: true,
+              precautionaryReason: 'holiday',
+            },
+          ],
+          totalChargingTimeMin: 18,
+        })}
+        isLoading={false}
+      />,
+    );
+
+    const card = screen.getByLabelText('Charging stops 1: Precautionary Midpoint');
+    expect(card).toHaveClass('border-dashed');
+    expect(card).toHaveClass('border-[var(--color-border)]');
+    expect(card).toHaveClass('opacity-70');
+    expect(screen.getByText('Top-up · suggested')).toBeInTheDocument();
+    expect(screen.getByText('~18 min top-up')).toBeInTheDocument();
   });
 });

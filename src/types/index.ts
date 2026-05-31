@@ -102,6 +102,13 @@ export interface LatLng {
   readonly lng: number;
 }
 
+export type PrecautionaryReason =
+  | 'holiday'
+  | 'sparse'
+  | 'peak'
+  | 'tightMargin'
+  | 'lowBuffer';
+
 /**
  * Phase 3b — Per-stop popularity verdict. Mirrors the shape returned by
  * src/lib/station/popularity-query.ts so the type can be consumed without
@@ -126,6 +133,8 @@ export interface ChargingStop {
   readonly arrivalBatteryPercent: number;
   readonly departureBatteryPercent: number;
   readonly estimatedChargingTimeMin: number;
+  readonly isPrecautionary?: true;
+  readonly precautionaryReason?: PrecautionaryReason;
   /** Phase 3b — populated when the heatmap has data for this arrival hour. */
   readonly popularity?: PopularityVerdict;
 }
@@ -220,6 +229,8 @@ export interface ChargingStopWithAlternatives {
   readonly distanceAlongRouteKm: number;
   readonly batteryPercentAtArrival: number;
   readonly batteryPercentAfterCharge: number;
+  readonly isPrecautionary?: true;
+  readonly precautionaryReason?: PrecautionaryReason;
   /** Phase 3b — popularity verdict for arrival at this stop. */
   readonly popularity?: PopularityVerdict;
 }

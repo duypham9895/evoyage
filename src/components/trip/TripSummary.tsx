@@ -808,6 +808,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
             const rank = hasAlternatives ? stop.selected.rank : undefined;
             const alternatives = hasAlternatives ? stop.alternatives : [];
             const isExpanded = expandedStops.has(i);
+            const isPrecautionary = stop.isPrecautionary === true;
 
             const rankLabel = rank === 'best' ? t('stations_best')
               : rank === 'ok' ? t('stations_ok')
@@ -820,12 +821,15 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
               : '';
 
             const navigateUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
+            const cardClassName = isPrecautionary
+              ? 'bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)] opacity-70 overflow-hidden transition-colors'
+              : 'bg-[var(--color-surface)] rounded-xl border border-[var(--color-surface-hover)] overflow-hidden transition-colors hover:border-[var(--color-accent-dim)]/40';
 
             return (
               <article
                 key={i}
                 aria-label={`${t('charging_stops')} ${i + 1}: ${station.name}`}
-                className="bg-[var(--color-surface)] rounded-xl border border-[var(--color-surface-hover)] overflow-hidden transition-colors hover:border-[var(--color-accent-dim)]/40"
+                className={cardClassName}
               >
                 {/* Collapsed card body — tappable to expand */}
                 <button
@@ -842,6 +846,11 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       <span className="text-sm font-semibold line-clamp-2" title={station.name}>{station.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {isPrecautionary && (
+                        <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-[var(--color-surface-hover)] text-[var(--color-text-secondary)]">
+                          {t('extra_stop_badge' as Parameters<typeof t>[0])}
+                        </span>
+                      )}
                       {rankLabel && (
                         <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${rankColor}`}>
                           {rankLabel}
@@ -865,6 +874,13 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       departurePercent={departureBattery}
                       chargeTimeMin={chargeTime}
                     />
+                    {isPrecautionary && (
+                      <div className="mt-1 text-[11px] text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+                        {t('extra_stop_duration' as Parameters<typeof t>[0], {
+                          minutes: String(Math.round(chargeTime)),
+                        })}
+                      </div>
+                    )}
                   </div>
                 </button>
 
