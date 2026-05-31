@@ -12,14 +12,16 @@ import { isHoliday } from '@/lib/trip/vietnam-holidays';
 import { queryStationPopularity } from '@/lib/station/popularity-query';
 import { planChargingStops, findChargingDecisionPoints } from '@/lib/routing/route-planner';
 import { applyBackupPressure } from '@/lib/routing/apply-backup-pressure';
+import { buildPrecautionaryStops } from '@/lib/routing/precautionary-stop-builder';
 import { calculateUsableRange } from '@/lib/routing/range-calculator';
 import { RELIABILITY_THRESHOLD } from '@/lib/routing/reliability-score';
 import { trackReliabilityCalibration } from '@/lib/analytics';
-import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
+import { cumulativeDistances, decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/routing/station-ranker';
-import { estimateDetourTimeSec, type StationWithRouteInfo } from '@/lib/routing/station-finder';
+import { estimateDetourTimeSec, haversineDistance, type StationWithRouteInfo } from '@/lib/routing/station-finder';
+import { chargeTargetForDecisionPoint } from '@/lib/routing/top-up-target';
 import { safeJsonArray } from '@/lib/safe-json';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
 import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
@@ -55,6 +57,12 @@ const routeRequestSchema = z.object({
     name: z.string().max(200).optional(),
   })).max(5).optional().default([]),
 });
+
+const LOW_CHARGE_REFERENCE_PERCENT = 20;
+
+function isPrecautionaryStopsEnabled(): boolean {
+  return process.env.PRECAUTIONARY_STOPS_ENABLED === 'true';
+}
 
 /**
  * POST /api/route — Calculate a trip plan with charging stops.
@@ -235,6 +243,7 @@ export async function POST(request: NextRequest) {
 
     const totalDistanceKm = directions.distanceMeters / 1000;
     const totalDurationMin = Math.round(directions.durationSeconds / 60);
+    const departureMoment = departAt ? new Date(departAt) : new Date();
 
     // Get charging stations within route corridor bounding box
     const routePoints = decodePolyline(directions.polyline);
@@ -311,9 +320,25 @@ export async function POST(request: NextRequest) {
     };
 
     // Pre-compute decision points once (shared between ranking and planning)
-    const decisionPoints = availableStations.length > 0
+    const baseDecisionPoints = availableStations.length > 0
       ? findChargingDecisionPoints(planInput)
       : [];
+    const routeDistancesKm = cumulativeDistances(routePoints, haversineDistance);
+    const precautionaryStops = buildPrecautionaryStops({
+      enabled: isPrecautionaryStopsEnabled(),
+      decisionPoints: baseDecisionPoints,
+      routePoints,
+      cumulativeRouteKm: routeDistancesKm,
+      stations: availableStations,
+      vehicle,
+      currentBatteryPercent,
+      minArrivalPercent,
+      rangeSafetyFactor,
+      departureMoment,
+      totalDistanceKm,
+      totalDurationMin,
+    });
+    const decisionPoints = precautionaryStops.decisionPoints;
 
     // ADR-0007 — load reliability for every candidate station in one query.
     // Stations missing from the map (no Phase 3 data yet, or below threshold)
@@ -363,13 +388,14 @@ export async function POST(request: NextRequest) {
       const vehicleMaxChargeKw = ('dcMaxChargingPowerKw' in vehicle && vehicle.dcMaxChargingPowerKw)
         ? vehicle.dcMaxChargingPowerKw as number
         : undefined;
-      const energyToCharge = vehicle.batteryCapacityKwh * 0.6; // rough: 20% → 80%
-
       const rankedMap = new Map<number, readonly RankedStation[]>();
 
       for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
         const dp = decisionPoints[dpIdx];
         if (dp.candidates.length === 0) continue;
+        const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
+        const energyToCharge = vehicle.batteryCapacityKwh *
+          Math.max(0, chargeTargetPercent - LOW_CHARGE_REFERENCE_PERCENT) / 100;
 
         try {
           if (dp.useCorridorScoring) {
@@ -473,7 +499,6 @@ export async function POST(request: NextRequest) {
     // driving-traffic for a sharper duration estimate. Heuristic stays as the
     // user-visible callout regardless of source so the reasonVi label is
     // consistent.
-    const departureMoment = departAt ? new Date(departAt) : new Date();
     const peakWindow = evaluatePeakHour(departureMoment, directions.polyline);
     const holiday = isHoliday(departureMoment);
 

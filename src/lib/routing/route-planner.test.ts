@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { planChargingStops } from './route-planner';
-import type { ChargingStationData } from '@/types';
+import type { ChargingStationData, RankedStation } from '@/types';
 
 // A simple encoded polyline for testing (straight line ~200km)
 // We'll generate a synthetic one for controllable tests
@@ -179,6 +179,48 @@ describe('planChargingStops', () => {
       const departureBattery = 'selected' in stop ? stop.batteryPercentAfterCharge : stop.departureBatteryPercent;
       expect(departureBattery).toBe(80);
     }
+  });
+
+  it('propagates precautionary decision-point flags and uses the vehicle-aware top-up target', () => {
+    const primary = makeStation('Precautionary Midpoint', 11.1, 107.5, true);
+    const ranked: RankedStation = {
+      station: primary,
+      detourDriveTimeSec: 60,
+      estimatedChargeTimeMin: 18,
+      totalStopTimeMin: 19,
+      rank: 'best',
+      score: 19,
+    };
+
+    const result = planChargingStops({
+      encodedPolyline: testPolyline,
+      totalDistanceKm: 430,
+      vehicle: VF8_ECO,
+      currentBatteryPercent: 80,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.80,
+      stations: stationsAlongRoute,
+      precomputedDecisionPoints: [
+        {
+          polylineIndex: 50,
+          distanceKm: 100,
+          point: { lat: 11.1, lng: 107.5 },
+          candidates: [primary],
+          useCorridorScoring: true,
+          isPrecautionary: true,
+          precautionaryReason: 'holiday',
+        },
+      ],
+      rankedStationsPerStop: new Map([[0, [ranked]]]),
+    });
+
+    expect(result.chargingStops).toHaveLength(1);
+    const stop = result.chargingStops[0];
+    expect(stop).toMatchObject({
+      isPrecautionary: true,
+      precautionaryReason: 'holiday',
+      batteryPercentAfterCharge: 60,
+    });
   });
 
   it('generates battery segments covering full route', () => {

@@ -5,6 +5,7 @@ import type {
   NoStationWarning,
   BatterySegment,
   RankedStation,
+  PrecautionaryReason,
 } from '@/types';
 import {
   SAFETY_BUFFER_KM,
@@ -21,6 +22,7 @@ import {
   type StationWithRouteInfo,
 } from './station-finder';
 import { decodePolyline, cumulativeDistances } from '../geo/polyline';
+import { chargeTargetForDecisionPoint } from './top-up-target';
 
 // ── Corridor Search Constants ──
 const SEARCH_TRIGGER_KM = 80;       // Start looking when range < 80km
@@ -75,6 +77,8 @@ export interface ChargingDecisionPoint {
   readonly candidates: readonly ChargingStationData[];
   /** True when candidates were found via route-corridor search (detour can be estimated from distance-to-route) */
   readonly useCorridorScoring: boolean;
+  readonly isPrecautionary?: true;
+  readonly precautionaryReason?: PrecautionaryReason;
 }
 
 /**
@@ -289,6 +293,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
 
     if (rankedStations && rankedStations.length > 0) {
       const best = rankedStations[0];
+      const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
       // ADR-0006: drop far-detour alternatives, return all within budget;
       // applyBackupPressure (called post-planning) trims to per-stop nMax.
       const alternatives = rankedStations
@@ -300,6 +305,9 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       const totalDrivenKm = routeDistanceKm + detourKm;
       const batteryUsedPercent = (totalDrivenKm / effectiveMaxRange) * 100;
       const arrivalBattery = Math.max(0, currentBattery - batteryUsedPercent);
+      const departureBattery = dp.isPrecautionary
+        ? Math.max(arrivalBattery, chargeTargetPercent)
+        : chargeTargetPercent;
 
       const lastStopName = chargingStops.length > 0
         ? getStopStation(chargingStops[chargingStops.length - 1]).name
@@ -318,21 +326,27 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
         alternatives,
         distanceAlongRouteKm: dp.distanceKm,
         batteryPercentAtArrival: arrivalBattery,
-        batteryPercentAfterCharge: CHARGE_TARGET_PERCENT,
+        batteryPercentAfterCharge: departureBattery,
+        ...(dp.isPrecautionary ? { isPrecautionary: true as const } : {}),
+        ...(dp.precautionaryReason ? { precautionaryReason: dp.precautionaryReason } : {}),
       });
 
-      currentBattery = CHARGE_TARGET_PERCENT;
+      currentBattery = departureBattery;
       lastStopKm = dp.distanceKm;
     } else if (dp.candidates.length > 0) {
       // Fallback to haversine nearest station from candidates
       const nearest = findNearestStation(dp.point, compatibleStations);
 
       if (nearest !== null) {
+        const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
         // Detour for nearest station: round-trip from route to station
         const detourKm = nearest.distanceKm * 2;
         const totalDrivenKm = routeDistanceKm + detourKm;
         const batteryUsedPercent = (totalDrivenKm / effectiveMaxRange) * 100;
         const arrivalBattery = Math.max(0, currentBattery - batteryUsedPercent);
+        const departureBattery = dp.isPrecautionary
+          ? Math.max(arrivalBattery, chargeTargetPercent)
+          : chargeTargetPercent;
 
         const lastStopName = chargingStops.length > 0
           ? getStopStation(chargingStops[chargingStops.length - 1]).name
@@ -352,11 +366,13 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
           station: nearest.station,
           distanceFromStartKm: dp.distanceKm,
           arrivalBatteryPercent: Math.round(arrivalBattery),
-          departureBatteryPercent: CHARGE_TARGET_PERCENT,
+          departureBatteryPercent: departureBattery,
           estimatedChargingTimeMin: chargingTimeMin,
+          ...(dp.isPrecautionary ? { isPrecautionary: true as const } : {}),
+          ...(dp.precautionaryReason ? { precautionaryReason: dp.precautionaryReason } : {}),
         });
 
-        currentBattery = CHARGE_TARGET_PERCENT;
+        currentBattery = departureBattery;
         lastStopKm = dp.distanceKm;
       }
     } else {
