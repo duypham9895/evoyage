@@ -14,6 +14,7 @@ import { MapModeProvider, useMapMode } from '@/lib/map-mode';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useDesktopSidebarTab } from '@/hooks/useDesktopSidebarTab';
 import { useUrlState, parseUrlState } from '@/hooks/useUrlState';
+import { usePrecautionaryStopInteractions } from '@/hooks/usePrecautionaryStopInteractions';
 import Header from '@/components/layout/Header';
 import ErrorBanner from '@/components/layout/ErrorBanner';
 import TripInput from '@/components/trip/TripInput';
@@ -130,6 +131,10 @@ function HomeContent() {
 
   // Trip result
   const [tripPlan, setTripPlan] = useState<TripPlan | null>(null);
+  const tripPlanResetKey = tripPlan
+    ? (tripPlan.tripId ?? `${tripPlan.startAddress}|${tripPlan.endAddress}|${tripPlan.polyline}`)
+    : null;
+  const precautionaryStopInteractions = usePrecautionaryStopInteractions(tripPlanResetKey);
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
@@ -785,7 +790,11 @@ function HomeContent() {
   const mapContent = (
     <>
       {mode === 'mapbox' ? (
-        <MapboxMap tripPlan={tripPlan} waypoints={waypointMarkers} />
+        <MapboxMap
+          tripPlan={tripPlan}
+          waypoints={waypointMarkers}
+          precautionaryStopInteractions={precautionaryStopInteractions}
+        />
       ) : (
         <LeafletMap
           tripPlan={tripPlan}
@@ -866,7 +875,7 @@ function HomeContent() {
                   (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
                     ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
                     : null)
-                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} />}
+                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} />}
                 {/* Inline share button for mobile — replaces floating FAB */}
                 {tripPlan && !isPlanning && (
                   <div className="pt-2">
@@ -1064,7 +1073,7 @@ function HomeContent() {
                   (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
                     ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
                     : null)
-                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} />
+                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} />
               </div>
             ) : (
               <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className="flex flex-col h-full -m-4">

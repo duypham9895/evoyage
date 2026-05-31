@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import {
@@ -10,8 +10,8 @@ import {
   trackBackupAlternativesDistribution,
   trackAlternativeListItemClicked,
 } from '@/lib/analytics';
-import { getStopDistance, getStopStation } from '@/types';
-import type { TripPlan, RankedStation, ChargingStationData, PrecautionaryReason } from '@/types';
+import { getStopStation } from '@/types';
+import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import { calculateSavings, formatVnd } from '@/lib/trip/cost';
 import { computeTripCost } from '@/lib/trip-cost';
 import { buildGoogleMapsUrl } from '@/lib/trip/google-maps-url';
@@ -19,6 +19,12 @@ import { extractCityName } from '@/lib/trip/extract-city';
 import { extractStationShortName } from '@/lib/trip/extract-station-name';
 import { detectPasses } from '@/lib/trip/detect-passes';
 import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
+import { usePrecautionaryStopInteractions, type PrecautionaryStopInteractions } from '@/hooks/usePrecautionaryStopInteractions';
+import {
+  getStopIdentity,
+  PRECAUTIONARY_REASON_LOCALE_KEY,
+  projectTripPlanForDismissedStops,
+} from '@/lib/trip/precautionary-stop-display';
 import RouteTimeline, { type RouteTimelineStop } from './RouteTimeline';
 import WhatIfCards, { type WhatIfOption } from './WhatIfCards';
 import StationAmenities from './StationAmenities';
@@ -43,6 +49,7 @@ interface TripSummaryProps {
   /** Phase 2 — called when the user taps a what-if card to replan with that
    *  departure time. Receives an ISO 8601 string. */
   readonly onSelectDepartureTime?: (iso: string) => void;
+  readonly precautionaryStopInteractions?: PrecautionaryStopInteractions;
 }
 
 // ── Battery color helpers ──
@@ -86,101 +93,6 @@ const STATUS_LOCALE_KEY: Record<StatusKey, string> = {
 
 function isStatusKey(val: string): val is StatusKey {
   return val in STATUS_DOT_COLOR;
-}
-
-// ── Precautionary stop helpers ──
-
-type TripStop = TripPlan['chargingStops'][number];
-
-const PRECAUTIONARY_REASON_LOCALE_KEY: Record<PrecautionaryReason, string> = {
-  holiday: 'extra_stop_why_holiday',
-  sparse: 'extra_stop_why_sparse',
-  peak: 'extra_stop_why_peak',
-  tightMargin: 'extra_stop_why_tight_margin',
-  lowBuffer: 'extra_stop_why_low_buffer',
-};
-
-function getStopArrivalBattery(stop: TripStop): number {
-  return 'selected' in stop ? stop.batteryPercentAtArrival : stop.arrivalBatteryPercent;
-}
-
-function getStopDepartureBattery(stop: TripStop): number {
-  return 'selected' in stop ? stop.batteryPercentAfterCharge : stop.departureBatteryPercent;
-}
-
-function getStopChargeTimeMin(stop: TripStop): number {
-  return 'selected' in stop ? stop.selected.estimatedChargeTimeMin : stop.estimatedChargingTimeMin;
-}
-
-function getStopIdentity(stop: TripStop): string {
-  const station = getStopStation(stop);
-  return station.id || `${station.latitude},${station.longitude}`;
-}
-
-function withStopArrivalBattery(stop: TripStop, arrivalBatteryPercent: number): TripStop {
-  return 'selected' in stop
-    ? { ...stop, batteryPercentAtArrival: arrivalBatteryPercent }
-    : { ...stop, arrivalBatteryPercent };
-}
-
-function projectTripPlanForDismissedStops(
-  tripPlan: TripPlan,
-  dismissedStopIds: ReadonlySet<string>,
-  warningCopy: { readonly messageVi: string; readonly messageEn: string },
-): TripPlan {
-  if (dismissedStopIds.size === 0) return tripPlan;
-
-  const chargingStops: TripStop[] = [];
-  const warnings: TripPlan['warnings'][number][] = [...tripPlan.warnings];
-  let currentBattery = tripPlan.batterySegments[0]?.startBatteryPercent ?? 0;
-  let skippedSinceLastVisibleCharge = false;
-  let totalChargingTimeMin = 0;
-
-  tripPlan.chargingStops.forEach((stop, index) => {
-    const segment = tripPlan.batterySegments[index];
-    const plannedArrival = getStopArrivalBattery(stop);
-    const segmentDrain = segment
-      ? Math.max(0, segment.startBatteryPercent - segment.endBatteryPercent)
-      : Math.max(0, currentBattery - plannedArrival);
-    const arrivalBattery = Math.max(0, currentBattery - segmentDrain);
-
-    if (stop.isPrecautionary === true && dismissedStopIds.has(getStopIdentity(stop))) {
-      currentBattery = arrivalBattery;
-      skippedSinceLastVisibleCharge = true;
-      return;
-    }
-
-    const projectedStop = withStopArrivalBattery(stop, arrivalBattery);
-    chargingStops.push(projectedStop);
-    totalChargingTimeMin += getStopChargeTimeMin(projectedStop);
-
-    if (skippedSinceLastVisibleCharge && arrivalBattery < 15) {
-      warnings.push({
-        type: 'INSUFFICIENT_MARGIN_AFTER_SKIP',
-        distanceFromStartKm: getStopDistance(projectedStop),
-        messageVi: warningCopy.messageVi,
-        messageEn: warningCopy.messageEn,
-      });
-    }
-
-    currentBattery = Math.max(arrivalBattery, getStopDepartureBattery(projectedStop));
-    skippedSinceLastVisibleCharge = false;
-  });
-
-  const finalSegment = tripPlan.batterySegments[tripPlan.chargingStops.length];
-  const arrivalBatteryPercent = finalSegment
-    ? Math.max(0, currentBattery - Math.max(0, finalSegment.startBatteryPercent - finalSegment.endBatteryPercent))
-    : skippedSinceLastVisibleCharge
-      ? Math.max(0, Math.min(currentBattery, tripPlan.arrivalBatteryPercent))
-      : tripPlan.arrivalBatteryPercent;
-
-  return {
-    ...tripPlan,
-    chargingStops,
-    warnings,
-    arrivalBatteryPercent,
-    totalChargingTimeMin,
-  };
 }
 
 // ── BatteryGauge ──
@@ -727,49 +639,22 @@ function TripOverviewCard({
 
 // ── Main Component ──
 
-interface StopInteractionState {
-  readonly planKey: string | null;
-  readonly expandedStops: Set<number>;
-  readonly dismissedStopIds: Set<string>;
-  readonly dismissingStopIds: Set<string>;
-  readonly confirmingStopId: string | null;
-  readonly revealedReasonStopIds: Set<string>;
-  readonly undoStopId: string | null;
-}
-
-function createStopInteractionState(planKey: string | null): StopInteractionState {
-  return {
-    planKey,
-    expandedStops: new Set(),
-    dismissedStopIds: new Set(),
-    dismissingStopIds: new Set(),
-    confirmingStopId: null,
-    revealedReasonStopIds: new Set(),
-    undoStopId: null,
-  };
-}
-
-export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime, precautionaryStopInteractions }: TripSummaryProps) {
   const { t, tBi, locale } = useLocale();
   const tripPlanResetKey = tripPlan
     ? (tripPlan.tripId ?? `${tripPlan.startAddress}|${tripPlan.endAddress}|${tripPlan.polyline}`)
     : null;
-  const [stopInteractionState, setStopInteractionState] = useState<StopInteractionState>(() =>
-    createStopInteractionState(tripPlanResetKey),
-  );
-  const activeStopInteractionState = stopInteractionState.planKey === tripPlanResetKey
-    ? stopInteractionState
-    : createStopInteractionState(tripPlanResetKey);
+  const internalStopInteractions = usePrecautionaryStopInteractions(tripPlanResetKey);
+  const stopInteractions = precautionaryStopInteractions ?? internalStopInteractions;
   const {
     expandedStops,
     dismissedStopIds,
     dismissingStopIds,
+    effectiveDismissedStopIds,
     confirmingStopId,
     revealedReasonStopIds,
     undoStopId,
-  } = activeStopInteractionState;
-  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dismissTimerRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  } = stopInteractions;
   const narrativeState = useRouteNarrative(tripPlan);
 
   // Phase 3b — popularity i18n bag, locale-aware. Dependencies match the
@@ -805,140 +690,6 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
     );
     trackBackupAlternativesDistribution(altCounts);
   }, [tripPlan?.tripId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    dismissTimerRefs.current.forEach(timer => clearTimeout(timer));
-    dismissTimerRefs.current.clear();
-    if (undoTimerRef.current) {
-      clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
-    }
-  }, [tripPlanResetKey]);
-
-  useEffect(() => {
-    return () => {
-      dismissTimerRefs.current.forEach(timer => clearTimeout(timer));
-      dismissTimerRefs.current.clear();
-      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    };
-  }, []);
-
-  const updateStopInteractionState = (
-    updater: (prev: StopInteractionState) => StopInteractionState,
-  ) => {
-    setStopInteractionState(prev => {
-      const base = prev.planKey === tripPlanResetKey
-        ? prev
-        : createStopInteractionState(tripPlanResetKey);
-      return updater(base);
-    });
-  };
-
-  const toggleExpanded = (index: number) => {
-    updateStopInteractionState(prev => {
-      const expandedStopsNext = new Set(prev.expandedStops);
-      if (expandedStopsNext.has(index)) {
-        expandedStopsNext.delete(index);
-      } else {
-        expandedStopsNext.add(index);
-      }
-      return { ...prev, expandedStops: expandedStopsNext };
-    });
-  };
-
-  const toggleReason = (stopId: string) => {
-    updateStopInteractionState(prev => {
-      const revealedReasonStopIdsNext = new Set(prev.revealedReasonStopIds);
-      if (revealedReasonStopIdsNext.has(stopId)) {
-        revealedReasonStopIdsNext.delete(stopId);
-      } else {
-        revealedReasonStopIdsNext.add(stopId);
-      }
-      return { ...prev, revealedReasonStopIds: revealedReasonStopIdsNext };
-    });
-  };
-
-  const showUndoForStop = (stopId: string) => {
-    updateStopInteractionState(prev => ({ ...prev, undoStopId: stopId }));
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => {
-      updateStopInteractionState(prev => ({
-        ...prev,
-        undoStopId: prev.undoStopId === stopId ? null : prev.undoStopId,
-      }));
-      undoTimerRef.current = null;
-    }, 5_000);
-  };
-
-  const finishDismissStop = (stopId: string) => {
-    updateStopInteractionState(prev => {
-      const dismissingStopIdsNext = new Set(prev.dismissingStopIds);
-      const dismissedStopIdsNext = new Set(prev.dismissedStopIds);
-      dismissingStopIdsNext.delete(stopId);
-      dismissedStopIdsNext.add(stopId);
-      return {
-        ...prev,
-        dismissingStopIds: dismissingStopIdsNext,
-        dismissedStopIds: dismissedStopIdsNext,
-      };
-    });
-    dismissTimerRefs.current.delete(stopId);
-    showUndoForStop(stopId);
-  };
-
-  const dismissStop = (stopId: string) => {
-    updateStopInteractionState(prev => {
-      const revealedReasonStopIdsNext = new Set(prev.revealedReasonStopIds);
-      const dismissingStopIdsNext = new Set(prev.dismissingStopIds);
-      revealedReasonStopIdsNext.delete(stopId);
-      dismissingStopIdsNext.add(stopId);
-      return {
-        ...prev,
-        confirmingStopId: null,
-        revealedReasonStopIds: revealedReasonStopIdsNext,
-        dismissingStopIds: dismissingStopIdsNext,
-      };
-    });
-
-    if (dismissTimerRefs.current.has(stopId)) return;
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined'
-      && typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (prefersReducedMotion) {
-      finishDismissStop(stopId);
-      return;
-    }
-
-    const timer = setTimeout(() => finishDismissStop(stopId), 200);
-    dismissTimerRefs.current.set(stopId, timer);
-  };
-
-  const undoDismiss = (stopId: string) => {
-    const dismissTimer = dismissTimerRefs.current.get(stopId);
-    if (dismissTimer) {
-      clearTimeout(dismissTimer);
-      dismissTimerRefs.current.delete(stopId);
-    }
-    updateStopInteractionState(prev => {
-      const dismissingStopIdsNext = new Set(prev.dismissingStopIds);
-      const dismissedStopIdsNext = new Set(prev.dismissedStopIds);
-      dismissingStopIdsNext.delete(stopId);
-      dismissedStopIdsNext.delete(stopId);
-      return {
-        ...prev,
-        dismissingStopIds: dismissingStopIdsNext,
-        dismissedStopIds: dismissedStopIdsNext,
-        undoStopId: null,
-      };
-    });
-    if (undoTimerRef.current) {
-      clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
-    }
-  };
 
   // Skeleton only when there's no previous trip to show. If a previous tripPlan
   // exists, keep it on screen during re-calc — Cancel button at the bottom of the
@@ -994,8 +745,6 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
     messageVi: t('extra_stop_insufficient_margin_warning' as Parameters<typeof t>[0]),
     messageEn: t('extra_stop_insufficient_margin_warning' as Parameters<typeof t>[0]),
   };
-  const effectiveDismissedStopIds = new Set(dismissedStopIds);
-  dismissingStopIds.forEach(stopId => effectiveDismissedStopIds.add(stopId));
   const displayedTripPlan = projectTripPlanForDismissedStops(tripPlan, effectiveDismissedStopIds, warningCopy);
   const cardTripPlan = dismissingStopIds.size > 0
     ? projectTripPlanForDismissedStops(tripPlan, dismissedStopIds, warningCopy)
@@ -1124,7 +873,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                 {/* Collapsed card body — tappable to expand */}
                 <button
                   type="button"
-                  onClick={() => toggleExpanded(i)}
+                  onClick={() => stopInteractions.toggleExpanded(i)}
                   className="w-full p-3 text-left focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)] rounded-t-xl"
                 >
                   {/* Header: number + name + rank + distance */}
@@ -1193,7 +942,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                     <div className="flex items-center justify-between gap-3">
                       <button
                         type="button"
-                        onClick={() => toggleReason(stopId)}
+                        onClick={() => stopInteractions.toggleReason(stopId)}
                         aria-expanded={isReasonRevealed}
                         className="text-xs font-medium text-[var(--color-accent)] hover:underline underline-offset-2 transition-colors"
                       >
@@ -1201,7 +950,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       </button>
                       <button
                         type="button"
-                        onClick={() => updateStopInteractionState(prev => ({ ...prev, confirmingStopId: stopId }))}
+                        onClick={() => stopInteractions.requestDismiss(stopId)}
                         aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: station.name })}
                         className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
                       >
@@ -1238,14 +987,14 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => updateStopInteractionState(prev => ({ ...prev, confirmingStopId: null }))}
+                            onClick={stopInteractions.cancelDismiss}
                             className="min-h-[36px] rounded-md px-3 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors"
                           >
                             {t('extra_stop_dismiss_confirm_cancel' as Parameters<typeof t>[0])}
                           </button>
                           <button
                             type="button"
-                            onClick={() => dismissStop(stopId)}
+                            onClick={() => stopInteractions.confirmDismiss(stopId)}
                             className="min-h-[36px] rounded-md px-3 text-xs font-semibold bg-[var(--color-surface-hover)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-elevated)] transition-colors motion-reduce:transition-none"
                           >
                             {t('extra_stop_dismiss_confirm_action' as Parameters<typeof t>[0])}
@@ -1379,7 +1128,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                 {/* Expand indicator */}
                 <button
                   type="button"
-                  onClick={() => toggleExpanded(i)}
+                  onClick={() => stopInteractions.toggleExpanded(i)}
                   className="w-full py-1.5 text-center border-t border-[var(--color-surface-hover)]"
                   aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
                 >
@@ -1405,7 +1154,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
           </span>
           <button
             type="button"
-            onClick={() => undoDismiss(undoStopId)}
+            onClick={() => stopInteractions.undoDismiss(undoStopId)}
             className="shrink-0 font-semibold text-[var(--color-accent)] hover:underline underline-offset-2 transition-colors"
           >
             {t('extra_stop_undo' as Parameters<typeof t>[0])}
