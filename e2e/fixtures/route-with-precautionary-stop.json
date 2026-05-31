@@ -1,0 +1,73 @@
+{
+  "totalDistanceKm": 300,
+  "totalDurationMin": 180,
+  "chargingStops": [
+    {
+      "selected": {
+        "station": {
+          "id": "station-suggested-tet-topup",
+          "name": "Suggested Tết Top-up",
+          "address": "Quốc lộ 20, Lâm Đồng",
+          "province": "Lâm Đồng",
+          "latitude": 11.5474,
+          "longitude": 107.8088,
+          "chargerTypes": ["DC"],
+          "connectorTypes": ["CCS2"],
+          "portCount": 4,
+          "maxPowerKw": 150,
+          "stationType": "public",
+          "isVinFastOnly": true,
+          "operatingHours": "24/7",
+          "provider": "VinFast",
+          "chargingStatus": "ACTIVE",
+          "parkingFee": false
+        },
+        "detourDriveTimeSec": 60,
+        "estimatedChargeTimeMin": 18,
+        "totalStopTimeMin": 19,
+        "rank": "best",
+        "score": 19
+      },
+      "alternatives": [],
+      "distanceAlongRouteKm": 120,
+      "batteryPercentAtArrival": 35,
+      "batteryPercentAfterCharge": 60,
+      "isPrecautionary": true,
+      "precautionaryReason": "holiday",
+      "precautionaryTelemetry": {
+        "reasonPrimary": "holiday",
+        "reasonSecondary": ["sparse", "peak"],
+        "pressureScore": 4,
+        "legDistanceKm": 126.5,
+        "legSparsityCount": 2,
+        "safetyFactor": 0.8,
+        "vehicleBatteryKwh": 82
+      }
+    }
+  ],
+  "warnings": [],
+  "batterySegments": [
+    {
+      "startKm": 0,
+      "endKm": 120,
+      "startBatteryPercent": 80,
+      "endBatteryPercent": 35,
+      "label": "HCM → Suggested Tết Top-up"
+    },
+    {
+      "startKm": 120,
+      "endKm": 300,
+      "startBatteryPercent": 60,
+      "endBatteryPercent": 50,
+      "label": "Suggested Tết Top-up → Đà Lạt"
+    }
+  ],
+  "arrivalBatteryPercent": 50,
+  "totalChargingTimeMin": 18,
+  "polyline": "k~umAqbtiSdC{E",
+  "startAddress": "Thành phố Hồ Chí Minh, Việt Nam",
+  "endAddress": "Đà Lạt, Lâm Đồng, Việt Nam",
+  "startCoord": { "lat": 10.7769, "lng": 106.7009 },
+  "endCoord": { "lat": 11.9404, "lng": 108.4583 },
+  "tripId": "tet-precautionary-trip"
+}

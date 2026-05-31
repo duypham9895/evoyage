@@ -158,7 +158,7 @@
   "extra_stop_aria_label": "Suggested stop {{n}}, {{name}}, {{minutes}} min top-up, can be skipped",
   "extra_stop_dismiss_aria": "Skip suggested station {{stationName}}",
   "extra_stop_insufficient_margin_warning": "Skipping this top-up leaves very low battery at the next stop.",
-  "stations_view_alternatives": "{{count}} more options",
+  "stations_view_alternatives": "{{count}} backup stations",
   "stations_no_alternatives": "No backup stations in this area — charge above 80% before leaving to be safe.",
   "popup_navigate": "Navigate",
   "popup_backup_for_stop": "Backup for stop {{n}}",

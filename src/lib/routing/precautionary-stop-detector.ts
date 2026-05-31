@@ -4,18 +4,26 @@ import type { BackupPressureResult, BackupPressureSignals } from './backup-press
 export interface PrecautionaryLegPressure {
   readonly legIndex: number;
   readonly pressure: BackupPressureResult;
+  readonly legDistanceKm?: number;
+  readonly downstreamStationCount?: number;
 }
 
 export interface PrecautionaryInjectionSite {
   readonly legIndex: number;
   readonly pressureScore: number;
   readonly reason: PrecautionaryReason;
+  readonly reasonSecondary: readonly PrecautionaryReason[];
   readonly signals: BackupPressureSignals;
+  readonly legDistanceKm: number;
+  readonly legSparsityCount: number;
+  readonly safetyFactor: number;
+  readonly vehicleBatteryKwh: number;
 }
 
 export interface FindInjectionSitesInput {
   readonly legs: readonly PrecautionaryLegPressure[];
   readonly rangeSafetyFactor: number;
+  readonly vehicleBatteryKwh?: number;
   readonly existingPrecautionaryCount?: number;
   readonly maxPrecautionaryStops?: number;
 }
@@ -36,6 +44,16 @@ function primaryReason(signals: BackupPressureSignals): PrecautionaryReason {
   return 'lowBuffer';
 }
 
+function activeReasons(signals: BackupPressureSignals): readonly PrecautionaryReason[] {
+  const reasons: PrecautionaryReason[] = [];
+  if (signals.holiday) reasons.push('holiday');
+  if (signals.sparseArea) reasons.push('sparse');
+  if (signals.peakWindow) reasons.push('peak');
+  if (signals.tightMargin) reasons.push('tightMargin');
+  if (signals.lowBuffer) reasons.push('lowBuffer');
+  return reasons;
+}
+
 export function findInjectionSites(
   input: FindInjectionSitesInput,
 ): readonly PrecautionaryInjectionSite[] {
@@ -49,11 +67,17 @@ export function findInjectionSites(
   for (const leg of input.legs) {
     if (leg.pressure.score < threshold) continue;
 
+    const reason = primaryReason(leg.pressure.signals);
     sites.push({
       legIndex: leg.legIndex,
       pressureScore: leg.pressure.score,
-      reason: primaryReason(leg.pressure.signals),
+      reason,
+      reasonSecondary: activeReasons(leg.pressure.signals).filter((candidate) => candidate !== reason),
       signals: leg.pressure.signals,
+      legDistanceKm: leg.legDistanceKm ?? 0,
+      legSparsityCount: leg.downstreamStationCount ?? 0,
+      safetyFactor: input.rangeSafetyFactor,
+      vehicleBatteryKwh: input.vehicleBatteryKwh ?? 0,
     });
 
     if (sites.length === remaining) break;

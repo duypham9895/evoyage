@@ -64,6 +64,11 @@ vi.mock('@/lib/analytics', () => ({
   trackWhatIfPicked: vi.fn(),
   trackBackupAlternativesDistribution: vi.fn(),
   trackAlternativeListItemClicked: vi.fn(),
+  trackPrecautionaryStopAccepted: vi.fn(),
+  trackPrecautionaryStopDismissed: vi.fn(),
+  trackPrecautionaryStopDistribution: vi.fn(),
+  trackPrecautionaryStopSuggested: vi.fn(),
+  trackPrecautionaryStopUndone: vi.fn(),
 }));
 
 vi.mock('@/components/trip/StationAmenities', () => ({ default: () => null }));

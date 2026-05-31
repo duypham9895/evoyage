@@ -1,5 +1,6 @@
 import { getStopDistance, getStopStation } from '@/types';
 import type { ChargingStationData, PrecautionaryReason, TripPlan } from '@/types';
+import type { PrecautionaryStopEventPayload } from '@/lib/analytics';
 
 export type TripStop = TripPlan['chargingStops'][number];
 
@@ -30,6 +31,25 @@ export function getStopIdentity(stop: TripStop): string {
 
 export function getStationIdentity(station: ChargingStationData): string {
   return station.id || `${station.latitude},${station.longitude}`;
+}
+
+export function getPrecautionaryStopEventPayload(
+  tripPlan: TripPlan,
+  stop: TripStop,
+): PrecautionaryStopEventPayload {
+  const telemetry = stop.precautionaryTelemetry;
+  const reasonPrimary = telemetry?.reasonPrimary ?? stop.precautionaryReason ?? 'tightMargin';
+  return {
+    tripId: tripPlan.tripId ?? 'unknown',
+    stationId: getStopIdentity(stop),
+    reasonPrimary,
+    reasonSecondary: telemetry?.reasonSecondary ?? [],
+    pressureScore: telemetry?.pressureScore ?? 0,
+    legDistanceKm: telemetry?.legDistanceKm ?? getStopDistance(stop),
+    legSparsityCount: telemetry?.legSparsityCount ?? 0,
+    safetyFactor: telemetry?.safetyFactor ?? 0,
+    vehicleBatteryKwh: telemetry?.vehicleBatteryKwh ?? 0,
+  };
 }
 
 function withStopArrivalBattery(stop: TripStop, arrivalBatteryPercent: number): TripStop {

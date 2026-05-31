@@ -207,7 +207,7 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
  * Desktop tabs: eVi (sidebar), Trip / Chuyến đi (was "Plan Trip" / "Lên lộ trình"), Stations / Trạm sạc
  * Mobile tabs:  Route, Vehicle, Battery, Stations (eVi is opened via FAB, not a tab)
  */
-type TabName = 'Plan Trip' | 'Route' | 'Vehicle' | 'Battery' | 'Stations';
+type TabName = 'Plan Trip' | 'Route' | 'Vehicle' | 'Battery' | 'Stations' | 'Saved';
 
 const TAB_NAMES: Record<TabName, string[]> = {
   'Plan Trip': ['Trip', 'Chuyến đi', 'Plan Trip', 'Lên lộ trình'],
@@ -215,6 +215,7 @@ const TAB_NAMES: Record<TabName, string[]> = {
   'Vehicle': ['Vehicle', 'Xe'],
   'Battery': ['Battery', 'Pin'],
   'Stations': ['Stations', 'Trạm sạc'],
+  'Saved': ['Saved', 'Đã lưu', 'Notebook', 'Sổ tay'],
 };
 
 export async function switchToTab(

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useRouteNarrative } from '@/hooks/useRouteNarrative';
 import {
@@ -9,6 +9,11 @@ import {
   trackWhatIfPicked,
   trackBackupAlternativesDistribution,
   trackAlternativeListItemClicked,
+  trackPrecautionaryStopAccepted,
+  trackPrecautionaryStopDismissed,
+  trackPrecautionaryStopDistribution,
+  trackPrecautionaryStopSuggested,
+  trackPrecautionaryStopUndone,
 } from '@/lib/analytics';
 import { getStopStation } from '@/types';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
@@ -22,6 +27,7 @@ import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import { usePrecautionaryStopInteractions, type PrecautionaryStopInteractions } from '@/hooks/usePrecautionaryStopInteractions';
 import {
   getStopIdentity,
+  getPrecautionaryStopEventPayload,
   PRECAUTIONARY_REASON_LOCALE_KEY,
   projectTripPlanForDismissedStops,
 } from '@/lib/trip/precautionary-stop-display';
@@ -150,10 +156,12 @@ function QuickStats({
   station,
   navigateUrl,
   navigateLabel,
+  onNavigate,
 }: {
   readonly station: ChargingStationData;
   readonly navigateUrl: string;
   readonly navigateLabel: string;
+  readonly onNavigate?: () => void;
 }) {
   const { t } = useLocale();
   const normalizedStatus = station.chargingStatus?.toUpperCase() ?? null;
@@ -190,6 +198,7 @@ function QuickStats({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${navigateLabel} ${station.name}`}
+        onClick={onNavigate}
         className="text-xs px-3 py-1 min-h-[32px] flex items-center rounded-full bg-[var(--color-accent)] text-[var(--color-background)] font-semibold hover:opacity-90 transition-opacity"
       >
         {navigateLabel}
@@ -646,6 +655,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
     : null;
   const internalStopInteractions = usePrecautionaryStopInteractions(tripPlanResetKey);
   const stopInteractions = precautionaryStopInteractions ?? internalStopInteractions;
+  const precautionaryStopShownAtRef = useRef<Map<string, number>>(new Map());
   const {
     expandedStops,
     dismissedStopIds,
@@ -690,6 +700,19 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
     );
     trackBackupAlternativesDistribution(altCounts);
   }, [tripPlan?.tripId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!tripPlan) return;
+    const visiblePrecautionaryStops = tripPlan.chargingStops.filter(
+      (stop) => stop.isPrecautionary === true && !effectiveDismissedStopIds.has(getStopIdentity(stop)),
+    );
+    trackPrecautionaryStopDistribution(visiblePrecautionaryStops.length);
+    for (const stop of visiblePrecautionaryStops) {
+      const stopId = getStopIdentity(stop);
+      precautionaryStopShownAtRef.current.set(stopId, Date.now());
+      trackPrecautionaryStopSuggested(getPrecautionaryStopEventPayload(tripPlan, stop));
+    }
+  }, [tripPlan]); // eslint-disable-line react-hooks/exhaustive-deps -- one telemetry impression per TripPlan object
 
   // Skeleton only when there's no previous trip to show. If a previous tripPlan
   // exists, keep it on screen during re-calc — Cancel button at the bottom of the
@@ -749,6 +772,23 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
   const cardTripPlan = dismissingStopIds.size > 0
     ? projectTripPlanForDismissedStops(tripPlan, dismissedStopIds, warningCopy)
     : displayedTripPlan;
+
+  const confirmPrecautionaryDismiss = (stop: TripPlan['chargingStops'][number], stopId: string) => {
+    const shownAt = precautionaryStopShownAtRef.current.get(stopId) ?? Date.now();
+    trackPrecautionaryStopDismissed(
+      getPrecautionaryStopEventPayload(tripPlan, stop),
+      Date.now() - shownAt,
+    );
+    stopInteractions.confirmDismiss(stopId);
+  };
+
+  const undoPrecautionaryDismiss = (stopId: string) => {
+    const stop = tripPlan.chargingStops.find((candidate) => getStopIdentity(candidate) === stopId);
+    if (stop) {
+      trackPrecautionaryStopUndone(getPrecautionaryStopEventPayload(tripPlan, stop));
+    }
+    stopInteractions.undoDismiss(stopId);
+  };
 
   return (
     <div className="space-y-3">
@@ -850,7 +890,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
 
             const navigateUrl = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
             const cardClassName = isPrecautionary
-              ? `bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)] overflow-hidden transition-[transform,opacity,border-color] duration-200 ease-in motion-reduce:duration-0 ${
+              ? `group bg-[var(--color-surface)] rounded-xl border border-dashed border-[var(--color-border)] overflow-hidden transition-[transform,opacity,border-color] duration-200 ease-in motion-reduce:duration-0 ${
                   isDismissing ? 'opacity-0 -translate-y-1 scale-[0.98]' : 'opacity-70'
                 }`
               : 'bg-[var(--color-surface)] rounded-xl border border-[var(--color-surface-hover)] overflow-hidden transition-colors hover:border-[var(--color-accent-dim)]/40';
@@ -934,6 +974,9 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                     station={station}
                     navigateUrl={navigateUrl}
                     navigateLabel={t('trip_stop_navigate')}
+                    onNavigate={isPrecautionary
+                      ? () => trackPrecautionaryStopAccepted(getPrecautionaryStopEventPayload(tripPlan, stop))
+                      : undefined}
                   />
                 </div>
 
@@ -952,7 +995,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                         type="button"
                         onClick={() => stopInteractions.requestDismiss(stopId)}
                         aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: station.name })}
-                        className="text-xs font-medium text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+                        className="text-xs font-medium text-[var(--color-muted)] opacity-100 lg:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--color-foreground)] transition-[opacity,color]"
                       >
                         {t('extra_stop_dismiss' as Parameters<typeof t>[0])}
                       </button>
@@ -994,7 +1037,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                           </button>
                           <button
                             type="button"
-                            onClick={() => stopInteractions.confirmDismiss(stopId)}
+                            onClick={() => confirmPrecautionaryDismiss(stop, stopId)}
                             className="min-h-[36px] rounded-md px-3 text-xs font-semibold bg-[var(--color-surface-hover)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-elevated)] transition-colors motion-reduce:transition-none"
                           >
                             {t('extra_stop_dismiss_confirm_action' as Parameters<typeof t>[0])}
@@ -1154,7 +1197,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
           </span>
           <button
             type="button"
-            onClick={() => stopInteractions.undoDismiss(undoStopId)}
+            onClick={() => undoPrecautionaryDismiss(undoStopId)}
             className="shrink-0 font-semibold text-[var(--color-accent)] hover:underline underline-offset-2 transition-colors"
           >
             {t('extra_stop_undo' as Parameters<typeof t>[0])}

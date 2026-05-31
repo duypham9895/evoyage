@@ -6,6 +6,7 @@ import type {
   BatterySegment,
   RankedStation,
   PrecautionaryReason,
+  PrecautionaryStopTelemetry,
 } from '@/types';
 import {
   SAFETY_BUFFER_KM,
@@ -79,6 +80,7 @@ export interface ChargingDecisionPoint {
   readonly useCorridorScoring: boolean;
   readonly isPrecautionary?: true;
   readonly precautionaryReason?: PrecautionaryReason;
+  readonly precautionaryTelemetry?: PrecautionaryStopTelemetry;
 }
 
 /**
@@ -329,6 +331,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
         batteryPercentAfterCharge: departureBattery,
         ...(dp.isPrecautionary ? { isPrecautionary: true as const } : {}),
         ...(dp.precautionaryReason ? { precautionaryReason: dp.precautionaryReason } : {}),
+        ...(dp.precautionaryTelemetry ? { precautionaryTelemetry: dp.precautionaryTelemetry } : {}),
       });
 
       currentBattery = departureBattery;
@@ -370,6 +373,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
           estimatedChargingTimeMin: chargingTimeMin,
           ...(dp.isPrecautionary ? { isPrecautionary: true as const } : {}),
           ...(dp.precautionaryReason ? { precautionaryReason: dp.precautionaryReason } : {}),
+          ...(dp.precautionaryTelemetry ? { precautionaryTelemetry: dp.precautionaryTelemetry } : {}),
         });
 
         currentBattery = departureBattery;

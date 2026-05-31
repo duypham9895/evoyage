@@ -207,6 +207,125 @@ describe('analytics', () => {
       });
     });
 
+    it('trackPrecautionaryStopDistribution captures the per-trip count bucket', async () => {
+      const { initAnalytics, trackPrecautionaryStopDistribution } = await loadAnalytics();
+      initAnalytics();
+      trackPrecautionaryStopDistribution(3);
+      expect(captureMock).toHaveBeenCalledWith('precautionary_stop_distribution', {
+        precautionary_stop_count: 3,
+        count_bucket: '2',
+      });
+    });
+
+    it('trackPrecautionaryStopSuggested captures the ADR-0009 payload', async () => {
+      const { initAnalytics, trackPrecautionaryStopSuggested } = await loadAnalytics();
+      initAnalytics();
+      trackPrecautionaryStopSuggested({
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: ['sparse', 'peak'],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      });
+      expect(captureMock).toHaveBeenCalledWith('extra_stop_suggested', {
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: ['sparse', 'peak'],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      });
+    });
+
+    it('trackPrecautionaryStopAccepted captures the same ADR-0009 payload', async () => {
+      const { initAnalytics, trackPrecautionaryStopAccepted } = await loadAnalytics();
+      initAnalytics();
+      trackPrecautionaryStopAccepted({
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: [],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      });
+      expect(captureMock).toHaveBeenCalledWith('extra_stop_accepted', {
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: [],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      });
+    });
+
+    it('trackPrecautionaryStopDismissed captures dismiss latency', async () => {
+      const { initAnalytics, trackPrecautionaryStopDismissed } = await loadAnalytics();
+      initAnalytics();
+      trackPrecautionaryStopDismissed({
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: [],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      }, 1234);
+      expect(captureMock).toHaveBeenCalledWith('extra_stop_dismissed', {
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: [],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+        dismissTimeMsFromShown: 1234,
+      });
+    });
+
+    it('trackPrecautionaryStopUndone captures the restored stop payload', async () => {
+      const { initAnalytics, trackPrecautionaryStopUndone } = await loadAnalytics();
+      initAnalytics();
+      trackPrecautionaryStopUndone({
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: [],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      });
+      expect(captureMock).toHaveBeenCalledWith('extra_stop_undone', {
+        tripId: 'trip-1',
+        stationId: 'station-a',
+        reasonPrimary: 'holiday',
+        reasonSecondary: [],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      });
+    });
+
     it('trackAlternativeMarkerClicked captures stop and alt indices', async () => {
       const { initAnalytics, trackAlternativeMarkerClicked } = await loadAnalytics();
       initAnalytics();
