@@ -28,6 +28,11 @@ export interface SavedTripWaypoint {
   readonly name?: string;
 }
 
+export interface DismissedPrecautionaryStop {
+  readonly tripId: string;
+  readonly stationId: string;
+}
+
 /** Caller-supplied fields. Identity + timestamps + pin are managed by the store. */
 export interface SavedTripInput {
   readonly start: string;
@@ -42,13 +47,15 @@ export interface SavedTripInput {
   readonly minArrival: number;
   readonly rangeSafetyFactor: number;
   readonly departAt: string | null;
+  readonly dismissedPrecautionaryStops?: readonly DismissedPrecautionaryStop[];
 }
 
-export interface SavedTrip extends SavedTripInput {
+export interface SavedTrip extends Omit<SavedTripInput, 'dismissedPrecautionaryStops'> {
   readonly id: string;
   readonly savedAt: string;
   readonly lastViewedAt: string;
   readonly pinned: boolean;
+  readonly dismissedPrecautionaryStops: readonly DismissedPrecautionaryStop[];
 }
 
 export interface NotebookStore {
@@ -56,6 +63,7 @@ export interface NotebookStore {
   save(trip: SavedTripInput): SavedTrip;
   pin(id: string, pinned: boolean): void;
   touch(id: string): void;
+  setDismissedPrecautionaryStops(id: string, tripId: string, stationIds: readonly string[]): void;
   remove(id: string): void;
   clear(): void;
 }
@@ -67,21 +75,38 @@ function safeParse(raw: string | null): SavedTrip[] {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isPlausibleSavedTrip);
+    return parsed
+      .map(normalizeSavedTrip)
+      .filter((entry): entry is SavedTrip => entry !== null);
   } catch {
     return [];
   }
 }
 
-function isPlausibleSavedTrip(value: unknown): value is SavedTrip {
-  if (typeof value !== 'object' || value === null) return false;
+function normalizeSavedTrip(value: unknown): SavedTrip | null {
+  if (typeof value !== 'object' || value === null) return null;
   const v = value as Record<string, unknown>;
-  return (
-    typeof v.id === 'string' &&
-    typeof v.savedAt === 'string' &&
-    typeof v.start === 'string' &&
-    typeof v.end === 'string'
-  );
+  if (
+    typeof v.id !== 'string' ||
+    typeof v.savedAt !== 'string' ||
+    typeof v.start !== 'string' ||
+    typeof v.end !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    ...(v as unknown as Omit<SavedTrip, 'dismissedPrecautionaryStops'>),
+    dismissedPrecautionaryStops: normalizeDismissedPrecautionaryStops(v.dismissedPrecautionaryStops),
+  };
+}
+
+function normalizeDismissedPrecautionaryStops(value: unknown): DismissedPrecautionaryStop[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is DismissedPrecautionaryStop => {
+    if (typeof entry !== 'object' || entry === null) return false;
+    const pair = entry as Record<string, unknown>;
+    return typeof pair.tripId === 'string' && typeof pair.stationId === 'string';
+  });
 }
 
 function isSameTuple(a: SavedTripInput, b: SavedTrip): boolean {
@@ -179,6 +204,7 @@ export function createNotebookStore(storage?: Storage): NotebookStore {
         savedAt: now,
         lastViewedAt: now,
         pinned: false,
+        dismissedPrecautionaryStops: normalizeDismissedPrecautionaryStops(trip.dismissedPrecautionaryStops),
       };
       write(applyCap([created, ...entries]));
       return created;
@@ -195,6 +221,22 @@ export function createNotebookStore(storage?: Storage): NotebookStore {
       const idx = entries.findIndex((e) => e.id === id);
       if (idx === -1) return;
       entries[idx] = { ...entries[idx]!, lastViewedAt: new Date().toISOString() };
+      write(entries);
+    },
+    setDismissedPrecautionaryStops(id, tripId, stationIds) {
+      if (!tripId) return;
+      const entries = read();
+      const idx = entries.findIndex((e) => e.id === id);
+      if (idx === -1) return;
+      const existing = entries[idx]!;
+      const uniqueStationIds = [...new Set(stationIds.filter((stationId) => stationId.length > 0))];
+      entries[idx] = {
+        ...existing,
+        dismissedPrecautionaryStops: [
+          ...existing.dismissedPrecautionaryStops.filter((pair) => pair.tripId !== tripId),
+          ...uniqueStationIds.map((stationId) => ({ tripId, stationId })),
+        ],
+      };
       write(entries);
     },
     remove(id) {

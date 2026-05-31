@@ -44,6 +44,22 @@ describe('NotebookStore', () => {
       expect(fresh.list()).toHaveLength(1);
     });
 
+    it('persists dismissed precautionary stops with saved trips', () => {
+      store.save({
+        ...SAMPLE,
+        dismissedPrecautionaryStops: [
+          { tripId: 'trip-1', stationId: 'station-a' },
+          { tripId: 'trip-1', stationId: 'station-b' },
+        ],
+      });
+
+      const [saved] = createNotebookStore().list();
+      expect(saved?.dismissedPrecautionaryStops).toEqual([
+        { tripId: 'trip-1', stationId: 'station-a' },
+        { tripId: 'trip-1', stationId: 'station-b' },
+      ]);
+    });
+
     it('returns most-recent first by default (lastViewedAt desc)', () => {
       store.save({ ...SAMPLE, end: 'Vũng Tàu' });
       store.save({ ...SAMPLE, end: 'Nha Trang' });
@@ -132,6 +148,80 @@ describe('NotebookStore', () => {
       expect(() => store.pin('nonexistent', true)).not.toThrow();
       expect(() => store.touch('nonexistent')).not.toThrow();
       expect(() => store.remove('nonexistent')).not.toThrow();
+    });
+  });
+
+  describe('precautionary stop dismissals', () => {
+    it('replaces dismissals for one tripId while preserving other tripIds on the same saved trip', () => {
+      const saved = store.save({
+        ...SAMPLE,
+        dismissedPrecautionaryStops: [
+          { tripId: 'old-trip', stationId: 'old-station' },
+          { tripId: 'trip-1', stationId: 'station-a' },
+        ],
+      });
+
+      store.setDismissedPrecautionaryStops(saved.id, 'trip-1', [
+        'station-b',
+        'station-b',
+        '',
+        'station-c',
+      ]);
+
+      expect(store.list()[0]?.dismissedPrecautionaryStops).toEqual([
+        { tripId: 'old-trip', stationId: 'old-station' },
+        { tripId: 'trip-1', stationId: 'station-b' },
+        { tripId: 'trip-1', stationId: 'station-c' },
+      ]);
+    });
+
+    it('returns an empty dismissal list for legacy saved trips without the field', () => {
+      localStorage.setItem('evoyage-notebook-v1', JSON.stringify([{
+        id: 'legacy',
+        savedAt: '2026-05-01T00:00:00.000Z',
+        lastViewedAt: '2026-05-01T00:00:00.000Z',
+        pinned: false,
+        start: SAMPLE.start,
+        end: SAMPLE.end,
+        waypoints: [],
+        isLoopTrip: false,
+        vehicleId: null,
+        customVehicle: null,
+        currentBattery: 80,
+        minArrival: 15,
+        rangeSafetyFactor: 0.8,
+        departAt: null,
+      }]));
+
+      expect(store.list()[0]?.dismissedPrecautionaryStops).toEqual([]);
+    });
+
+    it('ignores malformed dismissal pairs when reading saved trips', () => {
+      localStorage.setItem('evoyage-notebook-v1', JSON.stringify([{
+        id: 'saved',
+        savedAt: '2026-05-01T00:00:00.000Z',
+        lastViewedAt: '2026-05-01T00:00:00.000Z',
+        pinned: false,
+        start: SAMPLE.start,
+        end: SAMPLE.end,
+        waypoints: [],
+        isLoopTrip: false,
+        vehicleId: null,
+        customVehicle: null,
+        currentBattery: 80,
+        minArrival: 15,
+        rangeSafetyFactor: 0.8,
+        departAt: null,
+        dismissedPrecautionaryStops: [
+          { tripId: 'trip-1', stationId: 'station-a' },
+          { tripId: 123, stationId: 'bad' },
+          { tripId: 'trip-1' },
+        ],
+      }]));
+
+      expect(store.list()[0]?.dismissedPrecautionaryStops).toEqual([
+        { tripId: 'trip-1', stationId: 'station-a' },
+      ]);
     });
   });
 

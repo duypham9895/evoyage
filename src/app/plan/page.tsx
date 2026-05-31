@@ -134,7 +134,22 @@ function HomeContent() {
   const tripPlanResetKey = tripPlan
     ? (tripPlan.tripId ?? `${tripPlan.startAddress}|${tripPlan.endAddress}|${tripPlan.polyline}`)
     : null;
-  const precautionaryStopInteractions = usePrecautionaryStopInteractions(tripPlanResetKey);
+  const [activeNotebookEntryId, setActiveNotebookEntryId] = useState<string | null>(null);
+  const planningNotebookEntryIdRef = useRef<string | null>(null);
+  const initialDismissedStopIds = useMemo(() => {
+    if (!tripPlan?.tripId || !activeNotebookEntryId) return [];
+    const savedTrip = notebook.list().find((entry) => entry.id === activeNotebookEntryId);
+    if (!savedTrip) return [];
+    return savedTrip.dismissedPrecautionaryStops
+      .filter((pair) => pair.tripId === tripPlan.tripId)
+      .map((pair) => pair.stationId);
+  }, [activeNotebookEntryId, notebook, tripPlan?.tripId]);
+  const stopInteractionPlanKey = tripPlanResetKey
+    ? `${tripPlanResetKey}|${activeNotebookEntryId ?? 'scratch'}`
+    : null;
+  const precautionaryStopInteractions = usePrecautionaryStopInteractions(stopInteractionPlanKey, {
+    initialDismissedStopIds,
+  });
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
@@ -143,6 +158,15 @@ function HomeContent() {
   const planAbortRef = useRef<AbortController | null>(null);
   const planTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const TRIP_CALC_TIMEOUT_MS = 10_000;
+
+  useEffect(() => {
+    if (!activeNotebookEntryId || !tripPlan?.tripId) return;
+    notebook.setDismissedPrecautionaryStops(
+      activeNotebookEntryId,
+      tripPlan.tripId,
+      [...precautionaryStopInteractions.dismissedStopIds],
+    );
+  }, [activeNotebookEntryId, notebook, precautionaryStopInteractions.dismissedStopIds, tripPlan?.tripId]);
 
   // Auto-snap bottom sheet to half when results load
   const [bottomSheetSnap, setBottomSheetSnap] = useState<{ point: 'peek' | 'half' | 'full'; trigger: number } | undefined>(undefined);
@@ -425,6 +449,8 @@ function HomeContent() {
     // — UI also locks inputs, but EVi or other entry points could still call).
     if (planAbortRef.current) return;
 
+    const sourceNotebookEntryId = planningNotebookEntryIdRef.current;
+    planningNotebookEntryIdRef.current = null;
     const controller = new AbortController();
     planAbortRef.current = controller;
 
@@ -507,23 +533,32 @@ function HomeContent() {
 
       // Phase 5 — persist into the notebook (richer schema, dedup-aware)
       try {
-        notebook.save({
-          start,
-          end,
-          startCoords: startCoords ?? undefined,
-          endCoords: endCoords ?? undefined,
-          waypoints: waypoints
-            .filter((wp) => wp.coords)
-            .map((wp) => ({ lat: wp.coords!.lat, lng: wp.coords!.lng, name: wp.name })),
-          isLoopTrip,
-          vehicleId: selectedVehicle?.id ?? null,
-          customVehicle,
-          currentBattery,
-          minArrival,
-          rangeSafetyFactor,
-          departAt,
-        });
-      } catch { /* notebook never breaks the planning flow */ }
+        if (sourceNotebookEntryId) {
+          notebook.touch(sourceNotebookEntryId);
+          setActiveNotebookEntryId(sourceNotebookEntryId);
+        } else {
+          const savedTrip = notebook.save({
+            start,
+            end,
+            startCoords: startCoords ?? undefined,
+            endCoords: endCoords ?? undefined,
+            waypoints: waypoints
+              .filter((wp) => wp.coords)
+              .map((wp) => ({ lat: wp.coords!.lat, lng: wp.coords!.lng, name: wp.name })),
+            isLoopTrip,
+            vehicleId: selectedVehicle?.id ?? null,
+            customVehicle,
+            currentBattery,
+            minArrival,
+            rangeSafetyFactor,
+            departAt,
+          });
+          setActiveNotebookEntryId(savedTrip.id);
+        }
+      } catch {
+        if (!sourceNotebookEntryId) setActiveNotebookEntryId(null);
+        /* notebook never breaks the planning flow */
+      }
     } catch (err) {
       // Aborted (Cancel or timeout): the abort path already set state — no-op here.
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -548,6 +583,7 @@ function HomeContent() {
   // traffic/popularity/holiday may have changed since the original plan).
   const handleReplanFromNotebook = useCallback(
     (trip: SavedTrip) => {
+      planningNotebookEntryIdRef.current = trip.id;
       setStart(trip.start);
       setEnd(trip.end);
       setStartCoords(trip.startCoords ?? null);
@@ -581,8 +617,7 @@ function HomeContent() {
       notebook.touch(trip.id);
       const daysSinceSaved = (Date.now() - new Date(trip.savedAt).getTime()) / (24 * 60 * 60 * 1000);
       trackTripReplannedFromNotebook(daysSinceSaved);
-      // The plan auto-fires once state settles — caller can opt to navigate
-      // to the route tab so the user lands on the result, not the form
+      setAutoPlanPending(true);
     },
     [notebook],
   );
