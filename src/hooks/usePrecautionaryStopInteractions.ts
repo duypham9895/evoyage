@@ -26,11 +26,18 @@ export interface PrecautionaryStopInteractions {
   readonly undoDismiss: (stopId: string) => void;
 }
 
-function createStopInteractionState(planKey: string | null): StopInteractionState {
+interface PrecautionaryStopInteractionOptions {
+  readonly initialDismissedStopIds?: readonly string[];
+}
+
+function createStopInteractionState(
+  planKey: string | null,
+  initialDismissedStopIds: readonly string[] = [],
+): StopInteractionState {
   return {
     planKey,
     expandedStops: new Set(),
-    dismissedStopIds: new Set(),
+    dismissedStopIds: new Set(initialDismissedStopIds),
     dismissingStopIds: new Set(),
     confirmingStopId: null,
     revealedReasonStopIds: new Set(),
@@ -38,25 +45,39 @@ function createStopInteractionState(planKey: string | null): StopInteractionStat
   };
 }
 
-export function usePrecautionaryStopInteractions(planKey: string | null): PrecautionaryStopInteractions {
+export function usePrecautionaryStopInteractions(
+  planKey: string | null,
+  options: PrecautionaryStopInteractionOptions = {},
+): PrecautionaryStopInteractions {
+  const initialDismissedStopIdsKey = (options.initialDismissedStopIds ?? []).join('\u0000');
+  const initialDismissedStopIds = useMemo(
+    () => [...new Set(options.initialDismissedStopIds ?? [])],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- callers pass a fresh array from persisted store reads
+    [initialDismissedStopIdsKey],
+  );
   const [stopInteractionState, setStopInteractionState] = useState<StopInteractionState>(() =>
-    createStopInteractionState(planKey),
+    createStopInteractionState(planKey, initialDismissedStopIds),
   );
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissTimerRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const activeState = stopInteractionState.planKey === planKey
     ? stopInteractionState
-    : createStopInteractionState(planKey);
+    : createStopInteractionState(planKey, initialDismissedStopIds);
 
   useEffect(() => {
+    setStopInteractionState(prev =>
+      prev.planKey === planKey
+        ? prev
+        : createStopInteractionState(planKey, initialDismissedStopIds),
+    );
     dismissTimerRefs.current.forEach(timer => clearTimeout(timer));
     dismissTimerRefs.current.clear();
     if (undoTimerRef.current) {
       clearTimeout(undoTimerRef.current);
       undoTimerRef.current = null;
     }
-  }, [planKey]);
+  }, [initialDismissedStopIds, planKey]);
 
   useEffect(() => {
     return () => {
@@ -72,7 +93,7 @@ export function usePrecautionaryStopInteractions(planKey: string | null): Precau
     setStopInteractionState(prev => {
       const base = prev.planKey === planKey
         ? prev
-        : createStopInteractionState(planKey);
+        : createStopInteractionState(planKey, initialDismissedStopIds);
       return updater(base);
     });
   };
