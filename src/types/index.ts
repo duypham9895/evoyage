@@ -140,7 +140,7 @@ export interface ChargingStop {
 }
 
 export interface NoStationWarning {
-  readonly type: 'NO_COMPATIBLE_STATION';
+  readonly type: 'NO_COMPATIBLE_STATION' | 'INSUFFICIENT_MARGIN_AFTER_SKIP';
   readonly distanceFromStartKm: number;
   readonly messageVi: string;
   readonly messageEn: string;
