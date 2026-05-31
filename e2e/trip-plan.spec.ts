@@ -107,7 +107,7 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     await stopHeader.click();
 
     // Assert the alternatives list is visible (locale-key text in either lang)
-    const altsHeader = page.locator('text=/lựa chọn khác|more options/').first();
+    const altsHeader = page.locator('text=/trạm dự phòng|backup stations/').first();
     await expect(altsHeader).toBeVisible({ timeout: 5_000 });
 
     // Assert the alternative station name is rendered

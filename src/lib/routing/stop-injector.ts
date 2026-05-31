@@ -99,6 +99,15 @@ export function injectPrecautionaryStops(
       useCorridorScoring: true,
       isPrecautionary: true,
       precautionaryReason: site.reason,
+      precautionaryTelemetry: {
+        reasonPrimary: site.reason,
+        reasonSecondary: site.reasonSecondary,
+        pressureScore: site.pressureScore,
+        legDistanceKm: site.legDistanceKm,
+        legSparsityCount: site.legSparsityCount,
+        safetyFactor: site.safetyFactor,
+        vehicleBatteryKwh: site.vehicleBatteryKwh,
+      },
     });
     inserted = true;
   }

@@ -115,13 +115,17 @@ function computeLegPressures(input: BuildPrecautionaryStopsInput): readonly Prec
   for (let i = 0; i < input.decisionPoints.length - 1; i++) {
     const current = input.decisionPoints[i]!;
     const next = input.decisionPoints[i + 1]!;
+    const legDistanceKm = Math.max(0, next.distanceKm - current.distanceKm);
+    const downstreamStationCount = countStationsNearPoint(current.point, input.stations);
 
     legs.push({
       legIndex: i,
+      legDistanceKm,
+      downstreamStationCount,
       pressure: computeBackupPressure({
-        distanceToNextStopKm: Math.max(0, next.distanceKm - current.distanceKm),
+        distanceToNextStopKm: legDistanceKm,
         arrivalBatteryPercent: arrivals[i] ?? 100,
-        downstreamStationCount: countStationsNearPoint(current.point, input.stations),
+        downstreamStationCount,
         arrivalLocalHour: arrivalHours[i] ?? 0,
         tripDate: input.departureMoment,
         usableRangeKm: usableRangeAfterChargeKm,
@@ -150,6 +154,7 @@ export function buildPrecautionaryStops(
   const injectionSites = findInjectionSites({
     legs: computeLegPressures(compatibleInput),
     rangeSafetyFactor: input.rangeSafetyFactor,
+    vehicleBatteryKwh: input.vehicle.batteryCapacityKwh,
     existingPrecautionaryCount,
   });
 

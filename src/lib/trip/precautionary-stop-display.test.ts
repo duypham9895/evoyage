@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getPrecautionaryStopEventPayload,
   getStopIdentity,
   projectTripPlanForDismissedStops,
 } from './precautionary-stop-display';
@@ -113,5 +114,32 @@ describe('precautionary stop display projection', () => {
     );
 
     expect(projected.chargingStops.map(getStopIdentity)).toEqual(['new-holiday-station']);
+  });
+
+  it('builds the ADR-0009 event payload from stop metadata', () => {
+    const stop = {
+      ...makeStop('station-a', 100, true),
+      precautionaryTelemetry: {
+        reasonPrimary: 'holiday' as const,
+        reasonSecondary: ['sparse' as const],
+        pressureScore: 4,
+        legDistanceKm: 126.5,
+        legSparsityCount: 2,
+        safetyFactor: 0.8,
+        vehicleBatteryKwh: 82,
+      },
+    };
+
+    expect(getPrecautionaryStopEventPayload(makeTripPlan([stop]), stop)).toEqual({
+      tripId: 'trip-1',
+      stationId: 'station-a',
+      reasonPrimary: 'holiday',
+      reasonSecondary: ['sparse'],
+      pressureScore: 4,
+      legDistanceKm: 126.5,
+      legSparsityCount: 2,
+      safetyFactor: 0.8,
+      vehicleBatteryKwh: 82,
+    });
   });
 });

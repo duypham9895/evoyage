@@ -46,4 +46,9 @@ describe('Locale key consistency', () => {
 
     expect(mismatches).toEqual([]);
   });
+
+  it('uses precautionary-stop wording for backup station alternatives', () => {
+    expect(en.stations_view_alternatives).toBe('{{count}} backup stations');
+    expect(vi.stations_view_alternatives).toBe('{{count}} trạm dự phòng');
+  });
 });

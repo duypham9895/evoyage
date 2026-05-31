@@ -109,6 +109,16 @@ export type PrecautionaryReason =
   | 'tightMargin'
   | 'lowBuffer';
 
+export interface PrecautionaryStopTelemetry {
+  readonly reasonPrimary: PrecautionaryReason;
+  readonly reasonSecondary: readonly PrecautionaryReason[];
+  readonly pressureScore: number;
+  readonly legDistanceKm: number;
+  readonly legSparsityCount: number;
+  readonly safetyFactor: number;
+  readonly vehicleBatteryKwh: number;
+}
+
 /**
  * Phase 3b — Per-stop popularity verdict. Mirrors the shape returned by
  * src/lib/station/popularity-query.ts so the type can be consumed without
@@ -135,6 +145,7 @@ export interface ChargingStop {
   readonly estimatedChargingTimeMin: number;
   readonly isPrecautionary?: true;
   readonly precautionaryReason?: PrecautionaryReason;
+  readonly precautionaryTelemetry?: PrecautionaryStopTelemetry;
   /** Phase 3b — populated when the heatmap has data for this arrival hour. */
   readonly popularity?: PopularityVerdict;
 }
@@ -231,6 +242,7 @@ export interface ChargingStopWithAlternatives {
   readonly batteryPercentAfterCharge: number;
   readonly isPrecautionary?: true;
   readonly precautionaryReason?: PrecautionaryReason;
+  readonly precautionaryTelemetry?: PrecautionaryStopTelemetry;
   /** Phase 3b — popularity verdict for arrival at this stop. */
   readonly popularity?: PopularityVerdict;
 }

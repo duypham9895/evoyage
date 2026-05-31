@@ -14,6 +14,7 @@
  */
 
 import posthog from 'posthog-js';
+import type { PrecautionaryReason } from '@/types';
 
 let initialized = false;
 
@@ -215,6 +216,54 @@ export function trackBackupAlternativesDistribution(
     no_backup_stops: noBackupCount,
     mean_alt_count: altCounts.length > 0 ? Math.round((sum / altCounts.length) * 100) / 100 : 0,
   });
+}
+
+export interface PrecautionaryStopEventPayload {
+  readonly tripId: string;
+  readonly stationId: string;
+  readonly reasonPrimary: PrecautionaryReason;
+  readonly reasonSecondary: readonly PrecautionaryReason[];
+  readonly pressureScore: number;
+  readonly legDistanceKm: number;
+  readonly legSparsityCount: number;
+  readonly safetyFactor: number;
+  readonly vehicleBatteryKwh: number;
+}
+
+function capturePrecautionaryStopEvent(
+  event: 'extra_stop_suggested' | 'extra_stop_accepted' | 'extra_stop_undone',
+  payload: PrecautionaryStopEventPayload,
+): void {
+  safeCapture(event, payload as unknown as Record<string, unknown>);
+}
+
+export function trackPrecautionaryStopDistribution(count: number): void {
+  safeCapture('precautionary_stop_distribution', {
+    precautionary_stop_count: count,
+    count_bucket: count >= 2 ? '2' : String(Math.max(0, count)),
+  });
+}
+
+export function trackPrecautionaryStopSuggested(payload: PrecautionaryStopEventPayload): void {
+  capturePrecautionaryStopEvent('extra_stop_suggested', payload);
+}
+
+export function trackPrecautionaryStopAccepted(payload: PrecautionaryStopEventPayload): void {
+  capturePrecautionaryStopEvent('extra_stop_accepted', payload);
+}
+
+export function trackPrecautionaryStopDismissed(
+  payload: PrecautionaryStopEventPayload,
+  dismissTimeMsFromShown: number,
+): void {
+  safeCapture('extra_stop_dismissed', {
+    ...payload,
+    dismissTimeMsFromShown: Math.max(0, Math.round(dismissTimeMsFromShown)),
+  });
+}
+
+export function trackPrecautionaryStopUndone(payload: PrecautionaryStopEventPayload): void {
+  capturePrecautionaryStopEvent('extra_stop_undone', payload);
 }
 
 /** User clicked an alternative marker on the map (curiosity signal). */

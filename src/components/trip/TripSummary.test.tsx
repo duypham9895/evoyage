@@ -101,6 +101,19 @@ vi.mock('@/hooks/useRouteNarrative', () => ({
   useRouteNarrative: () => ({ overview: null, narrative: null, isLoading: false }),
 }));
 
+vi.mock('@/lib/analytics', () => ({
+  trackAlternativeListItemClicked: vi.fn(),
+  trackBackupAlternativesDistribution: vi.fn(),
+  trackPrecautionaryStopAccepted: vi.fn(),
+  trackPrecautionaryStopDismissed: vi.fn(),
+  trackPrecautionaryStopDistribution: vi.fn(),
+  trackPrecautionaryStopSuggested: vi.fn(),
+  trackPrecautionaryStopUndone: vi.fn(),
+  trackTerrainWarningShown: vi.fn(),
+  trackTrafficCalloutShown: vi.fn(),
+  trackWhatIfPicked: vi.fn(),
+}));
+
 vi.mock('./StationDetailExpander', () => ({
   default: () => null,
 }));
@@ -416,7 +429,11 @@ describe('TripSummary — precautionary stops', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Why?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Skip suggested station Precautionary Midpoint' })).toBeInTheDocument();
+    const dismissButton = screen.getByRole('button', { name: 'Skip suggested station Precautionary Midpoint' });
+    expect(dismissButton).toBeInTheDocument();
+    expect(dismissButton).toHaveClass('opacity-100');
+    expect(dismissButton).toHaveClass('lg:opacity-0');
+    expect(dismissButton).toHaveClass('group-hover:opacity-100');
   });
 
   it('opens and cancels the dismiss confirmation dialog', () => {

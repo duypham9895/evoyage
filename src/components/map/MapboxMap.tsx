@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapGL, { Source, Layer, Marker, Popup, useMap } from 'react-map-gl/mapbox';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -11,11 +11,14 @@ import { usePrecautionaryStopInteractions, type PrecautionaryStopInteractions } 
 import {
   getStopChargeTimeMin,
   getStopIdentity,
+  getPrecautionaryStopEventPayload,
   PRECAUTIONARY_REASON_LOCALE_KEY,
 } from '@/lib/trip/precautionary-stop-display';
 import {
   trackAlternativeMarkerClicked,
   trackAlternativeNavigateClicked,
+  trackPrecautionaryStopAccepted,
+  trackPrecautionaryStopDismissed,
 } from '@/lib/analytics';
 import { decodePolyline } from '@/lib/geo/polyline';
 import {
@@ -75,12 +78,14 @@ function EndpointMarker({ lat, lng, label }: { readonly lat: number; readonly ln
 
 function StopMarker({
   stop,
+  tripPlan,
   index,
   isSelected,
   onSelect,
   stopInteractions,
 }: {
   readonly stop: ChargingStop | ChargingStopWithAlternatives;
+  readonly tripPlan: TripPlan;
   readonly index: number;
   readonly isSelected: boolean;
   readonly onSelect: (index: number | null) => void;
@@ -96,6 +101,7 @@ function StopMarker({
     : null;
   const isReasonRevealed = stopInteractions.revealedReasonStopIds.has(stopId);
   const chargeTimeMin = Math.round(getStopChargeTimeMin(stop));
+  const selectedAtRef = useRef(0);
   const markerLabel = isPrecautionary
     ? t('extra_stop_aria_label' as Parameters<typeof t>[0], {
         n: String(index + 1),
@@ -106,6 +112,12 @@ function StopMarker({
   const markerSize = isPrecautionary ? 16 : 24;
 
   const selectMarker = () => onSelect(isSelected ? null : index);
+
+  useEffect(() => {
+    if (isSelected && isPrecautionary) {
+      selectedAtRef.current = Date.now();
+    }
+  }, [isPrecautionary, isSelected]);
 
   return (
     <>
@@ -217,7 +229,13 @@ function StopMarker({
                       </button>
                       <button
                         type="button"
-                        onClick={() => stopInteractions.confirmDismiss(stopId)}
+                        onClick={() => {
+                          trackPrecautionaryStopDismissed(
+                            getPrecautionaryStopEventPayload(tripPlan, stop),
+                            Date.now() - (selectedAtRef.current || Date.now()),
+                          );
+                          stopInteractions.confirmDismiss(stopId);
+                        }}
                         style={{ border: 0, background: '#00D4AA', color: '#0F0F11', borderRadius: 4, padding: '4px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                       >
                         {t('extra_stop_dismiss_confirm_action' as Parameters<typeof t>[0])}
@@ -231,6 +249,9 @@ function StopMarker({
               href={`https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={isPrecautionary
+                ? () => trackPrecautionaryStopAccepted(getPrecautionaryStopEventPayload(tripPlan, stop))
+                : undefined}
               style={{
                 display: 'inline-block',
                 marginTop: 8,
@@ -459,6 +480,7 @@ function TripOverlay({
         <StopMarker
           key={`${getStopIdentity(stop)}-${index}`}
           stop={stop}
+          tripPlan={tripPlan}
           index={index}
           isSelected={selectedStop === index}
           onSelect={handleStopSelect}

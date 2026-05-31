@@ -158,7 +158,7 @@
   "extra_stop_aria_label": "Trạm đề xuất số {{n}}, {{name}}, sạc {{minutes}} phút, có thể bỏ qua",
   "extra_stop_dismiss_aria": "Bỏ qua trạm đề xuất {{stationName}}",
   "extra_stop_insufficient_margin_warning": "Bỏ qua điểm sạc nhẹ này sẽ khiến pin ở trạm tiếp theo rất thấp.",
-  "stations_view_alternatives": "{{count}} lựa chọn khác",
+  "stations_view_alternatives": "{{count}} trạm dự phòng",
   "stations_no_alternatives": "Khu vực này không có trạm sạc dự phòng — sạc trên 80% trước khi rời để an toàn.",
   "popup_navigate": "Đi đến trạm",
   "popup_backup_for_stop": "Trạm dự phòng cho điểm sạc {{n}}",

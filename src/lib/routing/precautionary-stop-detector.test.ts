@@ -89,7 +89,12 @@ describe('findInjectionSites', () => {
         legIndex: 0,
         pressureScore: 4,
         reason: 'holiday',
+        reasonSecondary: ['sparse'],
         signals: { ...NO_SIGNALS, holiday: true, sparseArea: true },
+        legDistanceKm: 0,
+        legSparsityCount: 0,
+        safetyFactor: 0.80,
+        vehicleBatteryKwh: 0,
       },
     ]);
   });
