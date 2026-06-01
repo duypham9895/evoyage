@@ -63,6 +63,18 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
     throw new Error(`${provider.envVar} is not set`);
   }
   const client = new OpenAI({ apiKey, baseURL: provider.baseURL });
+  const maxTokens = input.maxTokens ?? DEFAULT_MAX_TOKENS;
+  const baseParams = {
+    model: provider.defaultModel,
+    messages: [
+      { role: 'system' as const, content: input.system },
+      { role: 'user' as const, content: input.user },
+    ],
+    response_format: { type: 'json_object' as const },
+  };
+  const completionParams = provider.name === 'openai'
+    ? { ...baseParams, max_completion_tokens: maxTokens }
+    : { ...baseParams, max_tokens: maxTokens, temperature: 0.1 };
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? DEFAULT_TIMEOUT_MS);
@@ -71,16 +83,7 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
   let response;
   try {
     response = await client.chat.completions.create(
-      {
-        model: provider.defaultModel,
-        messages: [
-          { role: 'system', content: input.system },
-          { role: 'user', content: input.user },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: input.maxTokens ?? DEFAULT_MAX_TOKENS,
-        temperature: 0.1,
-      },
+      completionParams,
       { signal: controller.signal },
     );
   } finally {

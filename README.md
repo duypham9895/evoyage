@@ -50,7 +50,8 @@ npm install
 
 # Set up environment variables in .env.local
 # Required: DATABASE_URL, DIRECT_URL (Supabase Postgres)
-# Required: MINIMAX_API_KEY (eVi assistant)
+# Required: OPENAI_API_KEY (eVi assistant)
+# Optional fallback: MINIMAX_API_KEY
 # Optional: MAPBOX_TOKEN (richer basemap)
 
 # Push schema and seed reference data

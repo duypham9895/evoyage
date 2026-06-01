@@ -137,8 +137,30 @@ describe('callLLM — caller overrides', () => {
 
     await callLLM({ schema, system: 's', user: 'u', maxTokens: 8000 });
 
-    const callArgs = mockCreate.mock.calls[0][0] as { max_tokens: number };
-    expect(callArgs.max_tokens).toBe(8000);
+    const callArgs = mockCreate.mock.calls[0][0] as {
+      max_completion_tokens: number;
+      max_tokens?: number;
+      temperature?: number;
+    };
+    expect(callArgs.max_completion_tokens).toBe(8000);
+    expect(callArgs.max_tokens).toBeUndefined();
+    expect(callArgs.temperature).toBeUndefined();
+  });
+
+  it('keeps legacy max_tokens on the Minimax fallback provider', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 503 }))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    await callLLM({ schema, system: 's', user: 'u', maxTokens: 900 });
+
+    const fallbackArgs = mockCreate.mock.calls[1][0] as { max_completion_tokens?: number; max_tokens: number };
+    expect(fallbackArgs.max_tokens).toBe(900);
+    expect(fallbackArgs.max_completion_tokens).toBeUndefined();
   });
 
   it('aborts primary after timeoutMs elapses and falls back to secondary', async () => {
