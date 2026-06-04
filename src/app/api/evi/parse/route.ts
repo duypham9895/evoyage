@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp, eviLimiter } from '@/lib/rate-limit';
 import { EViParseRequest } from '@/lib/evi/types';
-import type { EViParseResponse, FollowUpType, SuggestedOption, EViTripParams } from '@/lib/evi/types';
+import type { EViParseRequestData, EViParseResponse, FollowUpType, SuggestedOption, EViTripParams, MinimaxTripExtractionResult } from '@/lib/evi/types';
 import { parseTrip } from '@/lib/evi/minimax-client';
 import { LLMUnavailableError } from '@/lib/evi/llm-module';
 import { resolveVehicle } from '@/lib/evi/vehicle-resolver';
@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
   const followUpCount = Math.floor(history.length / 2);
 
   // Call eVi parser (provider chain owned by lib/evi/llm-module.ts; see ADR-0002)
-  let extraction;
+  let extraction: MinimaxTripExtractionResult;
   try {
-    extraction = await parseTrip({ message, history, vehicleListText, accumulatedParams: accumulatedParams ?? null });
+    extraction = buildCurrentLocationExtraction(message, userLocation, accumulatedParams)
+      ?? await parseTrip({ message, history, vehicleListText, accumulatedParams: accumulatedParams ?? null });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     const errorType = err instanceof LLMUnavailableError ? 'both_providers_failed' : 'unexpected';
@@ -275,4 +276,45 @@ function buildErrorResponse(error: string, followUpCount: number): EViParseRespo
     error,
     nearbyStations: null,
   };
+}
+
+function buildCurrentLocationExtraction(
+  message: string,
+  userLocation: EViParseRequestData['userLocation'],
+  accumulatedParams: EViParseRequestData['accumulatedParams'],
+): MinimaxTripExtractionResult | null {
+  if (!userLocation || !accumulatedParams?.end || !isCurrentLocationReply(message)) return null;
+
+  return {
+    startLocation: null,
+    endLocation: accumulatedParams.end,
+    vehicleBrand: accumulatedParams.vehicleBrand,
+    vehicleModel: accumulatedParams.vehicleModel,
+    currentBatteryPercent: accumulatedParams.currentBattery,
+    isTripRequest: true,
+    isStationSearch: false,
+    stationSearchParams: null,
+    isOutsideVietnam: false,
+    missingFields: accumulatedParams.vehicleBrand || accumulatedParams.vehicleModel ? [] : ['vehicle'],
+    followUpQuestion: accumulatedParams.vehicleBrand || accumulatedParams.vehicleModel ? null : 'Bạn đang lái xe điện gì?',
+    confidence: 1,
+  };
+}
+
+function isCurrentLocationReply(message: string): boolean {
+  const normalized = message
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  return [
+    /\bvi tri hien tai\b/,
+    /\bo day\b/,
+    /\bcurrent location\b/,
+    /\bmy location\b/,
+    /\bhere\b/,
+  ].some(pattern => pattern.test(normalized));
 }

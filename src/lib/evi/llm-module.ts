@@ -41,7 +41,7 @@ const PROVIDER_CHAIN: ReadonlyArray<LLMProvider> = [OPENAI_PROVIDER, MINIMAX_PRO
 
 function isInfrastructureError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
-  if (err.name === 'AbortError') return true;
+  if (err.name === 'AbortError' || err.name === 'APIUserAbortError') return true;
   const status = (err as { status?: number }).status;
   if (typeof status === 'number' && (status === 429 || status >= 500)) return true;
   // Network / TCP errors. The OpenAI SDK wraps these with no `.status`, so
@@ -50,6 +50,7 @@ function isInfrastructureError(err: unknown): boolean {
   if (/(ECONNRESET|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|network)/i.test(err.message)) {
     return true;
   }
+  if (/Request was aborted/i.test(err.message)) return true;
   // Empty / quirk-only content from primary — try the next provider.
   if (/returned empty response|returned only thinking/i.test(err.message)) return true;
   // Missing API key on a provider — try the other one rather than crashing.

@@ -43,6 +43,6 @@ export async function parseTrip(input: ParseInput): Promise<MinimaxTripExtractio
     system: buildSystemPrompt(input.vehicleListText, input.accumulatedParams),
     user: buildUserPayload(input.history, input.message),
     maxTokens: 1024,
-    timeoutMs: 8000,
+    timeoutMs: 12_000,
   });
 }

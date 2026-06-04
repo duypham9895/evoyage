@@ -81,6 +81,22 @@ describe('callLLM — fallback', () => {
     expect(result).toEqual({ from: 'minimax' });
   });
 
+  it('falls back to Minimax when OpenAI SDK aborts a timed-out request', async () => {
+    const schema = z.object({ from: z.string() });
+
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Request was aborted.'), { name: 'APIUserAbortError' }))
+      .mockResolvedValueOnce({
+        choices: [{ message: { content: '{"from":"minimax"}' } }],
+      });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(constructorCalls.map(c => c.baseURL)).toEqual([OPENAI_BASE_URL, MINIMAX_BASE_URL]);
+  });
+
   it('throws LLMUnavailableError when both providers fail with infrastructure errors', async () => {
     const schema = z.object({ x: z.string() });
 

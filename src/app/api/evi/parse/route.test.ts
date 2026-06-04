@@ -188,6 +188,129 @@ describe('POST /api/evi/parse', () => {
     expect(data.followUpQuestion).toBe('Bạn xuất phát từ đâu?');
   });
 
+  it('uses GPS start for exact current-location follow-up without calling the LLM', async () => {
+    mockSearchPlaces.mockResolvedValue([
+      {
+        placeId: 1,
+        displayName: 'Thành phố Đà Lạt, Lâm Đồng, Việt Nam',
+        lat: 11.9404,
+        lng: 108.4583,
+        type: 'city',
+      },
+    ]);
+
+    const res = await POST(createRequest({
+      message: 'từ vị trí hiện tại',
+      history: [
+        { role: 'user', content: 'Kế hoạch đi Đà Lạt ngày mai' },
+        { role: 'assistant', content: 'Bạn muốn xuất phát từ đâu ạ?' },
+      ],
+      userLocation: { lat: 10.804067355, lng: 106.7142873 },
+      previousVehicleId: null,
+      accumulatedParams: {
+        start: null,
+        end: 'Thành phố Đà Lạt, Phường Xuân Trường - Đà Lạt, Tỉnh Lâm Đồng, Việt Nam',
+        vehicleBrand: null,
+        vehicleModel: null,
+        currentBattery: 80,
+      },
+    }));
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+
+    expect(mockParseTrip).not.toHaveBeenCalled();
+    expect(data.error).toBeNull();
+    expect(data.followUpType).toBe('free_text');
+    expect(data.tripParams.startSource).toBe('geolocation');
+    expect(data.tripParams.startLat).toBe(10.804067355);
+    expect(data.tripParams.startLng).toBe(106.7142873);
+    expect(data.tripParams.end).toBe('Thành phố Đà Lạt, Lâm Đồng, Việt Nam');
+    expect(data.tripParams.currentBattery).toBe(80);
+  });
+
+  it.each(['ở đây', 'current location', 'here'])('uses GPS start for current-location phrase %s', async (message) => {
+    const res = await POST(createRequest({
+      message,
+      history: [
+        { role: 'user', content: 'Plan a trip to Đà Lạt tomorrow' },
+        { role: 'assistant', content: 'Where are you starting from?' },
+      ],
+      userLocation: { lat: 10.804067355, lng: 106.7142873 },
+      accumulatedParams: {
+        start: null,
+        end: 'Đà Lạt',
+        vehicleBrand: null,
+        vehicleModel: null,
+        currentBattery: 75,
+      },
+    }));
+
+    const data = await res.json();
+
+    expect(mockParseTrip).not.toHaveBeenCalled();
+    expect(data.tripParams.startSource).toBe('geolocation');
+    expect(data.tripParams.end).toBe('Đà Lạt');
+    expect(data.tripParams.currentBattery).toBe(75);
+  });
+
+  it('keeps the LLM path for current-location text when userLocation is missing', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      startLocation: null,
+      endLocation: 'Đà Lạt',
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+      missingFields: ['start_location'],
+      followUpQuestion: 'Bạn xuất phát từ đâu?',
+    }));
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const res = await POST(createRequest({
+      message: 'từ vị trí hiện tại',
+      history: [],
+      userLocation: null,
+      accumulatedParams: {
+        start: null,
+        end: 'Đà Lạt',
+        vehicleBrand: null,
+        vehicleModel: null,
+        currentBattery: 80,
+      },
+    }));
+
+    const data = await res.json();
+
+    expect(mockParseTrip).toHaveBeenCalledOnce();
+    expect(data.followUpType).toBe('location_input');
+  });
+
+  it('keeps the LLM path for current-location text when accumulated destination is missing', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      startLocation: null,
+      endLocation: 'Đà Lạt',
+      missingFields: ['vehicle'],
+      followUpQuestion: 'Bạn đang lái xe điện gì?',
+    }));
+
+    const res = await POST(createRequest({
+      message: 'current location',
+      history: [],
+      userLocation: { lat: 10.804067355, lng: 106.7142873 },
+      accumulatedParams: {
+        start: null,
+        end: null,
+        vehicleBrand: null,
+        vehicleModel: null,
+        currentBattery: 80,
+      },
+    }));
+
+    const data = await res.json();
+
+    expect(mockParseTrip).toHaveBeenCalledOnce();
+    expect(data.followUpType).toBe('free_text');
+  });
+
   it('returns non-trip message when input is not a trip request', async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       isTripRequest: false,
@@ -223,6 +346,28 @@ describe('POST /api/evi/parse', () => {
 
     expect(data.isComplete).toBe(false);
     expect(data.displayMessage).toContain('Việt Nam');
+  });
+
+  it('returns station-search response for charging-station parse', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      isTripRequest: false,
+      isStationSearch: true,
+      stationSearchParams: { radiusKm: 10, minPowerKw: 60 },
+      followUpQuestion: 'Đang tìm trạm sạc gần bạn...',
+    }));
+
+    const res = await POST(createRequest({
+      message: 'Tìm trạm sạc gần đây',
+      history: [],
+      userLocation: { lat: 10.77, lng: 106.70 },
+    }));
+
+    const data = await res.json();
+
+    expect(mockParseTrip).toHaveBeenCalledOnce();
+    expect(data.isStationSearch).toBe(true);
+    expect(data.followUpType).toBeNull();
+    expect(data.displayMessage).toBe('Đang tìm trạm sạc gần bạn...');
   });
 
   it('returns 503 when Minimax API fails', async () => {
