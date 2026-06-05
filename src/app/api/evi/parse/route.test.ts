@@ -163,6 +163,32 @@ describe('POST /api/evi/parse', () => {
     expect(data.suggestedOptions[0]).toHaveProperty('vehicleId');
   });
 
+  it('returns default vehicle_pick options when vehicle is missing with no brand or model', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: 'Đà Lạt',
+      vehicleBrand: null,
+      vehicleModel: null,
+      missingFields: ['vehicle'],
+      followUpQuestion: 'Bạn đang lái xe điện dòng nào vậy?',
+    }));
+
+    const res = await POST(createRequest({
+      message: 'Kế hoạch đi Đà Lạt ngày mai',
+      history: [],
+      userLocation: { lat: 10.77, lng: 106.70 },
+    }));
+
+    const data = await res.json();
+
+    expect(data.isComplete).toBe(false);
+    expect(data.followUpType).toBe('vehicle_pick');
+    expect(data.followUpQuestion).toBe('Bạn đang lái xe điện dòng nào vậy?');
+    expect(data.suggestedOptions).toEqual([
+      { label: 'VinFast VF 8 Plus', vehicleId: 'vf8-plus' },
+      { label: 'VinFast VF 5 Plus', vehicleId: 'vf5-plus' },
+    ]);
+  });
+
   it('returns location_input follow-up when start location is missing and no userLocation', async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       startLocation: null,
@@ -221,7 +247,8 @@ describe('POST /api/evi/parse', () => {
 
     expect(mockParseTrip).not.toHaveBeenCalled();
     expect(data.error).toBeNull();
-    expect(data.followUpType).toBe('free_text');
+    expect(data.followUpType).toBe('vehicle_pick');
+    expect(data.suggestedOptions.length).toBeGreaterThan(0);
     expect(data.tripParams.startSource).toBe('geolocation');
     expect(data.tripParams.startLat).toBe(10.804067355);
     expect(data.tripParams.startLng).toBe(106.7142873);
@@ -308,7 +335,8 @@ describe('POST /api/evi/parse', () => {
     const data = await res.json();
 
     expect(mockParseTrip).toHaveBeenCalledOnce();
-    expect(data.followUpType).toBe('free_text');
+    expect(data.followUpType).toBe('vehicle_pick');
+    expect(data.suggestedOptions.length).toBeGreaterThan(0);
   });
 
   it('returns non-trip message when input is not a trip request', async () => {

@@ -1,10 +1,12 @@
 import { test, expect } from 'playwright/test';
-import { mockAPIs, navigateToPlan } from './helpers/app';
+import { mockAPIs } from './helpers/app';
 
 test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
   test.beforeEach(async ({ page }) => {
     await mockAPIs(page);
-    await navigateToPlan(page);
+    await page.goto('/plan');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByText('eVoyage').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('sends chat message and receives AI response', async ({ page, isMobile }) => {
@@ -18,22 +20,94 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
 
     // Type trip request in chat input
     const chatInput = page.getByRole('textbox', { name: /Đi Đà Lạt|VF8|pin/ });
-    await chatInput.fill('SG to Da Lat, VF5');
+    await chatInput.click();
+    await chatInput.pressSequentially('SG to Da Lat, VF5');
+    const sendButton = page.getByRole('button', { name: 'Send' });
+    await expect(sendButton).toBeEnabled({ timeout: 5_000 });
 
-    // Set up response listener BEFORE pressing Enter (race condition fix)
-    const responsePromise = page.waitForResponse(
-      (resp) => resp.url().includes('/api/evi/parse') && resp.status() === 200,
-    );
-    await chatInput.press('Enter');
-
-    // Wait for AI response
-    const response = await responsePromise;
-    expect(response.ok()).toBeTruthy();
+    await sendButton.click();
 
     // The mock returns displayMessage with "HCM to Da Lat with VinFast VF 5 Plus"
     // The component shows this in the chat log before auto-switching tabs
     // Verify the user's message was sent (always visible regardless of tab switch)
     const userMessage = page.locator('text=/SG to Da Lat/');
     await expect(userMessage).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Got it! Planning a trip from HCM to Da Lat with VinFast VF 5 Plus.')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('shows vehicle answers under required vehicle prompt without generic suggestions', async ({ page, isMobile }) => {
+    await page.unroute('**/api/evi/parse');
+    await page.unroute('**/api/evi/suggestions');
+
+    let suggestionsCalls = 0;
+    await page.route('**/api/evi/parse', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          isComplete: false,
+          isStationSearch: false,
+          followUpType: 'vehicle_pick',
+          tripParams: {
+            start: null,
+            startLat: null,
+            startLng: null,
+            startSource: null,
+            end: 'Đà Lạt, Lâm Đồng, Việt Nam',
+            endLat: 11.9404,
+            endLng: 108.4583,
+            vehicleId: null,
+            vehicleName: null,
+            vehicleData: null,
+            currentBattery: 80,
+            minArrival: 15,
+            rangeSafetyFactor: 0.8,
+          },
+          followUpQuestion: 'Bạn đang lái xe điện dòng nào vậy?',
+          followUpCount: 1,
+          maxFollowUps: 2,
+          suggestedOptions: [
+            { label: 'VinFast VF 8 Plus', vehicleId: 'vf8-plus' },
+            { label: 'VinFast VF 5 Plus', vehicleId: 'vf5-plus' },
+          ],
+          displayMessage: 'Bạn đang lái xe điện dòng nào vậy?',
+          error: null,
+          nearbyStations: null,
+        }),
+      }),
+    );
+    await page.route('**/api/evi/suggestions', (route) => {
+      suggestionsCalls += 1;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          suggestions: ['Trạm sạc trên đường đi?', 'Thời tiết Đà Lạt ngày mai?', 'Mất bao lâu để đến?'],
+        }),
+      });
+    });
+
+    if (isMobile) {
+      const eviFab = page.getByRole('button', { name: /Mở trợ lý eVi|Open eVi assistant/ });
+      if (await eviFab.isVisible()) {
+        await eviFab.click();
+      }
+    }
+
+    const chatInput = page.getByRole('textbox', { name: /Đi Đà Lạt|VF8|pin/ });
+    await chatInput.click();
+    await chatInput.pressSequentially('Kế hoạch đi Đà Lạt ngày mai');
+    const sendButton = page.getByRole('button', { name: 'Send' });
+    await expect(sendButton).toBeEnabled({ timeout: 5_000 });
+
+    await sendButton.click();
+
+    await expect(page.getByText('Bạn đang lái xe điện dòng nào vậy?')).toBeVisible();
+    await expect(page.getByRole('option', { name: 'VinFast VF 8 Plus' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'VinFast VF 5 Plus' })).toBeVisible();
+    await expect(page.getByText('Trạm sạc trên đường đi?')).toHaveCount(0);
+    await expect(page.getByText('Thời tiết Đà Lạt ngày mai?')).toHaveCount(0);
+    await expect(page.getByText('Mất bao lâu để đến?')).toHaveCount(0);
+    expect(suggestionsCalls).toBe(0);
   });
 });
