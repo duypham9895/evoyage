@@ -114,6 +114,67 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     await expect(page.getByText(/Calculation took longer|Tính lộ trình lâu hơn/)).toHaveCount(0);
   });
 
+  test('auto-scrolls the mobile route sheet to progress and result', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'Mobile-only route sheet scroll behavior');
+
+    let resolveRoute!: () => void;
+    const routeGate = new Promise<void>((resolve) => {
+      resolveRoute = resolve;
+    });
+
+    await page.route('**/api/route', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+
+      await routeGate;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(routeFixture),
+      });
+    });
+
+    await page.goto('/plan');
+    await waitForAppReady(page);
+    await switchToTab(page, 'Route');
+
+    const startInput = page.locator('[role="combobox"]').first();
+    await startInput.fill('Ho Chi Minh City');
+    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
+    await page.locator('[role="option"]').first().click({ force: true });
+
+    const endInput = page.locator('[role="combobox"]').nth(1);
+    await endInput.fill('Da Lat');
+    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
+    await page.locator('[role="option"]').first().click({ force: true });
+
+    await switchToTab(page, 'Vehicle');
+    await page.locator('button:has-text("VF 8")').first().click();
+
+    const planButton = page.locator(
+      'button:has-text("Calculate route"), button:has-text("Tính lộ trình"), button:has-text("Plan this trip"), button:has-text("Xem lịch trình")',
+    );
+    await expect(planButton).toBeEnabled({ timeout: 5_000 });
+    await planButton.click();
+
+    await expect(page.getByRole('tab', { name: /Route|Tuyến đường/i })).toHaveAttribute('aria-selected', 'true');
+
+    const resultAnchor = page.getByTestId('route-result-anchor');
+    const progressText = resultAnchor.getByText(/Calculating route|Đang tính/i);
+    await expect(progressText).toBeVisible({ timeout: 5_000 });
+    await expect(progressText).toBeInViewport({ ratio: 1 });
+
+    const routeResponse = page.waitForResponse((resp) => resp.url().includes('/api/route') && resp.status() === 200);
+    resolveRoute();
+    await routeResponse;
+
+    const resultHeading = resultAnchor.getByRole('heading', { name: /Trip summary|Tổng quan chuyến đi/i });
+    await expect(resultHeading).toBeVisible({ timeout: 10_000 });
+    await expect(resultHeading).toBeInViewport({ ratio: 1 });
+  });
+
   test('does not submit Mapbox route requests for typed locations without coordinates', async ({ page, isMobile }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('evoyage-map-mode', 'mapbox');

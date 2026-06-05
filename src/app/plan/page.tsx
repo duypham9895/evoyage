@@ -159,8 +159,14 @@ function HomeContent() {
   const planAbortRef = useRef<AbortController | null>(null);
   const planTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const planSlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const routeResultRef = useRef<HTMLDivElement>(null);
+  const [routeResultScrollTrigger, setRouteResultScrollTrigger] = useState(0);
   const TRIP_CALC_SLOW_MS = 8_000;
   const TRIP_CALC_ABORT_MS = 25_000;
+
+  const requestRouteResultScroll = useCallback(() => {
+    setRouteResultScrollTrigger((value) => value + 1);
+  }, []);
 
   const clearPlanTimers = useCallback(() => {
     if (planSlowTimerRef.current) {
@@ -379,6 +385,24 @@ function HomeContent() {
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
   }, [handleDesktopTabChange]);
 
+  useEffect(() => {
+    if (routeResultScrollTrigger === 0) return;
+
+    const target = routeResultRef.current;
+    if (!target) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      setRouteResultScrollTrigger(0);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [routeResultScrollTrigger, activeTab, desktopSidebarTab]);
+
   // Pre-fill both inputs from a sample-trip chip. Coords are cleared so the
   // existing flow (Nominatim resolves on submit / on suggestion click) still
   // takes over — we don't auto-submit.
@@ -467,6 +491,11 @@ function HomeContent() {
     // — UI also locks inputs, but EVi or other entry points could still call).
     if (planAbortRef.current) return;
 
+    setActiveTab('route');
+    handleDesktopTabChange('planTrip');
+    setBottomSheetSnap({ point: 'full', trigger: Date.now() });
+    requestRouteResultScroll();
+
     const sourceNotebookEntryId = planningNotebookEntryIdRef.current;
     planningNotebookEntryIdRef.current = null;
     const controller = new AbortController();
@@ -535,6 +564,7 @@ function HomeContent() {
       if (planAbortRef.current !== controller) return;
 
       setTripPlan(data as TripPlan);
+      requestRouteResultScroll();
       // Analytics: aggregate-only payload (city labels + km), no coords/PII.
       try {
         trackTripPlanned(start, isLoopTrip ? start : end, (data as TripPlan).totalDistanceKm);
@@ -597,7 +627,7 @@ function HomeContent() {
         setIsSlowPlanning(false);
       }
     }
-  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt, notebook, clearPlanTimers, t]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt, notebook, clearPlanTimers, t, handleDesktopTabChange, requestRouteResultScroll]);
 
   // Phase 5 — Re-plan from a saved trip in the notebook. Loads every saved
   // param into page state, bumps lastViewedAt, and triggers handlePlanTrip
@@ -933,12 +963,16 @@ function HomeContent() {
                   onToggleLoop={handleToggleLoop}
                   disabled={isPlanning}
                 />
-                {(tripPlan || isPlanning) && <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
-                  selectedVehicle?.efficiencyWhPerKm ??
-                  (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
-                    ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
-                    : null)
-                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} />}
+                {(tripPlan || isPlanning) && (
+                  <div ref={routeResultRef} data-testid="route-result-anchor" className="scroll-mt-3">
+                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
+                      selectedVehicle?.efficiencyWhPerKm ??
+                      (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
+                        ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
+                        : null)
+                    } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} />
+                  </div>
+                )}
                 {/* Inline share button for mobile — replaces floating FAB */}
                 {tripPlan && !isPlanning && (
                   <div className="pt-2">
@@ -1133,12 +1167,16 @@ function HomeContent() {
                 {slowPlanningBanner}
                 {timeoutBanner}
 
-                <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
-                  selectedVehicle?.efficiencyWhPerKm ??
-                  (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
-                    ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
-                    : null)
-                } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} />
+                {(tripPlan || isPlanning) && (
+                  <div ref={routeResultRef} data-testid="route-result-anchor" className="scroll-mt-3">
+                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
+                      selectedVehicle?.efficiencyWhPerKm ??
+                      (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
+                        ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
+                        : null)
+                    } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} />
+                  </div>
+                )}
               </div>
             ) : (
               <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className="flex flex-col h-full -m-4">
