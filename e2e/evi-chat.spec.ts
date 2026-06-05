@@ -1,5 +1,27 @@
 import { test, expect } from 'playwright/test';
+import type { Page } from 'playwright/test';
 import { mockAPIs } from './helpers/app';
+
+async function openEViChatInput(page: Page, isMobile: boolean) {
+  const chatInput = page.getByRole('textbox', { name: /Đi Đà Lạt|VF8|pin/ });
+
+  if (isMobile) {
+    const eviFab = page.getByRole('button', { name: /Mở trợ lý eVi|Open eVi assistant/ });
+    await expect(eviFab).toBeVisible({ timeout: 10_000 });
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      if (await chatInput.isVisible().catch(() => false)) break;
+      if (await eviFab.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await eviFab.click();
+      }
+      if (await chatInput.waitFor({ state: 'visible', timeout: 1_500 }).then(() => true).catch(() => false)) break;
+    }
+  }
+
+  await expect(chatInput).toBeVisible({ timeout: 10_000 });
+  await expect(chatInput).toBeEditable({ timeout: 10_000 });
+  return chatInput;
+}
 
 test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
   test.beforeEach(async ({ page }) => {
@@ -10,16 +32,7 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
   });
 
   test('sends chat message and receives AI response', async ({ page, isMobile }) => {
-    // On mobile, eVi is opened via FAB (no longer a tab)
-    if (isMobile) {
-      const eviFab = page.getByRole('button', { name: /Mở trợ lý eVi|Open eVi assistant/ });
-      if (await eviFab.isVisible()) {
-        await eviFab.click();
-      }
-    }
-
-    // Type trip request in chat input
-    const chatInput = page.getByRole('textbox', { name: /Đi Đà Lạt|VF8|pin/ });
+    const chatInput = await openEViChatInput(page, isMobile);
     await chatInput.click();
     await chatInput.pressSequentially('SG to Da Lat, VF5');
     const sendButton = page.getByRole('button', { name: 'Send' });
@@ -87,14 +100,7 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
       });
     });
 
-    if (isMobile) {
-      const eviFab = page.getByRole('button', { name: /Mở trợ lý eVi|Open eVi assistant/ });
-      if (await eviFab.isVisible()) {
-        await eviFab.click();
-      }
-    }
-
-    const chatInput = page.getByRole('textbox', { name: /Đi Đà Lạt|VF8|pin/ });
+    const chatInput = await openEViChatInput(page, isMobile);
     await chatInput.click();
     await chatInput.pressSequentially('Kế hoạch đi Đà Lạt ngày mai');
     const sendButton = page.getByRole('button', { name: 'Send' });
