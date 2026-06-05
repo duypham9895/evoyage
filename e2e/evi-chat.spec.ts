@@ -1,6 +1,9 @@
 import { test, expect } from 'playwright/test';
 import type { Page } from 'playwright/test';
 import { mockAPIs } from './helpers/app';
+import eviParseFixture from './fixtures/evi-parse.json';
+import routeFixture from './fixtures/route.json';
+import vehiclesFixture from './fixtures/vehicles.json';
 
 async function openEViChatInput(page: Page, isMobile: boolean) {
   const chatInput = page.getByRole('textbox', { name: /Đi Đà Lạt|VF8|pin/ });
@@ -46,6 +49,73 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
     const userMessage = page.locator('text=/SG to Da Lat/');
     await expect(userMessage).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText('Got it! Planning a trip from HCM to Da Lat with VinFast VF 5 Plus.')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('auto-scrolls to route progress when planning from eVi CTA on mobile', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'Mobile-only eVi sheet behavior');
+
+    await page.unroute('**/api/evi/parse');
+    await page.route('**/api/evi/parse', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...eviParseFixture,
+          tripParams: {
+            ...eviParseFixture.tripParams,
+            vehicleData: vehiclesFixture.vehicles[1],
+          },
+        }),
+      }),
+    );
+
+    let resolveRoute!: () => void;
+    const routeGate = new Promise<void>((resolve) => {
+      resolveRoute = resolve;
+    });
+
+    await page.route('**/api/route', async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+
+      await routeGate;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(routeFixture),
+      });
+    });
+
+    const chatInput = await openEViChatInput(page, isMobile);
+    await chatInput.click();
+    await chatInput.pressSequentially('SG to Da Lat, VF5');
+
+    const sendButton = page.getByRole('button', { name: 'Send' });
+    await expect(sendButton).toBeEnabled({ timeout: 5_000 });
+    await sendButton.click();
+
+    const eviDialog = page.getByRole('dialog', { name: 'eVi' });
+    const eviPlanButton = eviDialog.getByRole('button', { name: /Calculate route|Tính lộ trình/i });
+    await expect(eviPlanButton).toBeEnabled({ timeout: 5_000 });
+    await eviPlanButton.click();
+
+    await expect(eviDialog).toBeHidden();
+    await expect(page.getByRole('tab', { name: /Route|Tuyến đường/i })).toHaveAttribute('aria-selected', 'true');
+
+    const resultAnchor = page.getByTestId('route-result-anchor');
+    const progressText = resultAnchor.getByText(/Calculating route|Đang tính/i);
+    await expect(progressText).toBeVisible({ timeout: 5_000 });
+    await expect(progressText).toBeInViewport({ ratio: 1 });
+
+    const routeResponse = page.waitForResponse((resp) => resp.url().includes('/api/route') && resp.status() === 200);
+    resolveRoute();
+    await routeResponse;
+
+    const resultHeading = resultAnchor.getByRole('heading', { name: /Trip summary|Tổng quan chuyến đi/i });
+    await expect(resultHeading).toBeVisible({ timeout: 10_000 });
+    await expect(resultHeading).toBeInViewport({ ratio: 1 });
   });
 
   test('shows vehicle answers under required vehicle prompt without generic suggestions', async ({ page, isMobile }) => {

@@ -366,9 +366,10 @@ function HomeContent() {
   // "Plan Trip" — fill form and auto-trigger route planning
   const handleEViPlanTrip = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
+    setIsEViOpen(false);
     setActiveTab('route');
     handleDesktopTabChange('planTrip'); // Desktop: switch sidebar to form view so TripSummary is visible
-    setBottomSheetSnap({ point: 'half', trigger: Date.now() });
+    setBottomSheetSnap({ point: 'full', trigger: Date.now() });
     setAutoPlanPending(true);
   }, [fillFormFromEVi]);
 
