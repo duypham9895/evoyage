@@ -109,7 +109,7 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
 
   const tokens = (response as { usage?: { total_tokens?: number } }).usage?.total_tokens;
   const tokenSuffix = typeof tokens === 'number' ? ` tokens=${tokens}` : '';
-  console.log(`[llm] provider=${provider.name} latency_ms=${latencyMs}${tokenSuffix} schema=ok`);
+  console.info(`[llm] provider=${provider.name} latency_ms=${latencyMs}${tokenSuffix} schema=ok`);
   return parsed.data;
 }
 

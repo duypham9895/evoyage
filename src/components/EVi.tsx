@@ -5,7 +5,7 @@ import { useLocale } from '@/lib/locale';
 import { useEVi } from '@/hooks/useEVi';
 import { useSpeechInput } from '@/hooks/useSpeechInput';
 import { hapticLight } from '@/lib/haptics';
-import type { EViTripParams } from '@/lib/evi/types';
+import type { EViParseResponse, EViTripParams } from '@/lib/evi/types';
 import { onStationAskEVi } from '@/lib/events/station-events';
 import StationCard from '@/components/StationCard';
 
@@ -95,6 +95,10 @@ function buildSuggestionChips(
   chips.push({ label: findStationsLabel, action: 'find_stations' });
 
   return chips;
+}
+
+function canShowExploratorySuggestions(response: EViParseResponse): boolean {
+  return !response.isComplete && !response.isStationSearch && response.followUpType === null;
 }
 
 // ── Sub-components ──
@@ -302,6 +306,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
   const greetingText = t(greetingKey as Parameters<typeof t>[0]);
 
   const isIdle = state === 'idle' && messages.length === 0;
+  const showExploratorySuggestions = lastResponse ? canShowExploratorySuggestions(lastResponse) : false;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -441,7 +446,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
             )}
 
             {/* AI-generated follow-up suggestions */}
-            {isSuggestionsLoading && (
+            {showExploratorySuggestions && isSuggestionsLoading && (
               <div className="flex gap-2 mt-2" aria-label={t('evi_suggestions_loading' as Parameters<typeof t>[0])}>
                 {[0, 1, 2].map((i) => (
                   <div
@@ -452,7 +457,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
                 ))}
               </div>
             )}
-            {!isSuggestionsLoading && followUpSuggestions.length > 0 && (
+            {showExploratorySuggestions && !isSuggestionsLoading && followUpSuggestions.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2" role="listbox" aria-label={t('evi_suggestions_label' as Parameters<typeof t>[0])}>
                 {followUpSuggestions.map((suggestion) => (
                   <button

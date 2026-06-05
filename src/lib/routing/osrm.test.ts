@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchDirections } from './osrm';
+import { fetchDirections, fetchDirectionsFromCoords } from './osrm';
 
 const mockFetch = vi.fn();
 const SAMPLE_POLYLINE_5 = '_p~iF~ps|U_ulLnnqC_mqNvxq`@';
@@ -74,6 +74,21 @@ describe('fetchDirections — OSRM happy path', () => {
     expect(result.durationSeconds).toBe(5400);
     expect(result.startAddress).toBe('Saigon');
     expect(result.endAddress).toBe('Da Nang');
+  });
+
+  it('fetchDirectionsFromCoords calls OSRM directly without Nominatim geocoding', async () => {
+    mockFetch.mockResolvedValueOnce(osrmOkResponse());
+
+    const result = await fetchDirectionsFromCoords(
+      { lat: 10.762, lng: 106.66 },
+      { lat: 11.94, lng: 108.45 },
+      'Ho Chi Minh City',
+      'Da Lat',
+    );
+
+    expect(result.provider).toBe('osrm');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(String(mockFetch.mock.calls[0][0])).toContain('router.project-osrm.org');
   });
 
   it('does NOT call Mapbox when OSRM succeeds', async () => {

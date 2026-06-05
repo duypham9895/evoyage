@@ -67,6 +67,10 @@ function extractAssistantContent(response: EViParseResponse): string {
   return response.followUpQuestion ?? response.displayMessage;
 }
 
+function shouldFetchExploratorySuggestions(response: EViParseResponse): boolean {
+  return !response.isComplete && !response.isStationSearch && response.followUpType === null;
+}
+
 // ── Hook ──
 
 export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
@@ -381,8 +385,8 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
         }
       }
 
-      // Fetch AI-powered follow-up suggestions for follow_up state (not for station search)
-      if (nextState === 'follow_up' && !response.isStationSearch) {
+      // Exploratory suggestions ask next questions; slot-filling prompts need exact answers.
+      if (nextState === 'follow_up' && shouldFetchExploratorySuggestions(response)) {
         fetchSuggestions(finalMessages, response);
       }
     } catch {

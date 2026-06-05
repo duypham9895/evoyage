@@ -172,16 +172,12 @@ export async function POST(request: NextRequest) {
   const vehicleMissing = extraction.missingFields.includes('vehicle') || vehicleResolution.type !== 'match';
   const startMissing = extraction.missingFields.includes('start_location') && !userLocation;
 
-  if (vehicleMissing && vehicleResolution.type === 'multiple') {
+  if (vehicleMissing && vehicleResolution.type !== 'match') {
     followUpType = 'vehicle_pick';
-    followUpQuestion = extraction.followUpQuestion ?? 'Bạn đang lái xe nào?';
-    suggestedOptions = vehicleResolution.options.map(v => ({
-      label: `${v.brand} ${v.model}${v.variant ? ` ${v.variant}` : ''}`,
-      vehicleId: v.id,
-    }));
-  } else if (vehicleMissing && vehicleResolution.type === 'not_found') {
-    followUpType = 'free_text';
-    followUpQuestion = extraction.followUpQuestion ?? 'Bạn đang lái xe điện gì?';
+    followUpQuestion = extraction.followUpQuestion ?? 'Bạn đang lái xe điện dòng nào vậy?';
+    suggestedOptions = buildVehicleOptions(
+      vehicleResolution.type === 'multiple' ? vehicleResolution.options : VIETNAM_MODELS,
+    );
   } else if (startMissing) {
     followUpType = 'location_input';
     followUpQuestion = extraction.followUpQuestion ?? 'Bạn xuất phát từ đâu?';
@@ -255,6 +251,15 @@ function buildResponse(params: {
     error: null,
     nearbyStations: null,
   };
+}
+
+function buildVehicleOptions(
+  vehicles: readonly { readonly id: string; readonly brand: string; readonly model: string; readonly variant?: string | null }[],
+): readonly SuggestedOption[] {
+  return vehicles.map(v => ({
+    label: `${v.brand} ${v.model}${v.variant ? ` ${v.variant}` : ''}`,
+    vehicleId: v.id,
+  }));
 }
 
 function buildErrorResponse(error: string, followUpCount: number): EViParseResponse {

@@ -320,7 +320,7 @@ describe('callLLM — telemetry (closes #11)', () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    infoSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });

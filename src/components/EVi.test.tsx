@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/// <reference types="@testing-library/jest-dom" />
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -115,6 +114,15 @@ const followUpResponse = {
   error: null,
 };
 
+const vehiclePickResponse = {
+  ...followUpResponse,
+  followUpType: 'vehicle_pick',
+  suggestedOptions: [
+    { label: 'VinFast VF 8 Plus', vehicleId: 'vf8-plus' },
+    { label: 'VinFast VF 5 Plus', vehicleId: 'vf5-plus' },
+  ],
+};
+
 // ── Mock useEVi ──
 
 const mockSendMessage = vi.fn();
@@ -123,7 +131,7 @@ const mockReset = vi.fn();
 let mockUseEViReturn = {
   state: 'idle' as string,
   messages: [] as { role: 'user' | 'assistant'; content: string }[],
-  lastResponse: null as typeof completeResponse | typeof followUpResponse | null,
+  lastResponse: null as typeof completeResponse | typeof followUpResponse | typeof vehiclePickResponse | null,
   userLocation: null as { lat: number; lng: number; address: string } | null,
   isFirstVisit: true,
   recentTrips: [] as { start: string; end: string; vehicleName?: string | null }[],
@@ -675,7 +683,7 @@ describe('EVi component', () => {
   });
 
   describe('AI follow-up suggestions', () => {
-    it('shows loading skeleton when suggestions are being fetched', () => {
+    it('hides loading skeleton during required free_text slot prompt', () => {
       setHookState({
         state: 'follow_up',
         lastResponse: followUpResponse,
@@ -689,10 +697,10 @@ describe('EVi component', () => {
 
       render(<EVi onTripParsed={vi.fn()} />);
 
-      expect(screen.getByLabelText('Loading suggestions...')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Loading suggestions...')).not.toBeInTheDocument();
     });
 
-    it('shows AI-generated suggestion chips when loaded', () => {
+    it('hides AI-generated suggestion chips during required free_text slot prompt', () => {
       setHookState({
         state: 'follow_up',
         lastResponse: followUpResponse,
@@ -706,28 +714,33 @@ describe('EVi component', () => {
 
       render(<EVi onTripParsed={vi.fn()} />);
 
-      expect(screen.getByText('VF 8 Plus')).toBeInTheDocument();
-      expect(screen.getByText('VF 5 Plus')).toBeInTheDocument();
-      expect(screen.getByText('VF e34')).toBeInTheDocument();
+      expect(screen.queryByText('VF 8 Plus')).not.toBeInTheDocument();
+      expect(screen.queryByText('VF 5 Plus')).not.toBeInTheDocument();
+      expect(screen.queryByText('VF e34')).not.toBeInTheDocument();
     });
 
-    it('sends suggestion as message when clicked', () => {
+    it('shows and sends vehicle options during vehicle_pick slot prompt', () => {
       setHookState({
         state: 'follow_up',
-        lastResponse: followUpResponse,
+        lastResponse: vehiclePickResponse,
         messages: [
           { role: 'user', content: 'Đi Đà Lạt' },
           { role: 'assistant', content: 'Bạn đang lái xe gì?' },
         ],
         isSuggestionsLoading: false,
-        followUpSuggestions: ['VF 8 Plus', 'VF 5 Plus', 'VF e34'],
+        followUpSuggestions: ['Trạm sạc trên đường đi?', 'Thời tiết Đà Lạt ngày mai?'],
       });
 
       render(<EVi onTripParsed={vi.fn()} />);
 
-      fireEvent.click(screen.getByText('VF 8 Plus'));
+      expect(screen.getByText('VinFast VF 8 Plus')).toBeInTheDocument();
+      expect(screen.getByText('VinFast VF 5 Plus')).toBeInTheDocument();
+      expect(screen.queryByText('Trạm sạc trên đường đi?')).not.toBeInTheDocument();
+      expect(screen.queryByText('Thời tiết Đà Lạt ngày mai?')).not.toBeInTheDocument();
 
-      expect(mockSendMessage).toHaveBeenCalledWith('VF 8 Plus');
+      fireEvent.click(screen.getByText('VinFast VF 8 Plus'));
+
+      expect(mockSendMessage).toHaveBeenCalledWith('VinFast VF 8 Plus');
     });
 
     it('does not show suggestions when state is complete', () => {
