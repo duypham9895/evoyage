@@ -153,11 +153,25 @@ function HomeContent() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
+  const [isSlowPlanning, setIsSlowPlanning] = useState(false);
 
   // In-flight calc tracking — for Cancel + timeout fallback
   const planAbortRef = useRef<AbortController | null>(null);
   const planTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const TRIP_CALC_TIMEOUT_MS = 10_000;
+  const planSlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const TRIP_CALC_SLOW_MS = 8_000;
+  const TRIP_CALC_ABORT_MS = 25_000;
+
+  const clearPlanTimers = useCallback(() => {
+    if (planSlowTimerRef.current) {
+      clearTimeout(planSlowTimerRef.current);
+      planSlowTimerRef.current = null;
+    }
+    if (planTimeoutRef.current) {
+      clearTimeout(planTimeoutRef.current);
+      planTimeoutRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeNotebookEntryId || !tripPlan?.tripId) return;
@@ -445,6 +459,10 @@ function HomeContent() {
       setError('Please select a vehicle');
       return;
     }
+    if (mode === 'mapbox' && (!startCoords || (!isLoopTrip && !endCoords))) {
+      setError(t('plan_disabled_select_locations'));
+      return;
+    }
     // Idempotent: ignore re-entry while a calc is in flight (defense in depth
     // — UI also locks inputs, but EVi or other entry points could still call).
     if (planAbortRef.current) return;
@@ -457,17 +475,23 @@ function HomeContent() {
     setIsPlanning(true);
     setError(null);
     setTimedOut(false);
+    setIsSlowPlanning(false);
     // Note: do NOT clear tripPlan here — keep previous result visible so Cancel
     // / timeout can revert without destroying the user's last good plan.
+
+    planSlowTimerRef.current = setTimeout(() => {
+      setIsSlowPlanning(true);
+    }, TRIP_CALC_SLOW_MS);
 
     planTimeoutRef.current = setTimeout(() => {
       // Timeout fallback: abort + surface a "try again" message.
       controller.abort();
       planAbortRef.current = null;
-      planTimeoutRef.current = null;
+      clearPlanTimers();
       setIsPlanning(false);
+      setIsSlowPlanning(false);
       setTimedOut(true);
-    }, TRIP_CALC_TIMEOUT_MS);
+    }, TRIP_CALC_ABORT_MS);
 
     try {
       const response = await fetch('/api/route', {
@@ -567,22 +591,20 @@ function HomeContent() {
       // Only clear if THIS calc is still the active one. A late response from a
       // previously-aborted calc must not overwrite the new in-flight calc's state.
       if (planAbortRef.current === controller) {
-        if (planTimeoutRef.current) {
-          clearTimeout(planTimeoutRef.current);
-          planTimeoutRef.current = null;
-        }
+        clearPlanTimers();
         planAbortRef.current = null;
         setIsPlanning(false);
+        setIsSlowPlanning(false);
       }
     }
-  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt, notebook]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt, notebook, clearPlanTimers, t]);
 
   // Phase 5 — Re-plan from a saved trip in the notebook. Loads every saved
   // param into page state, bumps lastViewedAt, and triggers handlePlanTrip
   // (always re-fetches — never serves a stale plan because conditions like
   // traffic/popularity/holiday may have changed since the original plan).
   const handleReplanFromNotebook = useCallback(
-    (trip: SavedTrip) => {
+    async (trip: SavedTrip) => {
       planningNotebookEntryIdRef.current = trip.id;
       setStart(trip.start);
       setEnd(trip.end);
@@ -597,15 +619,12 @@ function HomeContent() {
       setIsLoopTrip(trip.isLoopTrip);
       // Vehicle: try to fetch fresh data so naming/efficiency stays in sync
       if (trip.vehicleId) {
-        fetch(`/api/vehicles?id=${encodeURIComponent(trip.vehicleId)}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .then((data) => {
-            if (data) {
-              setSelectedVehicle(data);
-              setCustomVehicle(null);
-            }
-          })
-          .catch(() => { /* user can re-pick from the vehicle tab */ });
+        const response = await fetch(`/api/vehicles?id=${encodeURIComponent(trip.vehicleId)}`).catch(() => null);
+        const data = response?.ok ? await response.json().catch(() => null) : null;
+        if (data) {
+          setSelectedVehicle(data);
+          setCustomVehicle(null);
+        }
       } else if (trip.customVehicle) {
         setCustomVehicle(trip.customVehicle);
         setSelectedVehicle(null);
@@ -628,13 +647,11 @@ function HomeContent() {
       planAbortRef.current.abort();
       planAbortRef.current = null;
     }
-    if (planTimeoutRef.current) {
-      clearTimeout(planTimeoutRef.current);
-      planTimeoutRef.current = null;
-    }
+    clearPlanTimers();
     setIsPlanning(false);
+    setIsSlowPlanning(false);
     setTimedOut(false);
-  }, []);
+  }, [clearPlanTimers]);
 
   // Dismiss timeout banner (after Retry click or X)
   const handleDismissTimeout = useCallback(() => {
@@ -645,9 +662,9 @@ function HomeContent() {
   useEffect(() => {
     return () => {
       planAbortRef.current?.abort();
-      if (planTimeoutRef.current) clearTimeout(planTimeoutRef.current);
+      clearPlanTimers();
     };
-  }, []);
+  }, [clearPlanTimers]);
 
   // Auto-plan after eVi fills form (state updates need a render cycle)
   useEffect(() => {
@@ -706,13 +723,18 @@ function HomeContent() {
   );
 
   const activeVehicle = selectedVehicle ?? customVehicle;
-  const canPlan = Boolean(start && end && activeVehicle && !isPlanning);
+  const hasRequiredRouteCoords = mode !== 'mapbox' || (
+    startCoords != null && (isLoopTrip ? startCoords != null : endCoords != null)
+  );
+  const canPlan = Boolean(start && end && activeVehicle && hasRequiredRouteCoords && !isPlanning);
 
   // Shared controls content
   const disabledReason = !start || !end
     ? t('plan_disabled_route')
     : !activeVehicle
       ? t('plan_disabled_vehicle')
+      : !hasRequiredRouteCoords
+        ? t('plan_disabled_select_locations')
       : null;
 
   // Trigger 2: tap on disabled Plan-Trip area = signal of frustration → show nudge.
@@ -767,7 +789,13 @@ function HomeContent() {
     </div>
   ) : null;
 
-  // Timeout banner — shown after TRIP_CALC_TIMEOUT_MS elapses without response.
+  const slowPlanningBanner = isSlowPlanning && isPlanning ? (
+    <div className="p-3 bg-[var(--color-info)]/10 border border-[var(--color-info)]/30 rounded-lg text-sm text-[var(--color-info)]">
+      {t('plan_calc_slow_message')}
+    </div>
+  ) : null;
+
+  // Timeout banner — shown after TRIP_CALC_ABORT_MS elapses without response.
   // Retry triggers a fresh planTrip; dismiss closes the banner without retrying.
   const timeoutBanner = timedOut ? (
     <div className="p-3 bg-[var(--color-warn)]/10 border border-[var(--color-warn)]/30 rounded-lg text-sm text-[var(--color-warn)] flex items-center justify-between gap-3">
@@ -969,7 +997,7 @@ function HomeContent() {
                   return null;
                 }}
                 onReplan={(trip) => {
-                  handleReplanFromNotebook(trip);
+                  void handleReplanFromNotebook(trip);
                   setActiveTab('route');
                 }}
                 i18n={notebookI18n}
@@ -979,6 +1007,7 @@ function HomeContent() {
             {/* Plan button — only on route/vehicle/battery tabs (stations + notebook don't need one) */}
             {activeTab !== 'stations' && activeTab !== 'notebook' && planButton}
             {activeTab !== 'stations' && activeTab !== 'notebook' && errorDisplay}
+            {activeTab !== 'stations' && activeTab !== 'notebook' && slowPlanningBanner}
             {activeTab !== 'stations' && activeTab !== 'notebook' && timeoutBanner}
           </div>
         </MobileBottomSheet>
@@ -1038,7 +1067,7 @@ function HomeContent() {
                     return null;
                   }}
                   onReplan={(trip) => {
-                    handleReplanFromNotebook(trip);
+                    void handleReplanFromNotebook(trip);
                     handleDesktopTabChange('planTrip');
                   }}
                   i18n={notebookI18n}
@@ -1101,6 +1130,7 @@ function HomeContent() {
 
                 {planButton}
                 {errorDisplay}
+                {slowPlanningBanner}
                 {timeoutBanner}
 
                 <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={

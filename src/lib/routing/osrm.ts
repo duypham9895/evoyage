@@ -53,7 +53,7 @@ function shouldFallback(error: unknown): boolean {
   return true;
 }
 
-interface Coordinate {
+export interface Coordinate {
   readonly lat: number;
   readonly lng: number;
 }
@@ -179,6 +179,43 @@ export async function fetchDirections(
       destination,
     );
     return { ...result, startCoord, endCoord, provider: 'mapbox' };
+  }
+}
+
+export async function fetchDirectionsFromCoords(
+  origin: Coordinate,
+  destination: Coordinate,
+  startAddress: string,
+  endAddress: string,
+): Promise<DirectionsResult> {
+  const coordinates = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
+
+  try {
+    const route = await callOsrm(coordinates);
+    return {
+      ...route,
+      startAddress,
+      endAddress,
+      startCoord: origin,
+      endCoord: destination,
+      provider: 'osrm',
+    };
+  } catch (osrmError) {
+    if (!shouldFallback(osrmError)) throw osrmError;
+
+    const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
+    if (!mapboxToken) throw osrmError;
+
+    const result = await fetchDirectionsMapboxFromCoords(
+      origin.lat,
+      origin.lng,
+      destination.lat,
+      destination.lng,
+      mapboxToken,
+      startAddress,
+      endAddress,
+    );
+    return { ...result, startCoord: origin, endCoord: destination, provider: 'mapbox' };
   }
 }
 

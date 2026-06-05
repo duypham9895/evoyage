@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, routeLimiter } from '@/lib/rate-limit';
 import { isValidCoordinate, COORDINATE_ERROR_EN } from '@/lib/geo/coordinate-validation';
-import { fetchDirections, fetchDirectionsWithWaypoints } from '@/lib/routing/osrm';
+import { fetchDirections, fetchDirectionsFromCoords, fetchDirectionsWithWaypoints } from '@/lib/routing/osrm';
 import { fetchDirectionsMapbox } from '@/lib/routing/mapbox-directions';
 import { fetchTrafficAwareDirections, MapboxTrafficError } from '@/lib/routing/mapbox-traffic';
 import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
@@ -59,6 +59,26 @@ const routeRequestSchema = z.object({
 });
 
 const LOW_CHARGE_REFERENCE_PERCENT = 20;
+const ROUTE_STATION_SELECT = {
+  id: true,
+  name: true,
+  address: true,
+  province: true,
+  latitude: true,
+  longitude: true,
+  chargerTypes: true,
+  connectorTypes: true,
+  portCount: true,
+  maxPowerKw: true,
+  stationType: true,
+  isVinFastOnly: true,
+  operatingHours: true,
+  provider: true,
+  chargingStatus: true,
+  parkingFee: true,
+} as const;
+const EXCLUDED_STATION_STATUSES = ['UNAVAILABLE', 'INACTIVE'] as const;
+const EXCLUDED_STATION_STATUS_SET = new Set<string>(EXCLUDED_STATION_STATUSES);
 
 function isPrecautionaryStopsEnabled(): boolean {
   return process.env.PRECAUTIONARY_STOPS_ENABLED === 'true';
@@ -82,6 +102,12 @@ export async function POST(request: NextRequest) {
   }
 
   let body: unknown;
+  const routeStartedAt = Date.now();
+  const timings: Record<string, number> = {};
+  const mark = (key: string, startedAt: number) => {
+    timings[key] = Date.now() - startedAt;
+  };
+
   try {
     body = await request.json();
   } catch {
@@ -112,6 +138,7 @@ export async function POST(request: NextRequest) {
     departAt,
     waypoints,
   } = parsed.data;
+  const routeCoordsAvailable = startLat != null && startLng != null && endLat != null && endLng != null;
 
   // Resolve vehicle
   let vehicle: {
@@ -180,6 +207,7 @@ export async function POST(request: NextRequest) {
     // Get route from selected provider
     let directions;
     const hasWaypoints = waypoints && waypoints.length > 0;
+    const directionsStartedAt = Date.now();
     if (provider === 'mapbox') {
       const cached = hasWaypoints ? null : await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox');
       if (cached) {
@@ -229,10 +257,37 @@ export async function POST(request: NextRequest) {
     } else {
       if (waypoints && waypoints.length > 0) {
         directions = await fetchDirectionsWithWaypoints(start, end, waypoints);
+      } else if (routeCoordsAvailable) {
+        const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm');
+        if (cached) {
+          directions = {
+            polyline: cached.polyline,
+            distanceMeters: cached.distanceMeters,
+            durationSeconds: cached.durationSeconds,
+            startAddress: start,
+            endAddress: end,
+            startCoord: { lat: startLat!, lng: startLng! },
+            endCoord: { lat: endLat!, lng: endLng! },
+            provider: 'osrm' as const,
+          };
+        } else {
+          directions = await fetchDirectionsFromCoords(
+            { lat: startLat!, lng: startLng! },
+            { lat: endLat!, lng: endLng! },
+            start,
+            end,
+          );
+          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
+            polyline: directions.polyline,
+            distanceMeters: directions.distanceMeters,
+            durationSeconds: directions.durationSeconds,
+          });
+        }
       } else {
         directions = await fetchDirections(start, end);
       }
     }
+    mark('directionsMs', directionsStartedAt);
 
     if (!directions) {
       return NextResponse.json(
@@ -273,12 +328,19 @@ export async function POST(request: NextRequest) {
     minLng -= BUFFER_DEG;
     maxLng += BUFFER_DEG;
 
+    const stationQueryStartedAt = Date.now();
     const dbStations = await prisma.chargingStation.findMany({
       where: {
         latitude: { gte: minLat, lte: maxLat },
         longitude: { gte: minLng, lte: maxLng },
+        OR: [
+          { chargingStatus: null },
+          { chargingStatus: { notIn: [...EXCLUDED_STATION_STATUSES] } },
+        ],
       },
+      select: ROUTE_STATION_SELECT,
     });
+    mark('stationQueryMs', stationQueryStartedAt);
     const stations: ChargingStationData[] = dbStations.map((s) => ({
       id: s.id,
       name: s.name,
@@ -299,10 +361,9 @@ export async function POST(request: NextRequest) {
     }));
 
     // Filter out stations that are unavailable or inactive
-    const EXCLUDED_STATUSES = new Set(['UNAVAILABLE', 'INACTIVE']);
     const availableStations = stations.filter((s) => {
       const status = s.chargingStatus?.toUpperCase();
-      return !status || !EXCLUDED_STATUSES.has(status);
+      return !status || !EXCLUDED_STATION_STATUS_SET.has(status);
     });
 
     // Smart station ranking: corridor scoring + Matrix API fallback
@@ -456,6 +517,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Plan charging stops (uses ranked stations if available, else haversine)
+    const planningStartedAt = Date.now();
     const plan = planChargingStops({
       encodedPolyline: directions.polyline,
       totalDistanceKm,
@@ -467,6 +529,7 @@ export async function POST(request: NextRequest) {
       rankedStationsPerStop,
       precomputedDecisionPoints: decisionPoints,
     });
+    mark('plannerMs', planningStartedAt);
 
     const totalChargingTimeMin = plan.chargingStops.reduce(
       (sum, stop: ChargingStop | ChargingStopWithAlternatives) =>
@@ -511,9 +574,9 @@ export async function POST(request: NextRequest) {
 
     // Mapbox traffic-aware override (only when we have everything we need)
     const mapboxTokenForTraffic = process.env.MAPBOX_ACCESS_TOKEN;
-    const coordsAvailable = startLat != null && startLng != null && endLat != null && endLng != null;
+    const trafficCoordsAvailable = routeCoordsAvailable;
     const futureDepart = departAt != null && new Date(departAt).getTime() > Date.now();
-    if (futureDepart && coordsAvailable && mapboxTokenForTraffic) {
+    if (futureDepart && trafficCoordsAvailable && mapboxTokenForTraffic) {
       try {
         const trafficResult = await fetchTrafficAwareDirections({
           origin: { lat: startLat!, lng: startLng! },
@@ -634,11 +697,35 @@ export async function POST(request: NextRequest) {
       ...(trafficMetadata ? { traffic: trafficMetadata } : {}),
     };
 
-    return NextResponse.json(tripPlan);
+    const totalMs = Date.now() - routeStartedAt;
+    if (totalMs > 5_000) {
+      console.warn('Route calculation slow', {
+        totalMs,
+        timings,
+        provider,
+        stationRows: dbStations.length,
+        decisionPointCount: decisionPoints.length,
+        chargingStopCount: enrichedChargingStops.length,
+      });
+    }
+
+    const response = NextResponse.json(tripPlan);
+    if (process.env.NODE_ENV !== 'production') {
+      response.headers.set('Server-Timing', Object.entries(timings)
+        .map(([name, ms]) => `${name};dur=${ms}`)
+        .join(', '));
+    }
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
-    console.error('Route calculation error:', { message, stack, provider });
+    console.error('Route calculation error:', {
+      message,
+      stack,
+      provider,
+      totalMs: Date.now() - routeStartedAt,
+      timings,
+    });
 
     // Return specific error messages for known failure modes
     if (message.includes('timeout') || message.includes('abort')) {
