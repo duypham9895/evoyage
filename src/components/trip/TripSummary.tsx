@@ -101,6 +101,10 @@ function isStatusKey(val: string): val is StatusKey {
   return val in STATUS_DOT_COLOR;
 }
 
+function backupCountForStop(stop: TripPlan['chargingStops'][number]): number {
+  return 'selected' in stop ? stop.alternatives.length : 0;
+}
+
 // ── BatteryGauge ──
 
 function BatteryGauge({
@@ -452,6 +456,10 @@ function TripOverviewCard({
   const hasPickedDeparture = tripPlan.departureAtIso != null;
   const arrivalBattery = Math.max(0, Math.round(tripPlan.arrivalBatteryPercent));
   const startBattery = Math.round(tripPlan.batterySegments[0]?.startBatteryPercent ?? 0);
+  const backupStationCount = tripPlan.chargingStops.reduce(
+    (sum, stop) => sum + backupCountForStop(stop),
+    0,
+  );
 
   // Map TripPlan's chargingStops (heterogeneous shape) to RouteTimeline-friendly stops.
   // Uses .reduce so per-segment distance is computed without mid-render mutation.
@@ -638,6 +646,16 @@ function TripOverviewCard({
             stops: String(tripPlan.chargingStops.length),
           })}
         </p>
+        {backupStationCount > 0 && (
+          <p data-testid="trip-backup-summary" className="text-xs text-[var(--color-muted)]">
+            {t(
+              backupStationCount === 1
+                ? 'trip_backup_summary_one' as Parameters<typeof t>[0]
+                : 'trip_backup_summary_many' as Parameters<typeof t>[0],
+              { count: String(backupStationCount) },
+            )}
+          </p>
+        )}
         <p className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
           {t('trip_breakdown_drive_charge', { drive: driveStr, charge: chargeStr })}
         </p>
@@ -865,6 +883,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
             const distanceKm = hasAlternatives ? stop.distanceAlongRouteKm : stop.distanceFromStartKm;
             const rank = hasAlternatives ? stop.selected.rank : undefined;
             const alternatives = hasAlternatives ? stop.alternatives : [];
+            const backupCount = alternatives.length;
             const isExpanded = expandedStops.has(i);
             const isPrecautionary = stop.isPrecautionary === true;
             const stopId = getStopIdentity(stop);
@@ -945,6 +964,16 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                   <div className="text-xs text-[var(--color-muted)] truncate mt-1 ml-8" title={station.address}>
                     {station.address}
                   </div>
+                  {backupCount > 0 && (
+                    <div className="text-[11px] text-[var(--color-text-secondary)] mt-1 ml-8">
+                      {t(
+                        backupCount === 1
+                          ? 'station_backup_inline_one' as Parameters<typeof t>[0]
+                          : 'station_backup_inline_many' as Parameters<typeof t>[0],
+                        { count: String(backupCount) },
+                      )}
+                    </div>
+                  )}
 
                   {/* Battery gauge */}
                   <div className="ml-8">

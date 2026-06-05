@@ -22,6 +22,8 @@ const translations: Record<string, string> = {
   trip_duration_with_eta: '~{{time}} · arrive at {{eta}} if leaving now',
   trip_duration_only: '~{{time}}',
   trip_totals_compact: '{{distance}} km · {{stops}} stops',
+  trip_backup_summary_one: 'Includes 1 backup station',
+  trip_backup_summary_many: 'Includes {{count}} backup stations',
   trip_breakdown_drive_charge: 'Drive {{drive}} · Charge {{charge}}',
   trip_timeline_swipe_hint: '← Swipe for more stops',
   trip_timeline_aria_stop: 'Stop {{n}}: {{name}}, arrive {{arrive}}%, charge to {{depart}}%, {{minutes}} minutes',
@@ -47,6 +49,8 @@ const translations: Record<string, string> = {
   extra_stop_aria_label: 'Suggested stop {{n}}, {{name}}, {{minutes}} min top-up, can be skipped',
   extra_stop_dismiss_aria: 'Skip suggested station {{stationName}}',
   extra_stop_insufficient_margin_warning: 'Skipping this top-up leaves very low battery at the next stop.',
+  station_backup_inline_one: '1 backup station available',
+  station_backup_inline_many: '{{count}} backup stations available',
   navigate: 'Navigate',
   open_in_google_maps: 'Open in Google Maps',
   disclaimer: 'Disclaimer text',
@@ -381,6 +385,34 @@ describe('TripSummary — trip cost section', () => {
     );
     const section = screen.getByTestId('trip-cost-section');
     expect(section).toHaveTextContent(/more than gasoline/);
+  });
+});
+
+describe('TripSummary — backup station visibility', () => {
+  it('shows backup station coverage before the stop card is expanded', () => {
+    const primary = makeRankedStation(makeStation('Primary Station'));
+    const backup = makeRankedStation(makeStation('Backup Station'));
+
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({
+          chargingStops: [
+            {
+              selected: primary,
+              alternatives: [backup],
+              distanceAlongRouteKm: 80,
+              batteryPercentAtArrival: 20,
+              batteryPercentAfterCharge: 80,
+            },
+          ],
+          totalChargingTimeMin: 18,
+        })}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByTestId('trip-backup-summary')).toHaveTextContent('Includes 1 backup station');
+    expect(screen.getByText('1 backup station available')).toBeInTheDocument();
   });
 });
 
