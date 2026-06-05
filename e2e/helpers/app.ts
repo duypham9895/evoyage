@@ -116,7 +116,7 @@ export async function mockAPIs(page: Page): Promise<void> {
 
 /**
  * Navigate to /plan and wait for the app to be fully ready.
- * Checks: page loaded, map container rendered, tile layers present.
+ * Checks: page loaded and the configured map provider rendered.
  */
 export async function navigateToPlan(page: Page): Promise<void> {
   await page.goto('/plan');
@@ -125,22 +125,32 @@ export async function navigateToPlan(page: Page): Promise<void> {
 
 /**
  * Wait for the app to be fully interactive.
- * Verifies map container and Leaflet tile layers are loaded.
+ * Verifies either Mapbox or Leaflet has rendered. Tests run in developer
+ * environments with and without a Mapbox token.
  */
 export async function waitForAppReady(page: Page): Promise<void> {
   // Wait for DOM ready — avoid 'networkidle' which times out in CI
   // due to ongoing map tile requests and SSE connections
   await page.waitForLoadState('domcontentloaded');
 
-  // Verify map container rendered (Leaflet)
-  const mapContainer = page.locator('.leaflet-container');
+  const mapContainer = page.locator('.mapboxgl-map, .leaflet-container');
   await expect(mapContainer).toBeVisible({ timeout: 10_000 });
 
-  // Verify tile layers loaded (at least one tile image)
-  await page.waitForFunction(
-    () => document.querySelectorAll('.leaflet-tile-loaded').length > 0,
-    { timeout: 10_000 },
-  );
+  const leafletMap = page.locator('.leaflet-container');
+  if (await leafletMap.isVisible().catch(() => false)) {
+    await page.waitForFunction(
+      () => document.querySelectorAll('.leaflet-tile-loaded').length > 0,
+      { timeout: 10_000 },
+    );
+  }
+}
+
+export async function selectFirstPlaceSuggestion(page: Page): Promise<void> {
+  const firstSuggestion = page.locator('[role="listbox"] [role="option"], [data-testid="place-suggestion"]').first();
+  await expect(firstSuggestion).toBeVisible({ timeout: 5_000 });
+  await page.keyboard.press('ArrowDown');
+  await expect(firstSuggestion).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
 }
 
 /**
@@ -155,16 +165,12 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
   // Enter start location (combobox with Vietnamese placeholder "VD: Thủ Thiêm, TP.HCM")
   const startInput = page.getByRole('combobox', { name: /Thủ Thiêm|Thu Thiem/i });
   await startInput.fill('Ho Chi Minh City');
-  const firstSuggestion = page.locator('[role="listbox"] [role="option"], [data-testid="place-suggestion"]').first();
-  await expect(firstSuggestion).toBeVisible({ timeout: 5_000 });
-  await firstSuggestion.click({ force: true });
+  await selectFirstPlaceSuggestion(page);
 
   // Enter end location (combobox with Vietnamese placeholder "VD: Vũng Tàu")
   const endInput = page.getByRole('combobox', { name: /Vũng Tàu|Vung Tau/i });
   await endInput.fill('Da Lat');
-  const secondSuggestion = page.locator('[role="listbox"] [role="option"], [data-testid="place-suggestion"]').first();
-  await expect(secondSuggestion).toBeVisible({ timeout: 5_000 });
-  await secondSuggestion.click({ force: true });
+  await selectFirstPlaceSuggestion(page);
 
   // On mobile, vehicle selection is on a separate tab
   if (isMobile) {

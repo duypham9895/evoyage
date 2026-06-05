@@ -1,5 +1,5 @@
 import { test, expect } from 'playwright/test';
-import { mockAPIs, waitForAppReady, switchToTab } from './helpers/app';
+import { mockAPIs, waitForAppReady, switchToTab, selectFirstPlaceSuggestion } from './helpers/app';
 import routeFixture from './fixtures/route.json';
 import routeWithAlternativesFixture from './fixtures/route-with-alternatives.json';
 import vehiclesFixture from './fixtures/vehicles.json';
@@ -21,16 +21,12 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     // Enter start location using the real placeholder text
     const startInput = page.locator('[role="combobox"]').first();
     await startInput.fill('Ho Chi Minh City');
-    const startSuggestion = page.locator('[role="option"]').first();
-    await expect(startSuggestion).toBeVisible({ timeout: 5_000 });
-    await startSuggestion.click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     // Enter end location
     const endInput = page.locator('[role="combobox"]').nth(1);
     await endInput.fill('Da Lat');
-    const endSuggestion = page.locator('[role="option"]').first();
-    await expect(endSuggestion).toBeVisible({ timeout: 5_000 });
-    await endSuggestion.click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     // On mobile, vehicle selection is on a separate tab
     if (isMobile) {
@@ -60,7 +56,7 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     await expect(chargingInfo).toBeVisible({ timeout: 10_000 });
 
     // Verify map is still rendered
-    const mapContainer = page.locator('.leaflet-container');
+    const mapContainer = page.locator('.mapboxgl-map, .leaflet-container');
     await expect(mapContainer).toBeVisible();
   });
 
@@ -85,13 +81,11 @@ test.describe('F1: Trip Planning — Happy Path', () => {
 
     const startInput = page.locator('[role="combobox"]').first();
     await startInput.fill('Ho Chi Minh City');
-    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="option"]').first().click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     const endInput = page.locator('[role="combobox"]').nth(1);
     await endInput.fill('Da Lat');
-    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="option"]').first().click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     if (isMobile) {
       await switchToTab(page, 'Vehicle');
@@ -142,16 +136,15 @@ test.describe('F1: Trip Planning — Happy Path', () => {
 
     const startInput = page.locator('[role="combobox"]').first();
     await startInput.fill('Ho Chi Minh City');
-    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="option"]').first().click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     const endInput = page.locator('[role="combobox"]').nth(1);
     await endInput.fill('Da Lat');
-    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="option"]').first().click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     await switchToTab(page, 'Vehicle');
     await page.locator('button:has-text("VF 8")').first().click();
+    await switchToTab(page, 'Route');
 
     const planButton = page.locator(
       'button:has-text("Calculate route"), button:has-text("Tính lộ trình"), button:has-text("Plan this trip"), button:has-text("Xem lịch trình")',
@@ -272,13 +265,11 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     // Fill route form (same flow as the happy-path test)
     const startInput = page.locator('[role="combobox"]').first();
     await startInput.fill('Ho Chi Minh City');
-    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="option"]').first().click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     const endInput = page.locator('[role="combobox"]').nth(1);
     await endInput.fill('Da Lat');
-    await expect(page.locator('[role="option"]').first()).toBeVisible({ timeout: 5_000 });
-    await page.locator('[role="option"]').first().click({ force: true });
+    await selectFirstPlaceSuggestion(page);
 
     if (isMobile) await switchToTab(page, 'Vehicle');
     await page.locator('button:has-text("VF 8")').first().click();

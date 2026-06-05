@@ -53,6 +53,8 @@ const MapboxMap = dynamic(() => import('@/components/map/MapboxMap'), { ssr: fal
 
 function HomeContent() {
   const { mode } = useMapMode();
+  const hasMapboxToken = Boolean(process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN);
+  const activeMapMode = hasMapboxToken ? mode : 'osm';
   const { t } = useLocale();
   const isMobile = useIsMobile();
 
@@ -484,7 +486,7 @@ function HomeContent() {
       setError('Please select a vehicle');
       return;
     }
-    if (mode === 'mapbox' && (!startCoords || (!isLoopTrip && !endCoords))) {
+    if (activeMapMode === 'mapbox' && (!startCoords || (!isLoopTrip && !endCoords))) {
       setError(t('plan_disabled_select_locations'));
       return;
     }
@@ -540,7 +542,7 @@ function HomeContent() {
           currentBatteryPercent: currentBattery,
           minArrivalPercent: minArrival,
           rangeSafetyFactor,
-          provider: mode === 'mapbox' ? 'mapbox' : 'osrm',
+          provider: activeMapMode === 'mapbox' ? 'mapbox' : 'osrm',
           ...(departAt ? { departAt } : {}),
           waypoints: waypoints
             .filter(wp => wp.coords)
@@ -628,7 +630,7 @@ function HomeContent() {
         setIsSlowPlanning(false);
       }
     }
-  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, mode, waypoints, isLoopTrip, departAt, notebook, clearPlanTimers, t, handleDesktopTabChange, requestRouteResultScroll]);
+  }, [start, end, startCoords, endCoords, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, activeMapMode, waypoints, isLoopTrip, departAt, notebook, clearPlanTimers, t, handleDesktopTabChange, requestRouteResultScroll]);
 
   // Phase 5 — Re-plan from a saved trip in the notebook. Loads every saved
   // param into page state, bumps lastViewedAt, and triggers handlePlanTrip
@@ -754,7 +756,7 @@ function HomeContent() {
   );
 
   const activeVehicle = selectedVehicle ?? customVehicle;
-  const hasRequiredRouteCoords = mode !== 'mapbox' || (
+  const hasRequiredRouteCoords = activeMapMode !== 'mapbox' || (
     startCoords != null && (isLoopTrip ? startCoords != null : endCoords != null)
   );
   const canPlan = Boolean(start && end && activeVehicle && hasRequiredRouteCoords && !isPlanning);
@@ -883,7 +885,7 @@ function HomeContent() {
   // Map component
   const mapContent = (
     <>
-      {mode === 'mapbox' ? (
+      {activeMapMode === 'mapbox' ? (
         <MapboxMap
           tripPlan={tripPlan}
           waypoints={waypointMarkers}
