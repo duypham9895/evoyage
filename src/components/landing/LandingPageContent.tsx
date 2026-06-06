@@ -10,6 +10,7 @@ import {
 } from './LandingClient';
 import LandingTitleSync from './LandingTitleSync';
 import VietnamMap from './VietnamMap';
+import EVoyageLogo from '@/components/brand/EVoyageLogo';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
 import stationStats from '@/data/station-stats.json';
@@ -394,10 +395,7 @@ function LandingContent() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Logo & tagline */}
             <div>
-              <div className="font-[family-name:var(--font-heading)] font-bold text-2xl tracking-tight mb-2">
-                <span className="text-[var(--color-accent)] italic">e</span>
-                <span className="text-[var(--color-foreground)]">Voyage</span>
-              </div>
+              <EVoyageLogo size="md" className="mb-2" />
               <p className="text-[var(--color-muted)] text-sm font-light">
                 {t('landing_footer_tagline')}
               </p>

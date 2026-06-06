@@ -31,7 +31,7 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
     await mockAPIs(page);
     await page.goto('/plan');
     await page.waitForLoadState('domcontentloaded');
-    await expect(page.getByText('eVoyage').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('link', { name: 'eVoyage home' })).toBeVisible({ timeout: 10_000 });
   });
 
   test('sends chat message and receives AI response', async ({ page, isMobile }) => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
+import EVoyageLogo from '@/components/brand/EVoyageLogo';
 
 /* ─── Scroll Animation Observer ─────────────────────────── */
 
@@ -63,10 +64,8 @@ export function LandingNavbar({
           : 'bg-transparent'
       }`}
     >
-      {/* Logo */}
-      <Link href="/" className="font-[family-name:var(--font-heading)] font-bold text-2xl tracking-tight flex items-center gap-0.5">
-        <span className="text-[var(--color-accent)] italic">e</span>
-        <span className="text-[var(--color-foreground)]">Voyage</span>
+      <Link href="/" aria-label="eVoyage home" className="shrink-0">
+        <EVoyageLogo size="md" />
       </Link>
 
       {/* Desktop right side */}

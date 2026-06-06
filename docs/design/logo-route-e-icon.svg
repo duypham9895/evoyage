@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">eVoyage</title>
-  <desc id="desc">A teal planned route shaped like a lowercase e on a dark app icon.</desc>
+  <title id="title">eVoyage Route E icon</title>
+  <desc id="desc">A rounded dark app icon with a teal route shaped like a lowercase e.</desc>
   <defs>
     <filter id="routeGlow" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="10" result="blur" />

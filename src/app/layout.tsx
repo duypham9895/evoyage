@@ -24,7 +24,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'EVoyage — Plan your EV road trip',
+  title: 'eVoyage — Plan your EV road trip',
   description:
     'Plan your EV road trip with accurate range calculations, smart charging stops, and the 80% real-world range rule.',
   manifest: '/manifest.json',

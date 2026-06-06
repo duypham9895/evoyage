@@ -73,4 +73,21 @@ describe('sendFeedbackEmail', () => {
     // should at least contain the category label
     expect(body.text).toMatch(/Báo cáo lỗi/);
   });
+
+  it('uses the current text brand in the HTML email header without the old lightning mark', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await sendFeedbackEmail({
+      feedbackId: 'cmbrand123',
+      category: 'GENERAL_FEEDBACK',
+      description: 'Brand check',
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse((init as RequestInit).body as string);
+
+    expect(body.html).toContain('eVoyage');
+    expect(body.html).not.toContain('⚡');
+  });
 });
