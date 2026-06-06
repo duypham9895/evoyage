@@ -1,5 +1,18 @@
-import { test, expect } from 'playwright/test';
+import { test, expect, type Page } from 'playwright/test';
 import { mockAPIs } from './helpers/app';
+
+async function getVisibleFabBox(page: Page) {
+  const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]').first();
+  await expect(fab).toBeVisible({ timeout: 5_000 });
+
+  let box = await fab.boundingBox();
+  await expect(async () => {
+    box = await fab.boundingBox();
+    expect(box).not.toBeNull();
+  }).toPass({ timeout: 3_000 });
+
+  return { fab, box: box! };
+}
 
 test.describe('F9: Feedback FAB — Drag & Submit', () => {
   test.beforeEach(async ({ page }) => {
@@ -24,14 +37,10 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
   });
 
   test('drag moves FAB and snaps to nearest edge', async ({ page }) => {
-    const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
-    await expect(fab).toBeVisible();
+    const { fab, box: initialBox } = await getVisibleFabBox(page);
 
-    const initialBox = await fab.boundingBox();
-    expect(initialBox).not.toBeNull();
-
-    const startX = initialBox!.x + initialBox!.width / 2;
-    const startY = initialBox!.y + initialBox!.height / 2;
+    const startX = initialBox.x + initialBox.width / 2;
+    const startY = initialBox.y + initialBox.height / 2;
     const endX = 100;
 
     await page.mouse.move(startX, startY);
@@ -44,22 +53,16 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
     await expect(async () => {
       const finalBox = await fab.boundingBox();
       expect(finalBox).not.toBeNull();
-      expect(finalBox!.x).toBeLessThan(initialBox!.x);
+      expect(finalBox!.x).toBeLessThan(initialBox.x);
       expect(finalBox!.x).toBeLessThan(50);
     }).toPass({ timeout: 2_000 });
   });
 
   test('drag does NOT open modal', async ({ page }) => {
-    const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
-    // Wait for the FAB to mount before measuring — on Mobile Chrome / Safari
-    // the boundingBox() call can race with hydration and return null, causing
-    // the historical flake (deploy run 26360945735 / docs(retro) commit).
-    await fab.first().waitFor({ state: 'visible', timeout: 5_000 });
-    const initialBox = await fab.boundingBox();
-    expect(initialBox).not.toBeNull();
+    const { box: initialBox } = await getVisibleFabBox(page);
 
-    const startX = initialBox!.x + initialBox!.width / 2;
-    const startY = initialBox!.y + initialBox!.height / 2;
+    const startX = initialBox.x + initialBox.width / 2;
+    const startY = initialBox.y + initialBox.height / 2;
 
     await page.mouse.move(startX, startY);
     await page.mouse.down();
@@ -74,16 +77,10 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
   });
 
   test('position persists across page reload', async ({ page }) => {
-    const fab = page.locator('button[aria-label*="eedback"], button[aria-label*="góp ý"]');
-    // Wait for the FAB to mount before measuring — on Mobile Chrome / Safari
-    // the boundingBox() call can race with hydration and return null, causing
-    // the historical flake (deploy run 26360945735 / docs(retro) commit).
-    await fab.first().waitFor({ state: 'visible', timeout: 5_000 });
-    const initialBox = await fab.boundingBox();
-    expect(initialBox).not.toBeNull();
+    const { fab, box: initialBox } = await getVisibleFabBox(page);
 
-    const startX = initialBox!.x + initialBox!.width / 2;
-    const startY = initialBox!.y + initialBox!.height / 2;
+    const startX = initialBox.x + initialBox.width / 2;
+    const startY = initialBox.y + initialBox.height / 2;
 
     // Drag FAB to left side
     await page.mouse.move(startX, startY);
@@ -95,7 +92,8 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
     // Wait for position to settle
     await expect(async () => {
       const afterDragBox = await fab.boundingBox();
-      expect(afterDragBox!.x).toBeLessThan(initialBox!.x);
+      expect(afterDragBox).not.toBeNull();
+      expect(afterDragBox!.x).toBeLessThan(initialBox.x);
     }).toPass({ timeout: 2_000 });
 
     // Reload and verify position persisted
@@ -106,7 +104,7 @@ test.describe('F9: Feedback FAB — Drag & Submit', () => {
     await expect(async () => {
       const afterReloadBox = await afterReloadFab.boundingBox();
       expect(afterReloadBox).not.toBeNull();
-      expect(afterReloadBox!.x).toBeLessThan(initialBox!.x);
+      expect(afterReloadBox!.x).toBeLessThan(initialBox.x);
     }).toPass({ timeout: 3_000 });
   });
 
