@@ -135,7 +135,7 @@ No other new dependencies. Server-side Google API calls use plain `fetch`.
 ### Security Restrictions (Google Cloud Console)
 
 - Server key: restrict by IP / Vercel deployment
-- Client key: restrict by HTTP referrer (`evoyagevn.vercel.app/*`, `localhost:*`)
+- Client key: restrict by HTTP referrer (`evoyage.duypham.me/*`, `localhost:*`)
 - Set monthly usage caps on both keys to control billing
 
 ## Design Decisions

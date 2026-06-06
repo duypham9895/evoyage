@@ -1337,4 +1337,4 @@ vercel --prod
 
 - [ ] **Step 3: Test on production**
 
-Open `https://evoyagevn.vercel.app`, plan a trip with VinFast stop, click "Details", verify SSE streaming works end-to-end.
+Open `https://evoyage.duypham.me`, plan a trip with VinFast stop, click "Details", verify SSE streaming works end-to-end.

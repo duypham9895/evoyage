@@ -2,7 +2,7 @@
 
 Plan EV road trips across Vietnam with real charging station data. Know exactly where to charge, how long to wait, and whether you'll make it — before you leave.
 
-**Live:** [https://evoyagevn.vercel.app/](https://evoyagevn.vercel.app/)
+**Live:** [https://evoyage.duypham.me/](https://evoyage.duypham.me/)
 
 **Built entirely by Claude Code.** Duy Pham is the Product Manager — defining features, making design decisions, and ensuring quality.
 

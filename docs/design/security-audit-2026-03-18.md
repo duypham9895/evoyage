@@ -112,7 +112,7 @@ For immediate protection without Redis, add a `X-RateLimit` check using Vercel's
 
 - Create two separate API keys in Google Cloud Console
 - Server-side key (`GOOGLE_MAPS_API_KEY`): restrict to "IP addresses" — add your Vercel deployment IP ranges or restrict to "None" to server-only use
-- Client-side key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`): restrict to "HTTP referrers" — add `https://evoyagevn.vercel.app/*` and any preview deployment URLs
+- Client-side key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`): restrict to "HTTP referrers" — add `https://evoyage.duypham.me/*` and any preview deployment URLs
 - Enable only the APIs each key needs (server key: Directions API only; client key: Maps JavaScript API, Places API only)
 
 ---
@@ -577,7 +577,7 @@ throw new Error(safeError);
 **File:** `src/app/api/share-card/route.tsx` line 208
 
 ```typescript
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://evoyage.app';
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://evoyage.duypham.me';
 qrCodeDataUrl = await QRCode.toDataURL(appUrl, ...);
 ```
 
@@ -587,10 +587,10 @@ If `NEXT_PUBLIC_APP_URL` is set to an attacker-controlled domain (misconfigured 
 
 ```typescript
 const rawUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
-const appUrl = /^https:\/\/(www\.)?evoyage\.app/.test(rawUrl) ? rawUrl : 'https://evoyage.app';
+const appUrl = /^https:\/\/evoyage\.duypham\.me/.test(rawUrl) ? rawUrl : 'https://evoyage.duypham.me';
 ```
 
-Also add `NEXT_PUBLIC_APP_URL=https://evoyage.app` to `.env.example`.
+Also add `NEXT_PUBLIC_APP_URL=https://evoyage.duypham.me` to `.env.example`.
 
 ---
 

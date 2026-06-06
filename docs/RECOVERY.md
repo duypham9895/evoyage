@@ -134,8 +134,8 @@ After step 9, verify each item before declaring the incident resolved.
 - [ ] GitHub Actions secrets updated; the next scheduled cron run succeeds.
 - [ ] Daily VinFast crawler workflow is enabled (not on the disabled schedule from commit `06be101`).
 - [ ] Smoke-test endpoints:
-  - `https://evoyagevn.vercel.app/api/vehicles` returns 15 EV models.
-  - `https://evoyagevn.vercel.app/api/stations/nearby?lat=10.78&lng=106.69` returns a non-empty list.
+  - `https://evoyage.duypham.me/api/vehicles` returns 15 EV models.
+  - `https://evoyage.duypham.me/api/stations/nearby?lat=10.78&lng=106.69` returns a non-empty list.
   - The map view loads stations without console errors.
 - [ ] A new test trip can be planned end-to-end on mobile and desktop.
 

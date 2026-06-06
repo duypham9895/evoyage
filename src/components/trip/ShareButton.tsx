@@ -70,8 +70,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
 
   // Show button after trip plan loads
   useEffect(() => {
-    if (!tripPlan) { setVisible(false); return; }
-    const timer = setTimeout(() => setVisible(true), 1000);
+    const timer = setTimeout(() => setVisible(Boolean(tripPlan)), tripPlan ? 1000 : 0);
     return () => clearTimeout(timer);
   }, [tripPlan]);
 
@@ -97,9 +96,12 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
     const currentParams = getCurrentParams();
     if (currentParams !== lastParamsRef.current) {
       lastParamsRef.current = currentParams;
-      setShortUrl(null);
-      setQrDataUrl(null);
-      setLinkState('idle');
+      const timer = setTimeout(() => {
+        setShortUrl(null);
+        setQrDataUrl(null);
+        setLinkState('idle');
+      }, 0);
+      return () => clearTimeout(timer);
     }
   });
 
@@ -410,7 +412,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #21262d', paddingTop: 6 }}>
             <div>
-              <div style={{ fontSize: 13, color: '#58a6ff', fontWeight: 600 }}>evoyage.app</div>
+              <div style={{ fontSize: 13, color: '#58a6ff', fontWeight: 600 }}>evoyage.duypham.me</div>
               <div style={{ fontSize: 11, color: '#484f58' }}>EV Road Trip Planner</div>
             </div>
           </div>

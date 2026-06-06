@@ -24,7 +24,7 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          response=$(curl -s -X POST https://evoyagevn.vercel.app/api/cron/aggregate-popularity \
+          response=$(curl -s -X POST https://evoyage.duypham.me/api/cron/aggregate-popularity \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             --max-time 120 \
             --fail-with-body)

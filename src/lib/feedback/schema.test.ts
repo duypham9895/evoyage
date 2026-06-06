@@ -25,7 +25,7 @@ describe('feedbackRequestSchema', () => {
         useCase: 'Planning a road trip',
         correctInfo: 'The correct address is...',
         rating: 5,
-        pageUrl: 'https://evoyagevn.vercel.app/route',
+        pageUrl: 'https://evoyage.duypham.me/route',
         userAgent: 'Mozilla/5.0',
         viewport: '1920x1080',
         routeParams: 'start=10.5,106.7',

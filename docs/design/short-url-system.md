@@ -20,7 +20,7 @@ The `useUrlState` hook (`src/hooks/useUrlState.ts`) already syncs all trip param
 A typical trip URL with two waypoints and a custom vehicle:
 
 ```
-https://evoyage.app/plan?start=H%C3%A0%20N%E1%BB%99i&end=%C4%90%C3%A0%20N%E1%BA%B5ng
+https://evoyage.duypham.me/plan?start=H%C3%A0%20N%E1%BB%99i&end=%C4%90%C3%A0%20N%E1%BA%B5ng
 &slat=21.028511&slng=105.804817&elat=16.047079&elng=108.206230
 &wp=[{"n":"Ninh B%C3%ACnh","lat":20.2506,"lng":105.9745},{"n":"Vinh","lat":18.6796,"lng":105.6813}]
 &cv={"brand":"VinFast","model":"VF8","batteryCapacityKwh":87.7,"officialRangeKm":420,"chargingTimeDC_10to80_min":31}
@@ -37,7 +37,7 @@ This URL is 400-600+ characters. Consequences:
 
 ### 1.3 Goal
 
-Provide a short, shareable URL (e.g., `https://evoyage.app/s/Xk9mQ2`) that reliably restores the full trip state. The ShareButton should offer both the existing PNG share and a new link-sharing flow.
+Provide a short, shareable URL (e.g., `https://evoyage.duypham.me/s/Xk9mQ2`) that reliably restores the full trip state. The ShareButton should offer both the existing PNG share and a new link-sharing flow.
 
 ---
 
@@ -95,7 +95,7 @@ Assuming 500 short URLs created per day:
 ```typescript
 {
   code: string    // "Xk9mQ2p"
-  url: string     // "https://evoyage.app/s/Xk9mQ2p"
+  url: string     // "https://evoyage.duypham.me/s/Xk9mQ2p"
 }
 ```
 
@@ -398,4 +398,4 @@ No data migration needed -- this is a new table.
 
 2. **QR code generation**: The project already has `qrcode` as a dependency. Should the share modal include a QR code for the short URL? This would be useful for in-person sharing (e.g., showing a trip plan to a passenger). Recommendation: include in Phase 2 as a low-effort addition.
 
-3. **OG meta tags**: When someone pastes `evoyage.app/s/Xk9mQ2p` into a chat, should the link preview show trip details (route, distance, stops)? This requires the `/s/[code]` page to render OG tags before redirecting. Recommendation: defer to Phase 3 -- requires generating dynamic OG images per trip.
+3. **OG meta tags**: When someone pastes `evoyage.duypham.me/s/Xk9mQ2p` into a chat, should the link preview show trip details (route, distance, stops)? This requires the `/s/[code]` page to render OG tags before redirecting. Recommendation: defer to Phase 3 -- requires generating dynamic OG images per trip.

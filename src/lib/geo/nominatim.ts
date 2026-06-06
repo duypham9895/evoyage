@@ -32,7 +32,7 @@ export async function searchPlaces(
   const response = await fetch(`${NOMINATIM_BASE}/search?${params}`, {
     signal,
     headers: {
-      'User-Agent': 'EVoyage/1.0 (https://evoyagevn.vercel.app)',
+      'User-Agent': 'EVoyage/1.0 (https://evoyage.duypham.me)',
     },
   });
 

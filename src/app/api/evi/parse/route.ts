@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       try {
         const reverseUrl = `https://nominatim.openstreetmap.org/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json&accept-language=vi&zoom=16`;
         const reverseRes = await fetch(reverseUrl, {
-          headers: { 'User-Agent': 'EVoyage/1.0 (https://evoyagevn.vercel.app)' },
+          headers: { 'User-Agent': 'EVoyage/1.0 (https://evoyage.duypham.me)' },
         });
         const reverseData = await reverseRes.json();
         startDisplay = reverseData.display_name ?? null;

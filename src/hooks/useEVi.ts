@@ -43,7 +43,7 @@ const MAX_HISTORY = 10;
 const MAX_CLIENT_RETRIES = 2;
 const CLIENT_RETRY_DELAY_MS = 1000;
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/reverse';
-const USER_AGENT = 'EVoyage/1.0 (https://evoyagevn.vercel.app)';
+const USER_AGENT = 'EVoyage/1.0 (https://evoyage.duypham.me)';
 
 // ── Helpers ──
 

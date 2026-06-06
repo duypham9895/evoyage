@@ -6,6 +6,16 @@ import type { NextConfig } from "next";
 // here because they don't need per-request data.
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'evoyagevn.vercel.app' }],
+        destination: 'https://evoyage.duypham.me/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

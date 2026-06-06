@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Derive base URL from request
     const proto = request.headers.get('x-forwarded-proto') ?? 'https';
-    const host = request.headers.get('host') ?? 'evoyage.app';
+    const host = request.headers.get('host') ?? 'evoyage.duypham.me';
     const baseUrl = `${proto}://${host}`;
 
     // Create the short URL

@@ -39,7 +39,7 @@ async function fetchEVPowerStations(): Promise<EVPowerRaw[]> {
   const res = await fetch(LOAD_MAP_URL, {
     method: 'POST',
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; eVoyageBot/1.0; +https://evoyage.app)',
+      'User-Agent': 'Mozilla/5.0 (compatible; eVoyageBot/1.0; +https://evoyage.duypham.me)',
       'X-Requested-With': 'XMLHttpRequest',
       'Content-Type': 'application/x-www-form-urlencoded',
       Referer: 'https://evpower.vn/en/find-a-charging-station',

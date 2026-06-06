@@ -34,7 +34,7 @@ describe('sendFeedbackEmail', () => {
       feedbackId: 'test-id',
       category: 'GENERAL_FEEDBACK',
       description: 'sample feedback',
-      pageUrl: 'https://evoyagevn.vercel.app/plan?slat=10.65&slng=106.58&elat=11.91&elng=108.46&vid=vf8-plus',
+      pageUrl: 'https://evoyage.duypham.me/plan?slat=10.65&slng=106.58&elat=11.91&elng=108.46&vid=vf8-plus',
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();

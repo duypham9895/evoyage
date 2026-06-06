@@ -74,7 +74,7 @@ async function geocodeAddress(address: string): Promise<Coordinate> {
 
   const response = await fetch(`${NOMINATIM_BASE}/search?${params}`, {
     headers: {
-      'User-Agent': 'EVoyage/1.0 (https://evoyagevn.vercel.app)',
+      'User-Agent': 'EVoyage/1.0 (https://evoyage.duypham.me)',
     },
     signal: AbortSignal.timeout(10000),
   });

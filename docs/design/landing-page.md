@@ -689,7 +689,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'vi_VN',
     alternateLocale: 'en_US',
-    url: 'https://evoyage.app',
+    url: 'https://evoyage.duypham.me',
     siteName: 'eVoyage',
   },
   twitter: {
@@ -702,7 +702,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: 'https://evoyage.app',
+    canonical: 'https://evoyage.duypham.me',
   },
 };
 ```

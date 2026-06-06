@@ -89,7 +89,7 @@ export async function queryNearbyPois(
         // Overpass returns 406 to requests with the Node default UA;
         // a real-looking UA satisfies their content-negotiation. Identify
         // ourselves so OSM operators can reach us if usage spikes.
-        'User-Agent': 'eVoyage/1.0 (+https://evoyagevn.vercel.app)',
+        'User-Agent': 'eVoyage/1.0 (+https://evoyage.duypham.me)',
         Accept: 'application/json',
       },
       body,

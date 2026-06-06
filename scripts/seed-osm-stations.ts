@@ -109,7 +109,7 @@ async function main(): Promise<void> {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
-      'User-Agent': 'evoyage/1.0 (https://evoyagevn.vercel.app)',
+      'User-Agent': 'evoyage/1.0 (https://evoyage.duypham.me)',
     },
   });
   if (!response.ok) throw new Error(`Overpass API error: ${response.status}`);

@@ -4,7 +4,7 @@ Date: 2026-06-04
 
 ## Problem
 
-The AI trip-planning flow on `https://evoyagevn.vercel.app/plan` fails during a common multi-turn conversation:
+The AI trip-planning flow on `https://evoyage.duypham.me/plan` fails during a common multi-turn conversation:
 
 1. User asks: `Kế hoạch đi Đà Lạt ngày mai`
 2. eVi asks for start location.
@@ -257,7 +257,7 @@ After deploy, replay exact second-turn request against production:
 
 ```bash
 curl -sS -w 'status=%{http_code} time=%{time_total}\n' \
-  -X POST https://evoyagevn.vercel.app/api/evi/parse \
+  -X POST https://evoyage.duypham.me/api/evi/parse \
   -H 'content-type: application/json' \
   --data '{"message":"từ vị trí hiện tại","history":[{"role":"user","content":"Kế hoạch đi Đà Lạt ngày mai"},{"role":"assistant","content":"Bạn muốn xuất phát từ đâu ạ?"}],"userLocation":{"lat":10.804067355,"lng":106.7142873},"previousVehicleId":null,"accumulatedParams":{"start":null,"end":"Thành phố Đà Lạt, Phường Xuân Trường - Đà Lạt, Tỉnh Lâm Đồng, Việt Nam","vehicleBrand":null,"vehicleModel":null,"currentBattery":80}}'
 ```
@@ -272,7 +272,7 @@ Expected:
 
 Also verify in browser:
 
-1. Open `https://evoyagevn.vercel.app/plan`.
+1. Open `https://evoyage.duypham.me/plan`.
 2. Send `Kế hoạch đi Đà Lạt ngày mai`.
 3. Allow location if prompted.
 4. Send `từ vị trí hiện tại`.
@@ -317,4 +317,3 @@ No data cleanup is required.
 - No regression in existing eVi parse tests.
 - `npm test` passes.
 - `npx next build` passes.
-

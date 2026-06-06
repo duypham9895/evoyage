@@ -232,8 +232,8 @@ jobs:
 
 | Job name | Schedule | URL | Headers |
 |---|---|---|---|
-| `evoyage-poll-station-status` | `0 * * * *` (hourly on the hour) | `https://evoyage.app/api/cron/poll-station-status` | `Authorization: Bearer ${CRON_SECRET}` |
-| `evoyage-aggregate-popularity` | `0 19 * * *` (daily 19:00 UTC = 2:00 AM VN) | `https://evoyage.app/api/cron/aggregate-popularity` | `Authorization: Bearer ${CRON_SECRET}` |
+| `evoyage-poll-station-status` | `0 * * * *` (hourly on the hour) | `https://evoyage.duypham.me/api/cron/poll-station-status` | `Authorization: Bearer ${CRON_SECRET}` |
+| `evoyage-aggregate-popularity` | `0 19 * * *` (daily 19:00 UTC = 2:00 AM VN) | `https://evoyage.duypham.me/api/cron/aggregate-popularity` | `Authorization: Bearer ${CRON_SECRET}` |
 
 **Failure handling on cron side**: cron-job.org retries 2x with backoff. If still fails → email alert. Set `Treat as failure` for HTTP > 299.
 
@@ -273,7 +273,7 @@ Assumptions:
 
 1. **CRON_SECRET** — minimum 64 random chars, stored in Vercel env vars + cron-job.org config. Rotation procedure documented.
 2. **Cookie storage** — cookies grant API access to V-GREEN. Treat as secrets. `VinfastApiCookies.cookieJson` is sensitive; access only from server-side code.
-3. **Rate-limit politeness** — hourly = 24 calls/day to V-GREEN. Well below any reasonable rate limit. Add `User-Agent: eVoyage/1.0 (https://evoyage.app)` header for transparency.
+3. **Rate-limit politeness** — hourly = 24 calls/day to V-GREEN. Well below any reasonable rate limit. Add `User-Agent: eVoyage/1.0 (https://evoyage.duypham.me)` header for transparency.
 4. **No PII collected** — only station IDs and statuses. Zero user data in this pipeline.
 5. **Idempotency** — re-running an hourly poll within the same hour is safe (dedup-on-change). cron-job.org retries are harmless.
 

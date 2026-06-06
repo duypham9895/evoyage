@@ -37,26 +37,26 @@ describe('POST /api/short-url', () => {
     validateParamsMock.mockReturnValue({ valid: true, params: 'start=10.7,106.6&end=21.0,105.8' });
     createShortUrlMock.mockResolvedValue({
       code: 'AbCdEfG',
-      url: 'https://evoyage.app/s/AbCdEfG',
+      url: 'https://evoyage.duypham.me/s/AbCdEfG',
     });
 
     const res = await POST(makeRequest({ params: 'start=10.7,106.6&end=21.0,105.8' }));
 
     expect(res.status).toBe(201);
     const data = await res.json();
-    expect(data).toEqual({ code: 'AbCdEfG', url: 'https://evoyage.app/s/AbCdEfG' });
+    expect(data).toEqual({ code: 'AbCdEfG', url: 'https://evoyage.duypham.me/s/AbCdEfG' });
     expect(validateParamsMock).toHaveBeenCalledWith('start=10.7,106.6&end=21.0,105.8');
   });
 
   it('derives baseUrl from x-forwarded-proto + host headers', async () => {
     validateParamsMock.mockReturnValue({ valid: true, params: 'start=1' });
-    createShortUrlMock.mockResolvedValue({ code: 'X', url: 'https://evoyagevn.vercel.app/s/X' });
+    createShortUrlMock.mockResolvedValue({ code: 'X', url: 'https://evoyage.duypham.me/s/X' });
 
-    await POST(makeRequest({ params: 'start=1' }, { proto: 'https', host: 'evoyagevn.vercel.app' }));
+    await POST(makeRequest({ params: 'start=1' }, { proto: 'https', host: 'evoyage.duypham.me' }));
 
     const [params, baseUrl] = createShortUrlMock.mock.calls[0]!;
     expect(params).toBe('start=1');
-    expect(baseUrl).toBe('https://evoyagevn.vercel.app');
+    expect(baseUrl).toBe('https://evoyage.duypham.me');
   });
 
   it('returns 400 on malformed JSON body', async () => {

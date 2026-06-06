@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import LandingPageContent from '@/components/landing/LandingPageContent';
 
+const SITE_URL = 'https://evoyage.duypham.me';
+
 export const metadata: Metadata = {
   title: 'eVoyage — Lên kế hoạch chuyến đi xe điện tại Việt Nam',
   description:
@@ -12,7 +14,7 @@ export const metadata: Metadata = {
       'Plan your electric vehicle road trip across Vietnam with real-world range calculations and VinFast charging station data.',
     type: 'website',
     locale: 'vi_VN',
-    url: 'https://evoyage.app',
+    url: SITE_URL,
     siteName: 'eVoyage',
   },
   twitter: {
@@ -26,7 +28,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   alternates: {
-    canonical: 'https://evoyage.app',
+    canonical: SITE_URL,
   },
 };
 

@@ -51,7 +51,7 @@ export default function PlaceAutocomplete({
       // Reverse geocode to get place name
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=vi,en`,
-        { headers: { 'User-Agent': 'EVoyage/1.0 (https://evoyagevn.vercel.app)' } }
+        { headers: { 'User-Agent': 'EVoyage/1.0 (https://evoyage.duypham.me)' } }
       );
       if (response.ok) {
         const data = await response.json();
