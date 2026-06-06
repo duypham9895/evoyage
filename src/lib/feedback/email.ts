@@ -90,7 +90,7 @@ function buildHtmlBody(payload: EmailPayload): string {
   return `
     <div style="max-width:600px;margin:0 auto;background:#1A1A1F;border-radius:12px;overflow:hidden;font-family:system-ui,-apple-system,sans-serif">
       <div style="padding:16px 20px;background:#0F0F11;border-bottom:1px solid #252530">
-        <span style="color:#00D4AA;font-weight:700;font-size:18px">⚡ eVoyage</span>
+        <span style="color:#00D4AA;font-weight:700;font-size:18px;letter-spacing:-0.01em">eVoyage</span>
         <span style="color:#6B6B78;font-size:14px;margin-left:12px">Phản hồi mới</span>
       </div>
       <table style="width:100%;border-collapse:collapse">${rows.join('')}</table>

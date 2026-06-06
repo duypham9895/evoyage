@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 160" role="img" aria-labelledby="title desc">
+  <title id="title">eVoyage Route E wordmark</title>
+  <desc id="desc">The eVoyage wordmark with a route-shaped lowercase e and white Voyage text.</desc>
+  <defs>
+    <style>
+      .heading { fill: #E8E8ED; font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700; }
+    </style>
+  </defs>
+  <rect width="680" height="160" rx="24" fill="#0F0F11" />
+  <path
+    d="M72 75 C35 48 27 126 77 139 C127 151 170 114 164 67 C158 28 91 33 80 85 H174"
+    fill="none"
+    stroke="#00D4AA"
+    stroke-width="15"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="174" cy="85" r="6" fill="#0F0F11" stroke="#00D4AA" stroke-width="4" />
+  <text x="214" y="104" class="heading" font-size="74">Voyage</text>
+</svg>

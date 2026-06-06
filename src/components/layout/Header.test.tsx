@@ -19,4 +19,16 @@ describe('Header', () => {
     expect(screen.queryByText('OSM')).not.toBeInTheDocument();
     expect(screen.queryByText('Mapbox')).not.toBeInTheDocument();
   });
+
+  it('links the Route E wordmark back home with one accessible label', () => {
+    render(
+      <LocaleProvider>
+        <Header />
+      </LocaleProvider>,
+    );
+
+    const logoLink = screen.getByRole('link', { name: 'eVoyage home' });
+    expect(logoLink).toHaveAttribute('href', '/');
+    expect(screen.getByText('Voyage')).toBeInTheDocument();
+  });
 });

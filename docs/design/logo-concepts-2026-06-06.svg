@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">eVoyage logo concepts</title>
+  <desc id="desc">Three logo directions for eVoyage: Route E, Range Halo, and Vietnam Thread.</desc>
+  <defs>
+    <style>
+      .bg { fill: #0F0F11; }
+      .panel { fill: #1A1A1F; stroke: rgba(107, 107, 120, 0.22); stroke-width: 1; }
+      .panel-alt { fill: #111114; stroke: rgba(107, 107, 120, 0.22); stroke-width: 1; }
+      .text { fill: #E8E8ED; font-family: "Be Vietnam Pro", system-ui, sans-serif; }
+      .muted { fill: #A0A0AB; font-family: "Be Vietnam Pro", system-ui, sans-serif; }
+      .tiny { fill: #6B6B78; font-family: "JetBrains Mono", ui-monospace, monospace; }
+      .heading { fill: #E8E8ED; font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700; }
+      .accent { fill: #00D4AA; }
+      .accent-stroke { stroke: #00D4AA; }
+      .dim-stroke { stroke: #00A888; }
+      .info-stroke { stroke: #5B9BFF; }
+      .route { fill: none; stroke: #00D4AA; stroke-width: 24; stroke-linecap: round; stroke-linejoin: round; }
+      .route-small { fill: none; stroke: #00D4AA; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+      .route-hair { fill: none; stroke: #00D4AA; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+      .ghost-line { fill: none; stroke: rgba(232, 232, 237, 0.18); stroke-width: 1; }
+    </style>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 0.831  0 0 0 0 0.667  0 0 0 0.45 0" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect class="bg" width="1600" height="1120" />
+
+  <text x="72" y="92" class="heading" font-size="44">eVoyage logo exploration</text>
+  <text x="72" y="132" class="muted" font-size="18">Trusted navigation instrument first. Warm Vietnamese travel companion second.</text>
+  <text x="72" y="166" class="tiny" font-size="13">Tokens: #0F0F11 background, #1A1A1F surface, #00D4AA accent, Space Grotesk wordmark</text>
+
+  <!-- Concept A -->
+  <g transform="translate(72 230)">
+    <rect class="panel" width="460" height="610" rx="24" />
+    <text x="32" y="58" class="tiny" font-size="13">01 RECOMMENDED</text>
+    <text x="32" y="100" class="heading" font-size="34">Route E</text>
+    <text x="32" y="132" class="muted" font-size="15">A planned route shaped into the brand's lowercase e.</text>
+
+    <g transform="translate(118 174)">
+      <rect width="224" height="224" rx="48" fill="#111114" stroke="rgba(107,107,120,0.24)" />
+      <path class="route" filter="url(#softGlow)" transform="translate(-88 -126) scale(0.72)" d="M256 146 C206 108 132 126 107 185 C82 245 120 316 188 330 C253 343 314 298 319 235 C323 183 285 147 232 151 C185 154 154 185 148 230 H315" />
+      <circle cx="138" cy="40" r="8" fill="#E8E8ED" />
+      <circle cx="139" cy="40" r="17" fill="none" stroke="rgba(0,212,170,0.22)" stroke-width="2" />
+      <circle cx="217" cy="39" r="5" fill="#00D4AA" opacity="0.5" />
+      <circle cx="219" cy="143" r="7" fill="#0F0F11" stroke="#00D4AA" stroke-width="4" />
+    </g>
+
+    <g transform="translate(32 442)">
+      <path class="route-small" d="M36 36 C14 20 9 66 38 74 C67 82 92 61 88 35 C84 12 46 15 39 43 H94" />
+      <circle cx="91" cy="43" r="3.5" fill="#0F0F11" stroke="#00D4AA" stroke-width="2.5" />
+      <text x="118" y="50" class="heading" font-size="42">Voyage</text>
+    </g>
+
+    <g transform="translate(32 526)">
+      <rect width="396" height="56" rx="14" fill="#0F0F11" />
+      <path class="route-hair" d="M34 31 C20 20 18 47 37 51 C56 55 71 43 69 28 C67 15 44 17 40 35 H73" />
+      <text x="88" y="38" class="heading" font-size="25">Voyage</text>
+      <text x="242" y="36" class="tiny" font-size="12">app header scale</text>
+    </g>
+  </g>
+
+  <!-- Concept B -->
+  <g transform="translate(560 230)">
+    <rect class="panel-alt" width="460" height="610" rx="24" />
+    <text x="32" y="58" class="tiny" font-size="13">02 EXPLORATION</text>
+    <text x="32" y="100" class="heading" font-size="34">Range Halo</text>
+    <text x="32" y="132" class="muted" font-size="15">An instrument gauge around the e for range confidence.</text>
+
+    <g transform="translate(118 174)">
+      <rect width="224" height="224" rx="48" fill="#111114" stroke="rgba(107,107,120,0.24)" />
+      <circle cx="112" cy="112" r="78" fill="none" stroke="rgba(107,107,120,0.28)" stroke-width="14" />
+      <path d="M60 169 A78 78 0 1 1 184 169" fill="none" stroke="#00D4AA" stroke-width="14" stroke-linecap="round" filter="url(#softGlow)" />
+      <path class="route-small" d="M80 121 C58 104 53 151 83 158 C112 165 139 143 135 116 C131 92 91 96 84 126 H142" />
+      <circle cx="142" cy="126" r="4" fill="#0F0F11" stroke="#00D4AA" stroke-width="3" />
+      <circle cx="184" cy="169" r="7" fill="#E8E8ED" />
+    </g>
+
+    <g transform="translate(32 442)">
+      <circle cx="46" cy="42" r="36" fill="none" stroke="rgba(107,107,120,0.35)" stroke-width="7" />
+      <path d="M22 72 A36 36 0 1 1 74 70" fill="none" stroke="#00D4AA" stroke-width="7" stroke-linecap="round" />
+      <text x="118" y="50" class="heading" font-size="42"><tspan fill="#00D4AA">e</tspan>Voyage</text>
+    </g>
+
+    <g transform="translate(32 526)">
+      <rect width="396" height="56" rx="14" fill="#0F0F11" />
+      <circle cx="42" cy="31" r="20" fill="none" stroke="rgba(107,107,120,0.35)" stroke-width="4" />
+      <path d="M29 47 A20 20 0 1 1 57 47" fill="none" stroke="#00D4AA" stroke-width="4" stroke-linecap="round" />
+      <text x="74" y="38" class="heading" font-size="25"><tspan fill="#00D4AA">e</tspan>Voyage</text>
+      <text x="242" y="36" class="tiny" font-size="12">more technical</text>
+    </g>
+  </g>
+
+  <!-- Concept C -->
+  <g transform="translate(1048 230)">
+    <rect class="panel" width="460" height="610" rx="24" />
+    <text x="32" y="58" class="tiny" font-size="13">03 EXPLORATION</text>
+    <text x="32" y="100" class="heading" font-size="34">Vietnam Thread</text>
+    <text x="32" y="132" class="muted" font-size="15">A north-south route gesture inspired by Vietnam journeys.</text>
+
+    <g transform="translate(118 174)">
+      <rect width="224" height="224" rx="48" fill="#111114" stroke="rgba(107,107,120,0.24)" />
+      <path d="M128 32 C92 58 91 96 128 117 C170 141 170 178 113 202" fill="none" stroke="rgba(232,232,237,0.12)" stroke-width="42" stroke-linecap="round" />
+      <path d="M128 32 C92 58 91 96 128 117 C170 141 170 178 113 202" fill="none" stroke="#00D4AA" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" filter="url(#softGlow)" />
+      <circle cx="128" cy="32" r="10" fill="#E8E8ED" />
+      <circle cx="113" cy="202" r="10" fill="#0F0F11" stroke="#00D4AA" stroke-width="5" />
+      <circle cx="156" cy="146" r="6" fill="#5B9BFF" />
+    </g>
+
+    <g transform="translate(32 442)">
+      <path d="M50 7 C20 31 22 57 51 73 C82 90 79 115 38 134" fill="none" stroke="#00D4AA" stroke-width="8" stroke-linecap="round" />
+      <circle cx="50" cy="7" r="5" fill="#E8E8ED" />
+      <text x="118" y="72" class="heading" font-size="42"><tspan fill="#00D4AA">e</tspan>Voyage</text>
+    </g>
+
+    <g transform="translate(32 526)">
+      <rect width="396" height="56" rx="14" fill="#0F0F11" />
+      <path d="M42 14 C27 24 27 37 43 44 C55 49 56 56 43 62" fill="none" stroke="#00D4AA" stroke-width="4" stroke-linecap="round" />
+      <text x="74" y="38" class="heading" font-size="25"><tspan fill="#00D4AA">e</tspan>Voyage</text>
+      <text x="242" y="36" class="tiny" font-size="12">most local</text>
+    </g>
+  </g>
+
+  <g transform="translate(72 895)">
+    <rect width="1436" height="72" rx="18" fill="#111114" stroke="rgba(107,107,120,0.22)" />
+    <text x="28" y="31" class="heading" font-size="20">Recommendation</text>
+    <text x="28" y="54" class="muted" font-size="15">Use Route E as the primary identity. It keeps eVoyage recognizable, avoids EV cliches, and works as both a compact app icon and a wordmark.</text>
+  </g>
+
+  <g transform="translate(72 1008)">
+    <text x="0" y="0" class="tiny" font-size="13">Small-size check</text>
+    <g transform="translate(0 20) scale(0.18)">
+      <rect width="224" height="224" rx="48" fill="#111114" stroke="rgba(107,107,120,0.24)" />
+      <path class="route" transform="translate(-88 -126) scale(0.72)" d="M256 146 C206 108 132 126 107 185 C82 245 120 316 188 330 C253 343 314 298 319 235 C323 183 285 147 232 151 C185 154 154 185 148 230 H315" />
+      <circle cx="138" cy="40" r="8" fill="#E8E8ED" />
+      <circle cx="219" cy="143" r="7" fill="#0F0F11" stroke="#00D4AA" stroke-width="4" />
+    </g>
+    <g transform="translate(62 20) scale(0.25)">
+      <path class="route-small" d="M36 36 C14 20 9 66 38 74 C67 82 92 61 88 35 C84 12 46 15 39 43 H94" />
+      <circle cx="91" cy="43" r="3.5" fill="#0F0F11" stroke="#00D4AA" stroke-width="2.5" />
+      <text x="118" y="50" class="heading" font-size="42">Voyage</text>
+    </g>
+  </g>
+</svg>
