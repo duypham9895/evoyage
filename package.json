@@ -36,16 +36,16 @@
     "html-to-image": "^1.11.13",
     "impit": "^0.14.1",
     "leaflet": "^1.9.4",
-    "mapbox-gl": "^3.24.0",
+    "mapbox-gl": "^3.24.1",
     "nanoid": "^5.1.11",
-    "next": "16.2.6",
-    "openai": "^6.39.1",
+    "next": "16.2.9",
+    "openai": "^6.42.0",
     "playwright-core": "^1.58.2",
-    "posthog-js": "^1.376.5",
+    "posthog-js": "^1.386.6",
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "react-leaflet": "^5.0.0",
     "react-map-gl": "^8.1.1",
     "zod": "^4.4.3"
@@ -72,6 +72,6 @@
     "vitest": "^4.1.7"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.2.1"
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.1"
   }
 }
