@@ -1,107 +1,90 @@
 # eVoyage Agent Team
 
-Project-specific agent roster that complements global agents at `~/.claude/agents/`.
+Twelve role-based agents plus three workflows. Agents carry judgement and standards;
+workflows carry deterministic control flow (fan-out, verification, review gates).
+Use an agent when you need a perspective. Use a workflow when you need a process
+that must not be improvised.
 
-## The Team
+## Why this file changed
 
-### Strategic Roles (Decision-makers)
-| Agent | Role | When to Use |
-|-------|------|-------------|
-| **head-of-product** | Product strategy, prioritization, PRDs | Before building new features, scope decisions |
-| **head-of-design** | Design system, visual hierarchy, UX flows | Before designing UI, layout decisions |
-| **head-of-engineering** | Architecture, tech debt, code health | Before major refactors, dependency changes |
+Until 2026-09-30, the nine files in `.claude/agents/` had no YAML frontmatter, so
+Claude Code never registered any of them — they were prose nobody could invoke.
+Each now opens with `name` / `description` / `tools`, and their stale facts have
+been corrected against the live repo.
 
-### Specialist Roles (Builders & Reviewers)
-| Agent | Role | When to Use |
-|-------|------|-------------|
-| **senior-frontend** | React components, state, performance | Building/refactoring components |
-| **senior-backend** | API routes, database, external APIs | Building/modifying API endpoints |
-| **qa-lead** | Testing strategy, regression, user flows | After implementation, before deploy |
-| **devsecops** | Security, deployment, infrastructure | Before deploy, security concerns |
+## Roster
 
-### Research & Content Roles
-| Agent | Role | When to Use |
-|-------|------|-------------|
-| **ux-researcher** | User behavior, feedback analysis, personas | Validating design decisions, analyzing feedback |
-| **content-writer** | Bilingual copy, error messages, marketing | Adding locale strings, writing UI text |
+### Leadership
+| Agent | Owns | Invoke when |
+|---|---|---|
+| `head-of-product` | Prioritization, scope, PRDs | Deciding what to build next, or whether to cut |
+| `head-of-engineering` | Architecture, tech debt, file-size limits | Before a refactor, schema change, or new dependency |
+| `head-of-design` | Design system, DESIGN.md compliance | Before any visual work; to audit for violations |
 
-### Technical Reviewers (from Layer 0)
-| Agent | Role | When to Use |
-|-------|------|-------------|
-| **map-reviewer** | Map/geo code across 3 providers | Map component or routing lib changes |
-| **i18n-checker** | Locale sync, translation quality | Locale file changes |
-| **ux-auditor** | "Less Icons" philosophy enforcement | Any component UI changes |
+### Build
+| Agent | Owns | Invoke when |
+|---|---|---|
+| `senior-frontend` | `src/components`, `src/hooks`, pages | Component work, state bugs, responsive layout |
+| `senior-backend` | `src/app/api`, Prisma, external APIs | Route work, queries, integrations, caching |
+| `data-pipeline-engineer` | `scripts/`, cron routes, VinFast ingestion | A crawl or sync job fails; station data looks stale |
 
-## Agent-to-File Routing
+### Quality
+| Agent | Owns | Invoke when |
+|---|---|---|
+| `qa-lead` | Test strategy, regression detection | After any implementation, before any commit |
+| `devsecops` | Security posture, CSP, rate limits, deploy | New endpoints, auth changes, pre-deploy |
+| `release-manager` | Version, CHANGELOG, branch protection, release gate | Cutting a release; deploy path is broken |
 
-### By file path
-| Path Pattern | Primary Agent | Secondary |
-|-------------|---------------|-----------|
-| `src/components/Map*.tsx` | map-reviewer | senior-frontend |
-| `src/components/landing/*` | ux-auditor | content-writer |
-| `src/components/**/*.tsx` | senior-frontend | ux-auditor |
-| `src/lib/osrm.ts`, `src/lib/mapbox-*`, `src/lib/google-*` | map-reviewer | senior-backend |
-| `src/lib/route-planner.ts`, `station-ranker.ts`, `station-finder.ts` | senior-backend | head-of-engineering |
-| `src/lib/vinfast-*.ts` | senior-backend | devsecops |
-| `src/app/api/**` | senior-backend | devsecops |
-| `src/locales/*.json` | i18n-checker | content-writer |
-| `src/lib/locale.tsx` | i18n-checker | senior-frontend |
-| `prisma/schema.prisma` | senior-backend | head-of-engineering |
-| `next.config.ts` | devsecops | head-of-engineering |
-| `.github/workflows/*` | devsecops | — |
-| `src/app/globals.css` | head-of-design | senior-frontend |
-| `docs/**`, `CLAUDE.md` | head-of-product | — |
+### Content & Research
+| Agent | Owns | Invoke when |
+|---|---|---|
+| `content-writer` | Bilingual copy, locale keys | Any user-visible string changes |
+| `ux-researcher` | Feedback analysis, heuristics, a11y | Validating a design call; diagnosing low engagement |
+| `docs-keeper` | README, ARCHITECTURE, CHANGELOG, ADRs, RECOVERY | After a feature ships; when a doc contradicts code |
 
-## Workflow Patterns
+The three newest roles exist because real backlog clusters had no owner:
+`data-pipeline-engineer` (the crawl/cron surface, split between backend and devsecops),
+`release-manager` (version, changelog, and branch-protection drift), and
+`docs-keeper` (documentation drift — the single largest backlog category).
 
-### New Feature
+## Workflows
+
+| Workflow | Shape | Run it |
+|---|---|---|
+| `issue-triage` | 10 dimensions fan out, each finding adversarially verified | Quarterly, or whenever the backlog's age is unknown |
+| `fix-wave` | One isolated worktree per finding, then a cold reviewer per diff | After triage, on the confirmed findings |
+| `regression-gate` | Full verification sweep + per-subsystem blast-radius review | Before every commit, merge, or deploy |
+
 ```
-1. head-of-product  → "Should we build this? What's the scope?"
-2. head-of-design   → "How should it look and feel?"
-3. ux-researcher    → "What do users actually need?"
-4. head-of-engineering → "How should we architect this?"
-5. content-writer   → "What text/copy do we need?"
-6. senior-frontend + senior-backend → Build (parallel if independent)
-7. qa-lead          → Test
-8. ux-auditor + i18n-checker → Review (parallel)
-9. devsecops        → Pre-deploy security check
+Workflow({name: 'issue-triage'})
+Workflow({name: 'fix-wave', args: [ ...confirmed findings... ]})
+Workflow({name: 'regression-gate'})
 ```
 
-### Bug Fix
+## Where the backlog actually lives
+
+`docs/agents/issue-tracker.md` says GitHub issues. As of 2026-09-30 there are **zero
+open GitHub issues**, while `EVOYAGE_AUDIT_PLAN.md` holds roughly sixty tracked items.
+An agent that trusts the tracker doc alone concludes there is no work to do.
+
+Read `EVOYAGE_AUDIT_PLAN.md` (sections B, C, F), `QA-FINDINGS.md`, and `TODOS.md` —
+**and treat all three as stale until verified.** They were written 2026-05-24 against
+v0.8.0. The repo is v0.9.0. Most of their items are already fixed; the live problems
+are mostly ones they never recorded.
+
+## The rule that matters most
+
+Verify before you fix. The audit doc claims 106 TypeScript errors; the real count is 0.
+Acting on a stale list re-breaks things that were already repaired.
+
+## Baseline (measured 2026-09-30 @ `a00e34e`)
+
 ```
-1. qa-lead          → Reproduce and document
-2. senior-frontend or senior-backend → Fix (based on where bug lives)
-3. qa-lead          → Verify fix + regression check
+npm test               1467 tests / 133 files, all pass
+npx tsc --noEmit       5 errors (pre-existing test-fixture drift)
+npx next build         passes
+npx eslint src scripts 32 problems (14 errors, 18 warnings)
 ```
 
-### Design Change
-```
-1. head-of-design   → Design review
-2. ux-researcher    → User impact assessment
-3. content-writer   → Update copy if needed
-4. senior-frontend  → Implement
-5. ux-auditor       → Verify "Less Icons" compliance
-```
-
-### Pre-Deployment
-```
-Run in parallel:
-- qa-lead           → Regression checklist
-- devsecops         → Security audit
-- i18n-checker      → Locale sync
-- ux-auditor        → UI review
-```
-
-## Parallel Execution Rules
-
-1. **Always parallel**: ux-auditor + i18n-checker (no shared state)
-2. **Always parallel**: senior-frontend + senior-backend (different file scopes)
-3. **Always parallel**: qa-lead + devsecops (pre-deploy checks)
-4. **Sequential**: head-of-product → head-of-design → implementation agents
-5. **Sequential**: build agents → qa-lead → devsecops → deploy
-
-## Combining with Global Agents
-- After code change: global `code-reviewer` + relevant project agent(s) in parallel
-- For new features: global `planner` → project `head-of-product` for validation
-- For bugs: global `debugger` + project `qa-lead` in parallel
-- For architecture: global `architect` + project `head-of-engineering` in parallel
+Run `npm ci` first on a fresh clone — `node_modules` is not committed, and a missing
+install looks exactly like a broken test suite.
