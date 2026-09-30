@@ -77,12 +77,20 @@ const ROUTE_STATION_SELECT = {
   chargingStatus: true,
   parkingFee: true,
 } as const;
-const EXCLUDED_STATION_STATUSES = ['UNAVAILABLE', 'INACTIVE'] as const;
+const EXCLUDED_STATION_STATUSES = ['UNAVAILABLE', 'INACTIVE', 'OUTOFSERVICE'] as const;
 const EXCLUDED_STATION_STATUS_SET = new Set<string>(EXCLUDED_STATION_STATUSES);
 
 function isPrecautionaryStopsEnabled(): boolean {
   return process.env.PRECAUTIONARY_STOPS_ENABLED === 'true';
 }
+
+/**
+ * Worst-case budget for this handler: geocoding (10s) + directions (10s) +
+ * a provider fallback (10s) + matrix/DB work. Must exceed the client's own
+ * 25s abort (src/app/plan/page.tsx TRIP_CALC_ABORT_MS) so the platform never
+ * kills the function first and returns a non-JSON body.
+ */
+export const maxDuration = 60;
 
 /**
  * POST /api/route — Calculate a trip plan with charging stops.
@@ -148,6 +156,7 @@ export async function POST(request: NextRequest) {
     officialRangeKm: number;
     batteryCapacityKwh: number;
     chargingTimeDC_10to80_min: number | null;
+    dcMaxChargingPowerKw: number | null;
   };
 
   if (vehicleId) {
@@ -169,6 +178,7 @@ export async function POST(request: NextRequest) {
       officialRangeKm: resolved.officialRangeKm,
       batteryCapacityKwh: resolved.batteryCapacityKwh,
       chargingTimeDC_10to80_min: resolved.chargingTimeDC_10to80_min,
+      dcMaxChargingPowerKw: resolved.dcMaxChargingPowerKw,
     };
   } else if (customVehicle) {
     vehicle = {
@@ -178,6 +188,7 @@ export async function POST(request: NextRequest) {
       officialRangeKm: customVehicle.officialRangeKm,
       batteryCapacityKwh: customVehicle.batteryCapacityKwh,
       chargingTimeDC_10to80_min: customVehicle.chargingTimeDC_10to80_min ?? null,
+      dcMaxChargingPowerKw: null,
     };
   } else {
     return NextResponse.json(
@@ -208,6 +219,43 @@ export async function POST(request: NextRequest) {
     let directions;
     const hasWaypoints = waypoints && waypoints.length > 0;
     const directionsStartedAt = Date.now();
+
+    // The OSRM path. Used when the user picked OSRM, and reused as the Mapbox
+    // branch's fallback so resilience runs in both directions.
+    const fetchViaOsrm = async () => {
+      if (hasWaypoints) {
+        return fetchDirectionsWithWaypoints(start, end, waypoints);
+      }
+      if (routeCoordsAvailable) {
+        const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm');
+        if (cached) {
+          return {
+            polyline: cached.polyline,
+            distanceMeters: cached.distanceMeters,
+            durationSeconds: cached.durationSeconds,
+            startAddress: start,
+            endAddress: end,
+            startCoord: { lat: startLat!, lng: startLng! },
+            endCoord: { lat: endLat!, lng: endLng! },
+            provider: 'osrm' as const,
+          };
+        }
+        const fetched = await fetchDirectionsFromCoords(
+          { lat: startLat!, lng: startLng! },
+          { lat: endLat!, lng: endLng! },
+          start,
+          end,
+        );
+        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
+          polyline: fetched.polyline,
+          distanceMeters: fetched.distanceMeters,
+          durationSeconds: fetched.durationSeconds,
+        });
+        return fetched;
+      }
+      return fetchDirections(start, end);
+    };
+
     if (provider === 'mapbox') {
       const cached = hasWaypoints ? null : await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox');
       if (cached) {
@@ -221,71 +269,49 @@ export async function POST(request: NextRequest) {
           endCoord: { lat: endLat!, lng: endLng! },
         };
       } else {
-        const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
-        if (!mapboxToken) {
-          return NextResponse.json(
-            { error: 'Mapbox access token not configured on server' },
-            { status: 500 },
+        try {
+          const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
+          if (!mapboxToken) {
+            throw new Error('Mapbox access token not configured on server');
+          }
+          const mapboxResult = await fetchDirectionsMapbox(
+            startLat!, startLng!, endLat!, endLng!,
+            mapboxToken,
+            waypoints,
           );
-        }
-        const mapboxResult = await fetchDirectionsMapbox(
-          startLat!, startLng!, endLat!, endLng!,
-          mapboxToken,
-          waypoints,
-        );
-        // Normalize precision-6 polyline to precision-5 for uniform downstream use
-        const decoded = decodePolyline(mapboxResult.polyline, 6);
-        const normalizedPolyline = encodePolyline(decoded, 5);
+          // Normalize precision-6 polyline to precision-5 for uniform downstream use
+          const decoded = decodePolyline(mapboxResult.polyline, 6);
+          const normalizedPolyline = encodePolyline(decoded, 5);
 
-        directions = {
-          polyline: normalizedPolyline,
-          distanceMeters: mapboxResult.distanceMeters,
-          durationSeconds: mapboxResult.durationSeconds,
-          startAddress: mapboxResult.startAddress,
-          endAddress: mapboxResult.endAddress,
-          startCoord: mapboxResult.startCoord,
-          endCoord: mapboxResult.endCoord,
-        };
-        if (!hasWaypoints) {
-          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox', {
+          directions = {
             polyline: normalizedPolyline,
-            distanceMeters: directions.distanceMeters,
-            durationSeconds: directions.durationSeconds,
-          });
+            distanceMeters: mapboxResult.distanceMeters,
+            durationSeconds: mapboxResult.durationSeconds,
+            startAddress: mapboxResult.startAddress,
+            endAddress: mapboxResult.endAddress,
+            startCoord: mapboxResult.startCoord,
+            endCoord: mapboxResult.endCoord,
+          };
+          if (!hasWaypoints) {
+            await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'mapbox', {
+              polyline: normalizedPolyline,
+              distanceMeters: directions.distanceMeters,
+              durationSeconds: directions.durationSeconds,
+            });
+          }
+        } catch (mapboxError) {
+          // Mapbox unavailable (missing token, 5xx, network). Fall back to the
+          // free OSRM path — the mirror of the OSRM→Mapbox fallback in osrm.ts.
+          // OSRM returns precision-5 directly, so no polyline normalization here.
+          const reason = mapboxError instanceof Error ? mapboxError.message : String(mapboxError);
+          console.warn(
+            `[routing] Mapbox Directions failed (${reason}); falling back to OSRM.`,
+          );
+          directions = await fetchViaOsrm();
         }
       }
     } else {
-      if (waypoints && waypoints.length > 0) {
-        directions = await fetchDirectionsWithWaypoints(start, end, waypoints);
-      } else if (routeCoordsAvailable) {
-        const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm');
-        if (cached) {
-          directions = {
-            polyline: cached.polyline,
-            distanceMeters: cached.distanceMeters,
-            durationSeconds: cached.durationSeconds,
-            startAddress: start,
-            endAddress: end,
-            startCoord: { lat: startLat!, lng: startLng! },
-            endCoord: { lat: endLat!, lng: endLng! },
-            provider: 'osrm' as const,
-          };
-        } else {
-          directions = await fetchDirectionsFromCoords(
-            { lat: startLat!, lng: startLng! },
-            { lat: endLat!, lng: endLng! },
-            start,
-            end,
-          );
-          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
-            polyline: directions.polyline,
-            distanceMeters: directions.distanceMeters,
-            durationSeconds: directions.durationSeconds,
-          });
-        }
-      } else {
-        directions = await fetchDirections(start, end);
-      }
+      directions = await fetchViaOsrm();
     }
     mark('directionsMs', directionsStartedAt);
 
@@ -446,9 +472,7 @@ export async function POST(request: NextRequest) {
 
     if (decisionPoints.length > 0) {
       const isVinFast = vehicle.brand.toLowerCase() === 'vinfast';
-      const vehicleMaxChargeKw = ('dcMaxChargingPowerKw' in vehicle && vehicle.dcMaxChargingPowerKw)
-        ? vehicle.dcMaxChargingPowerKw as number
-        : undefined;
+      const vehicleMaxChargeKw = vehicle.dcMaxChargingPowerKw ?? undefined;
       const rankedMap = new Map<number, readonly RankedStation[]>();
 
       for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
