@@ -1,6 +1,10 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  // Vercel's Node runtime is arm64. Without linux-arm64-openssl-3.0.x every
+  // Prisma query fails at runtime with PrismaClientInitializationError
+  // ("generated for darwin-arm64 / rhel-openssl-3.0.x, deployment required
+  // linux-arm64-openssl-3.0.x"). rhel-openssl-3.0.x is kept for x64 runtimes.
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
