@@ -15,7 +15,8 @@ export interface MatrixResult {
  * @param source       Origin coordinate
  * @param destinations Up to 24 destination coordinates
  * @param accessToken  Mapbox access token
- * @returns Durations (seconds) and distances (meters) for each destination
+ * @returns Durations (seconds) and distances (meters), one entry per
+ *          destination in the order given
  */
 export async function fetchMatrixDurations(
   source: { lat: number; lng: number },
@@ -63,10 +64,22 @@ export async function fetchMatrixDurations(
       throw new Error(`Mapbox Matrix API returned code: ${data.code}`);
     }
 
-    // Extract row 0 (source → each destination)
+    // Row 0 is source → every coordinate. Drop its leading source→source cell
+    // so index i lines up with destinations[i].
+    const durationRow = data.durations?.[0];
+    const distanceRow = data.distances?.[0];
+
+    // A missing row means a malformed response. Throw rather than returning an
+    // empty result: the caller scores candidates by index and would silently
+    // treat every station as a zero-second detour. Throwing keeps the caller's
+    // existing catch-and-fall-back path, which is the safe behaviour.
+    if (!durationRow || !distanceRow) {
+      throw new Error('Mapbox Matrix API returned no source row');
+    }
+
     return {
-      durations: data.durations[0],
-      distances: data.distances[0],
+      durations: durationRow.slice(1),
+      distances: distanceRow.slice(1),
     };
   } finally {
     clearTimeout(timeoutId);
