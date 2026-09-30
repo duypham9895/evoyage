@@ -22,6 +22,16 @@ _Avoid_: charger (a charger is one connector at a Station), point, location.
 A Station attached to a Stop as a pre-computed fallback. Each Stop carries 0–3 Alternatives (ADR-0006), with the count driven by `BackupPressureScore`. Ranking is delegated to the existing `scoreStation` (detour drive-time + charge-time + VinFast affinity). Different from "a Station you could detour to" — an Alternative is explicitly endorsed by `TripPlanner`.
 _Avoid_: backup, fallback (in code). Vietnamese user-facing copy uses "trạm dự phòng".
 
+**Precautionary Stop**:
+An *extra* Stop injected between two required Stops when a leg looks risky, so the driver
+tops up early rather than arriving on a thin margin (ADR-0009). Unlike an **Alternative**,
+it is a new Stop on the Trip Plan, not a fallback attached to an existing one; unlike a
+required **Stop**, the trip completes without it and the driver can dismiss it in one tap.
+Injected when a leg's `BackupPressureScore` meets a threshold set by the Safety Factor tier
+— 5 at "very safe" (≤0.70), 4 at "recommended" (≤0.80), 3 at "risky" (>0.80) — capped at 2
+per Trip Plan. Gated by `PRECAUTIONARY_STOPS_ENABLED`, which defaults to off.
+_Avoid_: optional stop, top-up stop, buffer stop.
+
 **Operator**:
 The brand running a Station — primarily VinFast, V-GREEN, EVN. Affects connector type, payment method, and app required. Same-Operator continuity (e.g. a VinFast vehicle charging at a VinFast Station) earns a ranking-score bonus in `scoreStation`, reflecting same-app payment + membership and VinFast's ~80% DC fast-charger market share in VN.
 
@@ -59,6 +69,7 @@ Per-Station score in [0, 1] = fraction of `StationStatusObservation` records ove
 - A **Trip Plan** has one or more **Stop**s. Each **Stop** has 0–3 **Alternative**s.
 - A **Stop** references a **Station** as primary; its **Alternative**s reference different nearby **Station**s.
 - A **Station** is owned by exactly one **Operator**.
+- A **Trip Plan** carries 0–2 **Precautionary Stop**s, injected between required **Stop**s. Each still references a **Station** and carries its own **Alternative**s.
 - **Usable Range** depends on **Official Range** × **Safety Factor** × battery delta.
 - **Backup Pressure Score** is computed *per* **Stop**, using context from the surrounding **Trip Plan** (next-Stop distance, downstream **Station** count, trip departure time).
 
@@ -74,6 +85,6 @@ Per-Station score in [0, 1] = fraction of `StationStatusObservation` records ove
 
 ## Flagged ambiguities
 
-- "**Backup**" was used to mean three different things during initial design: pre-trip alternatives, in-trip reroute targets, and precautionary extra Stops. **Resolved**: only pre-trip alternatives are called **Alternative**s; in-trip rerouting and precautionary extra Stops are out of scope for v1 (ADR-0006).
+- "**Backup**" was used to mean three different things during initial design: pre-trip alternatives, in-trip reroute targets, and precautionary extra Stops. **Resolved**: only pre-trip alternatives are called **Alternative**s; in-trip rerouting stays out of scope. Precautionary extra Stops were rejected in ADR-0006, then reopened and shipped behind a default-off flag in ADR-0009 — see **Precautionary Stop** above.
 - **Stop** vs **Station** — used interchangeably in early conversations. **Resolved**: Stop = planned event on a Trip; Station = physical location. A Stop *uses* a Station.
 - "**Backup**" in code: avoid. Use **Alternative** in code; **trạm dự phòng** in user-facing Vietnamese copy.

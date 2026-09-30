@@ -14,6 +14,13 @@ export interface NominatimResult {
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 
+/**
+ * Deadline applied when the caller passes no signal of its own. Nominatim is
+ * free and throttled to 1 req/sec, and a queued response can otherwise hang
+ * until the platform kills the calling server function.
+ */
+const REQUEST_TIMEOUT_MS = 5000;
+
 export async function searchPlaces(
   query: string,
   signal?: AbortSignal,
@@ -30,7 +37,7 @@ export async function searchPlaces(
   });
 
   const response = await fetch(`${NOMINATIM_BASE}/search?${params}`, {
-    signal,
+    signal: signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
       'User-Agent': 'EVoyage/1.0 (https://evoyage.duypham.me)',
     },

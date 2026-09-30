@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { NextRequest } from 'next/server';
 
 /**
@@ -17,11 +17,12 @@ export function verifyCronSecret(request: NextRequest): boolean {
   const expected = `Bearer ${cronSecret}`;
   const provided = authHeader ?? '';
 
-  // Always compare fixed-size buffers to prevent length leakage
-  const bufA = Buffer.alloc(512);
-  const bufB = Buffer.alloc(512);
-  Buffer.from(expected).copy(bufA);
-  Buffer.from(provided).copy(bufB);
+  // Compare fixed-width SHA-256 digests: constant-time for any secret length,
+  // and no length leakage. Copying into a fixed 512-byte buffer instead would
+  // silently truncate a longer secret, making any two headers that agree on
+  // the first 512 bytes compare equal.
+  const expectedDigest = createHash('sha256').update(expected).digest();
+  const providedDigest = createHash('sha256').update(provided).digest();
 
-  return timingSafeEqual(bufA, bufB) && expected.length === provided.length;
+  return timingSafeEqual(expectedDigest, providedDigest);
 }

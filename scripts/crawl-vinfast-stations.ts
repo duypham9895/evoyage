@@ -14,35 +14,20 @@ import { chromium } from 'playwright';
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  fetchVinfastLocatorsFromPage,
+  VINFAST_BROWSER_USER_AGENT,
+} from '../src/lib/station/vinfast-browser-client';
+import {
+  getErrorMessage,
+  isRecoverableVinfastBrowserAccessError,
+} from '../src/lib/station/vinfast-upstream-error';
+import type { VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
 
 const prisma = new PrismaClient();
 
-const LOCATOR_PAGE = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';
 const BATCH_SIZE = 1000;
-
-interface VinFastLocatorStation {
-  readonly entity_id: string;
-  readonly store_id: string;
-  readonly code: string;
-  readonly name: string;
-  readonly address: string;
-  readonly lat: string;
-  readonly lng: string;
-  readonly hotline: string;
-  readonly province_id: string;
-  readonly access_type: string;
-  readonly party_id: string;
-  readonly charging_publish: boolean;
-  readonly charging_status: string;
-  readonly category_name: string;
-  readonly category_slug: string;
-  readonly hotline_xdv: string;
-  readonly open_time_service: string;
-  readonly close_time_service: string;
-  readonly parking_fee: boolean;
-  readonly has_link: boolean;
-  readonly marker_icon: string;
-}
+const MAX_ATTEMPTS = 3;
 
 function isInVietnam(lat: number, lng: number): boolean {
   return lat >= 8.0 && lat <= 23.5 && lng >= 102.0 && lng <= 110.0;
@@ -62,12 +47,11 @@ function inferProvince(lat: number): string {
   return 'Mekong Delta';
 }
 
-async function fetchVinFastLocators(): Promise<VinFastLocatorStation[]> {
+async function fetchVinFastLocators(): Promise<readonly VinfastLocatorRaw[]> {
   console.log('  Launching Chromium browser...');
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
-    userAgent:
-      'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    userAgent: VINFAST_BROWSER_USER_AGENT,
     viewport: { width: 1280, height: 720 },
   });
 
@@ -77,47 +61,51 @@ async function fetchVinFastLocators(): Promise<VinFastLocatorStation[]> {
 
   try {
     const page = await context.newPage();
-
-    console.log('  Navigating to locator page (solving CF challenge)...');
-    await page.goto(LOCATOR_PAGE, { waitUntil: 'networkidle', timeout: 30_000 });
-    console.log('  Page loaded:', await page.title());
-
-    console.log('  Calling get-locators API from browser context...');
-    const result = await page.evaluate(async () => {
-      const res = await fetch('/vn_vi/get-locators', {
-        headers: {
-          Accept: 'application/json, text/javascript, */*; q=0.01',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
-      });
-
-      if (!res.ok) return { error: true, status: res.status };
-
-      const text = await res.text();
-      if (text.includes('IM_UNDER_ATTACK') || text.includes('challenge-platform')) {
-        return { error: true, status: -1 };
-      }
-
-      return JSON.parse(text);
-    });
-
-    if ('error' in result) {
-      throw new Error(`VinFast API call failed with status: ${(result as { status: number }).status}`);
-    }
-
-    const json = result as { data: VinFastLocatorStation[] };
-    if (!json.data || !Array.isArray(json.data)) {
-      throw new Error('Unexpected response format from VinFast API');
-    }
-
-    return json.data;
+    console.log('  Fetching VinFast locators in browser context...');
+    return await fetchVinfastLocatorsFromPage(page);
   } finally {
     await browser.close();
   }
 }
 
-function buildStationData(s: VinFastLocatorStation) {
+/**
+ * Retry recoverable upstream failures: timeout, network error, 5xx/408/429, and
+ * Cloudflare challenges. The Cloudflare case matters most - the shared client
+ * labels a challenge body `cloudflare_blocked` regardless of its HTTP status, so
+ * gating on transient-only would skip retries for the single most likely failure
+ * mode. This matches scripts/poll-vinfast-station-status.ts; the two paths
+ * diverging is what let this crawl stay broken for ~70 days.
+ *
+ * Retries do not make failure silent. Once the attempts are exhausted the error
+ * propagates and the crawl exits non-zero, so the downstream README
+ * station-count sync never runs against a partial crawl.
+ */
+async function fetchVinFastLocatorsWithRetry(): Promise<readonly VinfastLocatorRaw[]> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return await fetchVinFastLocators();
+    } catch (err) {
+      lastErr = err;
+      console.error(
+        `  Attempt ${attempt}/${MAX_ATTEMPTS} failed: ${getErrorMessage(err)}`,
+      );
+      if (attempt < MAX_ATTEMPTS && isRecoverableVinfastBrowserAccessError(err)) {
+        const delaySec = 5 * attempt;
+        console.log(`  Retrying in ${delaySec}s...`);
+        await new Promise((r) => setTimeout(r, delaySec * 1000));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`VinFast crawl exhausted ${MAX_ATTEMPTS} attempts`);
+}
+
+function buildStationData(s: VinfastLocatorRaw) {
   const lat = parseFloat(s.lat);
   const lng = parseFloat(s.lng);
   return {
@@ -158,7 +146,7 @@ function buildStationData(s: VinFastLocatorStation) {
  * ~100x faster than individual Prisma operations over network.
  */
 async function bulkUpsertStations(
-  stations: VinFastLocatorStation[],
+  stations: readonly VinfastLocatorRaw[],
   existingByOcmId: Map<string, string>,
   existingByEntityId: Map<string, string>,
 ): Promise<{ created: number; updated: number }> {
@@ -252,7 +240,7 @@ async function main() {
 
   // Step 1: Fetch from VinFast
   console.log('[1/3] Fetching stations from vinfastauto.com...');
-  const allStations = await fetchVinFastLocators();
+  const allStations = await fetchVinFastLocatorsWithRetry();
   console.log(`  Total from API: ${allStations.length}`);
 
   // Step 2: Filter valid car charging stations

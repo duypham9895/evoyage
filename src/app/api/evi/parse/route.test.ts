@@ -136,6 +136,46 @@ describe('POST /api/evi/parse', () => {
     expect(data.error).toBeNull();
   });
 
+  it('bounds the reverse-geocode request and still answers when it aborts', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      startLocation: null,
+      endLocation: 'Đà Lạt',
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+    }));
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const originalFetch = global.fetch;
+    const fetchMock = vi.fn().mockRejectedValue(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const res = await POST(createRequest({
+        message: 'Đi Đà Lạt bằng VF8',
+        history: [],
+        userLocation: { lat: 10.77, lng: 106.70 },
+      }));
+
+      // Nominatim is free and throttled; an untimed reverse geocode can stall
+      // the whole 60s budget and turn the main eVi flow into a gateway error.
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const init = fetchMock.mock.calls[0][1] as RequestInit;
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+
+      // The driver still gets a usable answer — coordinates from geolocation,
+      // just without the readable address.
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.tripParams.startLat).toBe(10.77);
+      expect(data.tripParams.startLng).toBe(106.70);
+      expect(data.tripParams.start).toBeNull();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
   it('returns vehicle_pick follow-up when vehicle is missing and multiple matches', async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       endLocation: 'Đà Lạt',

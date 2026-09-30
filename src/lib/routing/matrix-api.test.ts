@@ -44,15 +44,32 @@ describe('fetchMatrixDurations', () => {
     expect(calledUrl).toContain(`access_token=${ACCESS_TOKEN}`);
   });
 
-  it('parses response extracting row 0 from 2D arrays', async () => {
+  it('drops the source-to-source cell so index i maps to destination i', async () => {
     mockFetch.mockResolvedValue(
       makeOkResponse([[0, 300, 600]], [[0, 5000, 10000]]),
     );
 
     const result = await fetchMatrixDurations(SOURCE, DESTINATIONS, ACCESS_TOKEN);
 
-    expect(result.durations).toEqual([0, 300, 600]);
-    expect(result.distances).toEqual([0, 5000, 10000]);
+    expect(result.durations).toEqual([300, 600]);
+    expect(result.distances).toEqual([5000, 10000]);
+  });
+
+  it('returns empty arrays when the row holds only the source cell', async () => {
+    mockFetch.mockResolvedValue(makeOkResponse([[0]], [[0]]));
+
+    const result = await fetchMatrixDurations(SOURCE, DESTINATIONS, ACCESS_TOKEN);
+
+    expect(result.durations).toEqual([]);
+    expect(result.distances).toEqual([]);
+  });
+
+  it('throws when the response has no rows, rather than scoring every candidate as a zero detour', async () => {
+    mockFetch.mockResolvedValue(makeOkResponse([], []));
+
+    await expect(
+      fetchMatrixDurations(SOURCE, DESTINATIONS, ACCESS_TOKEN),
+    ).rejects.toThrow('no source row');
   });
 
   it('returns empty arrays for empty destinations', async () => {
@@ -114,8 +131,8 @@ describe('fetchMatrixDurations', () => {
     mockFetch.mockResolvedValue(makeOkResponse(durations, distances));
 
     const result = await fetchMatrixDurations(SOURCE, maxDests, ACCESS_TOKEN);
-    expect(result.durations).toHaveLength(25);
-    expect(result.distances).toHaveLength(25);
+    expect(result.durations).toHaveLength(24);
+    expect(result.distances).toHaveLength(24);
   });
 
   it('passes AbortController signal to fetch', async () => {

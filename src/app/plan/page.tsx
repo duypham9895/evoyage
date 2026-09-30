@@ -554,11 +554,15 @@ function HomeContent() {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error ?? 'Route calculation failed');
+        // Read the body only once the status is known bad, and tolerate a
+        // non-JSON body (gateway HTML, empty 500). Parsing first turned every
+        // such failure into a raw SyntaxError in the error banner.
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(errorBody?.error ?? 'Route calculation failed');
       }
+
+      const data = await response.json();
 
       // Stale-fetch guard: if the in-flight controller was cancelled or replaced
       // while this fetch was resolving, don't apply its data. The AbortSignal

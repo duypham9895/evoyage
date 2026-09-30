@@ -156,10 +156,10 @@ export function useRouteNarrative(tripPlan: TripPlan | null): NarrativeState {
       abortRef.current = null;
     }
 
-    // Reset if no trip plan
+    // Reset if no trip plan — the returned state is derived below, so the
+    // effect only has to forget the last trip id.
     if (!tripPlan) {
       lastTripIdRef.current = null;
-      setState(INITIAL_STATE);
       return;
     }
 
@@ -180,5 +180,5 @@ export function useRouteNarrative(tripPlan: TripPlan | null): NarrativeState {
     };
   }, [tripPlan, fetchNarrative]);
 
-  return state;
+  return tripPlan ? state : INITIAL_STATE;
 }

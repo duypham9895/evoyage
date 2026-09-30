@@ -19,7 +19,7 @@ import {
 import {
   classifyVinfastCronError,
   getErrorMessage,
-  isTransientVinfastUpstreamError,
+  isRecoverableVinfastBrowserAccessError,
 } from '../src/lib/station/vinfast-upstream-error';
 import type { VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
 
@@ -78,7 +78,7 @@ async function fetchBrowserPollPayloadWithRetry(): Promise<BrowserPollPayload> {
       );
       if (
         attempt < MAX_ATTEMPTS &&
-        isTransientVinfastUpstreamError(err)
+        isRecoverableVinfastBrowserAccessError(err)
       ) {
         const delaySec = 5 * attempt;
         console.log(`Retrying in ${delaySec}s...`);

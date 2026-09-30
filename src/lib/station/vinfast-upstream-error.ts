@@ -38,6 +38,21 @@ export function isTransientVinfastUpstreamError(err: unknown): boolean {
   return err.statusCode >= 500 || TRANSIENT_HTTP_STATUSES.has(err.statusCode);
 }
 
+export function isRecoverableVinfastBrowserAccessError(err: unknown): boolean {
+  if (isTransientVinfastUpstreamError(err)) {
+    return true;
+  }
+
+  if (!(err instanceof VinfastApiError)) {
+    return false;
+  }
+
+  return (
+    err.kind === 'cloudflare_blocked' ||
+    (err.kind === 'http_error' && err.statusCode === 403)
+  );
+}
+
 export function normalizeVinfastBrowserError(err: unknown): unknown {
   if (err instanceof VinfastApiError) {
     return err;

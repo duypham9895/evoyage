@@ -10,6 +10,7 @@ vi.mock('@/lib/prisma', () => ({
 }));
 
 import { sendFeedbackEmail } from './email';
+import { prisma } from '@/lib/prisma';
 
 const ORIGINAL_FETCH = global.fetch;
 
@@ -72,6 +73,47 @@ describe('sendFeedbackEmail', () => {
     // Bug category gets the [Khẩn cấp] urgent prefix in the subject — text body
     // should at least contain the category label
     expect(body.text).toMatch(/Báo cáo lỗi/);
+  });
+
+  it('bounds the Resend request with an abort signal so a hung send cannot outlive the request budget', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await sendFeedbackEmail({
+      feedbackId: 'cmtimeout1',
+      category: 'GENERAL_FEEDBACK',
+      description: 'The feedback row is already persisted by the time we get here',
+    });
+
+    // The caller awaits this send before returning 201. Without a deadline a
+    // Resend stall runs out the function budget and the user is shown a
+    // failure for feedback that was in fact saved.
+    const [, init] = fetchMock.mock.calls[0];
+    const signal = (init as RequestInit).signal;
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal!.aborted).toBe(false);
+  });
+
+  it('resolves and logs the failure when the Resend request aborts, leaving emailSent unset', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(
+      sendFeedbackEmail({
+        feedbackId: 'cmtimeout2',
+        category: 'GENERAL_FEEDBACK',
+        description: 'Aborted send must not fail the submission',
+      }),
+    ).resolves.toBeUndefined();
+
+    // Swallowed but observable: the send failure has to reach the logs, and
+    // the record must not be marked as emailed.
+    expect(errorSpy).toHaveBeenCalled();
+    expect(vi.mocked(prisma.feedback.update)).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it('uses the current text brand in the HTML email header without the old lightning mark', async () => {

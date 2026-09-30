@@ -3,11 +3,17 @@ name: Poll Station Status
 # Runs the VinFast polling job every 2 hours to dedup-on-change insert fresh
 # chargingStatus observations into Postgres.
 #
-# Cadence rationale: hourly would be ideal for the 168-cell heatmap, but the
-# combined GHA budget on a private repo at ~2000 min/month doesn't fit
-# (refresh-vinfast-cookies.yml + crawl-stations.yml + this) at hourly. Every 2
-# hours gives 12 samples/day per cell — still statistically usable for
-# popularity prediction.
+# Cadence rationale: every 2 hours gives 12 samples/day per cell, which is
+# usable for the 168-cell popularity heatmap. Hourly would be better.
+#
+# Nothing technical caps this at 2h. The repo is public, so Actions minutes are
+# unmetered, and this job is self-contained: main() in
+# scripts/poll-vinfast-station-status.ts opens its own Chromium context, mints
+# its own cookies, calls persistCookies() and only then polls — pollStationStatus
+# reads back the row it just wrote, and its fetchLocators is stubbed to the
+# payload already in memory. It does NOT depend on refresh-vinfast-cookies.yml
+# at runtime. Raising the cadence is a sampling decision, not a cost or a
+# cookie-lifetime constraint.
 #
 # Production finding 2026-05-25: VinFast/Cloudflare accepts the browser
 # verification request during cookie refresh, but can still reject Vercel's

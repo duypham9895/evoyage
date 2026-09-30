@@ -6,10 +6,10 @@ on:
     # after issuance (production finding 2026-05-03). Refreshing every 2 hours
     # has zero buffer in the worst case (refresh runs at T+2h+5s, polling at
     # T+1h59m gets cookies_expired) — acceptable: the next polling cycle picks
-    # up the new cookies. Hourly refresh would give a 1-hour buffer but
-    # exceeds the GHA private-repo 2000 min/month budget when combined with
-    # poll-station-status.yml + crawl-stations.yml.
-    # Cost: ~360 runs/month × ~2 min = ~720 min/month
+    # up the new cookies. Hourly refresh would give a 1-hour buffer, but the
+    # cookies_expired failure it guards against is not occurring (2026-09-30:
+    # 100/100 refreshes and 99/100 polls succeeded over the last 100 runs), so
+    # it would double runner load for no measured benefit.
     - cron: '0 */2 * * *'
   workflow_dispatch: # manual trigger for ad-hoc recovery
 

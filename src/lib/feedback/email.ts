@@ -10,6 +10,14 @@ import {
   type FeedbackCategory,
 } from './constants';
 
+/**
+ * Deadline for the Resend call. The feedback row is committed before this
+ * send runs and the caller awaits it, so a stalled Resend would burn the
+ * function budget and show the user a failure for feedback that was saved.
+ * Kept under the route's platform default so the abort fires first.
+ */
+const RESEND_TIMEOUT_MS = 5000;
+
 interface EmailPayload {
   readonly feedbackId: string;
   readonly category: FeedbackCategory;
@@ -199,6 +207,7 @@ export async function sendFeedbackEmail(payload: EmailPayload): Promise<void> {
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${resendApiKey}`,
