@@ -13,6 +13,13 @@ export const maxDuration = 60;
 
 const MAX_FOLLOW_UPS = 2;
 
+/**
+ * Deadline for the reverse-geocode call below. Nominatim is free, throttled
+ * and has no SLA; without this the catch below cannot fire and a stalled
+ * response eats the whole maxDuration budget instead of degrading.
+ */
+const REVERSE_GEOCODE_TIMEOUT_MS = 5000;
+
 const DEFAULT_BATTERY = 80;
 const DEFAULT_MIN_ARRIVAL = 15;
 const DEFAULT_RANGE_SAFETY_FACTOR = 0.80;
@@ -136,6 +143,7 @@ export async function POST(request: NextRequest) {
         const reverseUrl = `https://nominatim.openstreetmap.org/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json&accept-language=vi&zoom=16`;
         const reverseRes = await fetch(reverseUrl, {
           headers: { 'User-Agent': 'EVoyage/1.0 (https://evoyage.duypham.me)' },
+          signal: AbortSignal.timeout(REVERSE_GEOCODE_TIMEOUT_MS),
         });
         const reverseData = await reverseRes.json();
         startDisplay = reverseData.display_name ?? null;
