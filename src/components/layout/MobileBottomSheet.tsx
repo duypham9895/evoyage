@@ -36,15 +36,17 @@ export default function MobileBottomSheet({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const startYRef = useRef(0);
-  const startHeightRef = useRef(0);
+  const [startHeight, setStartHeight] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Allow parent to control snap point (e.g., auto-expand on results)
-  useEffect(() => {
-    if (snapTo) {
-      setSnap(snapTo.point);
-    }
-  }, [snapTo]);
+  // Allow parent to control snap point (e.g., auto-expand on results).
+  // Adjusted during render rather than in an effect so the sheet never paints
+  // at the old snap point first. `trigger` is the parent's force-resnap knob.
+  const [lastSnapTrigger, setLastSnapTrigger] = useState<number | null>(null);
+  if (snapTo && snapTo.trigger !== lastSnapTrigger) {
+    setLastSnapTrigger(snapTo.trigger);
+    setSnap(snapTo.point);
+  }
 
   const getHeightPx = useCallback((point: SnapPoint): number => {
     if (typeof window === 'undefined') return 400;
@@ -53,14 +55,14 @@ export default function MobileBottomSheet({
   }, []);
 
   const currentHeight = isDragging
-    ? startHeightRef.current - dragOffset
+    ? startHeight - dragOffset
     : getHeightPx(snap);
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       setIsDragging(true);
       startYRef.current = e.touches[0].clientY;
-      startHeightRef.current = getHeightPx(snap);
+      setStartHeight(getHeightPx(snap));
     },
     [snap, getHeightPx],
   );
@@ -75,7 +77,7 @@ export default function MobileBottomSheet({
     if (!isDragging) return;
     setIsDragging(false);
 
-    const finalHeight = startHeightRef.current - dragOffset;
+    const finalHeight = startHeight - dragOffset;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
 
     // Snap to nearest point
@@ -92,7 +94,7 @@ export default function MobileBottomSheet({
     distances.sort((a, b) => a[1] - b[1]);
     setSnap(distances[0][0]);
     setDragOffset(0);
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, startHeight]);
 
   // Also handle mouse for testing on desktop
   useEffect(() => {
@@ -119,7 +121,7 @@ export default function MobileBottomSheet({
     (e: React.MouseEvent) => {
       setIsDragging(true);
       startYRef.current = e.clientY;
-      startHeightRef.current = getHeightPx(snap);
+      setStartHeight(getHeightPx(snap));
     },
     [snap, getHeightPx],
   );
