@@ -22,7 +22,7 @@ Three failure modes look similar from the outside (the app errors, the API retur
 
 **What it looks like:** Some queries succeed, others return malformed data. Prisma migration drift errors. The schema in the DB doesn't match `schema.prisma`.
 
-**What to do:** If the corruption is contained, run `npm run db:push` to reconcile schema, then re-run the relevant seed script. If you can't isolate the damage, treat it as Severity 2 and rebuild from scratch.
+**What to do:** If the corruption is contained, run `FORCE_DB_PUSH_TO_PROD=1 npm run db:push:local` to reconcile schema, then re-run the relevant seed script. If you can't isolate the damage, treat it as Severity 2 and rebuild from scratch.
 
 ## Recovery steps (full rebuild)
 
@@ -143,7 +143,7 @@ After step 9, verify each item before declaring the incident resolved.
 
 The 2026-04-30 incident was survivable in 30 minutes for two reasons. Both are non-negotiable going forward.
 
-- **Schema-as-code is mandatory.** `prisma/schema.prisma` is the source of truth for the database structure. Never make schema changes directly in the Supabase UI — always edit the schema file and run `npm run db:push`. This makes "recreate the DB" a one-line command.
+- **Schema-as-code is mandatory.** `prisma/schema.prisma` is the source of truth for the database structure. Never make schema changes directly in the Supabase UI — always edit the schema file and run `npm run db:push:local`. This makes "recreate the DB" a one-line command.
 - **Seed-as-code prevents data loss being existential.** The vehicle catalog and station data live in `scripts/seed-*.ts` files, not exclusively in the DB. New reference data must land in a seed script (or a crawler script committed to the repo). If a piece of data only exists in production and nowhere in the repo, deleting the DB makes it unrecoverable — that's the failure mode this rule prevents.
 - **User-generated data needs a backup story before it becomes load-bearing.** `ShortUrl` and `Feedback` are acceptable losses today because nothing depends on them long-term. Before any feature stores something users would expect to persist (saved trips, accounts, history), add a backup mechanism — Supabase point-in-time recovery on a paid tier is the simplest option.
 

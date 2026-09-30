@@ -21,7 +21,7 @@ Production cadence:
 |---|---|---|
 | `CRON_SECRET` env var | Vercel project settings | Must be a 64+ char random string. Already used by `src/lib/cron-auth.ts`. |
 | `DATABASE_URL` + `DIRECT_URL` | Vercel + GitHub Actions secrets | Needed by both Vercel functions and the cookie-refresh workflow. |
-| Schema synced | `npm run db:push` | Adds `StationStatusObservation`, `StationPopularity`, `VinfastApiCookies` tables. Safe — additive only. |
+| Schema synced | `npm run db:push:local` | Adds `StationStatusObservation`, `StationPopularity`, `VinfastApiCookies` tables. Safe — additive only. |
 | First cookie row seeded | GitHub Actions → "Refresh VinFast Cookies" workflow → `workflow_dispatch` | Required before the hourly poller can succeed. |
 
 ## One-time setup
@@ -29,7 +29,7 @@ Production cadence:
 ### 1. Sync schema
 
 ```bash
-npm run db:push
+npm run db:push:local
 ```
 
 Verify the three new tables exist in Supabase Studio. Should return rows from:

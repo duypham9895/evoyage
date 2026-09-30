@@ -3,6 +3,56 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — 2026-05-24 → 2026-06-06
+
+Work merged since the v0.9.0 tag (`1f7e9c4..a00e34e`). Two ADRs shipped in this window:
+ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops).
+
+### Added
+- **ADR-0010 — OpenAI gpt-5 replaces MiMo Flash as the primary eVi LLM** (commit `387158f`).
+  MiniMax M2.7 remains the fallback; `XIAOMI_MIMO_API_KEY` is retired and `OPENAI_API_KEY`
+  becomes required. Success telemetry now reports `provider=openai`. ADR-0002 is not
+  superseded — cite the two as a pair. (`docs/adr/0010-openai-primary-llm-provider.md`)
+- **ADR-0009 — Precautionary extra Stops**, shipped across five commits: MVP injection
+  (`0833e28`, #39), one-tap dismissal (`ae52657`), map pins (`ea61306`), dismissal
+  persistence (`8cfc323`), and rollout telemetry (`2980840`). Up to 2 top-up Stops are
+  injected between required Stops when a leg's Backup Pressure Score clears a
+  Safety-Factor-tiered threshold (5 / 4 / 3). Gated behind `PRECAUTIONARY_STOPS_ENABLED`,
+  **default off** — the code is on `main` but the feature is dark in production
+  (`docs/operations/precautionary-stops-rollout.md`).
+- **Route E logo system** (`b3d366c`) — `src/components/brand/EVoyageLogo.tsx`.
+
+### Changed
+- **Production domain moved to `evoyage.duypham.me`** (`7706e14`).
+- **Map provider choice hidden** from the UI (`171773d`).
+- **Dependabot PR churn reduced** — safe updates consolidated into grouped PRs
+  (`a193f0d` #31, `538f759` #35).
+
+### Fixed
+- **Vercel KV env-var aliases** — `rate-limit.ts` now recognises `KV_REST_API_URL` /
+  `KV_REST_API_TOKEN` alongside the `UPSTASH_REDIS_REST_*` pair (`8172cd0`, F1).
+- **`<html lang>` now syncs with the active locale** (`75e94c3`, F5).
+- **VinFast pipeline resilience** — poll browser context (`4830f35` #30) and cron upstream
+  outage handling (`be1fc9a` #36).
+- **GitHub Actions reliability** (`caca8e3`) and Dependabot PRs can now validate (`d339846`).
+- **eVi parsing** — GPT parse responses restored (`a8cd818`), current-location trip parsing
+  hardened (`d6c3e22`), required follow-up chips realigned with the prompt (`0683640`).
+- **Trip planning UX** — overall reliability (`47292d8`), backup station coverage shown
+  (`4332ecf`), route results auto-scroll (`d83471a`), route progress revealed from the eVi
+  CTA (`e7436dc`).
+
+### Tests
+- Vitest **1304 → 1471** across **133 files**; E2E **36 tests across 12 spec files** on
+  Desktop Chrome (`csp-smoke.spec.ts` and `precautionary-stop.spec.ts` are the two new specs).
+- CSP smoke regression suite (`9efb4b7`), +38 tests across short-url / feedback /
+  vinfast-client (`318702f`), and e2e flake fixes for the feedback FAB (`75787d5`,
+  `373deca`), mobile eVi chat (`2addff9`), and Mapbox trip planning (`ed7df0f`).
+
+### Docs
+- ADR-0009 (`d80c36e`) and the Option C PRD it supersedes (`7415b70`, `e83cea9`).
+- 2026-05 audit-fixup cycle retro (`f8d823d`); execution and reliability plans
+  (`3f8a930`, `1b76750`, `23de520`).
+
 ## [0.9.0] — 2026-05-24
 
 Three weeks of Trust Intelligence Roadmap work (Phases 1-5, ADR-0006 + ADR-0007) followed by a five-phase audit cycle hardening security, telemetry, retention, and CI. Reference: [EVOYAGE_AUDIT_PLAN.md](./EVOYAGE_AUDIT_PLAN.md) (1586-line discovery + plan) and [docs/qa/2026-05-24-phase4-qa-report.md](./docs/qa/2026-05-24-phase4-qa-report.md) (235-line QA report with 6 findings).

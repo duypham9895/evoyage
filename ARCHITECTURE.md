@@ -2,7 +2,7 @@
 
 ## Overview
 
-eVoyage is a Next.js App Router application for planning EV road trips across Vietnam. It combines real-time charging station data from VinFast's network with AI-powered trip planning via MiniMax M2.7.
+eVoyage is a Next.js App Router application for planning EV road trips across Vietnam. It combines real-time charging station data from VinFast's network with AI-powered trip planning via OpenAI gpt-5, with MiniMax M2.7 as fallback.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -33,6 +33,8 @@ eVoyage is a Next.js App Router application for planning EV road trips across Vi
 │  /api/stations/[id]/status-report → Crowdsourced status report │
 │  /api/vehicles                    → EV model database          │
 │  /api/feedback                    → User feedback collection   │
+│  /api/feedback/upload             → Feedback image upload      │
+│  /api/admin/feedback/[id]         → Admin feedback status PATCH│
 │  /api/short-url                   → Trip sharing via short URLs│
 │  /api/share-card                  → OG image generation        │
 │  /api/cron/poll-station-status    → Hourly status observations │
@@ -44,7 +46,8 @@ eVoyage is a Next.js App Router application for planning EV road trips across Vi
 │              External Services                    │
 │                                                   │
 │  VinFast API ─── Station data (SSE streaming)     │
-│  MiniMax M2.7 ── AI chat (OpenAI-compatible)      │
+│  OpenAI gpt-5 ── AI chat (primary)                │
+│  MiniMax M2.7 ── AI chat (fallback)               │
 │  Mapbox ──────── Map tiles + Directions API       │
 │  OSRM ────────── Routing fallback                 │
 │  Nominatim ───── Geocoding / place search         │
@@ -66,6 +69,7 @@ src/
 ├── components/
 │   ├── EVi.tsx             # AI trip assistant (chat UI)
 │   ├── NearbyStations.tsx  # Station list with distance
+│   ├── brand/              # EVoyageLogo (Route E logo system)
 │   ├── landing/            # Landing page sections
 │   ├── layout/             # Header, MobileBottomSheet, MobileTabBar
 │   ├── map/                # Map, MapboxMap, ElevationChart
@@ -107,6 +111,16 @@ src/
 │   │   ├── polyline.ts          # Polyline encode/decode
 │   │   └── static-map.ts       # Static map image URLs
 │   │
+│   ├── station/            # Station intelligence (polling, popularity,
+│   │                       #   reliability, POIs)
+│   ├── stations/           # Source parsers (OSM, EVPower, CSV), dedup
+│   ├── trip/               # Cost, passes, peak-hour model, notebook store
+│   ├── energy-prices/      # Petrolimex / V-GREEN / EVN price parsers
+│   ├── speech/             # Web Speech + Groq Whisper engines
+│   ├── feedback/           # Feedback schema, constants, email
+│   ├── events/             # station-events.ts emitter (eVi → map)
+│   ├── maintenance/        # prune-stale-caches.ts (retention)
+│   │
 │   ├── locale.tsx          # i18n with JSON locale files
 │   ├── map-mode.tsx        # Map provider toggle (OSM/Mapbox)
 │   ├── haptics.ts          # Mobile haptic feedback
@@ -117,6 +131,11 @@ src/
 ├── locales/
 │   ├── en.json             # English translations
 │   └── vi.json             # Vietnamese translations
+│
+├── hooks/                  # useEVi, useUrlState, useGeolocation,
+│                           #   usePrecautionaryStopInteractions
+│
+├── data/                   # Generated JSON (energy-prices, station-stats)
 │
 └── types/                  # Shared TypeScript types
 ```
@@ -139,7 +158,7 @@ User fills TripInput → /api/route
 
 ```
 User speaks/types trip description → /api/evi/parse
-  → MiniMax M2.7 extracts structured trip data (Zod schema)
+  → OpenAI gpt-5 extracts structured trip data (Zod schema)
   → vehicle-resolver maps natural language to EV model
   → returns parsed trip parameters → triggers route planning
   → /api/evi/suggestions generates follow-up chips
@@ -160,7 +179,7 @@ User taps station → /api/stations/[id]/vinfast-detail
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Map provider | Mapbox (primary), OSRM (fallback) | Mapbox has superior Vietnamese coverage; OSRM as free fallback |
-| AI model | OpenAI gpt-5 (primary) + MiniMax M2.7 (fallback) via OpenAI-compatible API | Strong JSON-mode reliability, good Vietnamese understanding, provider redundancy per ADR-0002 |
+| AI model | OpenAI gpt-5 (primary) + MiniMax M2.7 (fallback) via OpenAI-compatible API | Strong JSON-mode reliability, good Vietnamese understanding, provider redundancy per ADR-0002 + ADR-0010 |
 | Station data | VinFast API + SSE primary; OSM, EVPower, manual CSV, and crowdsourced promotion as secondary | Multi-source coverage per ADR-0001; SSE used only for real-time VinFast detail (ADR-0003) |
 | Mobile layout | Bottom sheet over full-screen map | Matches driver mental model (Google Maps, Grab) |
 | i18n | JSON key-based with runtime locale | Simple, type-safe, auto-tested for key sync |
