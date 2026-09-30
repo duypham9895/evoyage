@@ -21,6 +21,22 @@ const localStore = new Map<string, { count: number; resetAt: number }>();
 /** Test-only: clear the in-memory rate-limit store between cases. */
 export function __resetRateLimitForTests(): void {
   localStore.clear();
+  redisFailureLogged = false;
+}
+
+// Logged once per process. A dead Redis fails on every request, and one line
+// per request would bury the signal it is meant to raise.
+let redisFailureLogged = false;
+
+function warnRedisUnavailableOnce(err: unknown): void {
+  if (redisFailureLogged) return;
+  redisFailureLogged = true;
+  const reason = err instanceof Error ? err.message : String(err);
+  console.error(
+    `[SECURITY] Redis rate limiter unreachable (${reason}); falling back to the ` +
+      'per-instance in-memory limiter. Distributed rate limiting is DEGRADED — ' +
+      'check UPSTASH_REDIS_REST_URL / KV_REST_API_URL.',
+  );
 }
 
 function checkLocalRateLimit(
@@ -90,14 +106,27 @@ export async function checkRateLimit(
   windowMs: number,
   limiter?: Ratelimit | null,
 ): Promise<RateLimitResult> {
-  // Use Upstash Redis if available
+  // Use Upstash Redis if available.
+  //
+  // `limiter` is non-null whenever the env vars are SET, which is not the same
+  // as the backend being REACHABLE. When the Upstash host stopped resolving,
+  // this await threw and the error propagated out of every rate-limited route:
+  // /api/route, /api/stations and /api/vehicles all returned 500. Rate limiting
+  // is a guard, not the feature — a guard that is unreachable must degrade, not
+  // take the endpoint down with it.
   if (limiter) {
-    const result = await limiter.limit(identifier);
-    return {
-      allowed: result.success,
-      remaining: result.remaining,
-      retryAfterSec: result.success ? 0 : Math.ceil((result.reset - Date.now()) / 1000),
-    };
+    try {
+      const result = await limiter.limit(identifier);
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        retryAfterSec: result.success ? 0 : Math.ceil((result.reset - Date.now()) / 1000),
+      };
+    } catch (err) {
+      // Fall through to the in-memory limiter. Per-instance rather than
+      // distributed, so protection is weaker but the endpoint stays up.
+      warnRedisUnavailableOnce(err);
+    }
   }
 
   // Fallback to in-memory for local dev
