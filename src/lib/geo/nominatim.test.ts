@@ -75,6 +75,37 @@ describe('searchPlaces', () => {
     await expect(searchPlaces('Ha Noi', controller.signal)).rejects.toThrow();
   });
 
+  it('applies a default request timeout when the caller passes no signal', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await searchPlaces('Ha Noi');
+
+    // Nominatim is a free, 1 req/sec throttled service with no SLA. A server
+    // call with no signal can stall on a queued response until the platform
+    // kills the function, so the request must carry its own deadline.
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.signal!.aborted).toBe(false);
+  });
+
+  it('forwards a caller-provided signal instead of the default timeout', async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await searchPlaces('Ha Noi', controller.signal);
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBe(controller.signal);
+  });
+
   it('parses lat/lng as numbers', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,

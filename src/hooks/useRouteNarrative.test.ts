@@ -171,6 +171,34 @@ describe('useRouteNarrative', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it('resets in a single render when tripPlan becomes null', async () => {
+    mockFetch.mockResolvedValueOnce({
+      json: () => Promise.resolve(NARRATIVE_RESPONSE),
+    });
+
+    const plan = makeTripPlan();
+    const renders: { hasPlan: boolean; overview: string | null }[] = [];
+    const { result, rerender } = renderHook(
+      ({ tp }: { tp: TripPlan | null }) => {
+        const state = useRouteNarrative(tp);
+        renders.push({ hasPlan: tp !== null, overview: state.overview });
+        return state;
+      },
+      { initialProps: { tp: plan as TripPlan | null } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.overview).toBe(NARRATIVE_RESPONSE.overview);
+    });
+
+    renders.length = 0;
+    rerender({ tp: null });
+
+    // Exactly one render, already reset: a second entry would mean the hook
+    // painted the previous trip's narrative before correcting itself.
+    expect(renders).toEqual([{ hasPlan: false, overview: null }]);
+  });
+
   it('sends correct payload to API', async () => {
     mockFetch.mockResolvedValueOnce({
       json: () => Promise.resolve(NARRATIVE_RESPONSE),
