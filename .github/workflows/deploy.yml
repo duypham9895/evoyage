@@ -119,6 +119,53 @@ jobs:
             test-results/
           retention-days: 7
 
+      # PREVIEW DEPLOY ON PRs.
+      #
+      # Until 2026-09-30 every deploy step was gated on `push` to main, so a
+      # pull_request run never invoked Vercel at all — it only ran tests. The
+      # required status check is named "Deploy to Vercel", so a PR could be
+      # fully green and still fail to deploy the moment it merged. #78 and #79
+      # both did exactly that, failing on an ENOENT that no PR check could see.
+      #
+      # A preview deploy exercises the same pull/build/deploy path against the
+      # same `.vercelignore` and the same output file tracing, so that class of
+      # failure is caught before merge instead of after.
+      #
+      # Skipped for Dependabot: its pull_request runs cannot read Actions
+      # secrets, so VERCEL_TOKEN would be empty. Same rationale as the
+      # production DB drift check above.
+      - name: Install Vercel CLI (preview)
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        run: npm i -g vercel
+
+      - name: Pull Vercel environment (preview)
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build (preview)
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy preview
+        if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+        run: |
+          # Same pipefail reasoning as the production deploy below: `bash -e`
+          # does not imply pipefail, so piping into `tail` would mask a failure.
+          set -eo pipefail
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }} | tail -n1)
+          case "$url" in
+            https://*) echo "Preview: $url" ;;
+            *)
+              echo "::error::vercel preview deploy returned no URL (got: '$url')"
+              exit 1
+              ;;
+          esac
+
+      - name: Note skipped preview deploy
+        if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
+        run: |
+          echo "Skipping preview deploy - Dependabot pull_request runs cannot access Actions secrets."
+
       - name: Install Vercel CLI
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npm i -g vercel
