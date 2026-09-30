@@ -60,6 +60,27 @@ jobs:
         if: github.actor == 'dependabot[bot]'
         run: echo "Skipping production DB drift check because Dependabot pull_request runs cannot access Actions secrets."
 
+      # Report-only on purpose — these must NOT gate merges yet. There is a
+      # pre-existing backlog of eslint and tsc findings, so making these
+      # blocking today would fail every open PR instead of catching anything
+      # new. No count is recorded here on purpose: the numbers move with every
+      # cleanup commit, and a stale number in a comment is how the rest of this
+      # repo's documentation drifted. Measure the current state with:
+      #   npx eslint src scripts ; npx tsc --noEmit
+      # Ratchet: once both are clean, delete the two `continue-on-error` lines
+      # below so these become real gates.
+      #
+      # Caveat: with continue-on-error the check stays green on the PR list, so
+      # output is only visible to someone who opens the run. Promote to blocking
+      # as soon as the backlog allows.
+      - name: Lint (report only)
+        continue-on-error: true
+        run: npx eslint src scripts
+
+      - name: Type check (report only)
+        continue-on-error: true
+        run: npx tsc --noEmit
+
       - name: Run unit tests
         run: npm test
 
