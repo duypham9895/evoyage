@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { getClientIp } from './rate-limit';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { checkRateLimit, getClientIp, __resetRateLimitForTests } from './rate-limit';
 
 describe('getClientIp', () => {
   it('prefers x-vercel-forwarded-for (unspoofable)', () => {
@@ -39,5 +39,43 @@ describe('getClientIp', () => {
     });
     const req = { headers } as unknown as Request;
     expect(getClientIp(req)).toBe('1.2.3.4');
+  });
+});
+
+describe('checkRateLimit when the Redis backend is unreachable', () => {
+  beforeEach(() => {
+    __resetRateLimitForTests();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Regression: Upstash DNS stopped resolving and every rate-limited endpoint
+  // returned 500 in production -- /api/route, /api/stations, /api/vehicles.
+  // checkRateLimit awaited limiter.limit() with no try/catch, so an unreachable
+  // backend propagated out of the rate-limit check and crashed the request.
+  // The in-memory path existed but was only chosen when the env vars were
+  // ABSENT, never when the configured host was dead.
+  const throwingLimiter = {
+    limit: async () => {
+      throw new TypeError('fetch failed');
+    },
+  } as unknown as Parameters<typeof checkRateLimit>[3];
+
+  it('falls back to the in-memory limiter instead of throwing', async () => {
+    await expect(
+      checkRateLimit('ip-unreachable', 5, 60_000, throwingLimiter),
+    ).resolves.toMatchObject({ allowed: true });
+  });
+
+  it('still enforces a limit through the fallback', async () => {
+    for (let i = 0; i < 3; i++) {
+      const r = await checkRateLimit('ip-enforced', 3, 60_000, throwingLimiter);
+      expect(r.allowed).toBe(true);
+    }
+    const blocked = await checkRateLimit('ip-enforced', 3, 60_000, throwingLimiter);
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.retryAfterSec).toBeGreaterThan(0);
   });
 });
