@@ -66,4 +66,19 @@ describe('fetchVinfastLocatorsFromPage', () => {
       statusCode: 403,
     });
   });
+
+  it('classifies Cloudflare challenge pages before generic HTTP errors', async () => {
+    const page = makePage({
+      status: 403,
+      text: '<html>::IM_UNDER_ATTACK_BOX::</html>',
+    });
+
+    const error = await fetchVinfastLocatorsFromPage(page).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(VinfastApiError);
+    expect(error).toMatchObject({
+      kind: 'cloudflare_blocked',
+      statusCode: 403,
+    });
+  });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { VinfastApiError } from './vinfast-api-client';
 import {
   classifyVinfastCronError,
+  isRecoverableVinfastBrowserAccessError,
   isTransientVinfastUpstreamError,
   normalizeVinfastBrowserError,
 } from './vinfast-upstream-error';
@@ -51,6 +52,32 @@ describe('isTransientVinfastUpstreamError', () => {
   });
 });
 
+describe('isRecoverableVinfastBrowserAccessError', () => {
+  it('retries Cloudflare challenge and 403 responses from the browser poll', () => {
+    expect(
+      isRecoverableVinfastBrowserAccessError(
+        new VinfastApiError('cloudflare_blocked', 'Challenge detected', 403),
+      ),
+    ).toBe(true);
+    expect(
+      isRecoverableVinfastBrowserAccessError(
+        new VinfastApiError('http_error', 'Upstream returned 403', 403),
+      ),
+    ).toBe(true);
+  });
+
+  it('does not retry parse or generic programmer failures', () => {
+    expect(
+      isRecoverableVinfastBrowserAccessError(
+        new VinfastApiError('parse_error', 'Response was not valid JSON'),
+      ),
+    ).toBe(false);
+    expect(
+      isRecoverableVinfastBrowserAccessError(new Error('DB unavailable')),
+    ).toBe(false);
+  });
+});
+
 describe('classifyVinfastCronError', () => {
   it('turns transient VinFast upstream outages into a successful scheduled-job skip', () => {
     const outcome = classifyVinfastCronError(
@@ -58,6 +85,10 @@ describe('classifyVinfastCronError', () => {
       new VinfastApiError('http_error', 'Upstream returned 500', 500),
     );
 
+    expect(outcome.action).toBe('skip');
+    if (outcome.action !== 'skip') {
+      throw new Error('Expected skip outcome');
+    }
     expect(outcome).toMatchObject({
       action: 'skip',
       result: {

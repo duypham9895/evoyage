@@ -43,6 +43,17 @@ export async function fetchVinfastLocatorsFromPage(
       };
     });
 
+    if (
+      response.text.includes('IM_UNDER_ATTACK') ||
+      response.text.includes('challenge-platform')
+    ) {
+      throw new VinfastApiError(
+        'cloudflare_blocked',
+        `Response contained Cloudflare challenge markers; status=${response.status}`,
+        response.status,
+      );
+    }
+
     if (response.status !== 200) {
       throw new VinfastApiError(
         'http_error',
