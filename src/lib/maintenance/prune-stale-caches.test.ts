@@ -28,7 +28,9 @@ describe('pruneStaleCaches', () => {
       .mockResolvedValueOnce(42)
       .mockResolvedValueOnce(17)
       .mockResolvedValueOnce(4)
-      .mockResolvedValueOnce(300);
+      .mockResolvedValueOnce(300)
+      .mockResolvedValueOnce(8)
+      .mockResolvedValueOnce(96);
 
     const result = await pruneStaleCaches(makeDeps(prisma));
 
@@ -37,8 +39,10 @@ describe('pruneStaleCaches', () => {
     expect(result.vinfastDetailPruned).toBe(17);
     expect(result.shortUrlPruned).toBe(4);
     expect(result.statusReportPruned).toBe(300);
+    expect(result.reliabilityPruned).toBe(8);
+    expect(result.popularityPruned).toBe(96);
     expect(result.errors).toEqual([]);
-    expect(prisma.$executeRaw).toHaveBeenCalledTimes(4);
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(6);
   });
 
   it('uses a 30-day window in both cache DELETE statements', async () => {
@@ -153,5 +157,92 @@ describe('pruneStaleCaches', () => {
     expect(result.ok).toBe(false);
     expect(result.statusReportPruned).toBe(0);
     expect(result.errors[0]).toContain('StationStatusReport prune failed');
+  });
+  // StationReliability and StationPopularity are derived aggregates rebuilt
+  // nightly — see NEW-OPS-7. A row whose station still exists must never be
+  // deleted for age alone, or ADR-0007 ranking loses its input.
+  it('prunes StationReliability rows whose station no longer exists', async () => {
+    const prisma = makePrismaMock();
+    prisma.$executeRaw.mockResolvedValue(0);
+
+    await pruneStaleCaches(makeDeps(prisma));
+
+    const sql = sqlAt(prisma, 4);
+    expect(sql).toContain('StationReliability');
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('ChargingStation');
+  });
+
+  it('measures StationReliability staleness against the newest row, not wall-clock, so a stalled cron prunes nothing', async () => {
+    const prisma = makePrismaMock();
+    prisma.$executeRaw.mockResolvedValue(0);
+
+    await pruneStaleCaches(makeDeps(prisma));
+
+    const sql = sqlAt(prisma, 4);
+    expect(sql).toContain('MAX("computedAt")');
+    expect(sql).toContain("INTERVAL '60 days'");
+    expect(sql).not.toContain('NOW()');
+  });
+
+  it('prunes StationPopularity rows whose station no longer exists', async () => {
+    const prisma = makePrismaMock();
+    prisma.$executeRaw.mockResolvedValue(0);
+
+    await pruneStaleCaches(makeDeps(prisma));
+
+    const sql = sqlAt(prisma, 5);
+    expect(sql).toContain('StationPopularity');
+    expect(sql).toContain('NOT EXISTS');
+    expect(sql).toContain('ChargingStation');
+  });
+
+  it('measures StationPopularity staleness against the newest row, not wall-clock, so a stalled cron prunes nothing', async () => {
+    const prisma = makePrismaMock();
+    prisma.$executeRaw.mockResolvedValue(0);
+
+    await pruneStaleCaches(makeDeps(prisma));
+
+    const sql = sqlAt(prisma, 5);
+    expect(sql).toContain('MAX("updatedAt")');
+    expect(sql).toContain("INTERVAL '90 days'");
+    expect(sql).not.toContain('NOW()');
+  });
+
+  it('reports ok=false and keeps going when the StationReliability prune fails', async () => {
+    const prisma = makePrismaMock();
+    prisma.$executeRaw
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(4)
+      .mockRejectedValueOnce(new Error('StationReliability lock timeout'))
+      .mockResolvedValueOnce(5);
+
+    const result = await pruneStaleCaches(makeDeps(prisma));
+
+    expect(result.ok).toBe(false);
+    expect(result.reliabilityPruned).toBe(0);
+    expect(result.popularityPruned).toBe(5);
+    expect(result.errors[0]).toContain('StationReliability prune failed');
+  });
+
+  it('reports ok=false when the StationPopularity prune fails', async () => {
+    const prisma = makePrismaMock();
+    prisma.$executeRaw
+      .mockResolvedValue(0)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(4)
+      .mockResolvedValueOnce(5)
+      .mockRejectedValueOnce(new Error('StationPopularity statement timeout'));
+
+    const result = await pruneStaleCaches(makeDeps(prisma));
+
+    expect(result.ok).toBe(false);
+    expect(result.reliabilityPruned).toBe(5);
+    expect(result.popularityPruned).toBe(0);
+    expect(result.errors[0]).toContain('StationPopularity prune failed');
   });
 });

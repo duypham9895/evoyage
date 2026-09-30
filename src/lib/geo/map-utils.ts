@@ -23,8 +23,15 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/** Build sanitized popup HTML for a charging stop. Shared between Leaflet and Mapbox. */
-export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternatives): string {
+/**
+ * Build sanitized popup HTML for a charging stop. Shared between Leaflet and Mapbox.
+ * `navigateLabel` is the translated text for the directions link — callers pass
+ * `t('popup_navigate')` so the popup is not hardcoded to English.
+ */
+export function buildStopPopupHtml(
+  stop: ChargingStop | ChargingStopWithAlternatives,
+  navigateLabel: string,
+): string {
   const station = getStopStation(stop);
   const name = escapeHtml(station.name);
   const address = escapeHtml(station.address);
@@ -44,13 +51,13 @@ export function buildStopPopupHtml(stop: ChargingStop | ChargingStopWithAlternat
         | ~${chargingTime}min
       </p>
       <p style="font-size:11px;margin:4px 0 0;color:#888">
-        ⚡ ${station.maxPowerKw}kW | ${connectors} | ${provider}
+        ${station.maxPowerKw}kW | ${connectors} | ${provider}
       </p>
       <a href="https://www.google.com/maps/dir/?api=1&destination=${Number(station.latitude).toFixed(6)},${Number(station.longitude).toFixed(6)}"
          target="_blank" rel="noopener noreferrer"
          style="display:inline-block;margin-top:8px;padding:4px 12px;background:#00D4AA;color:#0F0F11;
                 border-radius:4px;text-decoration:none;font-size:12px;font-weight:bold">
-        Navigate
+        ${escapeHtml(navigateLabel)}
       </a>
     </div>
   `;

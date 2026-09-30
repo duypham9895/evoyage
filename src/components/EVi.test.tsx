@@ -26,6 +26,7 @@ const translations: Record<string, string> = {
   evi_retry: 'Retry',
   evi_start_over: 'Start over',
   evi_location_prompt: 'Enter location',
+  evi_location_submit: 'Confirm starting point',
   evi_greeting_morning: 'Good morning!',
   evi_greeting_evening: 'Good evening!',
   evi_greeting_return: 'Welcome back!',
@@ -121,6 +122,13 @@ const vehiclePickResponse = {
     { label: 'VinFast VF 8 Plus', vehicleId: 'vf8-plus' },
     { label: 'VinFast VF 5 Plus', vehicleId: 'vf5-plus' },
   ],
+};
+
+const locationInputResponse = {
+  ...followUpResponse,
+  followUpType: 'location_input',
+  followUpQuestion: 'Bạn xuất phát từ đâu?',
+  displayMessage: 'Bạn xuất phát từ đâu?',
 };
 
 // ── Mock useEVi ──
@@ -741,6 +749,22 @@ describe('EVi component', () => {
       fireEvent.click(screen.getByText('VinFast VF 8 Plus'));
 
       expect(mockSendMessage).toHaveBeenCalledWith('VinFast VF 8 Plus');
+    });
+
+    it('gives the location_input controls accessible names', () => {
+      setHookState({
+        state: 'follow_up',
+        lastResponse: locationInputResponse,
+        messages: [
+          { role: 'user', content: 'Đi Đà Lạt' },
+          { role: 'assistant', content: 'Bạn xuất phát từ đâu?' },
+        ],
+      });
+
+      render(<EVi onTripParsed={vi.fn()} />);
+
+      expect(screen.getByLabelText('Enter location')).toBeInTheDocument();
+      expect(screen.getByLabelText('Confirm starting point')).toBeInTheDocument();
     });
 
     it('does not show suggestions when state is complete', () => {

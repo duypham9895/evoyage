@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchTrafficAwareDirections, MapboxTrafficError } from './mapbox-traffic';
+import { fetchTrafficAwareDirections } from './mapbox-traffic';
 
 const ACCESS_TOKEN = 'pk.fake-test-token';
 const HCM = { lat: 10.78, lng: 106.7 };

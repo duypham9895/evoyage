@@ -395,6 +395,7 @@
   "evi_vehicle": "Vehicle",
   "evi_battery": "Battery",
   "evi_location_prompt": "Enter starting point",
+  "evi_location_submit": "Confirm starting point",
   "evi_or_type": "or type",
   "evi_speak": "Tap to speak",
   "evi_error_generic": "Sorry, something went wrong. You can enter manually!",

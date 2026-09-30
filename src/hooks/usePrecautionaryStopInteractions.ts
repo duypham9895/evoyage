@@ -80,9 +80,10 @@ export function usePrecautionaryStopInteractions(
   }, [initialDismissedStopIds, planKey]);
 
   useEffect(() => {
+    const dismissTimers = dismissTimerRefs.current;
     return () => {
-      dismissTimerRefs.current.forEach(timer => clearTimeout(timer));
-      dismissTimerRefs.current.clear();
+      dismissTimers.forEach(timer => clearTimeout(timer));
+      dismissTimers.clear();
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     };
   }, []);

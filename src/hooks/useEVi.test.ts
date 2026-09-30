@@ -381,5 +381,35 @@ describe('useEVi', () => {
       expect(result.current.isSuggestionsLoading).toBe(false);
       expect(result.current.followUpSuggestions).toEqual([]);
     });
+
+    it('asks for suggestions in the locale current at send time, not at mount time', async () => {
+      const { result, rerender } = renderHook(
+        ({ locale }: { locale: 'vi' | 'en' }) => useEVi(locale),
+        { initialProps: { locale: 'vi' } },
+      );
+
+      // User switches the language after the hook has mounted.
+      rerender({ locale: 'en' });
+
+      mockFetch.mockResolvedValueOnce(makeSuccessResponse({
+        isComplete: false,
+        followUpType: null,
+        followUpQuestion: 'Where would you like to go?',
+      }));
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ suggestions: [] }),
+      });
+
+      await act(async () => {
+        await result.current.sendMessage('Suggest a weekend trip');
+      });
+
+      const suggestionsCall = mockFetch.mock.calls.find(
+        (call) => call[0] === '/api/evi/suggestions',
+      );
+      expect(suggestionsCall).toBeDefined();
+      expect(JSON.parse(suggestionsCall![1].body).locale).toBe('en');
+    });
   });
 });

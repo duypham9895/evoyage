@@ -433,11 +433,13 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={t('evi_location_prompt')}
+                  aria-label={t('evi_location_prompt')}
                   className="flex-1 rounded-xl px-3 py-2 text-sm bg-[var(--color-surface)] text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] border border-[var(--color-border)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/30 focus:border-[var(--color-accent)]/40"
                 />
                 <button
                   type="submit"
                   disabled={!inputValue.trim()}
+                  aria-label={t('evi_location_submit')}
                   className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--color-accent)] text-[var(--color-background)] disabled:opacity-40 transition-opacity font-medium"
                 >
                   →
