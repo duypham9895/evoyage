@@ -106,7 +106,14 @@ function buildCsp(nonce: string): string {
 
 export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
-  const isAdmin = pathname.startsWith('/admin') || pathname.startsWith('/api/admin');
+  // Compare case-insensitively. Next resolves DYNAMIC routes case-insensitively,
+  // so /API/ADMIN/FEEDBACK/<id> reaches the same handler as the lowercase form.
+  // A case-sensitive guard therefore let that request through unauthenticated
+  // while the route module still executed. The path carries no dot, so the
+  // catch-all matcher already admits it and this guard is what must decide.
+  const normalizedPath = pathname.toLowerCase();
+  const isAdmin =
+    normalizedPath.startsWith('/admin') || normalizedPath.startsWith('/api/admin');
 
   if (isAdmin) {
     const authFail = checkAdminAuth(request);
@@ -123,10 +130,23 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Match every path except Next internals, static assets, and image files.
-  // Admin auth is decided inside the function (not matcher-gated) so that the
-  // nonce is also applied to /admin pages.
   matcher: [
+    // Lowercase admin surfaces, including paths containing a dot. The catch-all
+    // below excludes every dotted path so static assets skip the middleware;
+    // without these two entries that exclusion also skipped Basic Auth, so
+    // /admin/x.json reached the app unauthenticated.
+    //
+    // CASE: the guard above lowercases the pathname, so every dotless admin
+    // path is authorised regardless of spelling. Against the local matcher
+    // harness the dotted uppercase form (/ADMIN/x.json) is also challenged.
+    // A reviewer probing the DEPLOYED site, however, saw /ADMIN/FEEDBACK/<x>.<y>
+    // render the admin 404 shell, i.e. middleware did not run there — Vercel's
+    // compiled edge matcher and the local harness disagree. Re-verify against
+    // production after deploy; see docs/qa/2026-09-30-remediation-report.md.
+    '/admin/:path*',
+    '/api/admin/:path*',
+    // Everything else except Next internals, static assets, and image files —
+    // this is what carries the per-request CSP nonce to ordinary pages.
     '/((?!_next/static|_next/image|favicon.ico|icons/|manifest.json|robots.txt|sitemap.xml|.*\\..*).*)',
   ],
 };
