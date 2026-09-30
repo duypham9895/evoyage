@@ -62,7 +62,22 @@ export async function fetchVinfastLocatorsFromPage(
       );
     }
 
-    return parseVinfastLocatorsResponseText(response.text);
+    const locators = parseVinfastLocatorsResponseText(response.text);
+
+    // A 200 carrying an empty list is an upstream failure, not a valid answer.
+    // This endpoint backs roughly 20k stations; zero means it broke or moved.
+    // Returning [] here let both the daily crawl and the 2-hourly poll exit 0
+    // with no data — the crawl even rewrote src/data/station-stats.json to
+    // count=0 — so every run stayed green while the pipeline did nothing.
+    if (locators.length === 0) {
+      throw new VinfastApiError(
+        'empty_result',
+        'Upstream returned 200 with an empty station list',
+        response.status,
+      );
+    }
+
+    return locators;
   } catch (err) {
     throw normalizeVinfastBrowserError(err);
   }

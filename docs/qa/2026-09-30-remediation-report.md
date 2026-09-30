@@ -400,3 +400,101 @@ this runs against production.
   removed from the header in commit `171773d`.
 - `plan/page.tsx` error strings are hardcoded English in a bilingual app.
 - A root `VERSION` file says `0.5.1` while `package.json` says `0.9.0`.
+
+---
+
+# Part 3 — Why none of it reached production
+
+After #76 and #77 merged and both deploys reported success, production still served
+pre-#76 behaviour. Three independent probes disagreed with local results, which turned out
+to be one cause with three layers stacked on top of each other.
+
+## Layer 1 — CI reported success on deployments that failed
+
+`.github/workflows/deploy.yml` ran:
+
+```bash
+url=$(vercel deploy --prebuilt --prod --token=... | tail -n1)
+```
+
+GitHub executes `run:` blocks as `bash -e` — errexit **without pipefail**. The command
+substitution therefore returned *`tail`'s* exit status, which is always 0. A failed
+`vercel deploy` exited non-zero, `tail` swallowed it, the step passed, and the next step
+recorded a GitHub deployment with `state=success`.
+
+**Consequence: every production deployment from 2026-06-06 to 2026-09-30 errored on
+Vercel while every Actions run stayed green.** `vercel ls` showed the truth:
+
+```
+evoyage.duypham.me  ->  evoyage-4425csmle-…   created Jun 06 2026  [116 days ago]
+evoyage-73j46o71y  (#76)  ● Error
+evoyage-jymqcqh38  (#77)  ● Error
+```
+
+The domain was never pinned. It follows production correctly — there simply had been no
+successful production deployment in four months for it to follow.
+
+Fixed with `set -eo pipefail` plus an explicit assertion that a deployment URL came back.
+The other eight workflows were swept for the same pattern; none share it.
+
+## Layer 2 — the deploys failed on a `.vercelignore` collision
+
+```
+Error: ENOENT: no such file or directory, readlink '/vercel/path0/.env'
+
+! `.vercelignore` excludes 7 files the prebuilt functions need.
+```
+
+Next's output-file tracing pulls root `.env*` into the function bundle's `filePathMap`,
+while `.vercelignore` excludes `.env*` from upload — correctly, since those files hold
+secrets. Verified by moving the seven root `.env*` files aside and rebuilding: the
+`filePathMap` went from listing all seven to listing none, and the deploy then succeeded
+and auto-aliased the domain.
+
+`outputFileTracingExcludes` was tried and did **not** remove them, so it was reverted
+rather than shipped with a comment claiming a fix it did not deliver.
+
+**Operational note:** this is a hazard for local `vercel build && vercel deploy --prebuilt`
+only. CI checks out a clean tree with no root `.env*`, so it is not affected — and CI is
+where deploys should happen anyway (see Layer 3).
+
+## Layer 3 — Prisma had no arm64 engine
+
+With production finally serving current code, `/api/stations` still returned 500. The
+Vercel runtime log:
+
+```
+PrismaClientInitializationError: Prisma Client could not locate the Query Engine
+for runtime "linux-arm64-openssl-3.0.x"
+```
+
+`binaryTargets` was `["native", "rhel-openssl-3.0.x"]`. Vercel's Node runtime is arm64, so
+no usable engine shipped.
+
+**The dangerous half of this:** `/api/vehicles` returned **200**. It catches the Prisma
+failure and serves a hardcoded vehicle list (`DB query failed, using fallback`), so the
+endpoint looks healthy while returning static data instead of the database. Status-code
+monitoring would show green.
+
+This was independent of the Upstash outage — the rate limiter threw first and masked it.
+
+## A mistake worth recording
+
+To get production moving, this session ran `vercel build --prod && vercel deploy --prebuilt
+--prod` **from a Mac**. That shipped a bundle containing the `darwin-arm64` Prisma engine,
+so the deployment that finally succeeded was itself broken for every database query. The
+correct move was `gh workflow run deploy.yml`, which builds on Linux. Local prebuilt
+deploys should be treated as a diagnostic tool, never a release path.
+
+## What was verified live after the domain started serving current code
+
+```
+/api/admin/feedback/aaa   401
+/API/ADMIN/FEEDBACK/aaa   401   (was 405 — the unauthenticated write vector is closed)
+/api/ADMIN/feedback/aaa   401
+/admin/feedback/a.a       401
+/api/stations?bounds=abc  400   (Zod validation reached)
+```
+
+The admin auth fix is confirmed working against production, which the earlier
+"still bypassable" reading had wrong — that was the stale June build answering.

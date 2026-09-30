@@ -46,6 +46,10 @@ export interface VinfastLocatorRaw {
 
 export type VinfastApiErrorKind =
   | 'cloudflare_blocked'
+  // Upstream answered 200 with an empty station list. Treated as an error on
+  // purpose: this endpoint backs ~20k stations, so zero means the source is
+  // broken or has moved, never that Vietnam has no chargers.
+  | 'empty_result'
   | 'http_error'
   | 'parse_error'
   | 'network_error'

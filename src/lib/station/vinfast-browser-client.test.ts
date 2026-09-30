@@ -81,4 +81,19 @@ describe('fetchVinfastLocatorsFromPage', () => {
       statusCode: 403,
     });
   });
+
+  it('rejects an empty station list rather than reporting success', async () => {
+    // VinFast began answering 200 with {"data":[]} in 2026-09. The crawl and the
+    // poll both parsed that as "0 locators" and exited 0, so every run was green
+    // while no station data moved and station-stats.json was rewritten to 0.
+    const page = makePage({
+      status: 200,
+      text: JSON.stringify({ data: [], method: 'GET', status: 200 }),
+    });
+
+    const error = await fetchVinfastLocatorsFromPage(page).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(VinfastApiError);
+    expect(error).toMatchObject({ kind: 'empty_result' });
+  });
 });
