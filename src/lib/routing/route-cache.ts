@@ -36,9 +36,14 @@ export async function getCachedRoute(
   const { startPlaceId, endPlaceId } = makeCacheKey(startLat, startLng, endLat, endLng, provider);
   const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000);
 
-  const cached = await prisma.routeCache.findUnique({
-    where: { startPlaceId_endPlaceId: { startPlaceId, endPlaceId } },
-  });
+  // The cache is best-effort — a database failure must degrade to a cache miss,
+  // never fail the trip request that is only asking for a shortcut.
+  const cached = await prisma.routeCache
+    .findUnique({ where: { startPlaceId_endPlaceId: { startPlaceId, endPlaceId } } })
+    .catch((err: unknown) => {
+      console.warn('[route-cache] read failed; treating as a cache miss', err);
+      return null;
+    });
 
   if (!cached || cached.createdAt < cutoff) {
     return null;
@@ -62,20 +67,26 @@ export async function setCachedRoute(
 ): Promise<void> {
   const { startPlaceId, endPlaceId } = makeCacheKey(startLat, startLng, endLat, endLng, provider);
 
-  await prisma.routeCache.upsert({
-    where: { startPlaceId_endPlaceId: { startPlaceId, endPlaceId } },
-    update: {
-      polyline: route.polyline,
-      distanceMeters: route.distanceMeters,
-      durationSeconds: route.durationSeconds,
-      createdAt: new Date(),
-    },
-    create: {
-      startPlaceId,
-      endPlaceId,
-      polyline: route.polyline,
-      distanceMeters: route.distanceMeters,
-      durationSeconds: route.durationSeconds,
-    },
-  });
+  // Best-effort — the route has already been computed by the time we get here,
+  // so a failed write must never discard it. Logged, not silent.
+  try {
+    await prisma.routeCache.upsert({
+      where: { startPlaceId_endPlaceId: { startPlaceId, endPlaceId } },
+      update: {
+        polyline: route.polyline,
+        distanceMeters: route.distanceMeters,
+        durationSeconds: route.durationSeconds,
+        createdAt: new Date(),
+      },
+      create: {
+        startPlaceId,
+        endPlaceId,
+        polyline: route.polyline,
+        distanceMeters: route.distanceMeters,
+        durationSeconds: route.durationSeconds,
+      },
+    });
+  } catch (err) {
+    console.warn('[route-cache] write failed; continuing without caching', err);
+  }
 }

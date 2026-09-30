@@ -281,20 +281,21 @@ export default function ElevationChart({
         </>
       )}
 
-      {/* Charging stop markers (⚡) */}
+      {/* Charging stop markers */}
       {chargingStopDistances.map((dist, i) => {
         const cx = distToX(dist);
         const cy = distToY(dist);
         return (
-          <text
+          <circle
             key={`charge-${i}`}
-            x={cx}
-            y={cy - 8}
-            textAnchor="middle"
-            fontSize="12"
-          >
-            ⚡
-          </text>
+            data-testid="elevation-charging-stop"
+            cx={cx}
+            cy={cy - 8}
+            r="4"
+            fill="var(--color-warn)"
+            stroke="var(--color-surface)"
+            strokeWidth="1.5"
+          />
         );
       })}
 

@@ -274,10 +274,6 @@ describe('planChargingStops', () => {
       stations: stationsAlongRoute,
     });
 
-    // VinFast should be able to use VinFast-only stations
-    const vinFastStops = result.chargingStops.filter(
-      (s) => ('selected' in s ? s.selected.station.isVinFastOnly : s.station.isVinFastOnly),
-    );
     // May or may not use VinFast stations depending on proximity,
     // but at least it shouldn't be filtered out
     expect(result.chargingStops.length).toBeGreaterThan(0);

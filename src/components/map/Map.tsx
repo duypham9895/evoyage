@@ -155,7 +155,7 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation,
         { icon: createCircleIcon(color, `${index + 1}`) },
       );
 
-      marker.bindPopup(buildStopPopupHtml(stop));
+      marker.bindPopup(buildStopPopupHtml(stop, t('popup_navigate')));
       overlays.addLayer(marker);
     });
 
@@ -175,7 +175,7 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation,
       bounds.extend([wp.lat, wp.lng]);
     });
     map.fitBounds(bounds, { padding: [50, 50] });
-  }, [tripPlan, waypoints]);
+  }, [tripPlan, waypoints, t]);
 
   // Register global callback for "Ask eVi" button in mini-card popups
   const handleAskEVi = useCallback((stationId: string, stationName: string) => {

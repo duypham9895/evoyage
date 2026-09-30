@@ -1,4 +1,10 @@
 .env*
+# .env.example is committed to this public repo and holds no secrets, only key
+# names. Next's output file tracing pulls it into the prebuilt function bundle,
+# so excluding it from upload made every `vercel deploy --prebuilt` fail with
+#     Error: ENOENT: no such file or directory, readlink '/vercel/path0/.env.example'
+# Un-ignoring it costs nothing and unblocks the deploy.
+!.env.example
 .next/
 coverage/
 node_modules/

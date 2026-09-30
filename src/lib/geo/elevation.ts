@@ -1,4 +1,3 @@
-import type { LatLng } from '@/types';
 import { decodePolyline, cumulativeDistances } from '@/lib/geo/polyline';
 import { haversineDistance } from '@/lib/routing/station-finder';
 

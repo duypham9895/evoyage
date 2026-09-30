@@ -118,6 +118,9 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
   const lastResponseRef = useRef(lastResponse);
   lastResponseRef.current = lastResponse;
 
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+
   // ── Geolocation (mount only) ──
   useEffect(() => {
     let cancelled = false;
@@ -204,7 +207,7 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
         content: m.content,
       })),
       tripContext,
-      locale,
+      locale: localeRef.current,
     };
 
     fetch('/api/evi/suggestions', {

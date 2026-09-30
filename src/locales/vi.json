@@ -395,6 +395,7 @@
   "evi_vehicle": "Xe",
   "evi_battery": "Pin",
   "evi_location_prompt": "Nhập điểm xuất phát",
+  "evi_location_submit": "Xác nhận điểm xuất phát",
   "evi_or_type": "hoặc gõ",
   "evi_speak": "Bấm để nói",
   "evi_error_generic": "Xin lỗi, mình đang gặp sự cố. Bạn có thể nhập thủ công nhé!",
