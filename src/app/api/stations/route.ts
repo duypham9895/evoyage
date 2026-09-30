@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, stationsLimiter } from '@/lib/rate-limit';
 import { safeJsonArray } from '@/lib/safe-json';
@@ -12,6 +13,21 @@ import { safeJsonArray } from '@/lib/safe-json';
  *   provider    - Filter by provider name
  *   bounds      - "lat1,lng1,lat2,lng2" bounding box for map viewport
  */
+/** `bounds=lat1,lng1,lat2,lng2` — exactly four finite numbers, no blank parts. */
+const BoundsParam = z
+  .string()
+  .refine(
+    (raw) => {
+      const parts = raw.split(',');
+      return (
+        parts.length === 4 &&
+        parts.every((p) => p.trim() !== '' && Number.isFinite(Number(p)))
+      );
+    },
+    { message: 'bounds must be "lat1,lng1,lat2,lng2" with four finite numbers' },
+  )
+  .transform((raw) => raw.split(',').map(Number) as [number, number, number, number]);
+
 export async function GET(request: NextRequest) {
   // Rate limiting: 30 requests per minute per IP
   const ip = getClientIp(request);
@@ -45,33 +61,39 @@ export async function GET(request: NextRequest) {
   }
 
   if (bounds) {
-    const parts = bounds.split(',').map(Number);
-    const [lat1, lng1, lat2, lng2] = parts;
-    if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
-      // Validate geographic bounds
-      const minLat = Math.min(lat1, lat2);
-      const maxLat = Math.max(lat1, lat2);
-      const minLng = Math.min(lng1, lng2);
-      const maxLng = Math.max(lng1, lng2);
-
-      if (minLat < -90 || maxLat > 90 || minLng < -180 || maxLng > 180) {
-        return NextResponse.json(
-          { error: 'Invalid bounds: lat must be -90 to 90, lng must be -180 to 180' },
-          { status: 400 },
-        );
-      }
-
-      // Reject overly large bounding boxes to prevent full table scans
-      if ((maxLat - minLat) > 5 || (maxLng - minLng) > 5) {
-        return NextResponse.json(
-          { error: 'Bounding box too large (max 5° × 5°)' },
-          { status: 400 },
-        );
-      }
-
-      where.latitude = { gte: minLat, lte: maxLat };
-      where.longitude = { gte: minLng, lte: maxLng };
+    const parsedBounds = BoundsParam.safeParse(bounds);
+    if (!parsedBounds.success) {
+      return NextResponse.json(
+        { error: 'Invalid bounds', details: parsedBounds.error.issues.map((i) => i.message) },
+        { status: 400 },
+      );
     }
+
+    const [lat1, lng1, lat2, lng2] = parsedBounds.data;
+
+    // Validate geographic bounds
+    const minLat = Math.min(lat1, lat2);
+    const maxLat = Math.max(lat1, lat2);
+    const minLng = Math.min(lng1, lng2);
+    const maxLng = Math.max(lng1, lng2);
+
+    if (minLat < -90 || maxLat > 90 || minLng < -180 || maxLng > 180) {
+      return NextResponse.json(
+        { error: 'Invalid bounds: lat must be -90 to 90, lng must be -180 to 180' },
+        { status: 400 },
+      );
+    }
+
+    // Reject overly large bounding boxes to prevent full table scans
+    if ((maxLat - minLat) > 5 || (maxLng - minLng) > 5) {
+      return NextResponse.json(
+        { error: 'Bounding box too large (max 5° × 5°)' },
+        { status: 400 },
+      );
+    }
+
+    where.latitude = { gte: minLat, lte: maxLat };
+    where.longitude = { gte: minLng, lte: maxLng };
   }
 
   const stations = await prisma.chargingStation.findMany({

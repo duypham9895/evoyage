@@ -3,27 +3,38 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createWebSpeechEngine, isWebSpeechSupported } from './web-speech-engine';
 import type { SpeechEngineCallbacks } from './types';
 
+/** The slice of SpeechRecognitionEvent that web-speech-engine actually reads. */
+type SpeechResultEvent = { results: Array<{ 0: { transcript: string }; isFinal: boolean }> };
+/** The slice of SpeechRecognitionErrorEvent that web-speech-engine actually reads. */
+type SpeechErrorEvent = { error: string };
+
+/** The Web Speech API constructors are not in lib.dom, so widen `window` once here. */
+const speechWindow = window as Window & {
+  SpeechRecognition?: unknown;
+  webkitSpeechRecognition?: unknown;
+};
+
 function mockSpeechRecognition() {
   const mock = {
     lang: '',
     continuous: false,
     interimResults: false,
-    onresult: null as any,
-    onerror: null as any,
-    onend: null as any,
+    onresult: null as ((event: SpeechResultEvent) => void) | null,
+    onerror: null as ((event: SpeechErrorEvent) => void) | null,
+    onend: null as (() => void) | null,
     start: vi.fn(),
     stop: vi.fn(),
     abort: vi.fn(),
   };
   // Must use `function` keyword (not arrow) so it works as a constructor with `new`
   const Constructor = vi.fn().mockImplementation(function () { return mock; });
-  (window as any).SpeechRecognition = Constructor;
+  speechWindow.SpeechRecognition = Constructor;
   return { mock, Constructor };
 }
 
 function clearSpeechRecognition() {
-  delete (window as any).SpeechRecognition;
-  delete (window as any).webkitSpeechRecognition;
+  delete speechWindow.SpeechRecognition;
+  delete speechWindow.webkitSpeechRecognition;
 }
 
 function makeCallbacks(): SpeechEngineCallbacks & {
@@ -52,12 +63,12 @@ describe('isWebSpeechSupported', () => {
   });
 
   it('returns true when SpeechRecognition is present', () => {
-    (window as any).SpeechRecognition = vi.fn();
+    speechWindow.SpeechRecognition = vi.fn();
     expect(isWebSpeechSupported()).toBe(true);
   });
 
   it('returns true when webkitSpeechRecognition is present', () => {
-    (window as any).webkitSpeechRecognition = vi.fn();
+    speechWindow.webkitSpeechRecognition = vi.fn();
     expect(isWebSpeechSupported()).toBe(true);
   });
 });
@@ -108,7 +119,7 @@ describe('createWebSpeechEngine', () => {
     const engine = createWebSpeechEngine(cb);
 
     engine.start('vi');
-    mock.onresult({ results: [{ 0: { transcript: 'Đi Đà Lạt' }, isFinal: false }] });
+    mock.onresult!({ results: [{ 0: { transcript: 'Đi Đà Lạt' }, isFinal: false }] });
 
     expect(cb.transcripts).toHaveLength(1);
     expect(cb.transcripts[0]).toEqual({ text: 'Đi Đà Lạt', isFinal: false });
@@ -120,7 +131,7 @@ describe('createWebSpeechEngine', () => {
     const engine = createWebSpeechEngine(cb);
 
     engine.start('vi');
-    mock.onresult({ results: [{ 0: { transcript: 'Đi Đà Lạt' }, isFinal: true }] });
+    mock.onresult!({ results: [{ 0: { transcript: 'Đi Đà Lạt' }, isFinal: true }] });
 
     expect(cb.transcripts[0].isFinal).toBe(true);
   });
@@ -131,7 +142,7 @@ describe('createWebSpeechEngine', () => {
     const engine = createWebSpeechEngine(cb);
 
     engine.start('vi');
-    mock.onerror({ error: 'not-allowed' });
+    mock.onerror!({ error: 'not-allowed' });
 
     expect(cb.errors).toEqual(['not_allowed']);
   });
@@ -142,7 +153,7 @@ describe('createWebSpeechEngine', () => {
     const engine = createWebSpeechEngine(cb);
 
     engine.start('vi');
-    mock.onerror({ error: 'audio-capture' });
+    mock.onerror!({ error: 'audio-capture' });
 
     expect(cb.errors).toEqual(['not_allowed']);
   });
@@ -153,7 +164,7 @@ describe('createWebSpeechEngine', () => {
     const engine = createWebSpeechEngine(cb);
 
     engine.start('vi');
-    mock.onerror({ error: 'some-unknown-error' });
+    mock.onerror!({ error: 'some-unknown-error' });
 
     expect(cb.errors).toEqual(['recognition_failed']);
   });
@@ -164,7 +175,7 @@ describe('createWebSpeechEngine', () => {
     const engine = createWebSpeechEngine(cb);
 
     engine.start('vi');
-    mock.onend();
+    mock.onend!();
 
     expect(cb.endCount).toBe(1);
   });
