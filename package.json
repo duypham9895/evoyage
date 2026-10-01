@@ -28,26 +28,26 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@sparticuz/chromium": "^149.0.0",
-    "@types/leaflet": "^1.9.21",
+    "@types/leaflet": "^1.9.22",
     "@upstash/ratelimit": "^2.0.8",
-    "@upstash/redis": "^1.38.0",
-    "@vercel/blob": "^2.4.0",
+    "@upstash/redis": "^1.38.2",
+    "@vercel/blob": "^2.7.0",
     "@vercel/og": "^0.11.1",
     "html-to-image": "^1.11.13",
-    "impit": "^0.14.1",
+    "impit": "^0.14.3",
     "leaflet": "^1.9.4",
-    "mapbox-gl": "^3.24.0",
+    "mapbox-gl": "^3.28.0",
     "nanoid": "^5.1.11",
-    "next": "16.2.6",
+    "next": "16.3.0",
     "openai": "^6.39.1",
     "playwright-core": "^1.58.2",
-    "posthog-js": "^1.376.5",
+    "posthog-js": "^1.413.3",
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
-    "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-leaflet": "^5.0.0",
-    "react-map-gl": "^8.1.1",
+    "react-map-gl": "^8.1.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -72,6 +72,6 @@
     "vitest": "^4.1.7"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.2.1"
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.3"
   }
 }
