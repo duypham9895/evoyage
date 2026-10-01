@@ -30,18 +30,24 @@ export interface VinfastLocatorRaw {
   readonly lng: string;
   readonly hotline: string;
   readonly province_id: string;
-  readonly access_type: string;
-  readonly party_id: string;
-  readonly charging_publish: boolean;
-  readonly charging_status: string;
   readonly category_name: string;
   readonly category_slug: string;
-  readonly hotline_xdv: string;
-  readonly open_time_service: string;
-  readonly close_time_service: string;
-  readonly parking_fee: boolean;
-  readonly has_link: boolean;
   readonly marker_icon: string;
+  // Row class in the CDN locator feed: charging_station | battery_swap_station |
+  // showroom. Absent from the legacy /vn_vi/get-locators response.
+  readonly bundle?: string;
+  // Present on the legacy /vn_vi/get-locators response, absent from the CDN
+  // locator feed that replaced it (verified 2026-10-01). The poller still reads
+  // charging_status from the legacy endpoint, so these stay declared.
+  readonly access_type?: string;
+  readonly party_id?: string;
+  readonly charging_publish?: boolean;
+  readonly charging_status?: string;
+  readonly hotline_xdv?: string;
+  readonly open_time_service?: string;
+  readonly close_time_service?: string;
+  readonly parking_fee?: boolean;
+  readonly has_link?: boolean;
 }
 
 export type VinfastApiErrorKind =
