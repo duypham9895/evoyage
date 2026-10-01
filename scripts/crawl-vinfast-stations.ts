@@ -2,8 +2,8 @@
  * Crawl VinFast charging stations from vinfastauto.com using Playwright.
  *
  * Uses a real Chromium browser to navigate the locator page (solving any
- * Cloudflare JS challenges), then calls the get-locators API from the
- * browser context with valid CF cookies.
+ * Cloudflare JS challenges), then reads the CDN locator file set through the
+ * same browser context, which carries the Cloudflare clearance cookie.
  *
  * Designed to run on GitHub Actions (ubuntu-latest, free tier).
  *
@@ -14,10 +14,8 @@ import { chromium } from 'playwright';
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  fetchVinfastLocatorsFromPage,
-  VINFAST_BROWSER_USER_AGENT,
-} from '../src/lib/station/vinfast-browser-client';
+import { VINFAST_BROWSER_USER_AGENT } from '../src/lib/station/vinfast-browser-client';
+import { fetchVinfastCarChargingStationsFromCdn } from '../src/lib/station/vinfast-cdn-locators';
 import {
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
@@ -33,7 +31,7 @@ function isInVietnam(lat: number, lng: number): boolean {
   return lat >= 8.0 && lat <= 23.5 && lng >= 102.0 && lng <= 110.0;
 }
 
-function buildOperatingHours(open: string, close: string): string | null {
+function buildOperatingHours(open?: string, close?: string): string | null {
   if (open === '00:00' && close === '23:59') return '24/7';
   if (open && close) return `${open} - ${close}`;
   return null;
@@ -61,8 +59,10 @@ async function fetchVinFastLocators(): Promise<readonly VinfastLocatorRaw[]> {
 
   try {
     const page = await context.newPage();
-    console.log('  Fetching VinFast locators in browser context...');
-    return await fetchVinfastLocatorsFromPage(page);
+    console.log('  Fetching VinFast locators from the CDN file set...');
+    // The data file is ~73MB, well past Playwright's 30s request default.
+    const request = { get: (url: string) => context.request.get(url, { timeout: 120_000 }) };
+    return await fetchVinfastCarChargingStationsFromCdn(page, request);
   } finally {
     await browser.close();
   }
@@ -129,10 +129,10 @@ function buildStationData(s: VinfastLocatorRaw) {
     storeId: s.store_id,
     hotline: s.hotline || null,
     hotlineService: s.hotline_xdv || null,
-    chargingStatus: s.charging_status,
-    parkingFee: s.parking_fee,
-    accessType: s.access_type,
-    partyId: s.party_id,
+    chargingStatus: s.charging_status ?? null,
+    parkingFee: s.parking_fee ?? null,
+    accessType: s.access_type ?? null,
+    partyId: s.party_id ?? null,
     hasLink: s.has_link ?? false,
     categoryName: s.category_name,
     categorySlug: s.category_slug,
@@ -199,6 +199,22 @@ async function bulkUpsertStations(
         "categoryName", "categorySlug", "markerIcon", "rawData"
       ) VALUES ${values.join(', ')}
       ON CONFLICT ("ocmId") DO UPDATE SET
+        -- COALESCE on every column the CDN feed does not carry.
+        --
+        -- The 2026-10 migration to the static CDN dropped charging_status,
+        -- parking_fee, access_type, party_id, hotline_xdv, open/close_time_service
+        -- and has_link. Those columns were previously assigned EXCLUDED.* here,
+        -- so the first successful crawl would have nulled all of them across
+        -- every one of the ~19,951 existing VinFast rows.
+        --
+        -- chargingStatus is the one that bites: it is the SOLE input to the
+        -- out-of-service filter in src/app/api/route/route.ts. Production
+        -- currently holds UNAVAILABLE on 149 and INACTIVE on 29 of a 500-row
+        -- sample, so nulling it would have made ~36% of stations silently
+        -- eligible as charging stops again — routing drivers to dead chargers.
+        --
+        -- COALESCE keeps the existing value when the feed has nothing, and
+        -- resumes updating automatically if VinFast ever restores the field.
         "name" = EXCLUDED."name",
         "address" = EXCLUDED."address",
         "province" = EXCLUDED."province",
@@ -208,19 +224,22 @@ async function bulkUpsertStations(
         "connectorTypes" = EXCLUDED."connectorTypes",
         "portCount" = EXCLUDED."portCount",
         "maxPowerKw" = EXCLUDED."maxPowerKw",
-        "stationType" = EXCLUDED."stationType",
-        "operatingHours" = EXCLUDED."operatingHours",
+        -- "stationType" deliberately NOT updated: it is NOT NULL in the schema,
+        -- and the CDN feed carries no access_type, so buildStationData can only
+        -- guess 'public'. Overwriting would discard a real value with a guess.
+        -- New rows still get it on INSERT.
+        "operatingHours" = COALESCE(EXCLUDED."operatingHours", "ChargingStation"."operatingHours"),
         "scrapedAt" = EXCLUDED."scrapedAt",
         "entityId" = EXCLUDED."entityId",
         "stationCode" = EXCLUDED."stationCode",
         "storeId" = EXCLUDED."storeId",
         "hotline" = EXCLUDED."hotline",
-        "hotlineService" = EXCLUDED."hotlineService",
-        "chargingStatus" = EXCLUDED."chargingStatus",
-        "parkingFee" = EXCLUDED."parkingFee",
-        "accessType" = EXCLUDED."accessType",
-        "partyId" = EXCLUDED."partyId",
-        "hasLink" = EXCLUDED."hasLink",
+        "hotlineService" = COALESCE(EXCLUDED."hotlineService", "ChargingStation"."hotlineService"),
+        "chargingStatus" = COALESCE(EXCLUDED."chargingStatus", "ChargingStation"."chargingStatus"),
+        "parkingFee" = COALESCE(EXCLUDED."parkingFee", "ChargingStation"."parkingFee"),
+        "accessType" = COALESCE(EXCLUDED."accessType", "ChargingStation"."accessType"),
+        "partyId" = COALESCE(EXCLUDED."partyId", "ChargingStation"."partyId"),
+        "hasLink" = COALESCE(EXCLUDED."hasLink", "ChargingStation"."hasLink"),
         "categoryName" = EXCLUDED."categoryName",
         "categorySlug" = EXCLUDED."categorySlug",
         "markerIcon" = EXCLUDED."markerIcon",
@@ -244,9 +263,10 @@ async function main() {
   console.log(`  Total from API: ${allStations.length}`);
 
   // Step 2: Filter valid car charging stations
+  // Category selection happens in fetchVinfastCarChargingStationsFromCdn, which
+  // throws `empty_result` rather than returning zero rows. Only coordinate
+  // validity is left to check here.
   const valid = allStations.filter((s) => {
-    if (s.category_slug !== 'car_charging_station') return false;
-    if (!s.charging_publish) return false;
     const lat = parseFloat(s.lat);
     const lng = parseFloat(s.lng);
     if (isNaN(lat) || isNaN(lng)) return false;
