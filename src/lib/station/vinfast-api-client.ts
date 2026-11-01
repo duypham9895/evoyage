@@ -36,9 +36,9 @@ export interface VinfastLocatorRaw {
   // Row class in the CDN locator feed: charging_station | battery_swap_station |
   // showroom. Absent from the legacy /vn_vi/get-locators response.
   readonly bundle?: string;
-  // Present on the legacy /vn_vi/get-locators response, absent from the CDN
-  // locator feed that replaced it (verified 2026-10-01). The poller still reads
-  // charging_status from the legacy endpoint, so these stay declared.
+  // Present on the legacy /vn_vi/get-locators response; reported absent from the
+  // CDN feed on 2026-10-01. Exception: charging_status IS in the CDN feed
+  // (24,873 of 24,873 car rows on 2026-11-01) and the poller reads it there.
   readonly access_type?: string;
   readonly party_id?: string;
   readonly charging_publish?: boolean;

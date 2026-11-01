@@ -2,9 +2,12 @@
  * Poll VinFast station charging statuses from a GitHub Actions browser context.
  *
  * Vercel server-side requests can replay fresh cookies and still receive 403
- * from VinFast/Cloudflare. Running the poll from the same Chromium context that
- * resolves the locator page keeps the API request browser-native while reusing
- * the existing DB dedupe/insert logic.
+ * from VinFast/Cloudflare. Running the poll from a Chromium context that has
+ * cleared the challenge on the locator page keeps the requests browser-native
+ * while reusing the existing DB dedupe/insert logic.
+ *
+ * Statuses come from the CDN locator file set, the same reader the daily crawl
+ * uses. The legacy /vn_vi/get-locators endpoint answers 200 with {"data":[]}.
  *
  * Run: npx tsx scripts/poll-vinfast-station-status.ts
  */
@@ -12,16 +15,17 @@ import { PrismaClient } from '@prisma/client';
 import { chromium, type Cookie } from 'playwright';
 import { computeCookieExpiry } from '../src/lib/station/cookie-expiry';
 import { pollStationStatus } from '../src/lib/station/poll-status';
-import {
-  fetchVinfastLocatorsFromPage,
-  VINFAST_BROWSER_USER_AGENT,
-} from '../src/lib/station/vinfast-browser-client';
+import { VINFAST_BROWSER_USER_AGENT } from '../src/lib/station/vinfast-browser-client';
+import { fetchVinfastCarChargingStationsFromCdn } from '../src/lib/station/vinfast-cdn-locators';
 import {
   classifyVinfastCronError,
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
 } from '../src/lib/station/vinfast-upstream-error';
-import type { VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
+import {
+  VinfastApiError,
+  type VinfastLocatorRaw,
+} from '../src/lib/station/vinfast-api-client';
 
 const prisma = new PrismaClient();
 const KEEP_LAST_N_ROWS = 3;
@@ -49,8 +53,22 @@ async function fetchBrowserPollPayload(): Promise<BrowserPollPayload> {
     });
 
     const page = await context.newPage();
-    console.log('Fetching VinFast locators in browser context...');
-    const locators = await fetchVinfastLocatorsFromPage(page);
+    console.log('Fetching VinFast locators from the CDN file set...');
+    // The data file is ~73MB, well past Playwright's 30s request default.
+    const request = { get: (url: string) => context.request.get(url, { timeout: 120_000 }) };
+    const locators = await fetchVinfastCarChargingStationsFromCdn(page, request);
+
+    // pollStationStatus silently skips rows without a status, so a feed that
+    // drops the field would exit green having recorded nothing. Live share on
+    // 2026-11-01 was 24,873 of 24,873; under half means the field broke.
+    const withStatus = locators.filter((row) => row.charging_status).length;
+    if (withStatus * 2 < locators.length) {
+      throw new VinfastApiError(
+        'empty_result',
+        `Only ${withStatus} of ${locators.length} locator rows carry charging_status`,
+      );
+    }
+
     const cookies = await context.cookies();
     if (cookies.length === 0) {
       throw new Error('No cookies extracted from browser context');
