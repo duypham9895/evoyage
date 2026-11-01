@@ -33,7 +33,7 @@ A user reporting a missing station enters the coordinates as `10,7626` / `106,66
 - `node -e 'console.log(JSON.stringify({a:Number("10.7626, 106.6602"),b:Number("10,7626")}))'` prints `{"a":null,"b":null}`: `Number()` gives `NaN`, and `JSON.stringify` turns `NaN` into `null`.
 - `src/lib/feedback/schema.ts:25-26` — `z.number().min(-90).max(90).optional()` (and ±180) rejects `null` with `Invalid input: expected number, received null`, and rejects out-of-range numbers.
 - `src/app/api/feedback/route.ts:74-84` — on parse failure the route returns 400 with `details: parsed.error.issues`.
-- `src/components/feedback/FeedbackModal.tsx:202-214` — on a 400 with `details`, the client stores `errors[issue.path[0]] = issue.message` and calls `setValidationErrors(errors)`. It does **not** call `setStep('error')`.
+- `src/components/feedback/FeedbackModal.tsx:200-214` — on a 400 with `details`, the client stores `errors[issue.path[0]] = issue.message` and calls `setValidationErrors(errors)`. It does **not** call `setStep('error')`.
 - The JSX renders only three keys: `validationErrors.description` (`:378-386`), `validationErrors.email` (`:540-547`), `validationErrors.submit` (`:591-593`). Any other key (`proposedLatitude`, `proposedLongitude`, `pageUrl`, `routeParams`, ...) is stored and never shown.
 - `src/app/api/feedback/route.ts:44-61` — the rate-limit check runs before JSON parse and `safeParse`, so every rejected attempt consumes quota.
 - Verifier schema repro (scratch script, not in repo): body with `proposedLatitude: Number('10,7626')` round-tripped through JSON → `safeParse` → `false [["proposedLatitude"]]`; same for `200` and `"abc"`. A `pageUrl` over 2000 chars fails the same way with path `["pageUrl"]`.
@@ -59,12 +59,12 @@ Local dev only (do not POST to prod):
 `src/components/feedback/FeedbackModal.test.tsx`, both marked `it.fails`:
 
 - `normalises decimal-comma coordinates for MISSING_STATION instead of sending null`. It currently fails with `expected null to be 10.7626`. **Gotcha:** the test encodes the *normalise* fix. If the fixer instead chooses to reject commas client-side with a visible error, rewrite this test to assert that error and that no request was sent. Do not just delete it.
-- `shows a visible error when the server rejects a field the form does not render`. It mocks a 400 with `details: [{path:['proposedLatitude'], ...}]` and passes if either the error step (`feedback_error_message`) or the detail message is visible. It currently fails with `expected false to be true`.
+- `shows a visible error when the server rejects a field the form does not render`. It mocks a 400 with `details: [{path:['proposedLatitude'], ...}]` and passes if either the error step (`feedback_error_message`) or the detail message is visible. It currently fails with `expected false to be true`. The assertion is wrapped in `vi.waitFor`, so it holds whether the fix calls `setStep('error')` (which removes the submit button) or sets an inline message. **Gotcha:** it accepts exactly two visible outputs: the text `feedback_error_message` (the error step) or the raw zod message (`expected number, received null`). If the fixer shows a new generic locale key in `validationErrors.submit` instead (for example `feedback_invalid_input`), add that key to the assertion. Do not loosen it to "anything rendered".
 
 ### Fix direction
 
 - `FeedbackModal.tsx` `validate()`: parse the coordinates. Accept `,` as a decimal separator, and consider splitting a pasted `lat, lng` pair across both fields. Check the ranges (±90 / ±180) and show an inline error under the coordinate inputs. That requires rendering `validationErrors.proposedLatitude` / `proposedLongitude`, which in turn requires new locale keys in both `en.json` and `vi.json` (`locale-keys.test.ts` enforces parity).
-- 400-details branch (`:202-214`): for any key the form does not render, fall back to a visible message: `validationErrors.submit` with a generic text, or `setStep('error')`. Keep the existing behaviour for `description` / `email`.
+- 400-details branch (`:200-214`): for any key the form does not render, fall back to a visible message: `validationErrors.submit` with a generic text, or `setStep('error')`. Keep the existing behaviour for `description` / `email`.
 - Optional: clamp `pageUrl` (2000) and `routeParams` (5000) client-side, so long URLs cannot trigger the same failure.
 - Gotcha: `parseFloat('10,7626')` returns `10` and silently drops the decimals. Do not "fix" this with `parseFloat`.
 - Out of scope unless agreed: moving the rate-limit check after validation in `route.ts`. It is a deliberate abuse guard, and changing it affects spam protection.
@@ -100,14 +100,14 @@ After a successful upload in the feedback modal, the thumbnail is a broken image
 
 ### Regression test
 
-`src/middleware.test.ts` → `CSP img-src must allow the feedback photo preview host` → `allows Vercel Blob public URLs in img-src (FeedbackImageUpload renders <img src={blob.url}>)` (`it.fails`). It currently fails because img-src does not match `*.public.blob.vercel-storage.com`. **Gotcha:** if the fix renders the preview from `URL.createObjectURL(file)` instead of widening the CSP, this test stays red by design. In that case, replace it with a `FeedbackImageUpload` component test asserting that the `<img>` src is a `blob:` URL.
+`src/middleware.test.ts` → `CSP img-src must allow the feedback photo preview host` → `allows Vercel Blob public URLs in img-src (FeedbackImageUpload renders <img src={blob.url}>)` (`it.fails`). It currently fails because img-src has no `<host>.public.blob.vercel-storage.com` entry. The regex accepts either the wildcard `*.public.blob.vercel-storage.com` or a store-scoped `https://<store-id>.public.blob.vercel-storage.com`, so both CSP options below turn it green. **Gotcha:** if the fix renders the preview from `URL.createObjectURL(file)` instead of widening the CSP, this test stays red by design. In that case, replace it with a `FeedbackImageUpload` component test asserting that the `<img>` src is a `blob:` URL.
 
 ### Fix direction
 
 Pick one:
 
 - Add `*.public.blob.vercel-storage.com` (or `https://<store-id>.public.blob.vercel-storage.com` to scope it to this project's store) to img-src in `buildCsp`, `src/middleware.ts`. This is a one-line change, and the e2e CSP smoke test may need updating.
-- Or render the preview from a local object URL (`URL.createObjectURL(file)`), which `blob:` already allows. This keeps the CSP tighter but needs `revokeObjectURL` cleanup. The admin feedback view would still be blocked if it ever renders the Blob URL under the same CSP; check `/admin/feedback` before choosing this option.
+- Or render the preview from a local object URL (`URL.createObjectURL(file)`), which `blob:` already allows. This keeps the CSP tighter but needs `revokeObjectURL` cleanup. The admin view is not affected today: `src/app/admin/feedback/[id]/page.tsx:74` shows `row.imageUrl` as plain text through `field()` (`<dd>{String(value)}</dd>`, :15-22), with no `<img>`. The CSP would only matter there if admin starts rendering the image.
 
 ---
 
@@ -118,9 +118,8 @@ Pick one:
 ## Open questions / what to verify first
 
 1. Is `BLOB_READ_WRITE_TOKEN` set in prod? If not, `/api/feedback/upload` returns 503, users never reach the preview, and Finding 2 is latent. Check in the Vercel env settings, not by uploading.
-2. Has `/admin/feedback` ever rendered attached images? If it renders Blob URLs, it is blocked by the same CSP (the middleware also covers `/admin`).
-3. Product decision for coordinates: normalise silently, or reject with an inline message? This determines how the first regression test is rewritten.
-4. Does a Vietnamese Android/iOS keyboard emit `,` for `inputMode="decimal"`? Check on a real device.
+2. Product decision for coordinates: normalise silently, or reject with an inline message? This determines how the first regression test is rewritten.
+3. Does a Vietnamese Android/iOS keyboard emit `,` for `inputMode="decimal"`? Check on a real device.
 
 ## Verification provenance
 

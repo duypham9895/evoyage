@@ -125,12 +125,13 @@ describe('FeedbackModal — characterization (react-hooks compiler refactor)', (
     });
     fireEvent.click(screen.getByRole('button', { name: 'feedback_submit' }));
 
-    // Wait until the submit round-trip has fully settled (button label back from 'feedback_submitting').
+    // Accept either fix: the error step (submit button gone, retry shown) or an inline message on the form.
+    // Do not wait on the submit button here: setStep('error') removes it.
     await vi.waitFor(() => expect(jsonMock).toHaveBeenCalledTimes(1));
-    await screen.findByRole('button', { name: 'feedback_submit' });
-
-    const errorStepShown = screen.queryByText('feedback_error_message') !== null;
-    const detailShown = screen.queryByText(/expected number, received null/) !== null;
-    expect(errorStepShown || detailShown).toBe(true);
+    await vi.waitFor(() => {
+      const errorStepShown = screen.queryByText('feedback_error_message') !== null;
+      const detailShown = screen.queryByText(/expected number, received null/) !== null;
+      expect(errorStepShown || detailShown).toBe(true);
+    });
   });
 });
