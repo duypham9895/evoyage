@@ -217,7 +217,7 @@ async function main() {
   writeFileSync(OUTPUT, JSON.stringify(out, null, 2) + '\n', 'utf8');
   console.log(`[energy-prices] wrote ${OUTPUT}`);
   console.log(
-    `  petrolimex RON 95-III: ₫${petrolimex.products.ron95iii.vndPerLiter.toLocaleString('en-US')}/L`,
+    `  petrolimex E10 RON 95-III: ₫${petrolimex.products.ron95iii.vndPerLiter.toLocaleString('en-US')}/L`,
   );
   console.log(
     `  petrolimex DO 0,05S:   ₫${petrolimex.products.do005s.vndPerLiter.toLocaleString('en-US')}/L`,

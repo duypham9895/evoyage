@@ -112,6 +112,10 @@ describe('renderEnergyPricesBlock', () => {
     expect(bullets).toHaveLength(4);
   });
 
+  it('labels gasoline as E10 RON 95-III, the grade Petrolimex sells since the 2026 E10 switch', () => {
+    expect(renderEnergyPricesBlock(prices)).toContain('Gasoline E10 RON 95-III: ₫23,750');
+  });
+
   it('formats VND with comma thousand-separators', () => {
     const out = renderEnergyPricesBlock(prices);
     expect(out).toContain('₫23,750');

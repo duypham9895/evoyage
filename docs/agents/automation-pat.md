@@ -28,7 +28,9 @@ error. Nothing goes stale silently. Rotate with the steps above.
 
 ## Guard rails
 
-- The sync step aborts if its commit touches anything besides the data JSON and `README.md`.
+- The sync step only ever stages its data JSON and `README.md` (`git add` of those two paths).
+- Checkout runs with `persist-credentials: false`; otherwise checkout v6+'s persisted
+  `GITHUB_TOKEN` header wins over the PAT on push and the PR gets no CI again.
 - Repo setting **Allow auto-merge** must stay on.
 - `crawl-energy-prices.ts` exits non-zero when any source reused a previous value, so a broken
   source blocks the sync instead of re-stamping old prices with a new date.
