@@ -249,3 +249,13 @@ describe('CSP + headers characterization (pins exact behaviour before the proxy 
     ]);
   });
 });
+
+describe('CSP img-src must allow the feedback photo preview host', () => {
+  // BUG(p2-feedback-form-failures): img-src lacks *.public.blob.vercel-storage.com, so the uploaded-photo thumbnail is blocked. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-feedback-form-failures.md
+  it.fails('allows Vercel Blob public URLs in img-src (FeedbackImageUpload renders <img src={blob.url}>)', () => {
+    const res = proxy(new NextRequest('http://localhost/plan'));
+    const csp = res.headers.get('content-security-policy') ?? '';
+    const imgSrc = csp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src')) ?? '';
+    expect(imgSrc).toMatch(/(^|\s)(https:\/\/)?\*\.public\.blob\.vercel-storage\.com(\s|$)/);
+  });
+});
