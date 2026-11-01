@@ -9,6 +9,8 @@
  * We extract the per-kWh rate and the effective date (Vietnam-format dd/mm/yyyy
  * → ISO yyyy-mm-dd).
  */
+import { assertPlausibleVnd, ELECTRICITY_VND_PER_KWH_BOUNDS } from './plausibility';
+
 export interface VGreenPrice {
   readonly vndPerKwh: number;
   readonly effectiveAt: string;
@@ -25,9 +27,7 @@ export function parseVGreenFaq(html: string): VGreenPrice {
 
   const [, rawPrice, dd, mm, yyyy] = match;
   const vndPerKwh = Number.parseInt(rawPrice.replace(/[.,]/g, ''), 10);
-  if (!Number.isFinite(vndPerKwh) || vndPerKwh <= 0) {
-    throw new Error(`V-GREEN parser: invalid price value "${rawPrice}"`);
-  }
+  assertPlausibleVnd(vndPerKwh, 'V-GREEN parser', ELECTRICITY_VND_PER_KWH_BOUNDS);
 
   return {
     vndPerKwh,

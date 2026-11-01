@@ -15,6 +15,7 @@ import { PrismaClient } from '@prisma/client';
 import { chromium, type Cookie } from 'playwright';
 import { computeCookieExpiry } from '../src/lib/station/cookie-expiry';
 import { pollStationStatus } from '../src/lib/station/poll-status';
+import { hasEnoughStatusCoverage } from '../src/lib/station/status-coverage';
 import { VINFAST_BROWSER_USER_AGENT } from '../src/lib/station/vinfast-browser-client';
 import { fetchVinfastCarChargingStationsFromCdn } from '../src/lib/station/vinfast-cdn-locators';
 import {
@@ -61,8 +62,8 @@ async function fetchBrowserPollPayload(): Promise<BrowserPollPayload> {
     // pollStationStatus silently skips rows without a status, so a feed that
     // drops the field would exit green having recorded nothing. Live share on
     // 2026-11-01 was 24,873 of 24,873; under half means the field broke.
-    const withStatus = locators.filter((row) => row.charging_status).length;
-    if (withStatus * 2 < locators.length) {
+    if (!hasEnoughStatusCoverage(locators)) {
+      const withStatus = locators.filter((row) => row.charging_status).length;
       throw new VinfastApiError(
         'empty_result',
         `Only ${withStatus} of ${locators.length} locator rows carry charging_status`,

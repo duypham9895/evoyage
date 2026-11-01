@@ -10,6 +10,8 @@
  *     mountain districts and adds UI complexity we don't need yet
  *   - surfaces the most recent `LastModified` as the effective date
  */
+import { assertPlausibleVnd, FUEL_VND_PER_LITER_BOUNDS } from './plausibility';
+
 export interface PetrolimexProduct {
   readonly label: string;
   readonly vndPerLiter: number;
@@ -77,17 +79,25 @@ export function parsePetrolimexProducts(
 
   // `ron95iii` is the gasoline price every consumer reads. Petrolimex replaced
   // pure RON 95-III with E10 RON 95-III in the 2026 E10 rollout; the E10 grade
-  // is its direct successor, so it stands in, under its own label.
+  // is its direct successor, so it stands in, under its own label. Copied
+  // rather than aliased so the two stay independent objects — callers must
+  // not be able to mutate one and silently affect the other.
   if (!products.ron95iii && products.e10ron95iii) {
-    products.ron95iii = products.e10ron95iii;
+    products.ron95iii = { ...products.e10ron95iii };
   }
 
   for (const required of REQUIRED_KEYS) {
-    if (!(required in products)) {
+    const product = products[required];
+    if (!product) {
       throw new Error(
         `Petrolimex parser: required product "${required}" missing from feed`,
       );
     }
+    assertPlausibleVnd(
+      product.vndPerLiter,
+      `Petrolimex parser: ${required}`,
+      FUEL_VND_PER_LITER_BOUNDS,
+    );
   }
 
   if (latestModified === 0) {

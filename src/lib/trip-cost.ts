@@ -80,6 +80,17 @@ function deriveKwhPer100km(vehicle: TripCostVehicle): number {
   return DEFAULT_KWH_PER_100KM;
 }
 
+/**
+ * Defense-in-depth: treat a non-finite or non-positive upstream price as
+ * unknown (0) rather than letting it produce a NaN/negative cost. Mirrors the
+ * guard in src/lib/trip/cost.ts. The parsers already reject implausible
+ * values before they reach JSON (src/lib/energy-prices/plausibility.ts), so
+ * this should only fire if that gate is ever bypassed.
+ */
+function safePrice(vndPerUnit: number): number {
+  return Number.isFinite(vndPerUnit) && vndPerUnit > 0 ? vndPerUnit : 0;
+}
+
 function isVinFastFreeCharging(
   vehicle: TripCostVehicle,
   today: Date,
@@ -100,14 +111,14 @@ export function computeTripCost(input: ComputeTripCostInput): TripCost {
   // Gasoline + diesel — generic sedan defaults
   const gasolineLiters = (distanceKm * GASOLINE_L_PER_100KM) / 100;
   const dieselLiters = (distanceKm * DIESEL_L_PER_100KM) / 100;
-  const ron95iii = snapshot.petrolimex.products.ron95iii?.vndPerLiter ?? 0;
-  const do005s = snapshot.petrolimex.products.do005s?.vndPerLiter ?? 0;
+  const ron95iii = safePrice(snapshot.petrolimex.products.ron95iii?.vndPerLiter ?? 0);
+  const do005s = safePrice(snapshot.petrolimex.products.do005s?.vndPerLiter ?? 0);
 
   // Electric — derived from the user's vehicle (or default), with NEDC honesty
   const kwhPer100km = deriveKwhPer100km(vehicle);
   const kwh = (distanceKm * kwhPer100km) / 100;
-  const homeChargingVnd = kwh * snapshot.evnResidential.representativeVndPerKwh;
-  const vGreenVnd = kwh * snapshot.vgreen.vndPerKwh;
+  const homeChargingVnd = kwh * safePrice(snapshot.evnResidential.representativeVndPerKwh);
+  const vGreenVnd = kwh * safePrice(snapshot.vgreen.vndPerKwh);
   const isFreeAtVGreen = isVinFastFreeCharging(
     vehicle,
     today,

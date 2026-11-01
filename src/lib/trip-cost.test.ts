@@ -223,4 +223,72 @@ describe('computeTripCost — edge cases', () => {
     expect(cost.electric.isFreeAtVGreen).toBe(true);
     expect(cost.electric.kwh).toBeGreaterThan(0);
   });
+
+  it('treats a non-finite gasoline price as unknown (0) instead of NaN', () => {
+    const badSnapshot: EnergyPricesSnapshot = {
+      ...SNAPSHOT,
+      petrolimex: {
+        ...SNAPSHOT.petrolimex,
+        products: {
+          ...SNAPSHOT.petrolimex.products,
+          ron95iii: { label: 'Xăng RON 95-III', vndPerLiter: NaN },
+        },
+      },
+    };
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: VF8,
+      snapshot: badSnapshot,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.gasoline.vnd).toBe(0);
+  });
+
+  it('treats a negative diesel price as unknown (0) instead of a negative cost', () => {
+    const badSnapshot: EnergyPricesSnapshot = {
+      ...SNAPSHOT,
+      petrolimex: {
+        ...SNAPSHOT.petrolimex,
+        products: {
+          ...SNAPSHOT.petrolimex.products,
+          do005s: { label: 'DO 0,05S-II', vndPerLiter: -100 },
+        },
+      },
+    };
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: VF8,
+      snapshot: badSnapshot,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.diesel.vnd).toBe(0);
+  });
+
+  it('treats a non-finite EVN rate as unknown (0) for home-charging cost', () => {
+    const badSnapshot: EnergyPricesSnapshot = {
+      ...SNAPSHOT,
+      evnResidential: { ...SNAPSHOT.evnResidential, representativeVndPerKwh: Infinity },
+    };
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: VF8,
+      snapshot: badSnapshot,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.homeChargingVnd).toBe(0);
+  });
+
+  it('treats a negative V-GREEN rate as unknown (0) instead of a negative cost', () => {
+    const badSnapshot: EnergyPricesSnapshot = {
+      ...SNAPSHOT,
+      vgreen: { ...SNAPSHOT.vgreen, vndPerKwh: -4_000 },
+    };
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: VF8,
+      snapshot: badSnapshot,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.vGreenVnd).toBe(0);
+  });
 });

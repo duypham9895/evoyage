@@ -11,7 +11,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { chromium } from 'playwright';
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VINFAST_BROWSER_USER_AGENT } from '../src/lib/station/vinfast-browser-client';
@@ -20,11 +20,13 @@ import {
   markExistingOutOfService,
   partitionOutOfService,
 } from '../src/lib/station/partition-out-of-service';
+import { assertPlausibleStationCount } from '../src/lib/station/station-count-plausibility';
+import { hasEnoughStatusCoverage } from '../src/lib/station/status-coverage';
 import {
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
 } from '../src/lib/station/vinfast-upstream-error';
-import type { VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
+import { VinfastApiError, type VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
 
 const prisma = new PrismaClient();
 
@@ -47,6 +49,23 @@ function inferProvince(lat: number): string {
   if (lat > 11.5) return 'Central Highlands';
   if (lat > 10.5) return 'Southern Vietnam';
   return 'Mekong Delta';
+}
+
+/**
+ * Reads the station count this same script last wrote, so a fresh run can be
+ * checked for plausibility against it. Returns `undefined` on first run,
+ * missing file, or a count field that isn't a number — treated by
+ * `assertPlausibleStationCount` as "nothing trustworthy to compare against",
+ * never as a reason to fail the crawl.
+ */
+function readPreviousStationCount(statsPath: string): number | undefined {
+  if (!existsSync(statsPath)) return undefined;
+  try {
+    const parsed = JSON.parse(readFileSync(statsPath, 'utf-8')) as { count?: unknown };
+    return typeof parsed.count === 'number' ? parsed.count : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function fetchVinFastLocators(): Promise<readonly VinfastLocatorRaw[]> {
@@ -277,6 +296,23 @@ async function main() {
     return isInVietnam(lat, lng);
   });
 
+  // partitionOutOfService trusts charging_status to mark existing stations
+  // OUTOFSERVICE; a feed that silently drops the field would otherwise make
+  // that marking go inert without the crawl ever failing. Same guard and
+  // threshold as scripts/poll-vinfast-station-status.ts.
+  //
+  // hasEnoughStatusCoverage([]) is true (0 of 0 is vacuously "enough") — an
+  // empty `valid` does not throw here. It is still caught below: `toProcess`
+  // would then also be empty, and assertPlausibleStationCount rejects a
+  // non-positive count before anything is written.
+  if (!hasEnoughStatusCoverage(valid)) {
+    const withStatus = valid.filter((s) => s.charging_status).length;
+    throw new VinfastApiError(
+      'empty_result',
+      `Only ${withStatus} of ${valid.length} locator rows carry charging_status`,
+    );
+  }
+
   const existing = await prisma.chargingStation.findMany({
     where: { provider: 'VinFast' },
     select: { id: true, ocmId: true, entityId: true },
@@ -293,6 +329,19 @@ async function main() {
     partitionOutOfService(valid, existingByOcmId);
   const skippedOutOfService = valid.length - toProcess.length;
   console.log(`  Car charging stations in Vietnam: ${valid.length} (${skippedOutOfService} out of service)`);
+
+  // Guard the public station count BEFORE any DB write or stats-file write.
+  // `activeCount` is what gets upserted below and is also what
+  // src/data/station-stats.json (and from there the README) will report, so
+  // a collapsed feed must be caught here, not after the DB already has it.
+  const activeCount = toProcess.length;
+  const statsPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src/data/station-stats.json');
+  const previousCount = readPreviousStationCount(statsPath);
+  try {
+    assertPlausibleStationCount(activeCount, previousCount);
+  } catch (err) {
+    throw new VinfastApiError('empty_result', getErrorMessage(err));
+  }
 
   // Step 3: Bulk upsert stations
   console.log('\n[2/3] Syncing stations to database (bulk upsert)...');
@@ -334,8 +383,6 @@ async function main() {
   console.log(`  Skipped (out of service, not in DB): ${skippedNew}`);
   console.log(`  Mappings saved: ${mappingsSaved}`);
 
-  const activeCount = toProcess.length;
-  const statsPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src/data/station-stats.json');
   writeFileSync(
     statsPath,
     `${JSON.stringify({ count: activeCount, lastUpdated: new Date().toISOString() }, null, 2)}\n`,
