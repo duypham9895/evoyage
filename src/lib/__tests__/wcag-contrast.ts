@@ -14,7 +14,9 @@ export function tokenHex(token: string): string {
 /** Returns the token named by the first `text-[var(--color-x)]` class (ignoring hover:/placeholder: variants). */
 export function textColorToken(className: string): string {
   const match = className.match(/(?:^|\s)text-\[var\(--color-([a-z-]+)\)\]/);
-  if (!match) throw new Error(`no text-[var(--color-*)] class in "${className}"`);
+  // Keep this message free of anything Tailwind can read as a class: its scanner reads every file,
+  // and a "text-" + "[var(--color-" + "*)]" token compiles to invalid CSS that breaks the dev server.
+  if (!match) throw new Error(`no text colour token class found in "${className}"`);
   return match[1];
 }
 
