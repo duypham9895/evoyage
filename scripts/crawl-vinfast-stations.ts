@@ -17,6 +17,10 @@ import { fileURLToPath } from 'node:url';
 import { VINFAST_BROWSER_USER_AGENT } from '../src/lib/station/vinfast-browser-client';
 import { fetchVinfastCarChargingStationsFromCdn } from '../src/lib/station/vinfast-cdn-locators';
 import {
+  markExistingOutOfService,
+  partitionOutOfService,
+} from '../src/lib/station/partition-out-of-service';
+import {
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
 } from '../src/lib/station/vinfast-upstream-error';
@@ -273,18 +277,6 @@ async function main() {
     return isInVietnam(lat, lng);
   });
 
-  let skippedOutOfService = 0;
-  const toProcess = valid.filter((s) => {
-    if (s.charging_status === 'OUTOFSERVICE') {
-      skippedOutOfService++;
-      return false;
-    }
-    return true;
-  });
-  console.log(`  Car charging stations in Vietnam: ${valid.length} (${skippedOutOfService} out of service)`);
-
-  // Step 3: Bulk upsert stations
-  console.log('\n[2/3] Syncing stations to database (bulk upsert)...');
   const existing = await prisma.chargingStation.findMany({
     where: { provider: 'VinFast' },
     select: { id: true, ocmId: true, entityId: true },
@@ -297,7 +289,15 @@ async function main() {
     existing.filter((e) => e.entityId).map((e) => [e.entityId!, e.id]),
   );
 
+  const { toUpsert: toProcess, outOfServiceExistingIds, skippedNew } =
+    partitionOutOfService(valid, existingByOcmId);
+  const skippedOutOfService = valid.length - toProcess.length;
+  console.log(`  Car charging stations in Vietnam: ${valid.length} (${skippedOutOfService} out of service)`);
+
+  // Step 3: Bulk upsert stations
+  console.log('\n[2/3] Syncing stations to database (bulk upsert)...');
   const { created, updated } = await bulkUpsertStations(toProcess, existingByOcmId, existingByEntityId);
+  const markedOutOfService = await markExistingOutOfService(prisma, outOfServiceExistingIds, BATCH_SIZE);
 
   // Step 4: Sync entity_id → store_id mappings (bulk)
   console.log('\n[3/3] Syncing entity mappings...');
@@ -329,7 +329,9 @@ async function main() {
   console.log('\n=== Summary ===');
   console.log(`  Created: ${created}`);
   console.log(`  Updated: ${updated}`);
-  console.log(`  Skipped (out of service): ${skippedOutOfService}`);
+  console.log(`  Out of service in feed: ${skippedOutOfService}`);
+  console.log(`  Marked out of service (existing): ${markedOutOfService}`);
+  console.log(`  Skipped (out of service, not in DB): ${skippedNew}`);
   console.log(`  Mappings saved: ${mappingsSaved}`);
 
   const activeCount = toProcess.length;
