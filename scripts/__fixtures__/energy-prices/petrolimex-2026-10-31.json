@@ -1,0 +1,11 @@
+{
+  "_comment": "Live Petrolimex feed captured 2026-11-01. Pure RON 95-III is gone (replaced by E10 RON 95-III) and E5 RON 92-II is now titled E5 RON 92.",
+  "products": [
+    { "Title": "Xăng E10 RON 95-V", "EnglishTitle": "E10 RON 95-V", "Zone1Price": 24950, "LastModified": "2026-10-31T16:53:44.611Z" },
+    { "Title": "Xăng E10 RON 95-III", "EnglishTitle": "E10 RON 95-III", "Zone1Price": 24150, "LastModified": "2026-10-31T16:54:19.353Z" },
+    { "Title": "Xăng E5 RON 92", "EnglishTitle": "E5 RON 92", "Zone1Price": 24220, "LastModified": "2026-10-31T16:54:47.264Z" },
+    { "Title": "DO 0,001S-V", "EnglishTitle": "DO 0,001S-V", "Zone1Price": 31640, "LastModified": "2026-10-29T07:50:42.825Z" },
+    { "Title": "DO 0,05S-II", "EnglishTitle": "DO 0.05S-II", "Zone1Price": 30240, "LastModified": "2026-10-29T07:51:07.445Z" },
+    { "Title": "Dầu hỏa 2-K", "EnglishTitle": "2-K Kerosene", "Zone1Price": 30650, "LastModified": "2026-10-29T07:51:28.093Z" }
+  ]
+}

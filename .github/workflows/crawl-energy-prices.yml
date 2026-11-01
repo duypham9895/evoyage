@@ -39,12 +39,22 @@ jobs:
       - name: Sync README energy-prices block
         run: npx tsx scripts/update-readme-stats.ts
 
+      # Same token rationale as crawl-stations.yml: PRs made with GITHUB_TOKEN
+      # never get the required check. The crawl step now exits non-zero when any
+      # source fell back to a previous value, so this step only runs on fresh data.
       - name: Open energy-prices sync PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTOMATION_PAT }}
         run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::AUTOMATION_PAT secret is not set. See docs/agents/automation-pat.md."
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # checkout persists GITHUB_TOKEN as an auth header that would override the PAT.
+          git config --unset-all http.https://github.com/.extraheader || true
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           git add src/data/energy-prices.json README.md
           if git diff --cached --quiet; then
             echo "No energy-price changes to commit."
@@ -54,17 +64,26 @@ jobs:
           branch="automation/energy-prices"
           git checkout -b "$branch"
           git commit -m "chore(energy-prices): daily sync"
+
+          # Auto-merge is only safe for a data-only diff.
+          outside=$(git diff --name-only HEAD~1 HEAD | grep -vxF -e README.md -e src/data/energy-prices.json || true)
+          if [ -n "$outside" ]; then
+            echo "::error::Sync commit touches files outside the allowlist: $outside"
+            exit 1
+          fi
+
           git fetch origin "$branch:refs/remotes/origin/$branch" || true
           git push --force-with-lease origin "$branch"
 
-          existing_pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // ""')
-          if [ -n "$existing_pr" ]; then
-            echo "Updated existing energy-prices sync PR #$existing_pr."
-            exit 0
+          pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // ""')
+          if [ -n "$pr" ]; then
+            echo "Updated existing energy-prices sync PR #$pr."
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "chore(energy-prices): daily sync" \
+              --body "Automated energy price data sync from the scheduled GitHub Actions workflow. Auto-merges once the required check passes."
+            pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')
           fi
-
-          gh pr create \
-            --base main \
-            --head "$branch" \
-            --title "chore(energy-prices): daily sync" \
-            --body "Automated energy price data sync from the scheduled GitHub Actions workflow."
+          gh pr merge "$pr" --auto --merge

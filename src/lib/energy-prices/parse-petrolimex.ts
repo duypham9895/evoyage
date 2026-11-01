@@ -37,6 +37,7 @@ const TITLE_TO_KEY: ReadonlyMap<string, string> = new Map([
   ['RON 95-III', 'ron95iii'],
   ['E10 RON 95-III', 'e10ron95iii'],
   ['E5 RON 92-II', 'e5ron92'],
+  ['E5 RON 92', 'e5ron92'],
   ['DO 0,001S-V', 'do0001s'],
   ['DO 0.001S-V', 'do0001s'],
   ['DO 0,05S-II', 'do005s'],
@@ -72,6 +73,13 @@ export function parsePetrolimexProducts(
 
     const t = Date.parse(lastModified);
     if (!Number.isNaN(t) && t > latestModified) latestModified = t;
+  }
+
+  // `ron95iii` is the gasoline price every consumer reads. Petrolimex replaced
+  // pure RON 95-III with E10 RON 95-III in the 2026 E10 rollout; the E10 grade
+  // is its direct successor, so it stands in, under its own label.
+  if (!products.ron95iii && products.e10ron95iii) {
+    products.ron95iii = products.e10ron95iii;
   }
 
   for (const required of REQUIRED_KEYS) {

@@ -493,7 +493,7 @@
   "trip_cost_electricity": "Sạc điện: ~{{amount}}",
   "trip_cost_savings": "So với xăng: tiết kiệm {{amount}} ({{percent}}%)",
   "trip_cost_no_savings": "So với xăng: tốn thêm {{amount}}",
-  "trip_cost_note": "Ước tính theo giá hôm nay: xăng RON 95-III, dầu DO 0,05S, điện sinh hoạt EVN bậc 4, sạc V-GREEN. Cập nhật hằng ngày.",
+  "trip_cost_note": "Ước tính theo giá hôm nay: xăng E10 RON 95-III, dầu DO 0,05S, điện sinh hoạt EVN bậc 4, sạc V-GREEN. Cập nhật hằng ngày.",
   "trip_cost_hero_savings": "Tiết kiệm {{amount}} so với xăng",
   "trip_cost_hero_extra": "Tốn thêm {{amount}} so với xăng",
   "trip_cost_hero_free": "Miễn phí tại V-GREEN, xăng tốn {{amount}}",
