@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchDirections, fetchDirectionsFromCoords } from './osrm';
+import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 
 const mockFetch = vi.fn();
 const SAMPLE_POLYLINE_5 = '_p~iF~ps|U_ulLnnqC_mqNvxq`@';
@@ -239,5 +240,69 @@ describe('fetchDirections — fallback failure handling', () => {
     // Should not have attempted Mapbox without a token
     const calls = mockFetch.mock.calls.map((c) => c[0] as string);
     expect(calls.some((u) => u.includes('api.mapbox.com'))).toBe(false);
+  });
+});
+
+describe('fetchDirectionsFromCoords — route must stay inside Vietnam', () => {
+  // Points sampled from the real public-OSRM answer for HCM -> Ha Noi
+  // (2026-11-01): Kratie/Stung Treng (Cambodia), Pakse/Savannakhet/Thakhek (Laos).
+  const CROSS_BORDER_ROUTE = [
+    { lat: 10.7726, lng: 106.698 },
+    { lat: 12.94601, lng: 106.17561 },
+    { lat: 14.43832, lng: 105.886 },
+    { lat: 15.11911, lng: 105.84682 },
+    { lat: 16.22227, lng: 105.25832 },
+    { lat: 16.76257, lng: 104.90247 },
+    { lat: 17.42388, lng: 104.84919 },
+    { lat: 21.0285, lng: 105.8542 },
+  ];
+  // Coastal QL1A shape, as Mapbox returns for the same trip.
+  const VIETNAM_ROUTE = [
+    { lat: 10.7726, lng: 106.698 },
+    { lat: 13.09, lng: 109.26 },
+    { lat: 15.85, lng: 108.19 },
+    { lat: 21.0285, lng: 105.8542 },
+  ];
+
+  /** Between lat 12 and 17.5, anything west of lng 106 is Cambodia or Laos. */
+  function pointsInCambodiaOrLaos(points: readonly { lat: number; lng: number }[]) {
+    return points.filter((p) => p.lat >= 12 && p.lat <= 17.5 && p.lng < 106);
+  }
+
+  function routeResponse(points: readonly { lat: number; lng: number }[], distance: number) {
+    return {
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve({
+          code: 'Ok',
+          routes: [{ geometry: encodePolyline(points, 5), distance, duration: 80_000 }],
+        }),
+      headers: { get: () => null },
+    };
+  }
+
+  // BUG(p1-osrm-routes-through-cambodia-laos): OSRM's cross-border HCM->Ha Noi route is returned unchecked. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-osrm-routes-through-cambodia-laos.md
+  it.fails('never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos', async () => {
+    // Only external I/O is mocked. A plain 2-point OSRM request gets the real
+    // cross-border answer; OSRM with extra VN waypoints, or Mapbox, gets the
+    // in-country route, so any of the documented fix directions can pass.
+    mockFetch.mockImplementation((url: string) => {
+      const isOsrm = url.includes('router.project-osrm.org');
+      const coordCount = (url.split('/').pop() ?? '').split('?')[0].split(';').length;
+      if (isOsrm && coordCount <= 2) return Promise.resolve(routeResponse(CROSS_BORDER_ROUTE, 1_493_712));
+      return Promise.resolve(routeResponse(VIETNAM_ROUTE, 1_637_900));
+    });
+
+    const result = await fetchDirectionsFromCoords(
+      { lat: 10.7726, lng: 106.698 },
+      { lat: 21.0285, lng: 105.8542 },
+      'Chợ Bến Thành, TP.HCM',
+      'Hồ Hoàn Kiếm, Hà Nội',
+    ).catch(() => null); // rejecting a cross-border route is also acceptable
+
+    if (result) {
+      expect(pointsInCambodiaOrLaos(decodePolyline(result.polyline, 5))).toEqual([]);
+    }
   });
 });
