@@ -386,6 +386,41 @@ describe('POST /api/route provider resilience', () => {
   });
 });
 
+describe('POST /api/route traffic-aware departure', () => {
+  // BUG(p2-planner-ui-state-and-map): the Mapbox traffic override is called with origin+destination only, so a waypoint trip's duration would be replaced by the direct A->B estimate (latent until the depart_at format bug is fixed). Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
+  it.fails('does not price a waypoint trip with a direct origin->destination traffic estimate', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'server-token';
+    const { fetchDirectionsMapbox } = await import('@/lib/routing/mapbox-directions');
+    const { fetchTrafficAwareDirections } = await import('@/lib/routing/mapbox-traffic');
+    vi.mocked(fetchDirectionsMapbox).mockResolvedValueOnce({
+      polyline: '_gjaR_gvdiE?_c`|@?_c`|@',
+      distanceMeters: 220_000,
+      durationSeconds: 10_800,
+      startAddress: 'A',
+      endAddress: 'B',
+      startCoord: { lat: 10, lng: 106 },
+      endCoord: { lat: 10, lng: 108 },
+    });
+    vi.mocked(fetchTrafficAwareDirections).mockResolvedValue({
+      polyline: 'direct',
+      distanceMeters: 150_000,
+      durationSeconds: 3_600,
+    } as Awaited<ReturnType<typeof fetchTrafficAwareDirections>>);
+
+    await postRoute({
+      ...MAPBOX_BODY,
+      departAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      waypoints: [{ lat: 11.94, lng: 108.45, name: 'Da Lat' }],
+    });
+
+    // Correct behaviour: either skip the traffic override for waypoint trips,
+    // or pass the waypoints through. Never a bare origin->destination call.
+    for (const [opts] of vi.mocked(fetchTrafficAwareDirections).mock.calls) {
+      expect(opts).toHaveProperty('waypoints', [expect.objectContaining({ lat: 11.94, lng: 108.45 })]);
+    }
+  });
+});
+
 describe('POST /api/route platform budget', () => {
   it('declares a maxDuration longer than the client abort so the platform never truncates the response', () => {
     // src/app/plan/page.tsx aborts at TRIP_CALC_ABORT_MS = 25_000. Without an
