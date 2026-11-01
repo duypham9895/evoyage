@@ -77,9 +77,7 @@ vi.mock('node:fs', async (importOriginal) => {
   return { ...actual, existsSync: () => false, writeFileSync: () => {} };
 });
 
-// Column order of the bulk upsert params in scripts/crawl-vinfast-stations.ts.
-const COLS_PER_ROW = 30;
-const COL = { ocmId: 1, latitude: 5, longitude: 6, chargerTypes: 7, connectorTypes: 8, portCount: 9, maxPowerKw: 10 };
+const SPEC_COLS = ['maxPowerKw', 'portCount', 'chargerTypes', 'connectorTypes'] as const;
 
 // Placeholder coordinate the VinFast feed sends for ~108 out-of-region rows (prod, 2026-11-01).
 const PLACEHOLDER_LAT = '10.773106';
@@ -118,14 +116,38 @@ async function runCrawl(feed: VinfastLocatorRaw[], existing: ExistingRow[] = [])
   if (exitSpy.mock.calls.length > 0) throw new Error('HARNESS: crawl exited non-zero');
 }
 
-function stationUpsert(): { sql: string; rows: unknown[][] } {
+type StoredRow = Record<string, unknown>;
+
+/**
+ * Reads the bulk upsert the crawl sent. Rows are keyed by column name, parsed
+ * from the INSERT column list, so a fix that adds, drops or reorders INSERT
+ * columns cannot shift values onto the wrong column. A column the INSERT no
+ * longer writes reads as undefined.
+ */
+function stationUpsert(): { sql: string; rows: StoredRow[] } {
   const call = state.rawCalls.find((c) => c.sql.includes('INSERT INTO "ChargingStation"'));
   if (!call) throw new Error('crawl made no ChargingStation upsert');
-  const rows: unknown[][] = [];
-  for (let i = 0; i < call.params.length; i += COLS_PER_ROW) {
-    rows.push(call.params.slice(i, i + COLS_PER_ROW));
+  const header = /INSERT INTO "ChargingStation"\s*\(([^)]*)\)/.exec(call.sql);
+  if (!header) throw new Error('HARNESS: could not parse the INSERT column list');
+  const cols = [...header[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  if (call.params.length % cols.length !== 0) {
+    throw new Error(`HARNESS: ${call.params.length} params do not split into rows of ${cols.length} columns`);
+  }
+  const rows: StoredRow[] = [];
+  for (let i = 0; i < call.params.length; i += cols.length) {
+    rows.push(Object.fromEntries(cols.map((c, j) => [c, call.params[i + j]])));
   }
   return { sql: call.sql, rows };
+}
+
+/** The `DO UPDATE SET` assignment for `col`, with SQL comments stripped; undefined if the column is not updated. */
+function updateAssignment(sql: string, col: string): string | undefined {
+  const at = sql.indexOf('DO UPDATE SET');
+  if (at < 0) throw new Error('HARNESS: upsert has no DO UPDATE SET clause');
+  const setClause = sql.slice(at + 'DO UPDATE SET'.length).replace(/--[^\n]*/g, '');
+  // An assignment runs from `"col" =` to the next top-level `"other" =` or the end.
+  const m = new RegExp(`(?:^|,)\\s*"${col}"\\s*=\\s*([\\s\\S]*?)\\s*(?=,\\s*"[^"]+"\\s*=|$)`).exec(setClause);
+  return m?.[1];
 }
 
 let exitSpy: ReturnType<typeof vi.spyOn>;
@@ -148,7 +170,7 @@ describe('crawl-vinfast-stations: harness sanity (passes today)', () => {
   it('upserts every in-feed station and exits cleanly', async () => {
     await runCrawl([row('C.HCM0001'), row('C.HCM0002')]);
 
-    const ocmIds = stationUpsert().rows.map((r) => r[COL.ocmId]);
+    const ocmIds = stationUpsert().rows.map((r) => r.ocmId);
     expect(ocmIds).toEqual(['vinfast-C.HCM0001', 'vinfast-C.HCM0002']);
   });
 });
@@ -159,22 +181,37 @@ describe('crawl-vinfast-stations: charger specs', () => {
     await runCrawl([row('C.NQ0001', { name: 'Nhượng Quyền Bãi đỗ xe tư nhân' })]);
 
     const [stored] = stationUpsert().rows;
-    expect(stored[COL.maxPowerKw]).not.toBe(150);
-    expect(stored[COL.portCount]).not.toBe(4);
+    expect(stored.maxPowerKw).not.toBe(150);
+    expect(stored.portCount).not.toBe(4);
   });
 
   // BUG(p2-station-data-integrity): ON CONFLICT assigns EXCLUDED power/port/connector values, so each daily crawl wipes enriched specs. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-station-data-integrity.md
   it.fails('does not overwrite existing maxPowerKw / portCount / chargerTypes / connectorTypes on an existing station', async () => {
     await runCrawl([row('C.HCM0001')], [{ id: 'db-1', ocmId: 'vinfast-C.HCM0001', entityId: 'e-C.HCM0001' }]);
 
-    // A plain `"col" = EXCLUDED."col"` assignment replaces whatever the DB held
-    // (e.g. real specs from scripts/enrich-vinfast-detail.ts) with the
-    // crawl's placeholder. COALESCE-with-existing or dropping the column from
-    // the UPDATE list both satisfy this.
-    const { sql } = stationUpsert();
-    for (const col of ['maxPowerKw', 'portCount', 'chargerTypes', 'connectorTypes']) {
-      expect(sql).not.toMatch(new RegExp(`"${col}"\\s*=\\s*EXCLUDED\\."${col}"\\s*,`));
-    }
+    // Any assignment that lets the crawl's own value win replaces whatever the
+    // DB held (e.g. real specs from scripts/enrich-vinfast-detail.ts). Each
+    // column passes only if the existing value provably survives:
+    //  - the column is not in DO UPDATE SET at all, or
+    //  - it is `COALESCE(EXCLUDED."col", "ChargingStation"."col")` AND the crawl
+    //    inserts NULL for it (COALESCE keeps the old value only on NULL, so with
+    //    a sentinel such as 0 it would still overwrite), or
+    //  - it is a sentinel guard `CASE WHEN EXCLUDED."col" = <sentinel> THEN
+    //    "ChargingStation"."col" ...` whose <sentinel> literal equals the value
+    //    the crawl inserts. If you guard another way, extend this check; do not
+    //    loosen it.
+    const { sql, rows } = stationUpsert();
+    const [inserted] = rows;
+    const preserved = SPEC_COLS.filter((col) => {
+      const expr = updateAssignment(sql, col);
+      if (expr === undefined) return true;
+      const existing = `"ChargingStation"."${col}"`;
+      const flat = expr.replace(/\s+/g, ' ');
+      if (flat === `COALESCE(EXCLUDED."${col}", ${existing})`) return inserted[col] === null;
+      const guard = new RegExp(`^CASE WHEN EXCLUDED\\."${col}" = '?([^' ]*?)'?(?:::\\w+)? THEN ${existing.replace(/[."]/g, '\\$&')} `).exec(flat);
+      return guard !== null && inserted[col] !== null && guard[1] === String(inserted[col]);
+    });
+    expect(preserved).toEqual([...SPEC_COLS]);
   });
 });
 
@@ -199,7 +236,7 @@ describe('crawl-vinfast-stations: coordinate validation', () => {
     await runCrawl([...real, ...stacked]);
 
     const atPlaceholder = stationUpsert().rows.filter(
-      (r) => r[COL.latitude] === Number(PLACEHOLDER_LAT) && r[COL.longitude] === Number(PLACEHOLDER_LNG),
+      (r) => r.latitude === Number(PLACEHOLDER_LAT) && r.longitude === Number(PLACEHOLDER_LNG),
     );
     expect(atPlaceholder).toEqual([]);
   });

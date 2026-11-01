@@ -4,11 +4,11 @@ Audit date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80
 
 ## Summary
 
-The daily VinFast crawl (`scripts/crawl-vinfast-stations.ts`) stores bad station data. Every VinFast station is listed as 150 kW with 4 ports. About 108 stations whose addresses are in Hà Nội or Đà Nẵng sit on one placeholder point in HCM District 1. Stations that VinFast removed from its feed are never retired. As a result, drivers see wrong speed filters and charge times, get "0.2 km away" results that are really hundreds of km away, and a few dead or misplaced stations can be picked as route stops.
+The daily VinFast crawl (`scripts/crawl-vinfast-stations.ts`) stores bad station data. Every VinFast station is listed as 150 kW with 4 ports. About 108 out-of-region stations, mostly Hà Nội (province_id 2483) plus a few other provinces, sit on one placeholder point in HCM District 1. Stations that VinFast removed from its feed are never retired. As a result, drivers see wrong speed filters and charge times, get "0.2 km away" results that are really hundreds of km away, and a few dead or misplaced stations can be picked as route stops.
 
 ## Severity & priority
 
-- Priority: **P2**. Severity: **medium** for findings 1 and 2. Finding 3 is **low to medium**: the two verifiers disagreed on its impact (see below).
+- Priority: **P2**. Severity: **medium** for findings 1 and 2. Finding 3 is **low to medium**: its two verifiers split low and medium over impact, because only about 30 of the 726 stale rows are routable. They agreed on the root cause.
 - Nothing crashes. The app is still usable, but trip estimates and stop choices are less trustworthy.
 
 ## Affected features
@@ -46,10 +46,13 @@ node -e 'const s=require("/tmp/st.json").stations.filter(x=>x.ocmId?.startsWith(
 
 **Regression tests** (`src/lib/__tests__/crawl-vinfast-stations.test.ts`):
 - `crawl-vinfast-stations: charger specs > does not store a fabricated 150 kW / 4-port spec for a station whose feed row has no power data`
-- `crawl-vinfast-stations: charger specs > does not overwrite existing maxPowerKw / portCount / chargerTypes / connectorTypes on an existing station`. This test asserts that the ON CONFLICT SQL has no plain `"col" = EXCLUDED."col",` assignment for those four columns. Either COALESCE with the existing value or dropping the column from the UPDATE list satisfies it.
+- `crawl-vinfast-stations: charger specs > does not overwrite existing maxPowerKw / portCount / chargerTypes / connectorTypes on an existing station`. For each of those four columns it parses the `DO UPDATE SET` assignment and passes only if the existing value provably survives: the column is absent from the UPDATE list, or it is `COALESCE(EXCLUDED."col", "ChargingStation"."col")` **and** the crawl inserts NULL for it, or it is a `CASE WHEN EXCLUDED."col" = <sentinel> THEN "ChargingStation"."col" …` guard whose sentinel equals the inserted value. COALESCE combined with a sentinel such as `0` fails the test, because it would still overwrite enriched specs with 0.
+- Both tests read upsert values by column name, parsed from the INSERT column list, so adding, dropping or reordering INSERT columns cannot make them pass by reading the wrong column.
 
 **Fix direction.**
-- In the upsert, preserve the existing power, port and connector columns on conflict, the way `chargingStatus` is already preserved (`:254-265`).
+- In the upsert, preserve the existing power, port and connector columns on conflict. How depends on how "unknown" is stored (next bullet):
+  - **Nullable columns (migration):** `COALESCE(EXCLUDED."col", "ChargingStation"."col")`, the way `chargingStatus` is preserved (`:254-265`). This works only because new rows then carry NULL: COALESCE keeps the existing value only when the incoming one is NULL.
+  - **Sentinel such as `0`:** COALESCE does **not** work, because 0 is not NULL and would overwrite enriched specs with 0 every day. Either drop the column from the `DO UPDATE SET` list, or guard it with `CASE WHEN EXCLUDED."col" = <sentinel> THEN "ChargingStation"."col" ELSE EXCLUDED."col" END`.
 - For new rows, store "unknown" instead of 150. The columns are NOT NULL, so this needs either a Prisma migration (make them nullable) or an agreed sentinel such as `0`. Every reader must then handle the unknown value explicitly: the Nearby speed filter, the route ranker and charge-time estimate in `route.ts`, StationCard, TripSummary and marker size. If unknown silently becomes 0 kW, every VinFast station disappears from the "fast" filter, so decide how the UI should present unknown.
 - Then schedule `scripts/enrich-vinfast-detail.ts` (or derive the specs from the `VinFastStationDetail` cache). Without that, the data stays unknown rather than wrong.
 - Gotcha: the `VinFastStationDetail` mapping rows are pruned daily (see Related items), so "derive from the detail cache" does not work until that is fixed.
@@ -111,7 +114,7 @@ In the UI: open `/plan`, go to the "Trạm sạc" tab, use location 10.7769,106.
 - Nothing marks or deletes a VinFast row that is absent from the feed. No other job does it either: `scripts/poll-vinfast-station-status.ts` writes only cookies, and `src/lib/maintenance/prune-stale-caches.ts` does not touch `ChargingStation`.
 - The route planner filters on `chargingStatus` only (`route.ts:80`, `:364`) and never checks `scrapedAt`.
 - Read-only prod SQL (2026-11-01, finder plus one verifier inside a READ ONLY transaction): VinFast rows with `scrapedAt < now() - 3 days` and status not OUTOFSERVICE total 726, last scraped May: 4, Jun: 10, Jul: 660, Oct: 52. The oldest example is `vinfast-C.KHO0092` "Nhà ở Xã hội Cam Nghĩa Cam Ranh", status ACTIVE, `scrapedAt` 2026-05-07.
-- A post-mortem dated 2026-10-01 (`docs/POST-MORTEM-2026-10-01.md`, untracked in the main checkout and not on this branch) already counted 692 ghost stations. The problem is known and growing.
+- A post-mortem dated 2026-10-01 (`docs/POST-MORTEM-2026-10-01.md`, untracked in the main checkout and not on this branch) already recorded it: "**692 ghost stations** (669 stranded on 2026-07-21) are still served — the crawl only upserts, never deletes." The problem is known and growing.
 
 **Root cause.**
 - *Established:* the crawl has no "absent from the feed" step.
@@ -135,9 +138,10 @@ WHERE provider = 'VinFast' AND "scrapedAt" < now() - interval '3 days'
 **Regression test** (`src/lib/__tests__/crawl-vinfast-stations.test.ts`):
 - `crawl-vinfast-stations: retiring stations that left the feed > issues a retirement write for an existing VinFast station that is absent from a plausible feed`. It seeds the DB with three VinFast rows, sends a feed containing two of them, and asserts that some write besides the INSERT upserts targets the missing row (by id or ocmId) or selects rows by `scrapedAt`. This assertion is deliberately loose so it does not dictate the design.
 - It cannot check the grace window (K days). If you implement one, add a test for it.
+- If you choose the `route.ts` alternative in the fix direction instead of a crawl-level retirement, this test will never turn green. Replace it with a `route.ts` test that asserts stale-`scrapedAt` rows are excluded from route candidates; do not just delete it. Note that a `route.ts`-only fix still leaves the ghosts in Nearby and on the map.
 
 **Fix direction.**
-- After the plausibility gate passes (`:340-344`), retire VinFast rows whose `scrapedAt` is older than K days by setting `chargingStatus = 'OUTOFSERVICE'` or a new retired status. Alternatively, exclude stale rows from route candidates in `route.ts`.
+- After the plausibility gate passes (`:340-344`), retire VinFast rows whose `scrapedAt` is older than K days by setting `chargingStatus = 'OUTOFSERVICE'` or a new retired status. Alternatively, exclude stale rows from route candidates in `route.ts` (this fixes routing only; Nearby and the map keep showing ghosts, and the regression test must be replaced as noted above).
 - Keep the retirement behind `assertPlausibleStationCount`, so that a truncated feed cannot mass-retire stations.
 - A grace window of a few days covers stations that are only temporarily missing.
 - Gotcha: if you add a new status value, update `EXCLUDED_STATION_STATUSES` in `route.ts:80`, or the change does nothing for routing.
@@ -160,4 +164,4 @@ WHERE provider = 'VinFast' AND "scrapedAt" < now() - interval '3 days'
 - Same vendor, same priors; no external verifier ran.
 - All 4 original findings were confirmed and none was refuted.
 - Severity votes: Findings 1 and 2 medium/medium. Finding 3 low/medium, split over impact (only about 30 rows are routable), not over the root cause.
-- This document's author re-read every cited line at `64db6f92e0792aa4643b2ba76958ff0843b80567` and found every finding still present. The regression tests above were run there: each `it.fails` fails on its intended assertion (checked by temporarily running them as plain `it`), and the full suite stays green (1743 passed).
+- This document's author re-read every cited line at `64db6f92e0792aa4643b2ba76958ff0843b80567` and found every finding still present. The regression tests above were run there: each `it.fails` fails on its intended assertion (checked by temporarily running them as plain `it`), and the full suite stays green (1739 passed plus 4 expected failures, 1743 total).
