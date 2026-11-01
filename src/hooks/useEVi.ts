@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ChatMessage, EViParseResponse, NearbyStationInfo } from '@/lib/evi/types';
 import { trackEviMessage } from '@/lib/analytics';
 
@@ -108,18 +108,21 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
     }
   });
 
-  // Ref to avoid stale closures in sendMessage
+  // Refs to avoid stale closures in sendMessage. Synced in a layout effect
+  // (not during render) so React doesn't warn about mutating refs while
+  // rendering; useLayoutEffect (not useEffect) guarantees these run before
+  // any other passive effect in the same commit, including the voice-send
+  // effect in EVi.tsx that reads `sendMessage` right after a render.
   const messagesRef = useRef(messages);
-  messagesRef.current = messages;
-
   const userLocationRef = useRef(userLocation);
-  userLocationRef.current = userLocation;
-
   const lastResponseRef = useRef(lastResponse);
-  lastResponseRef.current = lastResponse;
-
   const localeRef = useRef(locale);
-  localeRef.current = locale;
+  useLayoutEffect(() => {
+    messagesRef.current = messages;
+    userLocationRef.current = userLocation;
+    lastResponseRef.current = lastResponse;
+    localeRef.current = locale;
+  });
 
   // ── Geolocation (mount only) ──
   useEffect(() => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useEVi } from './useEVi';
 
 // Mock fetch globally
@@ -63,6 +63,7 @@ function makeSuccessResponse(overrides: Partial<{
 beforeEach(() => {
   mockFetch.mockReset();
   mockPermissionsQuery.mockReset();
+  mockGetCurrentPosition.mockReset();
   // By default permissions query rejects so geolocation is skipped
   mockPermissionsQuery.mockRejectedValue(new Error('not supported'));
   localStorage.clear();
@@ -410,6 +411,75 @@ describe('useEVi', () => {
       );
       expect(suggestionsCall).toBeDefined();
       expect(JSON.parse(suggestionsCall![1].body).locale).toBe('en');
+    });
+  });
+
+  describe('ref sync (purity/refs compliance)', () => {
+    it('uses userLocation resolved after mount on the next send', async () => {
+      mockGetCurrentPosition.mockImplementation(
+        (resolve: (pos: { coords: { latitude: number; longitude: number } }) => void) => {
+          resolve({ coords: { latitude: 10.1, longitude: 106.2 } });
+        },
+      );
+      mockFetch.mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.includes('nominatim')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ display_name: 'Some Address' }),
+          });
+        }
+        return Promise.resolve(makeSuccessResponse());
+      });
+
+      const { result } = renderHook(() => useEVi());
+
+      await waitFor(() => expect(result.current.userLocation).not.toBeNull());
+
+      await act(async () => {
+        await result.current.sendMessage('test message');
+      });
+
+      const parseCall = mockFetch.mock.calls.find((call) => call[0] === '/api/evi/parse');
+      expect(parseCall).toBeDefined();
+      const body = JSON.parse(parseCall![1].body);
+      expect(body.userLocation).not.toBeNull();
+      expect(body.userLocation).toEqual({ lat: 10.1, lng: 106.2 });
+    });
+
+    it('second send carries the first response in history', async () => {
+      mockFetch.mockResolvedValueOnce(makeSuccessResponse({
+        isComplete: false,
+        followUpType: 'free_text',
+        followUpQuestion: 'Bạn đi xe gì?',
+        displayMessage: 'HCM → Đà Lạt',
+      }));
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi từ HCM đến Đà Lạt');
+      });
+
+      mockFetch.mockResolvedValueOnce(makeSuccessResponse({ isComplete: true }));
+
+      await act(async () => {
+        await result.current.sendMessage('VF 8 Plus');
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      const secondBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+
+      // messagesRef: history on the 2nd call reflects the 1st call's
+      // user+assistant turn (built from messagesRef.current before the 2nd
+      // user message is appended).
+      expect(secondBody.history).toEqual([
+        { role: 'user', content: 'Đi từ HCM đến Đà Lạt' },
+        { role: 'assistant', content: 'Bạn đi xe gì?' },
+      ]);
+
+      // lastResponseRef: the 1st response had no tripParams.vehicleId, so
+      // previousVehicleId stays null.
+      expect(secondBody.previousVehicleId).toBeNull();
     });
   });
 });
