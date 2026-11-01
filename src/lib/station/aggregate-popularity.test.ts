@@ -85,4 +85,18 @@ describe('aggregatePopularity', () => {
     expect(fullSql).toContain("INTERVAL '90 days'");
     expect(fullSql).toContain('DELETE');
   });
+
+  // BUG(p2-cron-silent-noops-and-observability): an empty 60-day observation window upserts 0 heatmap rows yet returns ok:true, so the workflow gate stays green. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md
+  it.fails('reports an unhealthy run when the 60-day window upserts zero heatmap rows', async () => {
+    const prisma = makePrismaMock();
+    // 1st call: aggregation upserts nothing (no observations in window)
+    // 2nd call: observation prune deletes nothing
+    prisma.$executeRaw.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+
+    const result = await aggregatePopularity(makeDeps(prisma));
+
+    expect(result.popularityRowsUpserted).toBe(0);
+    expect(result.ok).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
 });
