@@ -16,14 +16,13 @@ export interface OutOfServicePartition {
  * planner excludes stations by ChargingStation.chargingStatus alone, so a
  * stale ACTIVE there keeps a broken charger routable.
  *
- * Lookup order matches the crawl upsert: ocmId first, then entityId. (The
- * hourly poller tries entityId first; the two only differ when the keys point
- * at different rows.)
+ * Matches on ocmId (`vinfast-<store_id>`) only: the upsert writes rows solely
+ * through ON CONFLICT ("ocmId"), and entityId is not unique, so an
+ * entityId-only match could hide a different, working station from routing.
  */
 export function partitionOutOfService(
   stations: readonly VinfastLocatorRaw[],
   existingByOcmId: ReadonlyMap<string, string>,
-  existingByEntityId: ReadonlyMap<string, string>,
 ): OutOfServicePartition {
   const toUpsert: VinfastLocatorRaw[] = [];
   const outOfServiceIds = new Set<string>();
@@ -34,8 +33,7 @@ export function partitionOutOfService(
       toUpsert.push(s);
       continue;
     }
-    const existingId =
-      existingByOcmId.get(`vinfast-${s.store_id}`) ?? existingByEntityId.get(s.entity_id);
+    const existingId = existingByOcmId.get(`vinfast-${s.store_id}`);
     if (existingId) {
       outOfServiceIds.add(existingId);
     } else {

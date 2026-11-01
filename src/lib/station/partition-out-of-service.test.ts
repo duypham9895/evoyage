@@ -31,36 +31,36 @@ describe('partitionOutOfService', () => {
   it('returns the DB id of an existing station that the feed now reports OUTOFSERVICE (#84)', () => {
     const byOcm = new Map([['vinfast-M.HNO0035', 'db-1']]);
 
-    const result = partitionOutOfService([OOS_ROW], byOcm, noMap);
+    const result = partitionOutOfService([OOS_ROW], byOcm);
 
     expect(result.outOfServiceExistingIds).toEqual(['db-1']);
     expect(result.toUpsert).toEqual([]);
     expect(result.skippedNew).toBe(0);
   });
 
-  it('falls back to the entityId map when the ocmId is unknown, like the upsert does', () => {
-    const byEntity = new Map([['65481', 'db-2']]);
+  it('does not mark a station matched only by entityId: the upsert writes by ocmId alone and entityId is not unique', () => {
+    // A DB row whose ocmId differs but whose entityId collides could be a
+    // different, working station. Hiding it from routing is the wrong default.
+    const result = partitionOutOfService([OOS_ROW], noMap);
 
-    const result = partitionOutOfService([OOS_ROW], noMap, byEntity);
-
-    expect(result.outOfServiceExistingIds).toEqual(['db-2']);
+    expect(result.outOfServiceExistingIds).toEqual([]);
+    expect(result.skippedNew).toBe(1);
   });
 
   it('skips an OUTOFSERVICE station that is not in the DB, without inserting it', () => {
-    const result = partitionOutOfService([OOS_ROW], noMap, noMap);
+    const result = partitionOutOfService([OOS_ROW], noMap);
 
     expect(result.outOfServiceExistingIds).toEqual([]);
     expect(result.toUpsert).toEqual([]);
     expect(result.skippedNew).toBe(1);
   });
 
-  it('prefers the ocmId match over the entityId match when they disagree', () => {
+  it('matches on the same vinfast-<store_id> key the crawl writes into ocmId', () => {
     const byOcm = new Map([['vinfast-M.HNO0035', 'db-ocm']]);
-    const byEntity = new Map([['65481', 'db-entity']]);
+    const otherStore = { ...OOS_ROW, store_id: 'M.HNO9999' };
 
-    const result = partitionOutOfService([OOS_ROW], byOcm, byEntity);
-
-    expect(result.outOfServiceExistingIds).toEqual(['db-ocm']);
+    expect(partitionOutOfService([OOS_ROW], byOcm).outOfServiceExistingIds).toEqual(['db-ocm']);
+    expect(partitionOutOfService([otherStore], byOcm).outOfServiceExistingIds).toEqual([]);
   });
 
   it('passes every non-OUTOFSERVICE row to the upsert unchanged and in input order', () => {
@@ -69,7 +69,7 @@ describe('partitionOutOfService', () => {
     const empty = { ...ROW, store_id: 'C', charging_status: '' };
     const byOcm = new Map([['vinfast-A', 'db-a']]);
 
-    const result = partitionOutOfService([active, noStatus, empty], byOcm, noMap);
+    const result = partitionOutOfService([active, noStatus, empty], byOcm);
 
     expect(result.toUpsert).toEqual([active, noStatus, empty]);
     expect(result.outOfServiceExistingIds).toEqual([]);
@@ -78,10 +78,8 @@ describe('partitionOutOfService', () => {
 
   it('lists an existing id once when two OUTOFSERVICE rows resolve to it', () => {
     const byOcm = new Map([['vinfast-M.HNO0035', 'db-1']]);
-    const byEntity = new Map([['77777', 'db-1']]);
-    const second = { ...OOS_ROW, store_id: 'OTHER', entity_id: '77777' };
 
-    const result = partitionOutOfService([OOS_ROW, second], byOcm, byEntity);
+    const result = partitionOutOfService([OOS_ROW, { ...OOS_ROW }], byOcm);
 
     expect(result.outOfServiceExistingIds).toEqual(['db-1']);
   });
@@ -90,17 +88,15 @@ describe('partitionOutOfService', () => {
     // The OOS write runs after the upsert, so the station ends OUTOFSERVICE:
     // the safe side for routing.
     const byOcm = new Map([['vinfast-M.HNO0035', 'db-1']]);
-    const byEntity = new Map([['77777', 'db-1']]);
-    const oosDuplicate = { ...OOS_ROW, store_id: 'OTHER', entity_id: '77777' };
 
-    const result = partitionOutOfService([ROW, oosDuplicate], byOcm, byEntity);
+    const result = partitionOutOfService([ROW, OOS_ROW], byOcm);
 
     expect(result.toUpsert).toEqual([ROW]);
     expect(result.outOfServiceExistingIds).toEqual(['db-1']);
   });
 
   it('returns empty results for empty input', () => {
-    expect(partitionOutOfService([], noMap, noMap)).toEqual({
+    expect(partitionOutOfService([], noMap)).toEqual({
       toUpsert: [],
       outOfServiceExistingIds: [],
       skippedNew: 0,

@@ -290,7 +290,7 @@ async function main() {
   );
 
   const { toUpsert: toProcess, outOfServiceExistingIds, skippedNew } =
-    partitionOutOfService(valid, existingByOcmId, existingByEntityId);
+    partitionOutOfService(valid, existingByOcmId);
   const skippedOutOfService = valid.length - toProcess.length;
   console.log(`  Car charging stations in Vietnam: ${valid.length} (${skippedOutOfService} out of service)`);
 
@@ -329,7 +329,7 @@ async function main() {
   console.log('\n=== Summary ===');
   console.log(`  Created: ${created}`);
   console.log(`  Updated: ${updated}`);
-  console.log(`  Skipped (out of service): ${skippedOutOfService}`);
+  console.log(`  Out of service in feed: ${skippedOutOfService}`);
   console.log(`  Marked out of service (existing): ${markedOutOfService}`);
   console.log(`  Skipped (out of service, not in DB): ${skippedNew}`);
   console.log(`  Mappings saved: ${mappingsSaved}`);
