@@ -49,27 +49,27 @@ When writing Vietnamese copy, refer to the creator as "Duy" (not "Mình" or "Tô
 
 ## Agent skills
 
-### Skill priority — Matt Pocock first
+### Skill priority — ECC first
 
-When multiple installed skills match the same trigger, **prefer Matt Pocock's skill**. Specifically:
+Before **every process step** (diagnose, fix, test, refactor, review, commit, PR, CI/cron edits, audits), name the skill that owns it and invoke it. When several installed skills match, **prefer the ECC one**. Honour its gates (plan approval, pre-commit confirmation) even when the end result was pre-authorised. Owner decision, 2026-11-01 (#96).
 
 | Intent | Use this | Not these |
 |---|---|---|
-| Test-driven development | `tdd` (Matt) | `superpowers:test-driven-development`, `everything-claude-code:tdd`, `everything-claude-code:tdd-workflow` |
-| Debugging a hard bug or perf regression | `diagnose` (Matt) | `superpowers:systematic-debugging` |
-| Interviewing user before any creative work | `grill-me` (Matt) for non-code, `grill-with-docs` (Matt) for code | `superpowers:brainstorming` |
-| Breaking a plan into issues | `to-issues` (Matt) | (no real overlap) |
-| Turning conversation into a PRD | `to-prd` (Matt) | (no real overlap) |
-| Triaging incoming issues | `triage` (Matt) | (no real overlap) |
-| Architectural review / refactoring | `improve-codebase-architecture` (Matt) | (no real overlap) |
-| Reading code in broader system context | `zoom-out` (Matt) | (no real overlap) |
+| Fix a bug / defect (reproduce as a failing test first) | `ecc:orch-fix-defect` | `diagnose`, `superpowers:systematic-debugging` |
+| New feature | `ecc:orch-add-feature` | `feature-dev:feature-dev` |
+| Change existing behaviour | `ecc:orch-change-feature` | — |
+| Behaviour-preserving refactor | `ecc:orch-refine-code` | `improve-codebase-architecture` for the refactor itself |
+| Test-driven development inside any of the above | `ecc:tdd-guide` agent / `ecc:tdd-workflow` | `tdd`, `superpowers:test-driven-development` |
+| Build or type errors | `ecc:build-error-resolver` / `/ecc:build-fix` | ad-hoc fixes |
+| Code review | `ecc:code-reviewer` + the language reviewer (`ecc:typescript-reviewer`, `ecc:react-reviewer`) | generic review agents |
+| Anything touching auth, user input, DB queries, secrets, CSP or external APIs | add `ecc:security-reviewer` | — |
+| Commits, branches, PR text | `ecc:git-workflow` | — |
+| PRs, CI, Dependabot, merges | `ecc:github-ops` | — |
+| Audits / QA of the running app | `ecc:production-audit`, `ecc:browser-qa`, `ecc:click-path-audit` | hand-written audit scripts |
 
-**Exceptions** — don't replace these with Matt's lighter equivalents:
+**Kept — no ECC equivalent:** `grill-me` / `grill-with-docs` (interview before creative work), `to-prd`, `to-issues`, `triage` (with the labels below), `zoom-out`, and `gsd-*` (multi-session work that must survive context resets).
 
-- `gsd-debug` — when the bug investigation needs to survive context resets (multi-session debugging). Matt's `diagnose` is a single-shot loop; gsd's persists state.
-- `gsd-discuss-phase` / `gsd-plan-phase` / etc. — full GSD project-management workflow. Matt's `grill-me` is one interview; gsd is a full phase lifecycle.
-
-For everything else not listed above (e.g. `gsd-*`, `everything-claude-code:*` patterns/refs, `claude-md-management:*`), use the existing skill — they don't conflict with Matt's set.
+If no skill matches a step, do it directly and say so in the reply.
 
 ### Issue tracker
 
@@ -156,3 +156,10 @@ Before every commit, verify:
 - [ ] New/changed code has corresponding tests
 - [ ] No `console.log` left in production code
 - [ ] Locale keys match between en.json and vi.json
+
+<!-- claude-reflect: learned rules (saved from the band; edit freely) -->
+## Learned rules
+- Always select the correct skill for each process, matching each task to its appropriate skill before starting work.
+- Always search for and use a suitable ECC skill before starting work on a task.
+- Always search for and use suitable skills from ECC before starting work on a task.
+<!-- end claude-reflect -->
