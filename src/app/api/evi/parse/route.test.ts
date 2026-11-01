@@ -564,4 +564,50 @@ describe('POST /api/evi/parse', () => {
     expect(data.isComplete).toBe(true);
     expect(data.tripParams.currentBattery).toBe(80);
   });
+
+  // BUG(p2-evi-conversation-ux): a trip request with no destination is reported as complete. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
+  it.fails('asks for the destination instead of completing when endLocation is missing', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: null,
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+      missingFields: ['end_location'],
+    }));
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const res = await POST(createRequest({
+      message: 'Tôi lái VF 8 Plus',
+      history: [],
+      userLocation: { lat: 21.0, lng: 105.8 },
+    }));
+
+    const data = await res.json();
+
+    expect(data.isComplete).toBe(false);
+    expect(['location_input', 'free_text']).toContain(data.followUpType);
+    expect(data.displayMessage).not.toMatch(/^Đã hiểu!/);
+  });
+
+  // BUG(p2-evi-conversation-ux): a destination that geocodes to nothing (endLat null) is reported as complete. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
+  it.fails('asks again instead of completing when the destination cannot be geocoded', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: 'Nơi không tồn tại xyz',
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+    }));
+    mockSearchPlaces.mockResolvedValue([]);
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const res = await POST(createRequest({
+      message: 'Đi Nơi không tồn tại xyz bằng VF8',
+      history: [],
+      userLocation: { lat: 21.0, lng: 105.8 },
+    }));
+
+    const data = await res.json();
+
+    expect(data.tripParams.endLat).toBeNull();
+    expect(data.isComplete).toBe(false);
+    expect(['location_input', 'free_text']).toContain(data.followUpType);
+  });
 });
