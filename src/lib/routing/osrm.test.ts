@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchDirections, fetchDirectionsFromCoords } from './osrm';
+import { fetchDirections, fetchDirectionsFromCoords, fetchDirectionsWithWaypoints } from './osrm';
 import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 
 const mockFetch = vi.fn();
@@ -282,27 +282,83 @@ describe('fetchDirectionsFromCoords — route must stay inside Vietnam', () => {
     };
   }
 
-  // BUG(p1-osrm-routes-through-cambodia-laos): OSRM's cross-border HCM->Ha Noi route is returned unchecked. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-osrm-routes-through-cambodia-laos.md
-  it.fails('never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos', async () => {
-    // Only external I/O is mocked. A plain 2-point OSRM request gets the real
-    // cross-border answer; OSRM with extra VN waypoints, or Mapbox, gets the
-    // in-country route, so any of the documented fix directions can pass.
+  /**
+   * Mock only external I/O. An OSRM request with exactly `userCoordCount`
+   * coordinates gets `crossBorder` (the real OSRM answer). OSRM with extra
+   * in-VN via points, or any Mapbox call, gets the in-country route. Nominatim
+   * resolves HCM / Ha Noi by query text. So any documented fix direction
+   * (retry Mapbox, re-query with via points, reject) can pass.
+   */
+  function mockRouting(userCoordCount: number, crossBorder: readonly { lat: number; lng: number }[]) {
     mockFetch.mockImplementation((url: string) => {
+      if (url.includes('nominatim.openstreetmap.org')) {
+        return Promise.resolve(
+          url.includes('H%C3%A0+N%E1%BB%99i') || url.includes('Ha+Noi')
+            ? nominatimResponse(21.0285, 105.8542)
+            : nominatimResponse(10.7726, 106.698),
+        );
+      }
       const isOsrm = url.includes('router.project-osrm.org');
       const coordCount = (url.split('/').pop() ?? '').split('?')[0].split(';').length;
-      if (isOsrm && coordCount <= 2) return Promise.resolve(routeResponse(CROSS_BORDER_ROUTE, 1_493_712));
+      if (isOsrm && coordCount <= userCoordCount) return Promise.resolve(routeResponse(crossBorder, 1_493_712));
       return Promise.resolve(routeResponse(VIETNAM_ROUTE, 1_637_900));
     });
+  }
 
-    const result = await fetchDirectionsFromCoords(
-      { lat: 10.7726, lng: 106.698 },
-      { lat: 21.0285, lng: 105.8542 },
-      'Chợ Bến Thành, TP.HCM',
-      'Hồ Hoàn Kiếm, Hà Nội',
-    ).catch(() => null); // rejecting a cross-border route is also acceptable
-
-    if (result) {
-      expect(pointsInCambodiaOrLaos(decodePolyline(result.polyline, 5))).toEqual([]);
+  /**
+   * Passes if the call resolves with no point in Cambodia/Laos, or rejects with
+   * the guard's own "leaves Vietnam" error. Any other rejection (TypeError,
+   * mock-shape mismatch) fails, so the test cannot pass vacuously once flipped.
+   */
+  async function expectStaysInVietnamOrRefuses(call: Promise<{ polyline: string }>) {
+    expect.hasAssertions();
+    let result: { polyline: string };
+    try {
+      result = await call;
+    } catch (err) {
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(/vietnam|border/i);
+      return;
     }
+    expect(pointsInCambodiaOrLaos(decodePolyline(result.polyline, 5))).toEqual([]);
+  }
+
+  // BUG(p1-osrm-routes-through-cambodia-laos): OSRM's cross-border HCM->Ha Noi route is returned unchecked. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-osrm-routes-through-cambodia-laos.md
+  it.fails('never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos', async () => {
+    mockRouting(2, CROSS_BORDER_ROUTE);
+
+    await expectStaysInVietnamOrRefuses(
+      fetchDirectionsFromCoords(
+        { lat: 10.7726, lng: 106.698 },
+        { lat: 21.0285, lng: 105.8542 },
+        'Chợ Bến Thành, TP.HCM',
+        'Hồ Hoàn Kiếm, Hà Nội',
+      ),
+    );
+  });
+
+  // BUG(p1-osrm-routes-through-cambodia-laos): same guard must cover the geocoded path (route.ts:256). Fixer: change it.fails -> it once fixed.
+  it.fails('fetchDirections (geocoded) never resolves HCM -> Ha Noi through Cambodia/Laos', async () => {
+    mockRouting(2, CROSS_BORDER_ROUTE);
+
+    await expectStaysInVietnamOrRefuses(fetchDirections('TP.HCM', 'Hà Nội'));
+  });
+
+  // BUG(p1-osrm-routes-through-cambodia-laos): same guard must cover the user-waypoint path (route.ts:227). Fixer: change it.fails -> it once fixed.
+  it.fails('fetchDirectionsWithWaypoints never resolves through Cambodia/Laos for an in-VN Highlands waypoint', async () => {
+    // Waypoint: Buon Ma Thuot (Vietnam, Central Highlands, next to the Laos
+    // corridor). Synthetic OSRM shape: HCM -> Buon Ma Thuot, then the real
+    // Laos points from the 2-point answer, then Ha Noi.
+    const BUON_MA_THUOT = { lat: 12.6667, lng: 108.05 };
+    const CROSS_BORDER_VIA_HIGHLANDS = [
+      CROSS_BORDER_ROUTE[0],
+      BUON_MA_THUOT,
+      ...CROSS_BORDER_ROUTE.slice(2),
+    ];
+    mockRouting(3, CROSS_BORDER_VIA_HIGHLANDS);
+
+    await expectStaysInVietnamOrRefuses(
+      fetchDirectionsWithWaypoints('TP.HCM', 'Hà Nội', [BUON_MA_THUOT]),
+    );
   });
 });

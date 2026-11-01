@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import type { ChargingStation, EVVehicle } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { POST, maxDuration } from './route';
+import { decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -454,5 +455,54 @@ describe('POST /api/route platform budget', () => {
     // explicit maxDuration the platform default kills the function first and
     // returns a non-JSON body.
     expect(maxDuration).toBeGreaterThan(25);
+  });
+});
+
+describe('POST /api/route route cache must not serve cross-border routes', () => {
+  // Points from the real public-OSRM HCM -> Ha Noi answer (2026-11-01), through
+  // Cambodia (Kratie/Stung Treng) and Laos (Pakse/Savannakhet/Thakhek).
+  const CROSS_BORDER_ROUTE = [
+    { lat: 10.7726, lng: 106.698 },
+    { lat: 12.94601, lng: 106.17561 },
+    { lat: 14.43832, lng: 105.886 },
+    { lat: 15.11911, lng: 105.84682 },
+    { lat: 16.22227, lng: 105.25832 },
+    { lat: 16.76257, lng: 104.90247 },
+    { lat: 17.42388, lng: 104.84919 },
+    { lat: 21.0285, lng: 105.8542 },
+  ];
+
+  // BUG(p1-osrm-routes-through-cambodia-laos): route.ts:230 serves cached `osrm:` rows for 24 h without the guard, so a fix in osrm.ts alone still plans on cached cross-border routes. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-osrm-routes-through-cambodia-laos.md
+  it.fails('does not plan on a cached OSRM polyline through Cambodia/Laos', async () => {
+    expect.hasAssertions();
+    const { getCachedRoute } = await import('@/lib/routing/route-cache');
+    vi.mocked(getCachedRoute).mockResolvedValueOnce({
+      polyline: encodePolyline(CROSS_BORDER_ROUTE, 5),
+      distanceMeters: 1_493_712,
+      durationSeconds: 80_000,
+    });
+
+    const response = await POST(new NextRequest('http://localhost/api/route', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...BODY,
+        startLat: 10.7726,
+        startLng: 106.698,
+        endLat: 21.0285,
+        endLng: 105.8542,
+      }),
+      headers: { 'content-type': 'application/json' },
+    }));
+    const body = await response.json();
+
+    // Either refuse with the guard's own error, or re-route and return an in-country polyline.
+    if (response.status !== 200) {
+      expect(String(body.error)).toMatch(/vietnam|border/i);
+      return;
+    }
+    const foreign = decodePolyline(body.polyline, 5).filter(
+      (p) => p.lat >= 12 && p.lat <= 17.5 && p.lng < 106,
+    );
+    expect(foreign).toEqual([]);
   });
 });

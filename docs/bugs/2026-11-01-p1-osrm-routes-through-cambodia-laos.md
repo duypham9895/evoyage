@@ -2,20 +2,22 @@
 
 ## Summary
 
-When a trip is planned with the OSRM routing provider, a Ho Chi Minh City -> Ha Noi trip is routed through Cambodia and Laos (1,493.7 km instead of the 1,637.9 km QL1A route). The plan then recommends a charging station in Laos, has legs that arrive at 0%, and shows 60+ identical "No charging station found" warnings. This is the main long-trip case, and OSRM is the default provider.
+When a trip is planned with the OSRM routing provider, a Ho Chi Minh City -> Ha Noi trip is routed through Cambodia and Laos (1,493.7 km instead of the 1,637.9 km QL1A route). The plan then recommends a charging station in Laos, has legs that arrive at 0%, and shows 60+ identical "No charging station found" warnings.
+
+Fewer users reach this than "every trip". The UI always asks for Mapbox: `src/lib/map-mode.tsx:11-27` hard-codes `PREFERRED_MAP_MODE = 'mapbox'` and overwrites any saved value, so the OSM map mode cannot be selected. `src/app/plan/page.tsx:71` falls back to `'osm'` (and so to `provider: 'osrm'`, `:576`) only when `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` is missing at build time. `'osrm'` is the schema default only for API callers that omit `provider` (`route.ts:51`). On a prod build with a Mapbox token, real users get the OSRM route only through the Mapbox -> OSRM fallback (`route.ts:302-311`): a Mapbox 5xx or network error, or a missing server-side `MAPBOX_ACCESS_TOKEN`. During a Mapbox outage, every HCM <-> Ha Noi user would get this route, including cached cross-border `osrm:` rows (`route.ts:230`).
 
 ## Severity & priority
 
 - Severity: **high**. The core trip-planning flow gives a wrong, unusable plan for Vietnam's main north-south corridor.
-- Priority: **P1**.
-- Not a crash. Mapbox map mode gives a correct route for the same trip.
+- Priority: **P1, provisional. Duy should re-check it.** When the bug triggers, the plan is unusable and recommends a stop in another country. But on a prod build with a Mapbox token, it triggers only on the Mapbox -> OSRM fallback, a token-less build, or a direct API call (see Summary). If Mapbox outages are rare, P2 may fit better.
+- Not a crash. The audit finder observed Mapbox returning a correct in-country route for the same trip once. Nobody re-verified this (see open question 1), so do not treat Mapbox as a proven fallback.
 
 ## Affected features
 
 - Trip planning, `POST /api/route`, every path that ends in the OSRM client:
-  - the OSM / Leaflet map mode (`src/app/plan/page.tsx:576` sends `provider: 'osrm'` unless the map mode is `mapbox`),
-  - any request without `provider` (schema default is `'osrm'`, `src/app/api/route/route.ts:51`),
-  - the Mapbox -> OSRM fallback when Mapbox Directions fails (`route.ts:302-311`).
+  - the Mapbox -> OSRM fallback when Mapbox Directions fails or the server has no `MAPBOX_ACCESS_TOKEN` (`route.ts:302-311`). This is the main way real users on prod reach the bug.
+  - a build without `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`: `src/app/plan/page.tsx:71` then forces `'osm'` mode, and `:576` sends `provider: 'osrm'`. Otherwise the OSM map mode cannot be selected in the UI (`src/lib/map-mode.tsx:11` hard-codes `'mapbox'`). `page.tsx:560` is the only client of `/api/route`.
+  - direct API callers that send `provider: 'osrm'` or omit `provider` (the schema default for API callers is `'osrm'`, `src/app/api/route/route.ts:51`).
 - Charging-stop selection and warnings downstream (`src/lib/routing/route-planner.ts`).
 - The 24 h route cache (`src/lib/routing/route-cache.ts`), which stores the bad OSRM polyline.
 
@@ -23,7 +25,7 @@ When a trip is planned with the OSRM routing provider, a Ho Chi Minh City -> Ha 
 
 ### Symptom
 
-HCM -> Ha Noi with `provider: "osrm"` returns `totalDistanceKm: 1493.7`. The polyline goes through Kratie and Stung Treng (Cambodia) and Pakse, Savannakhet and Thakhek (Laos). Charging stop 2 is "Loco-EV fast charger 1x" at (15.1097884, 105.8210161), near Pakse in Laos, with 0% battery on arrival and a detour of about 1,178 s. Stop 3 also arrives at 0% (detour about 2,013 s). The response has 62-63 warnings, almost all `NO_COMPATIBLE_STATION` "No charging station found in this area", starting at about 305 km. The reverse trip (Ha Noi -> HCM) gives 1,495.7 km and 62 warnings. With `provider: "mapbox"` the same trip is 1,637.9 km with 0 warnings, and the polyline stays on the coast (for example 13.09,109.26 and 15.85,108.19).
+HCM -> Ha Noi with `provider: "osrm"` returns `totalDistanceKm: 1493.7`. The polyline goes through Kratie and Stung Treng (Cambodia) and Pakse, Savannakhet and Thakhek (Laos). Charging stop 2 is "Loco-EV fast charger 1x" at (15.1097884, 105.8210161), near Pakse in Laos, with 0% battery on arrival and a detour of about 1,178 s. Stop 3 also arrives at 0% (detour about 2,013 s). The response has 62-63 warnings, almost all `NO_COMPATIBLE_STATION` "No charging station found in this area", starting at about 305 km. The reverse trip (Ha Noi -> HCM) gives 1,495.7 km and 62 warnings. With `provider: "mapbox"` (observed once by the audit finder, not re-verified) the same trip is 1,637.9 km with 0 warnings, and the polyline stays on the coast (for example 13.09,109.26 and 15.85,108.19).
 
 ### Evidence
 
@@ -33,7 +35,7 @@ Commit `64db6f92e0792aa4643b2ba76958ff0843b80567`:
 - `src/lib/routing/osrm.ts:99-125` (`callOsrm`), URL at line 105: `${OSRM_BASE}/route/v1/driving/${coordinates}?overview=full&geometries=polyline`. It sends no waypoints, no exclusions and no region limit. The first route is returned as-is.
 - `src/lib/routing/osrm.ts:185-220` (`fetchDirectionsFromCoords`), `:135-183` (`fetchDirections`) and `:230-304` (`fetchDirectionsWithWaypoints`) all return the `callOsrm` result unchecked. Mapbox is used only on a 5xx or network failure (`shouldFallback`, `:47-54`).
 - `src/app/api/route/route.ts:201-216`: coordinate validation (`isValidCoordinate`, a loose Southeast Asia box of lat 0-30 and lng 95-115) runs only when `provider !== 'osrm'`, and it checks only the endpoints, never the polyline.
-- `src/app/api/route/route.ts:224-257` (`fetchViaOsrm`): reads and writes the OSRM route cache (`getCachedRoute` at :230, `setCachedRoute` at :249). Lines 313-315 call it for the default provider.
+- `src/app/api/route/route.ts:224-257` (`fetchViaOsrm`): reads and writes the OSRM route cache (`getCachedRoute` at :230, `setCachedRoute` at :249). Lines 313-315 call it when `provider` is `'osrm'` (sent or defaulted), and line 311 calls it as the Mapbox fallback.
 - `src/lib/routing/route-planner.ts:384-385`: pushes a `NO_COMPATIBLE_STATION` warning for every decision point that has no station. The foreign stretch has almost no stations, which produces the warning flood.
 - A grep of `src/` for a Vietnam polygon/bbox check, `cambodia`, `laos` or `isInVietnam` on the routing path finds nothing. The only "outside Vietnam" hits are in eVi parsing/prompt code, which does not touch routing.
 
@@ -70,10 +72,22 @@ Then decode `.polyline` (precision 5), look at the points with lat 12-17.5 and l
 
 ### Regression test
 
-- `src/lib/routing/osrm.test.ts` -> `fetchDirectionsFromCoords — route must stay inside Vietnam` -> `never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos`, marked `it.fails`.
-- Only `fetch` is mocked, and the mock is URL-aware. A plain 2-point OSRM call gets a polyline built from the real cross-border sample points. An OSRM call with extra waypoints, or any Mapbox call, gets an in-country coastal polyline. The test accepts either of two outcomes: the call resolves with no point in the Cambodia/Laos box, or it rejects. So any of "retry with Mapbox", "re-query OSRM with VN waypoints" or "refuse the route" makes it pass.
-- Today the assertion fails with `expected [ …(5) ] to deeply equal []` (five foreign points). The failure was checked by temporarily flipping the test to `it`.
-- **Fixer:** once the fix lands, change `it.fails` to `it`. If you put the guard in `route.ts` instead of `osrm.ts`, this test will not flip. Move it to `src/app/api/route/route.test.ts`, which mocks `@/lib/routing/osrm`, and assert at that level instead.
+There are four `it.fails` tests, one for each path the guard must cover:
+
+- `src/lib/routing/osrm.test.ts`, in the describe block `fetchDirectionsFromCoords — route must stay inside Vietnam`:
+  - `never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos` covers `fetchDirectionsFromCoords`, the coordinate path.
+  - `fetchDirections (geocoded) never resolves HCM -> Ha Noi through Cambodia/Laos` covers the geocoded path (`route.ts:256`). Nominatim is mocked.
+  - `fetchDirectionsWithWaypoints never resolves through Cambodia/Laos for an in-VN Highlands waypoint` covers the user-waypoint path (`route.ts:227`). The waypoint is Buon Ma Thuot, which is in Vietnam. The OSRM shape for it is synthetic: HCM -> Buon Ma Thuot, then the real Laos points, then Ha Noi.
+- `src/app/api/route/route.test.ts`, in the describe block `POST /api/route route cache must not serve cross-border routes`: `does not plan on a cached OSRM polyline through Cambodia/Laos`. Here `getCachedRoute` returns the cross-border polyline. This test flips only if `route.ts` guards cache hits, so a fix in `osrm.ts` alone leaves it failing.
+- Only external I/O is mocked, and the mock is URL-aware:
+  - An OSRM call with the user's own coordinate count gets the cross-border shape.
+  - An OSRM call with extra via points, or any Mapbox call, gets an in-country coastal polyline.
+- Each test passes on either of two outcomes:
+  - the call resolves with no point in the Cambodia/Laos box, or
+  - it refuses with an error whose message matches `/vietnam|border/i`.
+- Any other rejection, such as a TypeError or a mock mismatch, fails the test. Each test also calls `expect.hasAssertions()`. So no test can pass without asserting anything after the flip.
+- Today all four fail with `expected [ …(5) ] to deeply equal []` (five foreign points). This was checked by temporarily flipping each one to `it`.
+- **Fixer:** once the fix lands, change each `it.fails` to `it`. If the guard throws, its message must mention Vietnam or the border. If you put the whole guard in `route.ts` instead of `osrm.ts`, the three `osrm.test.ts` tests will not flip. Move them to `route.test.ts`, which mocks `@/lib/routing/osrm`, and assert at that level.
 
 ### Fix direction
 
@@ -84,7 +98,7 @@ Then decode `.polyline` (precision 5), look at the points with lat 12-17.5 and l
   2. Re-query OSRM with one or two in-Vietnam via points (for example on QL1A near Quy Nhon / Da Nang). OSRM accepts extra `lng,lat` pairs, but via points change the route and the ETA, so pick them only when the guard trips.
   3. If neither works, return an error or a flagged result the UI can show ("route leaves Vietnam") instead of a silent plan.
 - **Gotchas:**
-  - **Route cache:** `route.ts:230` serves `osrm:` cache rows for 24 h. A fix in `osrm.ts` alone still returns cached cross-border routes until they expire. Either run the guard on cache hits as well, or tell the fixer to purge `routeCache` rows with the `osrm:` prefix after deploying (ask Duy before any prod DB write).
+  - **Route cache:** `route.ts:230` serves `osrm:` cache rows for 24 h. A fix in `osrm.ts` alone still returns cached cross-border routes until they expire. Either run the guard on cache hits as well, or tell the fixer to purge `routeCache` rows with the `osrm:` prefix after deploying (ask Duy before any prod DB write). This matters most during a Mapbox outage, when the fallback serves those cached rows to every user. The `route.test.ts` cache test above covers the guard-on-hit option. A purge is a manual step that no test covers.
   - The polyline has about 17k points for this trip, so the check must be O(n) with no spread into `Math.min/max` (see the comment at `route.ts:339-340`).
   - Do not make every request call Mapbox. It costs money, and OSRM is the free default. Call it only when the guard trips.
   - Border-area endpoints (Moc Bai, Lao Bao, Tinh Bien) can briefly leave Vietnam legitimately. Use a tolerance (a few km, or a minimum share of foreign points), not "any point outside".
@@ -104,6 +118,6 @@ Then decode `.polyline` (precision 5), look at the points with lat 12-17.5 and l
 
 ## Verification provenance
 
-- Found during the eVoyage full audit. Two adversarial verifier agents confirmed it independently on 2026-11-01, against HEAD `bfa3a3b` and live prod. Both voted "not refuted, severity high", and both reproduced the 1493.7 km / Laos-station result on prod.
+- Found during the eVoyage full audit. Two adversarial verifier agents both confirmed it on 2026-11-01, against HEAD `bfa3a3b` and live prod. Both voted "not refuted, severity high", and both reproduced the 1493.7 km / Laos-station result on prod.
 - This author session re-read the cited code at `64db6f92e0792aa4643b2ba76958ff0843b80567` (line numbers above are from that commit) and re-ran the public OSRM query. It did not call prod.
 - The verifiers are Claude agents: same vendor, same priors; no external verifier ran.
