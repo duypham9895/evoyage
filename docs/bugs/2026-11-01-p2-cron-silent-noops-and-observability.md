@@ -4,7 +4,7 @@ Date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (
 
 ## Summary
 
-The station-trust pipeline (poll station status, then aggregate popularity and reliability) collected no new observations from about 2026-09-30 until a manual run on 2026-11-01. Before that, the poller had already spent weeks "succeeding" while inserting nothing. During all of this the daily aggregate jobs stayed green, because they report `ok:true` when they upsert 0 rows. Their tables are frozen at 2026-08-19 (reliability) and 2026-09-18 (popularity). The readers never check row age, and no health endpoint, error tracker or workflow failure alert exists. Users do not see a broken flow today. They lose the reliability ranking and busy-hour signals without any notice, and nobody gets alerted.
+The station-trust pipeline (poll station status, then aggregate popularity and reliability) collected no new observations from about 2026-09-30 until a manual run on 2026-11-01. Before that, the poller had already spent weeks "succeeding" while inserting nothing. During all of this the daily aggregate jobs stayed green, because they report `ok:true` when they upsert 0 rows. Their tables are frozen at 2026-08-19 (reliability) and 2026-09-18 (popularity) (per one verifier's read-only query, not re-checked). The readers never check row age, and no health endpoint, error tracker or workflow failure alert exists. Users do not see a broken flow today. They lose the reliability ranking and busy-hour signals without any notice, and nobody gets alerted.
 
 ## Severity & priority
 
@@ -64,7 +64,7 @@ Code at `64db6f9`:
 
 ### Root cause
 - **Established:** `ok` means "the SQL did not throw", not "useful work was done". An empty input window returns `ok:true` with 0 rows, and the workflow gate checks only for `"ok":false`.
-- **Established:** the empty window comes from upstream. VinFast's locator endpoint started returning an empty list. The poller first reported success with 0 rows (a silent no-op), then failed loudly once the empty-result guard landed. PR #83 moved it to the CDN feed (`scripts/poll-vinfast-station-status.ts:20,57` at the code reference).
+- **Established:** the empty window comes from upstream. VinFast's locator endpoint started returning an empty list. The poller first reported success with 0 rows (a silent no-op), then failed loudly once the empty-result guard landed. PR #83 moved it to the CDN feed (`scripts/poll-vinfast-station-status.ts:20,57` at the code reference). The code reference `64db6f9` already contains #83 (merge `f0f5d5a`).
 - **Hypothesis:** scheduled poll runs on post-#83 code will succeed. At audit time only two manual `workflow_dispatch` runs had succeeded on the new code. The 09:58Z scheduled failure ran on an older head.
 
 ### Repro
@@ -83,6 +83,7 @@ Both tests assert `ok === false` and a non-empty `errors` when the upsert return
 
 ### Fix direction
 - Choose the health contract first. The options are: (a) the lib returns `ok:false` when the upsert count is 0; (b) the route adds a freshness check, `max("observedAt")` on `StationStatusObservation` older than N hours means `ok:false`; or (c) the workflow also fails on `"stationsUpserted":0` or `"popularityRowsUpserted":0`. Option (b) is the most robust signal, because it catches a stall even when a trickle of rows exists.
+- Popularity note: `ok:false` from `aggregatePopularity` already means "the aggregation SQL threw", and the library deliberately keeps `ok:true` for other problems (see `still records aggregation success when prune fails`, `aggregate-popularity.test.ts:48-60`). At route level, a non-empty `popularity.errors` alone already makes the job `ok:false` (`src/app/api/cron/aggregate-popularity/route.ts:44`). So pushing a "0 rows upserted" string into `errors` is enough to turn the popularity job red. The `ok === false` assertion in the popularity library test is then optional; loosen it if contract (b) or (c) is chosen.
 - Gotcha: the workflow greps for the literal `"ok":false`. The popularity route test (`src/app/api/cron/aggregate-popularity/route.test.ts`, around line 177) already pins that serialisation. Keep it.
 - Gotcha: existing tests mock `$executeRaw` to return `0` to inspect the SQL (`uses a 30-day window`, `uses Asia/Ho_Chi_Minh timezone`, and others). They do not assert `ok`, so they stay green, but check them after the change.
 - Do **not** change the `prune-stale-caches.ts` derived-aggregate prune to compare against `NOW()`. See "Dropped / narrowed" below.
@@ -99,7 +100,9 @@ Neither reader checks how old a row is. The heatmap is frozen at 2026-09-18 and 
 ### Evidence
 - The aggregates are pure UPSERT, so cells that drop out of the window are never refreshed or deleted (`aggregate-popularity.ts:34-53`, `aggregate-reliability.ts:32-51`).
 - `src/lib/station/popularity-query.ts:84` returns `insufficient-data` only when `!row || row.sampleCount < POPULARITY_SAMPLE_THRESHOLD` (20). It never reads `updatedAt`.
-- `src/app/api/route/route.ts:440-462` runs `prisma.stationReliability.findMany(...)` and gates only on `observationCount >= RELIABILITY_THRESHOLD` (100, `src/lib/routing/reliability-score.ts:14`). It never reads `computedAt`.
+- The reliability gate that ranking uses is `reliabilityMultiplier()` in `src/lib/routing/reliability-score.ts:16-21`. It returns 1.0 only when `observationCount < RELIABILITY_THRESHOLD` (100, `:14`) and never looks at row age. `route.ts:503` and `:526` pass `reliabilityMap.get(station.id)` into scoring.
+- `src/app/api/route/route.ts:440-447` loads `prisma.stationReliability.findMany(...)` and builds the map from `reliability` and `observationCount` only, dropping `computedAt`. `ReliabilityRecord` (`reliability-score.ts:9-12`) has no `computedAt` field either, so a freshness gate needs `computedAt` carried through both.
+- `route.ts:455-463` is ADR-0007 calibration telemetry only (it counts candidates past the threshold and their mean reliability). It is not the ranking gate; do not patch only that loop.
 - Not reproduced live. One verifier ran three read-only `POST /api/route` plans (HCMC to Nha Trang, Hanoi to Vinh, HCMC to Da Lat), and every stop returned `popularity: {kind: 'insufficient-data'}`. Another verifier found that no prod row currently meets the thresholds (max popularity `sampleCount` = 1, and 0 reliability rows with `observationCount >= 100`).
 
 ### Root cause
@@ -107,11 +110,11 @@ Neither reader checks how old a row is. The heatmap is frozen at 2026-09-18 and 
 - **Established:** the issue is latent today, because no row clears the thresholds. It becomes live once a station builds up enough samples and its feed then stops.
 
 ### Repro
-Read `src/lib/station/popularity-query.ts:84` and `src/app/api/route/route.ts:460`. Then run the regression test below with `it.fails` changed to `it`.
+Read `src/lib/station/popularity-query.ts:84` and `src/lib/routing/reliability-score.ts:16-21`. Then run the regression test below with `it.fails` changed to `it`.
 
 ### Regression tests
 - `src/lib/station/popularity-query.test.ts` :: `treats a heatmap row not refreshed for a year as insufficient-data` (`it.fails`). With `it(...)` it fails with `expected 'ready' to be 'insufficient-data'`. The test uses a row one year old so that any reasonable cutoff passes it.
-- Reliability reader: **not unit-tested here.** The gate is inline in the 30 KB `POST /api/route` handler, and `route.test.ts` does not mock `stationReliability`. Encoding it would mean guessing where the fix moves the check. A fixer who extracts the reliability-map load into a helper should add the matching test there.
+- `src/lib/routing/reliability-score.test.ts` :: `returns 1.0 (no penalty) when the reliability row was computed a year ago` (`it.fails`). The record has `observationCount` 500, `reliability` 0.2 and a `computedAt` one year old; with `it(...)` it fails with `expected 1.8 to be 1`. `computedAt` is passed via a spread so the test compiles while `ReliabilityRecord` lacks the field.
 
 ### Fix direction
 - Treat a row whose `updatedAt` or `computedAt` is older than a cutoff as insufficient data. A reasonable cutoff is the aggregation window plus a grace period: popularity 60 + 30 days, reliability 30 + 30 days. This is a product decision and should be confirmed.
@@ -155,7 +158,7 @@ gh run list --workflow poll-station-status.yml --limit 100                      
 **Not unit-testable.** The gap is a missing workflow step and a missing route, and any vitest assertion would dictate one specific mechanism. Verify the fix with the manual commands above: `/api/health` returns 200 with freshness fields, and a failing scheduled run opens or updates an issue (or sends another notification).
 
 ### Fix direction
-- Add a failure-notification step (`if: failure()`) to each scheduled workflow: poll, both aggregates, crawls and cookie refresh. For example, open or update a GitHub issue with `gh issue` using the default `GITHUB_TOKEN`. Grant `issues: write` per job, because these workflows currently set `permissions: contents: read`.
+- Add a failure-notification step (`if: failure()`) to each scheduled workflow. For example, open or update a GitHub issue with `gh issue` using the default `GITHUB_TOKEN`. The scheduled workflows are `poll-station-status.yml`, `aggregate-popularity.yml`, `aggregate-reliability.yml`, `crawl-stations.yml`, `crawl-energy-prices.yml`, `refresh-vinfast-cookies.yml` and `warm-station-pois.yml`. Add `issues: write` next to the permissions each one already has (`contents: read` in most; `contents: write` + `pull-requests: write` in the two crawl workflows).
 - Add a lightweight `GET /api/health`. It should run `SELECT 1` and report the age of the newest `StationStatusObservation.observedAt` and of the last crawl. It must not expose secrets or row contents.
 - Optionally, run a scheduled freshness check that fails when the newest observation is more than about 4 hours old (the poll runs every 2 hours). This catches the case where the job succeeds but does nothing.
 
