@@ -249,4 +249,74 @@ describe('plan page — effects refactor characterization', () => {
       expect(body.end).toBe('Da Nang');
     }, 20000);
   });
+
+  describe('shared-link recipient (URL restore)', () => {
+    function routeCalls() {
+      const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+      return fetchMock.mock.calls.filter(
+        (call) => typeof call[0] === 'string' && call[0].includes('/api/route'),
+      );
+    }
+
+    // BUG(p2-sharing-flow): opening a shared /plan?… link restores the form but never plans the trip. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-sharing-flow.md
+    it.fails('auto-plans a shared link with start/end coords and a custom vehicle, without pressing Plan', async () => {
+      window.history.replaceState(
+        null,
+        '',
+        `/plan?start=Ho%20Chi%20Minh&end=Vung%20Tau&slat=10.7769&slng=106.7009&elat=10.346&elng=107.0843&cv=${encodeURIComponent(CUSTOM_VEHICLE)}`,
+      );
+
+      await renderPlanPage();
+
+      await waitFor(() => expect(routeCalls().length).toBeGreaterThan(0), { timeout: 3000 });
+      const body = JSON.parse((routeCalls()[0][1] as RequestInit).body as string);
+      expect(body.start).toBe('Ho Chi Minh');
+      expect(body.end).toBe('Vung Tau');
+    }, 20000);
+
+    // BUG(p2-sharing-flow): a shared link with a preset vehicle (vid=…) never plans the trip after the vehicle fetch resolves. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-sharing-flow.md
+    it.fails('auto-plans a shared link with a preset vehicle id once the vehicle fetch resolves', async () => {
+      const VEHICLE = {
+        id: 'veh-1',
+        brand: 'VinFast',
+        model: 'VF 8',
+        variant: 'Plus',
+        batteryCapacityKwh: 87.7,
+        usableBatteryKwh: 82,
+        officialRangeKm: 471,
+        efficiencyWhPerKm: 180,
+        chargingTimeDC_10to80_min: 31,
+        chargingPortType: 'CCS2',
+      };
+      vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+        if (typeof url === 'string' && url.includes('/api/route')) {
+          return Promise.resolve(new Response(JSON.stringify(ROUTE_RESPONSE), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }));
+        }
+        if (typeof url === 'string' && url.includes('/api/vehicles?id=')) {
+          return Promise.resolve(new Response(JSON.stringify(VEHICLE), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ vehicles: [] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }));
+      }));
+      window.history.replaceState(
+        null,
+        '',
+        '/plan?start=Ho%20Chi%20Minh&end=Vung%20Tau&slat=10.7769&slng=106.7009&elat=10.346&elng=107.0843&vid=veh-1',
+      );
+
+      await renderPlanPage();
+
+      await waitFor(() => expect(routeCalls().length).toBeGreaterThan(0), { timeout: 3000 });
+      const body = JSON.parse((routeCalls()[0][1] as RequestInit).body as string);
+      expect(body.vehicleId).toBe('veh-1');
+    }, 20000);
+  });
 });
