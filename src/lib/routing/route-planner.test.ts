@@ -460,33 +460,53 @@ describe('BUG p1-route-planner-soc-and-stop-correctness', () => {
 
   // BUG(p1-route-planner-soc-and-stop-correctness): one NO_COMPATIBLE_STATION warning is emitted every ~10 km of a station-less stretch. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
   it.fails('emits a single warning for one continuous station-less stretch', () => {
-    expect(noStationsTrip().warnings).toHaveLength(1);
+    // Filter by type: an infeasible verdict added as a new warning type (open question 2) must not fail this.
+    expect(noStationsTrip().warnings.filter((w) => w.type === 'NO_COMPATIBLE_STATION')).toHaveLength(1);
   });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): warning text blames VinFast incompatibility even when no station of any brand exists. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
   it.fails('does not blame VinFast compatibility when there are no stations at all', () => {
     const { warnings } = noStationsTrip();
+    // This guard is tied to today's result shape. Update it once open question 2 (infeasible result shape) is decided.
     expect(warnings.length).toBeGreaterThan(0);
     for (const w of warnings) {
       expect(w.messageEn).not.toContain("VinFast stations don't support");
     }
   });
 
-  // BUG(p1-route-planner-soc-and-stop-correctness): the same station can be selected for two consecutive stops. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('never selects the same station for two consecutive stops', () => {
-    const result = planChargingStops({
-      encodedPolyline: northRoutePolyline(120),
-      totalDistanceKm: 120,
-      vehicle: GENERIC_TINY,
-      currentBatteryPercent: 100,
-      minArrivalPercent: 15,
-      rangeSafetyFactor: 0.8,
-      stations: [onRouteStation('Only station', 9)],
-    });
+  const duplicateStationInput = {
+    encodedPolyline: northRoutePolyline(120),
+    totalDistanceKm: 120,
+    vehicle: GENERIC_TINY,
+    currentBatteryPercent: 100,
+    minArrivalPercent: 15,
+    rangeSafetyFactor: 0.8,
+    stations: [onRouteStation('Only station', 9)],
+  };
+  const expectNoConsecutiveDuplicates = (result: ChargingPlanResult) => {
     const names = result.chargingStops.map(stopStationName);
+    // This guard is tied to today's result shape. Update it once open question 2 (infeasible result shape) is decided.
     expect(names.length).toBeGreaterThan(0);
     for (let i = 1; i < names.length; i++) {
       expect(names[i]).not.toBe(names[i - 1]);
     }
+  };
+
+  // BUG(p1-route-planner-soc-and-stop-correctness): the same station can be selected for two consecutive stops. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
+  it.fails('never selects the same station for two consecutive stops', () => {
+    // No ranking passed: exercises the haversine fallback (findNearestStation).
+    expectNoConsecutiveDuplicates(planChargingStops(duplicateStationInput));
+  });
+
+  // BUG(p1-route-planner-soc-and-stop-correctness): same duplicate via the ranked branch, which prod uses when a Mapbox token is set. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
+  it.fails('never selects the same station for two consecutive stops when stops come from a ranking', () => {
+    // Mimic route.ts: rank each decision point's own candidates.
+    const dps = findChargingDecisionPoints(duplicateStationInput);
+    const rankedMap = new Map<number, readonly RankedStation[]>(
+      dps.map((dp, i) => [i, dp.candidates.map(ranked)]),
+    );
+    expectNoConsecutiveDuplicates(
+      planChargingStops({ ...duplicateStationInput, precomputedDecisionPoints: dps, rankedStationsPerStop: rankedMap }),
+    );
   });
 });

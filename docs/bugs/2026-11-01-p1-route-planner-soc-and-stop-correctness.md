@@ -71,10 +71,10 @@ Established (code read by author and both verifiers): the decision point (where 
 
 Where: `planChargingStops` in `route-planner.ts`, and how the ranking in `route.ts:478-541` feeds it. Two options:
 
-1. Planner-side (what tests 1-2 encode): use the selected station's `StationWithRouteInfo.nearestRouteKm` for leg distance, SOC, segment end and `lastStopKm`, and re-simulate the downstream decision points from that position. Re-simulating means decision-point finding and selection can no longer be fully separate passes; the current `precomputedDecisionPoints` split (shared with `buildPrecautionaryStops`) has to change.
-2. Ranking-side: restrict ranking candidates to those near `dp.distanceKm`. Cheaper, but tests 1-2 still fail because `planChargingStops` would still trust any ranking it is given. If you choose this, rewrite those two tests against `route.ts` and say why.
+1. Planner-side (what tests 1-2 encode): use the selected station's `StationWithRouteInfo.nearestRouteKm` for leg distance, SOC, segment end and `lastStopKm`, and re-simulate the downstream decision points from that position. Re-simulating means decision-point finding and selection can no longer be fully separate passes; the current `precomputedDecisionPoints` split (shared with `buildPrecautionaryStops`) has to change. It also invalidates `route.ts`'s `rankedMap`, which is keyed by the index of the precomputed decision points: a re-simulated decision point would get a ranking built for a different window. Ranking must then move into the planner (or be called back from it per decision point); test 3's `rankedMap` setup must change accordingly.
+2. Ranking-side: restrict ranking candidates to those near `dp.distanceKm`. Cheaper, but tests 1-3 still fail because `planChargingStops` would still trust any ranking it is given. If you choose this, rewrite those three tests against `route.ts` and say why.
 
-Gotchas: stations found via the 15 km circle fallback (`useCorridorScoring: false`) carry no `nearestRouteKm`; they need a projection or a fallback. Alternatives (`alternatives` list) are shown next to the stop, so their SOC is also implicitly wrong; decide whether to show per-alternative SOC. Test 3 checks the user-facing invariant and should pass under either option.
+Gotchas: stations found via the 15 km circle fallback (`useCorridorScoring: false`) carry no `nearestRouteKm`; they need a projection or a fallback. Alternatives (`alternatives` list) are shown next to the stop, so their SOC is also implicitly wrong; decide whether to show per-alternative SOC. Test 3 checks the user-facing invariant, but it builds its own position-blind ranking and passes it straight to `planChargingStops`, never through `route.ts`. So it also encodes the planner-side contract: under option 2 it keeps failing and must be rewritten against `route.ts`.
 
 ---
 
@@ -147,7 +147,7 @@ Deterministic repros on this branch:
 
 Established: the planner has no feasibility check. It clamps SOC to 0 instead of flagging an infeasible leg, re-emits a warning on every rescan of a station-less stretch (the `:191` reset), never deduplicates consecutive identical stations, and picks the warning text by brand only.
 
-Hypothesis (not verified): the duplicate-station case arises because the second decision point comes from the 15 km circle fallback, whose `findNearestStation(dp.point, ...)` returns the station just charged at. The unit repro matches this path, but the live duplicates were not traced line by line.
+Hypothesis (not verified against live): the duplicate comes from the candidate set, not from the selection path. In the unit repro, decision point 1 is at km 10.0 (corridor) and decision point 2 at km 21.0 from the 15 km circle fallback (strategy 3, `:164-178`), whose `findStationsNearPoint(points[i], ...)` (`:166`) includes the station at km 9, which the car already passed and just charged at. Both selection paths then pick it: the haversine fallback `findNearestStation` (`:341`) and the ranked branch (`:297`) that prod uses when a Mapbox token is set (`route.ts:509-531` ranks the circle candidates via the Matrix API). Both give `[Only@10.0, Only@21.0]`. The live duplicates were not traced line by line.
 
 ### Repro
 
@@ -160,13 +160,14 @@ Hypothesis (not verified): the duplicate-station case arises because the second 
 
 - `emits a single warning for one continuous station-less stretch` — today 5.
 - `does not blame VinFast compatibility when there are no stations at all` — today it does.
-- `never selects the same station for two consecutive stops` — today "Only" twice.
+- `never selects the same station for two consecutive stops` — today "Only" twice (haversine fallback path).
+- `never selects the same station for two consecutive stops when stops come from a ranking` — same, via the ranked branch prod uses.
 
 Not unit-tested: the missing "unreachable/infeasible" verdict. The result type has no field for it yet (`ChargingPlanResult`, `NoStationWarning.type` is `'NO_COMPATIBLE_STATION' | 'INSUFFICIENT_MARGIN_AFTER_SKIP'`), so a test would have to invent the API shape. Write that test once the shape is decided (see open questions).
 
 ### Fix direction
 
-`route-planner.ts`: detect legs where arrival < minArrival (or <= 0) and return an explicit infeasible result, per ADR-0004. Collapse consecutive empty decision points into one warning covering a km range (changing the `:191` reset is the lever). Do not select the station used at the previous stop. Choose the warning text by cause: no stations nearby vs. only brand-incompatible stations nearby vs. out of range. `TripSummary.tsx:855` should show the infeasible state prominently instead of a stack of boxes. Gotchas: `NoStationWarning` text is bilingual (vi + en); new strings need both. `route.ts:709-711` passes `plan.warnings` through unchanged, and saved/shared trips may hold old warning shapes.
+`route-planner.ts`: detect legs where arrival < minArrival (or <= 0) and return an explicit infeasible result, per ADR-0004. Collapse consecutive empty decision points into one warning covering a km range (changing the `:191` reset is the lever). Do not offer stations already passed in the circle fallback (`findStationsNearPoint`, `:166`), and do not select the station used at the previous stop. Choose the warning text by cause: no stations nearby vs. only brand-incompatible stations nearby vs. out of range. `TripSummary.tsx:855` should show the infeasible state prominently instead of a stack of boxes. Gotchas: `NoStationWarning` text is bilingual (vi + en); new strings need both. `route.ts:709-711` passes `plan.warnings` through unchanged, and saved/shared trips may hold old warning shapes.
 
 ---
 
