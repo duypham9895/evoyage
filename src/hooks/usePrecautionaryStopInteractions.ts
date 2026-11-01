@@ -61,16 +61,17 @@ export function usePrecautionaryStopInteractions(
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissTimerRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
+  // Reset to a fresh state for the new plan during render — "adjusting state
+  // when a prop changes" (https://react.dev/learn/you-might-not-need-an-effect).
+  // Keeps the timer cleanup (an actual side effect) in the effect below.
+  if (stopInteractionState.planKey !== planKey) {
+    setStopInteractionState(createStopInteractionState(planKey, initialDismissedStopIds));
+  }
   const activeState = stopInteractionState.planKey === planKey
     ? stopInteractionState
     : createStopInteractionState(planKey, initialDismissedStopIds);
 
   useEffect(() => {
-    setStopInteractionState(prev =>
-      prev.planKey === planKey
-        ? prev
-        : createStopInteractionState(planKey, initialDismissedStopIds),
-    );
     dismissTimerRefs.current.forEach(timer => clearTimeout(timer));
     dismissTimerRefs.current.clear();
     if (undoTimerRef.current) {

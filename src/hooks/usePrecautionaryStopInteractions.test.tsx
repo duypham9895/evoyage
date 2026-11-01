@@ -57,4 +57,45 @@ describe('usePrecautionaryStopInteractions', () => {
     expect([...result.current.dismissedStopIds]).toEqual([]);
     expect([...result.current.effectiveDismissedStopIds]).toEqual([]);
   });
+
+  it('cancels an in-flight dismiss timer when planKey changes', () => {
+    vi.useFakeTimers();
+
+    const { result, rerender } = renderHook(
+      ({ planKey }: { readonly planKey: string }) => usePrecautionaryStopInteractions(planKey),
+      { initialProps: { planKey: 'trip-1' } },
+    );
+
+    act(() => {
+      result.current.confirmDismiss('s1');
+    });
+    expect([...result.current.dismissingStopIds]).toEqual(['s1']);
+
+    rerender({ planKey: 'trip-2' });
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    expect([...result.current.dismissedStopIds]).not.toContain('s1');
+    expect([...result.current.dismissingStopIds]).not.toContain('s1');
+
+    vi.restoreAllMocks();
+  });
+
+  it('keeps dismissedStopIds identity stable across rerenders with the same planKey', () => {
+    const { result, rerender } = renderHook(
+      ({ planKey }: { readonly planKey: string }) =>
+        usePrecautionaryStopInteractions(planKey, {
+          initialDismissedStopIds: ['station-a'],
+        }),
+      { initialProps: { planKey: 'trip-1' } },
+    );
+
+    const firstDismissedStopIds = result.current.dismissedStopIds;
+
+    rerender({ planKey: 'trip-1' });
+
+    expect(result.current.dismissedStopIds).toBe(firstDismissedStopIds);
+  });
 });

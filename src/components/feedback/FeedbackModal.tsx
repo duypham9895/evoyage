@@ -41,16 +41,16 @@ export default function FeedbackModal({
   stationContext,
 }: FeedbackModalProps) {
   const { t } = useLocale();
-  const formOpenedAt = useRef(Date.now());
+  const formOpenedAt = useRef(0);
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Form state
-  const [step, setStep] = useState<ModalStep>('category');
+  const [step, setStep] = useState<ModalStep>(stationContext ? 'form' : 'category');
   const [category, setCategory] = useState<FeedbackCategory | null>(
     stationContext ? 'STATION_DATA_ERROR' : null,
   );
   const [description, setDescription] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('evoyage-feedback-email') ?? '');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [stepsToReproduce, setStepsToReproduce] = useState('');
@@ -68,20 +68,10 @@ export default function FeedbackModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Restore email from localStorage
+  // Stamp the form-opened time once the component has mounted.
   useEffect(() => {
-    const savedEmail = localStorage.getItem('evoyage-feedback-email');
-    if (savedEmail) setEmail(savedEmail);
+    formOpenedAt.current = Date.now();
   }, []);
-
-  // If stationContext provided, skip to form
-  useEffect(() => {
-    if (stationContext) {
-      setStep('form');
-      setCategory('STATION_DATA_ERROR');
-      formOpenedAt.current = Date.now();
-    }
-  }, [stationContext]);
 
   // Close on Escape + focus trap
   useEffect(() => {

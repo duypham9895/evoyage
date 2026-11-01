@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useEVi } from '@/hooks/useEVi';
 import { useSpeechInput } from '@/hooks/useSpeechInput';
@@ -40,6 +40,12 @@ const CONTEXTUAL_CHIPS: Record<string, readonly string[]> = {
 };
 
 // ── Helpers ──
+
+// No external store to subscribe to — this only exists to give
+// useSyncExternalStore an "is this the client, post-hydration render?" flag.
+function subscribeNoop(): () => void {
+  return () => {};
+}
 
 function getGreetingKey(isFirstVisit: boolean): string {
   if (isFirstVisit) return 'evi_greeting_first';
@@ -295,14 +301,21 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
 
   // ── Greeting text ──
   // Hydration-safe: SSR renders the first-visit greeting (no time/locale
-  // branching). After mount, the time-aware greeting takes over. Without
-  // this guard, server and client pick different keys when hours differ
-  // between SSR render time and hydration time, producing the React
-  // "hydration failed because text didn't match" warning.
+  // branching). `isClient` reads false via useSyncExternalStore's server
+  // snapshot during SSR and the first client render (so hydration matches),
+  // then flips to true once React checks the real client snapshot after
+  // mount. The greeting is then resolved once, during render, using the
+  // "adjust state when a value changes" pattern — not an effect — so it
+  // settles in the same commit instead of flashing on a later one. The
+  // `greetingSettled` flag makes this a one-shot: once resolved, the
+  // greeting stays fixed even if the hour changes later in the session.
+  const isClient = useSyncExternalStore(subscribeNoop, () => true, () => false);
   const [greetingKey, setGreetingKey] = useState<string>('evi_greeting_first');
-  useEffect(() => {
+  const [greetingSettled, setGreetingSettled] = useState(false);
+  if (isClient && !greetingSettled) {
+    setGreetingSettled(true);
     setGreetingKey(getGreetingKey(isFirstVisit));
-  }, [isFirstVisit]);
+  }
   const greetingText = t(greetingKey as Parameters<typeof t>[0]);
 
   const isIdle = state === 'idle' && messages.length === 0;
