@@ -493,7 +493,7 @@
   "trip_cost_electricity": "Electricity: ~{{amount}}",
   "trip_cost_savings": "vs gasoline: save {{amount}} ({{percent}}%)",
   "trip_cost_no_savings": "vs gasoline: {{amount}} more",
-  "trip_cost_note": "Estimates use today's prices: gasoline RON 95-III, diesel DO 0,05S, EVN home tier 4, V-GREEN public charging. Auto-updated daily.",
+  "trip_cost_note": "Estimates use today's prices: gasoline E10 RON 95-III, diesel DO 0,05S, EVN home tier 4, V-GREEN public charging. Auto-updated daily.",
   "trip_cost_hero_savings": "Save {{amount}} vs gasoline",
   "trip_cost_hero_extra": "{{amount}} more than gasoline",
   "trip_cost_hero_free": "Free at V-GREEN vs gasoline {{amount}}",

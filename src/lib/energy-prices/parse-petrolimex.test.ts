@@ -43,6 +43,36 @@ describe('parsePetrolimexProducts', () => {
     expect(result.effectiveAt).toBe('2026-04-29T08:00:08.855Z');
   });
 
+  describe('the 2026 E10 switch (live feed, 2026-10-31)', () => {
+    const live = JSON.parse(
+      readFileSync(resolve(dirname(FIXTURE), 'petrolimex-2026-10-31.json'), 'utf8'),
+    ) as { products: ReadonlyArray<Record<string, unknown>> };
+
+    it('uses E10 RON 95-III as the gasoline price when pure RON 95-III is gone', () => {
+      const result = parsePetrolimexProducts(live.products);
+      expect(result.products.ron95iii).toEqual({
+        label: 'Xăng E10 RON 95-III',
+        vndPerLiter: 24150,
+      });
+    });
+
+    it('still reads diesel from the same feed instead of failing the whole source', () => {
+      const result = parsePetrolimexProducts(live.products);
+      expect(result.products.do005s.vndPerLiter).toBe(30240);
+    });
+
+    it('maps the renamed "E5 RON 92" title', () => {
+      const result = parsePetrolimexProducts(live.products);
+      expect(result.products.e5ron92.vndPerLiter).toBe(24220);
+    });
+  });
+
+  it('prefers pure RON 95-III over E10 when the feed carries both', () => {
+    const result = parsePetrolimexProducts(fixture.products);
+    expect(result.products.ron95iii.label).toBe('Xăng RON 95-III');
+    expect(result.products.ron95iii.vndPerLiter).toBe(23750);
+  });
+
   it('throws when the products array is empty', () => {
     expect(() => parsePetrolimexProducts([])).toThrow(/Petrolimex/i);
   });

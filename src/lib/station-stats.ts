@@ -52,7 +52,7 @@ export function renderEnergyPricesBlock(prices: EnergyPricesReadmeBlock): string
   const fmt = (n: number) => n.toLocaleString('en-US');
   return [
     '<!-- ENERGY_PRICES_START -->',
-    `  - Gasoline RON 95-III: ₫${fmt(prices.gasolineVndPerLiter)} / liter (Petrolimex)`,
+    `  - Gasoline E10 RON 95-III: ₫${fmt(prices.gasolineVndPerLiter)} / liter (Petrolimex)`,
     `  - Diesel DO 0,05S: ₫${fmt(prices.dieselVndPerLiter)} / liter (Petrolimex)`,
     `  - Electricity at home: ₫${fmt(prices.evnHomeVndPerKwh)} / kWh (EVN tier 4 · 201–300 kWh/month)`,
     `  - V-GREEN public charging: ₫${fmt(prices.vGreenVndPerKwh)} / kWh (free for VinFast owners until 2029)`,

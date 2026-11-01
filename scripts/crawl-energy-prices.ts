@@ -133,10 +133,14 @@ async function main() {
   const results = await Promise.allSettled([fetchPetrolimex(), fetchVGreen(), fetchEvn()]);
   const [petrolimexRes, vgreenRes, evnRes] = results;
 
-  // If a source fails, fall back to its previous value rather than crashing the
-  // whole crawler. We still log loudly so a human notices the failure.
+  // If a source fails, fall back to its previous value so the file stays
+  // complete, but exit non-zero at the end. Logging alone was not enough:
+  // Petrolimex failed every day from 2026-05-28 while the job stayed green and
+  // the sync PR kept stamping a fresh lastSyncedAt onto May prices.
+  const failedSources: string[] = [];
   function pick<T>(label: string, res: PromiseSettledResult<T>, fallback: T | null): T {
     if (res.status === 'fulfilled') return res.value;
+    failedSources.push(label);
     console.error(`[energy-prices] ${label} crawl failed:`, res.reason);
     if (fallback === null) {
       throw new Error(
@@ -213,7 +217,7 @@ async function main() {
   writeFileSync(OUTPUT, JSON.stringify(out, null, 2) + '\n', 'utf8');
   console.log(`[energy-prices] wrote ${OUTPUT}`);
   console.log(
-    `  petrolimex RON 95-III: ₫${petrolimex.products.ron95iii.vndPerLiter.toLocaleString('en-US')}/L`,
+    `  petrolimex E10 RON 95-III: ₫${petrolimex.products.ron95iii.vndPerLiter.toLocaleString('en-US')}/L`,
   );
   console.log(
     `  petrolimex DO 0,05S:   ₫${petrolimex.products.do005s.vndPerLiter.toLocaleString('en-US')}/L`,
@@ -222,6 +226,13 @@ async function main() {
   console.log(
     `  evn tier 4:            ₫${evn.representativeVndPerKwh.toLocaleString('en-US')}/kWh`,
   );
+
+  if (failedSources.length > 0) {
+    console.error(
+      `[energy-prices] FAILED: ${failedSources.join(', ')} reused previous values; not syncing.`,
+    );
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {
