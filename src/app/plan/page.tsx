@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, useSyncExternalStore } from 'react';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
@@ -51,6 +51,20 @@ import {
 const LeafletMap = dynamic(() => import('@/components/map/Map'), { ssr: false });
 const MapboxMap = dynamic(() => import('@/components/map/MapboxMap'), { ssr: false });
 
+// No external store to subscribe to — these just give useSyncExternalStore a
+// "same value during SSR and the first client render, real value after" flag.
+function subscribeNoop(): () => void {
+  return () => {};
+}
+
+function getGeolocationSupportedSnapshot(): boolean {
+  return typeof navigator !== 'undefined' && 'geolocation' in navigator;
+}
+
+function getGeolocationSupportedServerSnapshot(): boolean {
+  return false;
+}
+
 function HomeContent() {
   const { mode } = useMapMode();
   const hasMapboxToken = Boolean(process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN);
@@ -60,14 +74,16 @@ function HomeContent() {
 
   // Geolocation (lifted — shared between MapLocateButton and NearbyStations)
   const geo = useGeolocation();
-  // Hydration-safe geolocation feature detection: render `false` on SSR
-  // (no `navigator`), then update on mount so server and client agree on the
-  // initial DOM. Prevents the "server rendered HTML didn't match the client"
-  // warning that fires when the button conditionally renders.
-  const [geolocationSupported, setGeolocationSupported] = useState(false);
-  useEffect(() => {
-    setGeolocationSupported(typeof navigator !== 'undefined' && 'geolocation' in navigator);
-  }, []);
+  // Hydration-safe geolocation feature detection: `useSyncExternalStore`
+  // renders `false` during SSR and the first client render (its server
+  // snapshot), then the real value once React checks the client snapshot
+  // after mount. Prevents the "server rendered HTML didn't match the
+  // client" warning that fires when the button conditionally renders.
+  const geolocationSupported = useSyncExternalStore(
+    subscribeNoop,
+    getGeolocationSupportedSnapshot,
+    getGeolocationSupportedServerSnapshot,
+  );
   const [nearbyStations, setNearbyStations] = useState<readonly (ChargingStationData & { distanceKm: number })[] | null>(null);
   const handleStationsFound = useCallback((stations: readonly (ChargingStationData & { distanceKm: number })[]) => {
     setNearbyStations(stations);
@@ -138,14 +154,15 @@ function HomeContent() {
     : null;
   const [activeNotebookEntryId, setActiveNotebookEntryId] = useState<string | null>(null);
   const planningNotebookEntryIdRef = useRef<string | null>(null);
+  const tripId = tripPlan?.tripId;
   const initialDismissedStopIds = useMemo(() => {
-    if (!tripPlan?.tripId || !activeNotebookEntryId) return [];
+    if (!tripId || !activeNotebookEntryId) return [];
     const savedTrip = notebook.list().find((entry) => entry.id === activeNotebookEntryId);
     if (!savedTrip) return [];
     return savedTrip.dismissedPrecautionaryStops
-      .filter((pair) => pair.tripId === tripPlan.tripId)
+      .filter((pair) => pair.tripId === tripId)
       .map((pair) => pair.stationId);
-  }, [activeNotebookEntryId, notebook, tripPlan?.tripId]);
+  }, [activeNotebookEntryId, notebook, tripId]);
   const stopInteractionPlanKey = tripPlanResetKey
     ? `${tripPlanResetKey}|${activeNotebookEntryId ?? 'scratch'}`
     : null;
@@ -195,10 +212,20 @@ function HomeContent() {
 
   // URL state sync
   const { syncToUrl } = useUrlState();
-  const urlInitialized = useRef(false);
 
-  // Load state: URL params take priority, then localStorage fallback
-  useEffect(() => {
+  // Load state: URL params take priority, then localStorage fallback.
+  // SSR-unsafe (reads window.location / localStorage), so it can't run in an
+  // initializer. `isClient` is false during SSR and the first client render
+  // (hydration-safe), then true once React checks the real client snapshot;
+  // the one-shot `restoredFromUrl` flag makes the render-time adjustment
+  // below run exactly once, the same way the old `useEffect(() => {...}, [])`
+  // did. The one real side effect here — fetching a vehicle by ID — stays in
+  // its own effect since render must stay free of network calls.
+  const isClient = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const [restoredFromUrl, setRestoredFromUrl] = useState(false);
+  if (isClient && !restoredFromUrl) {
+    setRestoredFromUrl(true);
+
     const urlState = parseUrlState();
     const hasUrlParams = Object.keys(urlState).length > 0;
 
@@ -220,19 +247,6 @@ function HomeContent() {
       if (urlState.customVehicle) {
         setCustomVehicle(urlState.customVehicle);
         setSelectedVehicle(null);
-      }
-
-      // Fetch vehicle by ID from URL
-      if (urlState.vehicleId) {
-        fetch(`/api/vehicles?id=${encodeURIComponent(urlState.vehicleId)}`)
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            if (data) {
-              setSelectedVehicle(data);
-              setCustomVehicle(null);
-            }
-          })
-          .catch(() => { /* vehicle not found, user can pick manually */ });
       }
     }
 
@@ -266,13 +280,27 @@ function HomeContent() {
         } catch { /* ignore invalid JSON */ }
       }
     }
+  }
 
-    urlInitialized.current = true;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Fetch vehicle by ID from the URL — the one genuine side effect of the
+  // restore above, kept in an effect (network I/O can't run during render).
+  useEffect(() => {
+    const urlState = parseUrlState();
+    if (!urlState.vehicleId) return;
+    fetch(`/api/vehicles?id=${encodeURIComponent(urlState.vehicleId)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          setSelectedVehicle(data);
+          setCustomVehicle(null);
+        }
+      })
+      .catch(() => { /* vehicle not found, user can pick manually */ });
+  }, []);
 
   // Sync state → URL whenever inputs change
   useEffect(() => {
-    if (!urlInitialized.current) return;
+    if (!restoredFromUrl) return;
     syncToUrl({
       start,
       end,
@@ -288,7 +316,7 @@ function HomeContent() {
       minArrival,
       rangeSafetyFactor,
     });
-  }, [start, end, startCoords, endCoords, waypoints, isLoopTrip, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, syncToUrl]);
+  }, [restoredFromUrl, start, end, startCoords, endCoords, waypoints, isLoopTrip, selectedVehicle, customVehicle, currentBattery, minArrival, rangeSafetyFactor, syncToUrl]);
 
   // Persist RSF to localStorage
   const handleRSFChange = useCallback((val: number) => {
@@ -321,8 +349,11 @@ function HomeContent() {
   // Desktop sidebar: tab switcher (eVi chat vs Plan Trip vs Stations)
   const { activeTab: desktopSidebarTab, setTab: handleDesktopTabChange } = useDesktopSidebarTab();
 
-  // Flag to auto-trigger planning after eVi fills the form
-  const [autoPlanPending, setAutoPlanPending] = useState(false);
+  // Auto-trigger planning after eVi fills the form. A counter (not a boolean
+  // flag) so the effect below can tell "a new request came in" from "the
+  // same request re-rendered" without itself calling setState.
+  const [autoPlanRequestId, setAutoPlanRequestId] = useState(0);
+  const lastHandledAutoPlanRequestIdRef = useRef(0);
 
   // eVi discoverability nudge — fires once per session after 90s on /plan
   // with no input, OR when the user attempts to plan with invalid state.
@@ -372,7 +403,7 @@ function HomeContent() {
     setActiveTab('route');
     handleDesktopTabChange('planTrip'); // Desktop: switch sidebar to form view so TripSummary is visible
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
-    setAutoPlanPending(true);
+    setAutoPlanRequestId((id) => id + 1);
   }, [fillFormFromEVi]);
 
   // "Back to eVi" — return to chat from trip detail view
@@ -571,6 +602,7 @@ function HomeContent() {
       if (planAbortRef.current !== controller) return;
 
       setTripPlan(data as TripPlan);
+      setNearbyStations(null);
       requestRouteResultScroll();
       // Analytics: aggregate-only payload (city labels + km), no coords/PII.
       try {
@@ -673,7 +705,7 @@ function HomeContent() {
       notebook.touch(trip.id);
       const daysSinceSaved = (Date.now() - new Date(trip.savedAt).getTime()) / (24 * 60 * 60 * 1000);
       trackTripReplannedFromNotebook(daysSinceSaved);
-      setAutoPlanPending(true);
+      setAutoPlanRequestId((id) => id + 1);
     },
     [notebook],
   );
@@ -705,11 +737,11 @@ function HomeContent() {
 
   // Auto-plan after eVi fills form (state updates need a render cycle)
   useEffect(() => {
-    if (autoPlanPending) {
-      setAutoPlanPending(false);
+    if (autoPlanRequestId !== lastHandledAutoPlanRequestIdRef.current) {
+      lastHandledAutoPlanRequestIdRef.current = autoPlanRequestId;
       handlePlanTrip();
     }
-  }, [autoPlanPending, handlePlanTrip]);
+  }, [autoPlanRequestId, handlePlanTrip]);
 
   // eVi nudge trigger 1: 90s on /plan with empty start AND end fields.
   // The nudge component itself respects sessionStorage — we only flip the
@@ -755,6 +787,7 @@ function HomeContent() {
 
         return { ...prev, chargingStops: updatedStops };
       });
+      setNearbyStations(null);
     },
     [],
   );
@@ -868,11 +901,6 @@ function HomeContent() {
   const userLocationForMap = geo.latitude != null && geo.longitude != null
     ? { lat: geo.latitude, lng: geo.longitude }
     : null;
-
-  // Clear nearby stations when a trip plan is loaded
-  useEffect(() => {
-    if (tripPlan) setNearbyStations(null);
-  }, [tripPlan]);
 
   // Mobile: auto-request geolocation when Stations tab is active (300ms debounce)
   useEffect(() => {
