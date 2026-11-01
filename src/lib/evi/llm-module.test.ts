@@ -441,3 +441,62 @@ describe('callLLM — no fallback on caller errors', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
 });
+
+// Regression tests for docs/bugs/2026-11-01-p0-evi-llm-chain-down.md.
+// They assert the CORRECT behaviour and are marked it.fails while the bug exists.
+// When the fix lands, flip each to `it` and update the two
+// "no fallback on caller errors" tests above (401 premise is wrong: providers
+// use separate keys, OPENAI_API_KEY vs MINIMAX_API_KEY).
+describe('callLLM — fallback classification (BUG p0-evi-llm-chain-down)', () => {
+  // BUG(p0-evi-llm-chain-down): a 401 from OpenAI (revoked key) ends the chain; MiniMax, which has its own key, is never tried. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-evi-llm-chain-down.md
+  it.fails('falls back to MiniMax when the primary rejects its own API key with HTTP 401', async () => {
+    const schema = z.object({ from: z.string() });
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Incorrect API key provided'), { status: 401 }))
+      .mockResolvedValueOnce({ choices: [{ message: { content: '{"from":"minimax"}' } }] });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  // BUG(p0-evi-llm-chain-down): a 403 from OpenAI (key without model access) ends the chain without trying MiniMax. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-evi-llm-chain-down.md
+  it.fails('falls back to MiniMax when the primary returns HTTP 403', async () => {
+    const schema = z.object({ from: z.string() });
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 }))
+      .mockResolvedValueOnce({ choices: [{ message: { content: '{"from":"minimax"}' } }] });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  // BUG(p0-evi-llm-chain-down): malformed JSON from the primary escapes as a raw SyntaxError (unguarded JSON.parse) and never reaches the fallback. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-evi-llm-chain-down.md
+  it.fails('falls back to MiniMax when the primary returns content that is not valid JSON', async () => {
+    const schema = z.object({ from: z.string() });
+    mockCreate
+      .mockResolvedValueOnce({ choices: [{ message: { content: 'Sure! {"from":"openai"' } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: '{"from":"minimax"}' } }] });
+
+    const result = await callLLM({ schema, system: 's', user: 'u' });
+
+    expect(result).toEqual({ from: 'minimax' });
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+
+  // BUG(p0-evi-llm-chain-down): when the fallback fails with 404 "model no longer available" (retired MiniMax-M2.7), the raw SDK error escapes instead of LLMUnavailableError, so routes log 'unexpected' and narrative returns 500. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-evi-llm-chain-down.md
+  it.fails('throws LLMUnavailableError when the primary has an outage and the fallback model is retired (404)', async () => {
+    const schema = z.object({ x: z.string() });
+    mockCreate
+      .mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 500 }))
+      .mockRejectedValueOnce(
+        Object.assign(new Error('404 The model "MiniMax-M2.7" is no longer available. (2069)'), { status: 404 }),
+      );
+
+    await expect(callLLM({ schema, system: 's', user: 'u' })).rejects.toBeInstanceOf(LLMUnavailableError);
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+  });
+});
