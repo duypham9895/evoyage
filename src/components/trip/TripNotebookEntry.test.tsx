@@ -40,6 +40,7 @@ function makeTrip(overrides: Partial<SavedTrip> = {}): SavedTrip {
     rangeSafetyFactor: 0.8,
     departAt: null,
     ...overrides,
+    dismissedPrecautionaryStops: overrides.dismissedPrecautionaryStops ?? [],
   };
 }
 

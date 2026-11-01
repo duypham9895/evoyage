@@ -40,7 +40,7 @@ describe('chargeTargetForDecisionPoint', () => {
   it('keeps the normal 80% target for required stops', () => {
     expect(
       chargeTargetForDecisionPoint(
-        { polylineIndex: 1, distanceKm: 100, point: { lat: 10, lng: 106 }, candidates: [], useCorridorScoring: true },
+        {},
         { batteryCapacityKwh: 87.7 },
       ),
     ).toBe(CHARGE_TARGET_PERCENT);
@@ -49,14 +49,7 @@ describe('chargeTargetForDecisionPoint', () => {
   it('uses the vehicle-aware top-up target for precautionary stops', () => {
     expect(
       chargeTargetForDecisionPoint(
-        {
-          polylineIndex: 1,
-          distanceKm: 100,
-          point: { lat: 10, lng: 106 },
-          candidates: [],
-          useCorridorScoring: true,
-          isPrecautionary: true,
-        },
+        { isPrecautionary: true },
         { batteryCapacityKwh: 55 },
       ),
     ).toBe(70);
@@ -65,14 +58,7 @@ describe('chargeTargetForDecisionPoint', () => {
   it('uses the small-battery top-up target for precautionary stops below 40 kWh', () => {
     expect(
       chargeTargetForDecisionPoint(
-        {
-          polylineIndex: 1,
-          distanceKm: 100,
-          point: { lat: 10, lng: 106 },
-          candidates: [],
-          useCorridorScoring: true,
-          isPrecautionary: true,
-        },
+        { isPrecautionary: true },
         { batteryCapacityKwh: 35 },
       ),
     ).toBe(75);

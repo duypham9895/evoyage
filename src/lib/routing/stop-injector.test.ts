@@ -48,7 +48,12 @@ function site(legIndex: number): PrecautionaryInjectionSite {
     legIndex,
     pressureScore: 5,
     reason: 'holiday',
+    reasonSecondary: ['sparse'],
     signals: SIGNALS,
+    legDistanceKm: 200,
+    legSparsityCount: 1,
+    safetyFactor: 0.8,
+    vehicleBatteryKwh: 82,
   };
 }
 
