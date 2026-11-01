@@ -292,3 +292,29 @@ describe('computeTripCost — edge cases', () => {
     expect(cost.electric.vGreenVnd).toBe(0);
   });
 });
+
+describe('computeTripCost — seeded catalog vehicles (NEDC-derived efficiency)', () => {
+  // Exactly what scripts/seed-vietnam-models.ts writes and prod /api/vehicles
+  // returns for VF 8 Eco: efficiencyWhPerKm = gross battery × 1000 / NEDC range
+  // = 87.7 × 1000 / 471. It is a synthesised NEDC figure, not a measured one.
+  const SEEDED_VF8_ECO: TripCostVehicle = {
+    brand: 'VinFast',
+    model: 'VF 8',
+    usableBatteryKwh: 82,
+    officialRangeKm: 471,
+    efficiencyWhPerKm: (87.7 * 1000) / 471,
+  };
+
+  // BUG(p2-trip-cost-accuracy): NEDC-derived efficiencyWhPerKm skips the 1.2x real-world multiplier, so EV kWh/cost is ~11% low. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-trip-cost-accuracy.md
+  it.fails('applies the NEDC real-world correction when efficiencyWhPerKm was synthesised from the NEDC spec', () => {
+    const cost = computeTripCost({
+      distanceKm: 300,
+      vehicle: SEEDED_VF8_ECO,
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    // Intended: 82 / 471 × 100 × 1.2 = 20.89 kWh/100km → 300 km ≈ 62.68 kWh.
+    // Shipped:  186.2 Wh/km = 18.62 kWh/100km → 300 km ≈ 55.86 kWh.
+    expect(cost.electric.kwh).toBeCloseTo((82 / 471) * 100 * 1.2 * 3, 1);
+  });
+});
