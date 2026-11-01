@@ -313,3 +313,60 @@ describe('GET /api/stations', () => {
     });
   });
 });
+
+// ── Regression: 500-row cap applied before distance ordering ──
+
+/**
+ * Minimal fake of the Prisma findMany contract used by this route: applies the
+ * lat/lng range in `where`, then `orderBy: { name }` if given, then `take`.
+ * Rows come back in insertion order otherwise (Postgres heap order is arbitrary).
+ */
+type Range = { gte: number; lte: number };
+type FakeRow = { id: string; name: string; latitude: number; longitude: number };
+function fakeFindMany(rows: readonly FakeRow[]) {
+  return async (args: {
+    where?: { latitude?: Range; longitude?: Range };
+    orderBy?: { name?: 'asc' | 'desc' };
+    take?: number;
+  }) => {
+    let out = rows.filter((r) => {
+      const { latitude: lat, longitude: lng } = args.where ?? {};
+      return (!lat || (r.latitude >= lat.gte && r.latitude <= lat.lte))
+        && (!lng || (r.longitude >= lng.gte && r.longitude <= lng.lte));
+    });
+    if (args.orderBy?.name) {
+      const dir = args.orderBy.name === 'asc' ? 1 : -1;
+      out = [...out].sort((a, b) => dir * a.name.localeCompare(b.name));
+    }
+    return args.take === undefined ? out : out.slice(0, args.take);
+  };
+}
+
+describe('GET /api/stations — dense-city radius box', () => {
+  // BUG(p1-nearby-stations-status-and-cap): take:500 after orderBy name drops the nearest stations in a >500-row box. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+  it.fails('keeps the station nearest the box centre when the box holds more than 500 stations', async () => {
+    const CENTER = { lat: 10.7769, lng: 106.7009 }; // District 1, HCMC
+    // 600 stations ~15 km out, all alphabetically before the nearest one
+    const far: FakeRow[] = Array.from({ length: 600 }, (_, i) => ({
+      ...STATION_ROW,
+      id: `far-${i}`,
+      name: `A station ${String(i).padStart(3, '0')}`,
+      latitude: CENTER.lat + 0.135,
+      longitude: CENTER.lng + (i - 300) * 0.0005,
+    }));
+    const nearest: FakeRow = {
+      ...STATION_ROW,
+      id: 'nearest',
+      name: 'Vincom Center Dong Khoi, Ham B6',
+      latitude: CENTER.lat + 0.001,
+      longitude: CENTER.lng + 0.001,
+    };
+    mockFindMany.mockImplementation(fakeFindMany([...far, nearest]) as never);
+
+    // Same 25 km box NearbyStations builds via boundsFromRadius(center, 25)
+    const res = await GET(makeRequest('?bounds=10.5517,106.4724,11.0021,106.9294'));
+    const data = await res.json();
+
+    expect(data.stations.map((s: { id: string }) => s.id)).toContain('nearest');
+  });
+});

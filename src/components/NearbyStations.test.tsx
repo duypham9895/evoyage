@@ -563,4 +563,46 @@ describe('NearbyStations', () => {
       expect(screen.getByText('Busy')).toBeInTheDocument();
     });
   });
+
+  describe('status badge maps the API enum exactly', () => {
+    const CENTER = { latitude: 10.800, longitude: 106.700, accuracy: 50, loading: false, error: null };
+
+    async function renderWithStatus(chargingStatus: string | null) {
+      mockGeoState = { ...CENTER };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ stations: [{ ...MOCK_STATIONS[0], chargingStatus }] }),
+      });
+      render(<NearbyStations />);
+      await waitFor(() => {
+        expect(screen.getByText('VinFast Thủ Đức')).toBeInTheDocument();
+      });
+    }
+
+    // BUG(p1-nearby-stations-status-and-cap): 'inactive'.includes('active') so INACTIVE renders the green Active badge. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+    it.fails('shows INACTIVE stations as Inactive, not Active', async () => {
+      await renderWithStatus('INACTIVE');
+      expect(screen.queryByText('Active')).not.toBeInTheDocument();
+      expect(screen.getByText('Inactive')).toBeInTheDocument();
+    });
+
+    // BUG(p1-nearby-stations-status-and-cap): 'unavailable'.includes('available') so UNAVAILABLE renders the green Active badge. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+    it.fails('shows UNAVAILABLE stations as Inactive, not Active', async () => {
+      await renderWithStatus('UNAVAILABLE');
+      expect(screen.queryByText('Active')).not.toBeInTheDocument();
+      expect(screen.getByText('Inactive')).toBeInTheDocument();
+    });
+
+    // BUG(p1-nearby-stations-status-and-cap): a null status defaults to the green Active badge. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+    it.fails('does not claim a station with no status is Active', async () => {
+      await renderWithStatus(null);
+      expect(screen.queryByText('Active')).not.toBeInTheDocument();
+    });
+
+    // Control: the uppercase enum for a working charger must still read Active (passes today).
+    it('shows ACTIVE stations as Active', async () => {
+      await renderWithStatus('ACTIVE');
+      expect(screen.getByText('Active')).toBeInTheDocument();
+    });
+  });
 });

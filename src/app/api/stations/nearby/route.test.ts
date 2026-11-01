@@ -294,3 +294,47 @@ describe('POST /api/stations/nearby', () => {
     expect(data.count).toBe(0);
   });
 });
+
+// ── Regression: 500-row cap applied before distance sort ──
+
+describe('POST /api/stations/nearby — dense-city radius', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 29, retryAfterSec: 0 });
+    mockFindUniqueVehicle.mockResolvedValue(null);
+  });
+
+  // BUG(p1-nearby-stations-status-and-cap): take:500 with no orderBy drops the nearest stations when the bbox holds >500 rows. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+  it.fails('returns the nearest station when the bounding box holds more than 500 stations', async () => {
+    type Range = { gte: number; lte: number };
+    // 600 stations ~15 km out, stored (heap order) before the nearest one
+    const far = Array.from({ length: 600 }, (_, i) => toPrismaRow({
+      ...STATION_DISTRICT_3,
+      id: `far-${i}`,
+      latitude: CENTER_LAT + 0.135,
+      longitude: CENTER_LNG + (i - 300) * 0.0005,
+    }));
+    const nearest = toPrismaRow({
+      ...STATION_DISTRICT_1,
+      id: 'nearest',
+      latitude: CENTER_LAT + 0.001,
+      longitude: CENTER_LNG + 0.001,
+    });
+    const rows = [...far, nearest];
+    // Fake of the Prisma contract the route uses: lat/lng range, then take (no orderBy = storage order)
+    mockFindManyStations.mockImplementation((async (args: {
+      where: { latitude: Range; longitude: Range };
+      take?: number;
+    }) => {
+      const hit = rows.filter((r) =>
+        r.latitude >= args.where.latitude.gte && r.latitude <= args.where.latitude.lte
+        && r.longitude >= args.where.longitude.gte && r.longitude <= args.where.longitude.lte);
+      return args.take === undefined ? hit : hit.slice(0, args.take);
+    }) as never);
+
+    const res = await POST(createRequest({ latitude: CENTER_LAT, longitude: CENTER_LNG, radiusKm: 25 }));
+    const data = await res.json();
+
+    expect(data.stations[0]?.station.id).toBe('nearest');
+  });
+});
