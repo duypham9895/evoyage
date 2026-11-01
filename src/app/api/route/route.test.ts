@@ -361,6 +361,29 @@ describe('POST /api/route provider resilience', () => {
     expect(fetchDirectionsFromCoords).not.toHaveBeenCalled();
     expect(plan.error).toBeUndefined();
   });
+
+  // BUG(p0-mapbox-token-sensitive-placeholder): Mapbox cache-miss branch returns "lat,lng" strings as start/end addresses instead of the user-entered names. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-mapbox-token-sensitive-placeholder.md
+  it.fails('returns the user-entered start/end names on a Mapbox cache miss, not coordinate strings', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'server-token';
+    const { fetchDirectionsMapbox } = await import('@/lib/routing/mapbox-directions');
+    // Mirrors the real client (mapbox-directions.ts), which formats the input
+    // coordinates with toFixed(4) as its startAddress/endAddress.
+    vi.mocked(fetchDirectionsMapbox).mockResolvedValueOnce({
+      polyline: '_gjaR_gvdiE?_c`|@?_c`|@',
+      distanceMeters: 220_000,
+      durationSeconds: 10_800,
+      startAddress: '10.0000,106.0000',
+      endAddress: '10.0000,108.0000',
+      startCoord: { lat: 10, lng: 106 },
+      endCoord: { lat: 10, lng: 108 },
+    });
+
+    const plan = await postRoute(MAPBOX_BODY);
+
+    expect(plan.error).toBeUndefined();
+    expect(plan.startAddress).toBe('A');
+    expect(plan.endAddress).toBe('B');
+  });
 });
 
 describe('POST /api/route platform budget', () => {
