@@ -171,4 +171,42 @@ describe('queryNearbyPois', () => {
     expect(ua).toBeTruthy();
     expect(ua).toContain('eVoyage');
   });
+
+  // BUG(p1-overpass-amenities-and-warm-pois): AbortSignal.timeout rejects with name 'TimeoutError', but the client only checks 'AbortError', so timeouts are reported as network_error. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it.fails('throws OverpassError(timeout) when the request times out (AbortSignal.timeout -> TimeoutError)', async () => {
+    // This is exactly what Node's fetch rejects with when AbortSignal.timeout fires.
+    fetchSpy.mockRejectedValueOnce(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+
+    await expect(
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }),
+    ).rejects.toMatchObject({ kind: 'timeout' });
+  });
+
+  // BUG(p1-overpass-amenities-and-warm-pois): a single transient 502 "at capacity" from overpass-api.de fails the whole query; no retry/backoff or mirror fallback. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it.fails('recovers from a transient 502 (retry with backoff or mirror fallback) and returns POIs', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response('This Overpass API server is currently at capacity', { status: 502 }),
+        )
+        .mockResolvedValue(new Response(JSON.stringify(SAMPLE_RESPONSE), { status: 200 }));
+
+      const result = queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 });
+      // Keep the rejection handled while timers are flushed.
+      const settled = result.then(
+        (pois) => ({ ok: true as const, pois }),
+        (error: unknown) => ({ ok: false as const, error }),
+      );
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+
+      expect(outcome.ok).toBe(true);
+      expect(outcome.ok && outcome.pois).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

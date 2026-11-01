@@ -218,4 +218,23 @@ describe('GET /api/stations/[id]/amenities — tiered radius', () => {
     expect(body.pois).toEqual([]);
     expect(mockUpsertCache).toHaveBeenCalledTimes(1);
   });
+
+  // BUG(p1-overpass-amenities-and-warm-pois): a Stage 1 Overpass failure with no prior cache writes nothing, so every view of that station re-hits Overpass and waits again. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it.fails('on Stage 1 Overpass failure with no cache, writes a short-TTL negative cache row', async () => {
+    mockQueryOverpass.mockRejectedValueOnce(
+      new OverpassError('network_error', 'Overpass returned 502', 502),
+    );
+
+    const before = Date.now();
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.pois).toEqual([]);
+    expect(mockUpsertCache).toHaveBeenCalledTimes(1);
+    const created = mockUpsertCache.mock.calls[0][0].create as { expiresAt: Date };
+    const ttlMs = created.expiresAt.getTime() - before;
+    // Short negative TTL: must expire in the future, but well before the 30-day success TTL.
+    expect(ttlMs).toBeGreaterThan(0);
+    expect(ttlMs).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
+  });
 });
