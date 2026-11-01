@@ -73,6 +73,17 @@ describe('parsePetrolimexProducts', () => {
     expect(result.products.ron95iii.vndPerLiter).toBe(23750);
   });
 
+  describe('the 2026 E10 switch — object identity', () => {
+    const live = JSON.parse(
+      readFileSync(resolve(dirname(FIXTURE), 'petrolimex-2026-10-31.json'), 'utf8'),
+    ) as { products: ReadonlyArray<Record<string, unknown>> };
+
+    it('does not alias ron95iii to the same object as e10ron95iii', () => {
+      const result = parsePetrolimexProducts(live.products);
+      expect(result.products.ron95iii).not.toBe(result.products.e10ron95iii);
+    });
+  });
+
   it('throws when the products array is empty', () => {
     expect(() => parsePetrolimexProducts([])).toThrow(/Petrolimex/i);
   });
@@ -90,6 +101,46 @@ describe('parsePetrolimexProducts', () => {
       },
     ];
     expect(() => parsePetrolimexProducts(partial)).toThrow(/Petrolimex/i);
+  });
+
+  it('throws when a required product price is implausibly high', () => {
+    const bad = [
+      {
+        ID: '1',
+        Title: 'Xăng RON 95-III',
+        EnglishTitle: 'RON 95-III',
+        Zone1Price: 999_999,
+        LastModified: '2026-04-29T08:00:08.855Z',
+      },
+      {
+        ID: '2',
+        Title: 'DO 0,05S-II',
+        EnglishTitle: 'DO 0,05S-II',
+        Zone1Price: 28170,
+        LastModified: '2026-04-29T08:00:08.855Z',
+      },
+    ];
+    expect(() => parsePetrolimexProducts(bad)).toThrow(/Petrolimex/i);
+  });
+
+  it('throws when a required product price is zero or negative', () => {
+    const bad = [
+      {
+        ID: '1',
+        Title: 'Xăng RON 95-III',
+        EnglishTitle: 'RON 95-III',
+        Zone1Price: 23750,
+        LastModified: '2026-04-29T08:00:08.855Z',
+      },
+      {
+        ID: '2',
+        Title: 'DO 0,05S-II',
+        EnglishTitle: 'DO 0,05S-II',
+        Zone1Price: -1,
+        LastModified: '2026-04-29T08:00:08.855Z',
+      },
+    ];
+    expect(() => parsePetrolimexProducts(bad)).toThrow(/Petrolimex/i);
   });
 
   it('skips unknown products gracefully (log-and-continue)', () => {

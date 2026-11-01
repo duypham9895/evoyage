@@ -9,6 +9,8 @@
  * (tier 4) — the band a typical EV-owning household lands in once the car adds
  * 150–300 kWh/month of charging on top of normal household use.
  */
+import { assertPlausibleVnd, ELECTRICITY_VND_PER_KWH_BOUNDS } from './plausibility';
+
 export interface EvnTier {
   readonly minKwh: number;
   readonly maxKwh: number | null;
@@ -55,6 +57,12 @@ export function parseEvnTariff(html: string): EvnTariff {
   for (const def of TIER_LABELS) {
     const price = findTierPrice(html, def.labelRegex);
     if (price === null) break;
+    // Also covers representativeVndPerKwh below, which is just tier 4's price.
+    assertPlausibleVnd(
+      price,
+      `EVN parser: tier ${def.minKwh}-${def.maxKwh ?? '∞'} kWh`,
+      ELECTRICITY_VND_PER_KWH_BOUNDS,
+    );
     tiers.push({ minKwh: def.minKwh, maxKwh: def.maxKwh, vndPerKwh: price });
   }
 

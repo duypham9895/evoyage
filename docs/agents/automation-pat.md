@@ -34,3 +34,23 @@ error. Nothing goes stale silently. Rotate with the steps above.
 - Repo setting **Allow auto-merge** must stay on.
 - `crawl-energy-prices.ts` exits non-zero when any source reused a previous value, so a broken
   source blocks the sync instead of re-stamping old prices with a new date.
+
+## No human review gate
+
+These PRs auto-merge on the **Deploy to Vercel** check alone — no one reads the diff before it
+reaches production. The gate is entirely in code:
+
+- **Plausibility bounds** (`src/lib/energy-prices/plausibility.ts`) — each price parser
+  (`parse-petrolimex.ts`, `parse-vgreen.ts`, `parse-evn.ts`) throws on a non-finite, zero/negative,
+  or implausibly large value, which fails that source and blocks the sync (see above).
+- **Status coverage** (`src/lib/station/status-coverage.ts`) — the station crawl and poll both
+  throw `VinfastApiError('empty_result', ...)` when fewer than half the feed's rows carry a
+  `charging_status`, instead of silently going inert.
+- **Station count plausibility** (`src/lib/station/station-count-plausibility.ts`) — the station
+  crawl throws before any DB write or stats-file write when the new count isn't a positive
+  integer, or is less than half the previous count in `src/data/station-stats.json`. Catches a
+  truncated feed (e.g. 100 rows instead of ~24,800) that would otherwise pass the checks above and
+  ship a wrong public count.
+- CI (`Deploy to Vercel`) catches build/type errors.
+
+If a bad value ships anyway, it is because it passed all three.

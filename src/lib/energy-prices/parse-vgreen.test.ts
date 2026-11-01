@@ -31,6 +31,12 @@ describe('parseVGreenFaq', () => {
     expect(() => parseVGreenFaq(broken)).toThrow(/V-GREEN/i);
   });
 
+  it('throws when the price is implausibly high', () => {
+    const extreme =
+      '<p>Đơn giá sạc: 99.999.999 VNĐ/kWh áp dụng từ ngày 19/03/2024</p>';
+    expect(() => parseVGreenFaq(extreme)).toThrow(/V-GREEN/i);
+  });
+
   it('parses a synthetic well-formed snippet', () => {
     const synthetic =
       '<p>Đơn giá sạc: 4.123 VNĐ/kWh áp dụng từ ngày 02/01/2026</p>';
