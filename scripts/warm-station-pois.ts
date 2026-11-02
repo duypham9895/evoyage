@@ -21,6 +21,9 @@ const prisma = createPrismaClient();
 
 const TOP_N = 50;
 const REQUEST_PAUSE_MS = 3000; // be polite to Overpass: ~20 req/min
+// Stop before the workflow's 15-minute timeout kills the job, so the run
+// ends with a summary instead of "cancelled".
+const RUN_BUDGET_MS = 12 * 60 * 1000;
 
 async function main(): Promise<void> {
   console.log(`=== StationPois cache warmer ===\nTarget: top ${TOP_N} stations\n`);
@@ -34,9 +37,11 @@ async function main(): Promise<void> {
 
   console.log(`Selected ${stations.length} stations.\n`);
 
+  const startedAt = Date.now();
   let warmed = 0;
   let failed = 0;
   let skipped = 0;
+  let notReached = 0;
 
   for (const [i, st] of stations.entries()) {
     const label = `[${i + 1}/${stations.length}] ${st.name}`;
@@ -73,13 +78,23 @@ async function main(): Promise<void> {
       }
     }
 
+    if (Date.now() - startedAt >= RUN_BUDGET_MS) {
+      notReached = stations.length - i - 1;
+      if (notReached > 0) {
+        console.log(`\nRun budget (${RUN_BUDGET_MS / 60_000} min) used up; stopping early.`);
+      }
+      break;
+    }
+
     // Politeness pause between requests (skip last)
     if (i < stations.length - 1) {
       await new Promise((r) => setTimeout(r, REQUEST_PAUSE_MS));
     }
   }
 
-  console.log(`\nDone. Warmed ${warmed}, empty ${skipped}, failed ${failed}.`);
+  console.log(
+    `\nDone. Warmed ${warmed}, empty ${skipped}, failed ${failed}, not reached ${notReached}.`,
+  );
 }
 
 main()

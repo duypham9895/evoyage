@@ -79,6 +79,31 @@ describe('scripts/warm-station-pois.ts', () => {
     const logged = warn.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(logged).toContain('502');
   });
+  it('stops cleanly at the 12-minute run budget and reports the stations it did not reach', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    findMany.mockResolvedValue([
+      STATION,
+      { ...STATION, id: 'st-2', name: 'Second' },
+      { ...STATION, id: 'st-3', name: 'Third' },
+    ]);
+    const start = 1_800_000_000_000;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(start);
+    mockQuery.mockImplementationOnce(async () => {
+      // The first station eats the whole budget (e.g. timeouts + retries).
+      now.mockReturnValue(start + 12 * 60 * 1000);
+      return [{ id: 1, lat: 11.3888, lng: 107.5426, name: 'Cafe', amenity: 'cafe', tags: {} }];
+    });
+
+    await runWarmer();
+
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(upsert).toHaveBeenCalledTimes(1);
+    const logged = log.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(logged).toMatch(/budget/i);
+    expect(logged).toContain('not reached 2');
+  });
+
   it('caches a Stage 2 failure for 1h with a failure marker, not 30 days of "nothing nearby"', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     mockQuery.mockResolvedValueOnce([]); // Stage 1 empty
