@@ -79,3 +79,55 @@ describe('checkRateLimit when the Redis backend is unreachable', () => {
     expect(blocked.retryAfterSec).toBeGreaterThan(0);
   });
 });
+
+describe('checkRateLimit latency when the Redis backend is slow or dead', () => {
+  beforeEach(() => {
+    __resetRateLimitForTests();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  // Regression: if the Redis backend is slow or unreachable, @upstash/redis
+  // retries 5 times with exponential backoff (~4.3 s) before throwing, and every
+  // rate-limited request waits that long before the fallback runs.
+  it('falls back to the in-memory limiter after a bounded wait when Redis hangs', async () => {
+    const hangingLimiter = {
+      limit: () => new Promise(() => {}),
+    } as unknown as Parameters<typeof checkRateLimit>[3];
+
+    let settled: unknown;
+    void checkRateLimit('ip-hang', 5, 60_000, hangingLimiter).then((r) => {
+      settled = r;
+    });
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(settled).toMatchObject({ allowed: true });
+  });
+});
+
+describe('Redis client configuration', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.doUnmock('@upstash/redis');
+    vi.resetModules();
+  });
+
+  it('disables client-side retries so a dead host fails on the first attempt', async () => {
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://example.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test-token');
+    const fromEnv = vi.fn(() => ({}));
+    vi.resetModules();
+    vi.doMock('@upstash/redis', () => ({ Redis: { fromEnv } }));
+
+    await import('./rate-limit');
+
+    expect(fromEnv).toHaveBeenCalled();
+    for (const call of fromEnv.mock.calls as unknown as Array<[unknown]>) {
+      expect(call[0]).toMatchObject({ retry: { retries: 0 } });
+    }
+  });
+});
