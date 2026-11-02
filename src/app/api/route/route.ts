@@ -600,7 +600,9 @@ export async function POST(request: NextRequest) {
     const mapboxTokenForTraffic = process.env.MAPBOX_ACCESS_TOKEN;
     const trafficCoordsAvailable = routeCoordsAvailable;
     const futureDepart = departAt != null && new Date(departAt).getTime() > Date.now();
-    if (futureDepart && trafficCoordsAvailable && mapboxTokenForTraffic) {
+    // Skipped for waypoint trips: the traffic call is origin->destination only, so its
+    // duration would replace the real multi-stop one (docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md F1).
+    if (futureDepart && trafficCoordsAvailable && mapboxTokenForTraffic && !hasWaypoints) {
       try {
         const trafficResult = await fetchTrafficAwareDirections({
           origin: { lat: startLat!, lng: startLng! },
