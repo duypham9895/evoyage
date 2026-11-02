@@ -2,7 +2,18 @@
 
 Date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Live: https://evoyage.duypham.me
 
-> **Status 2026-11-02:** Fixed on this branch: related low-severity item 1. When the fallback clipboard write also fails, Copy link and Share link now show a new `share_copy_failed` message (en + vi) followed by the full URL to copy by hand, instead of claiming it was copied. Still open: Finding 1 (OG preview; note #125 removed `@vercel/og`) and Finding 2 (auto-plan on open) await Duy's product decision, their tests stay `it.fails`; Finding 3 (FAB covers the X) needs the portal-vs-hide decision; Finding 4 is unreproduced on a real device; related items 2 and 3 are unchanged.
+> **Status 2026-11-02:**
+> - Fixed on this branch:
+>   - Related item 1: when the fallback clipboard write also fails, Copy link and Share link show `share_copy_failed` (en + vi) and the full URL to copy by hand, instead of claiming it was copied.
+>   - Finding 3: the share modal is portalled to `document.body` and raised to `z-[900]`, above FeedbackFAB (800) and EViFab (750). Unit tests pin the portal, the z-index order and the X closing the modal. Real hit-testing on a 390x844 viewport is not covered by a test yet.
+>   - Related item 2: `resolveShortUrl` now returns ok / not-found / expired. `/s/[code]` redirects with `link-not-found` (bad format or no row), `link-expired` or `link-unavailable` (the lookup threw). ErrorBanner shows `share_link_not_found`, `share_expired` or `share_link_unavailable` (new keys, en + vi); unknown codes get the not-found copy. ErrorBanner also latches the code, because the `/plan` URL sync drops `?error` about 300 ms after mount and the banner disappeared on the next re-render.
+> - Still open:
+>   - Finding 1 (OG preview): needs Duy's product decision (site-wide image vs per-trip card on `/s/[code]`, keep or delete `/api/share-card`). Its test stays `it.fails`.
+>   - Finding 2 (auto-plan on open): needs Duy's decision. Each open would cost one `/api/route` call, and the tests open `/plan?…` directly, so passing them means re-planning on every reload. Both tests stay `it.fails`.
+>   - Finding 4: unreproduced; needs a real iPhone.
+>   - Related item 3 (`/api/share-card` untested): waits on Finding 1.
+>   - Same layering pattern, not fixed here: `FeedbackModal` is `z-[100]` below its own FAB; ShareButton's `aria-label`s "Close" and "Share trip" are hardcoded English.
+> - Defaults taken (reversible, owner may override): Finding 3 uses portal + `z-[900]` rather than hiding the FABs while a modal is open. Related item 2 uses three codes with new copy: en "This trip link doesn't exist or the address is mistyped. Please plan a new trip." / vi "Không tìm thấy liên kết này. Bạn kiểm tra lại đường dẫn hoặc lên lộ trình mới nhé." and en "We couldn't open this trip link right now. Please try again in a moment." / vi "Chưa mở được liên kết lúc này. Bạn thử lại sau ít phút nhé."; unknown codes fall back to the not-found copy.
 
 ## Summary
 
