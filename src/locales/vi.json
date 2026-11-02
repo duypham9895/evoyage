@@ -64,6 +64,7 @@
   "trip_duration_with_eta": "~{{time}} · đến lúc {{eta}} nếu đi ngay",
   "trip_duration_with_eta_picked": "~{{time}} · đến lúc {{eta}}",
   "trip_duration_only": "~{{time}}",
+  "trip_time_incl_charging": "{{time}} gồm {{charge}} sạc",
   "trip_whatif_current": "Đã chọn",
   "trip_whatif_plus_2h": "Chờ 2 giờ",
   "trip_whatif_tomorrow_morning": "Sáng mai 6:30",

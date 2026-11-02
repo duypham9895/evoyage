@@ -142,4 +142,24 @@ describe('RouteTimeline', () => {
     render(<RouteTimeline {...BASE_PROPS} stops={stops} />);
     expect(screen.queryByText('← Swipe')).not.toBeInTheDocument();
   });
+
+  it('colours stop battery by the user minimum arrival: below it danger, within 15 points warn, else safe', () => {
+    const stop = (shortName: string, arrivalPercent: number) => ({
+      shortName,
+      distanceFromPrevKm: 50,
+      arrivalPercent,
+      departurePercent: 80,
+      chargeTimeMin: 20,
+    });
+    render(
+      <RouteTimeline
+        {...BASE_PROPS}
+        minArrivalPercent={25}
+        stops={[stop('Low', 20), stop('Mid', 30), stop('High', 40)]}
+      />,
+    );
+    expect(screen.getByText('20→80%')).toHaveClass('text-[var(--color-danger)]');
+    expect(screen.getByText('30→80%')).toHaveClass('text-[var(--color-warn)]');
+    expect(screen.getByText('40→80%')).toHaveClass('text-[var(--color-safe)]');
+  });
 });
