@@ -8,6 +8,7 @@ import { hapticLight } from '@/lib/haptics';
 import PlaceAutocomplete from '@/components/trip/PlaceAutocomplete';
 import type { NominatimResult } from '@/lib/geo/nominatim';
 import type { ChargingStationData, LatLng } from '@/types';
+import { formatStationName } from '@/lib/stations/format-station-name';
 
 // ── Types ──
 
@@ -270,7 +271,7 @@ function StationCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">
-            {station.name}
+            {formatStationName(station.name)}
           </h3>
           <p className="text-xs text-[var(--color-muted)] mt-0.5" title={station.address}>
             {truncateAddress(station.address)}

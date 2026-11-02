@@ -1,4 +1,5 @@
 import { escapeHtml, PROVIDER_COLORS } from './map-utils';
+import { formatStationName } from '@/lib/stations/format-station-name';
 
 // ── Types ──
 
@@ -63,7 +64,7 @@ function getStatusDisplay(status: string | null, labels: MiniCardLabels): Status
 // ── Render Mini-Card HTML ──
 
 export function renderMiniCardHtml(data: MiniCardData, labels: MiniCardLabels = DEFAULT_LABELS): string {
-  const name = escapeHtml(data.name);
+  const name = escapeHtml(formatStationName(data.name));
   const provider = escapeHtml(data.provider);
   const connectors = escapeHtml(data.connectorTypes.join(', '));
   const providerColor = PROVIDER_COLORS[data.provider] ?? '#888888';

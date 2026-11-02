@@ -787,3 +787,21 @@ describe('TripSummary — results hero (will I make it)', () => {
     expect(screen.queryByText(/incl\./)).not.toBeInTheDocument();
   });
 });
+
+describe('TripSummary — feed direction tags in accessible names', () => {
+  it('announces "(chiều đi)" instead of the raw "<chiều đi>" tag in every aria-label', () => {
+    const { container } = render(
+      <TripSummary
+        tripPlan={makeTripPlan({
+          chargingStops: [makeChargingStop('Trạm cao tốc <chiều đi>', 80, 20, 80)],
+          totalChargingTimeMin: 18,
+        })}
+        isLoading={false}
+      />,
+    );
+
+    const labels = Array.from(container.querySelectorAll('[aria-label]')).map((el) => el.getAttribute('aria-label') ?? '');
+    expect(labels.some((l) => l.includes('Trạm cao tốc (chiều đi)'))).toBe(true);
+    expect(labels.filter((l) => l.includes('<chiều'))).toEqual([]);
+  });
+});

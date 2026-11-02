@@ -30,6 +30,7 @@ export interface NearbyStationMarker extends ChargingStationData {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { FALLBACK_TILE_ATTRIBUTION, FALLBACK_TILE_CLASS, FALLBACK_TILE_URL } from '@/lib/map/fallback-tiles';
+import { formatStationName } from '@/lib/stations/format-station-name';
 
 interface WaypointMarkerData {
   readonly lat: number;
@@ -345,7 +346,7 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation,
         const el = popup?.getElement();
         const askBtn = el?.querySelector('[data-action="ask-evi"]');
         askBtn?.addEventListener('click', () => {
-          handleAskEVi(station.id, station.name);
+          handleAskEVi(station.id, formatStationName(station.name));
         });
       });
 

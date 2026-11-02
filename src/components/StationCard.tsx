@@ -6,6 +6,7 @@ import { hapticLight } from '@/lib/haptics';
 import { emitStationHighlight } from '@/lib/events/station-events';
 import { trackStationTapped } from '@/lib/analytics';
 import type { NearbyStationInfo } from '@/lib/evi/types';
+import { formatStationName } from '@/lib/stations/format-station-name';
 
 // ── Status Color Mapping ──
 
@@ -69,7 +70,7 @@ export default function StationCard({ station }: StationCardProps) {
       {/* Header: name + distance */}
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">
-          {station.name}
+          {formatStationName(station.name)}
         </span>
         <span className="text-xs text-[var(--color-accent)] whitespace-nowrap flex-shrink-0">
           {station.distanceKm} km
