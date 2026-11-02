@@ -87,4 +87,70 @@ describe('FeedbackModal — characterization (react-hooks compiler refactor)', (
     expect(body.formOpenedAt as number).toBeGreaterThan(0);
     expect(body.formOpenedAt as number).toBeLessThanOrEqual(beforeSubmit + 1);
   });
+  // BUG(p2-feedback-form-failures): a decimal-comma coordinate ('10,7626') is sent as Number() -> NaN -> JSON null, which the API rejects. See docs/bugs/2026-11-01-p2-feedback-form-failures.md
+  it('normalises decimal-comma coordinates for MISSING_STATION instead of sending null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<FeedbackModal isOpen={true} onClose={() => {}} />);
+    fireEvent.click(screen.getByText('feedback_cat_missing_station'));
+
+    fireEvent.change(await screen.findByPlaceholderText('feedback_ph_missing_station'), {
+      target: { value: 'A new charging station near District 1.' },
+    });
+    fireEvent.change(screen.getByLabelText('feedback_field_proposed_lat'), { target: { value: '10,7626' } });
+    fireEvent.change(screen.getByLabelText('feedback_field_proposed_lng'), { target: { value: '106,6602' } });
+    fireEvent.click(screen.getByRole('button', { name: 'feedback_submit' }));
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string) as Record<string, unknown>;
+    expect(body.proposedLatitude).toBe(10.7626);
+    expect(body.proposedLongitude).toBe(106.6602);
+  });
+
+  // BUG(p2-feedback-form-failures): a 400 whose details name a field the form does not render (e.g. proposedLatitude) is swallowed silently. See docs/bugs/2026-11-01-p2-feedback-form-failures.md
+  it('shows a visible error when the server rejects a field the form does not render', async () => {
+    const jsonMock = vi.fn().mockResolvedValue({
+      success: false,
+      error: 'Dữ liệu không hợp lệ',
+      details: [{ path: ['proposedLatitude'], message: 'Invalid input: expected number, received null' }],
+    });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 400, json: jsonMock });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<FeedbackModal isOpen={true} onClose={() => {}} />);
+    fireEvent.click(screen.getByText('feedback_cat_missing_station'));
+    fireEvent.change(await screen.findByPlaceholderText('feedback_ph_missing_station'), {
+      target: { value: 'A new charging station near District 1.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'feedback_submit' }));
+
+    // Accept either fix: the error step (submit button gone, retry shown) or an inline message on the form.
+    // Do not wait on the submit button here: setStep('error') removes it.
+    await vi.waitFor(() => expect(jsonMock).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => {
+      const errorStepShown = screen.queryByText('feedback_error_message') !== null;
+      const detailShown = screen.queryByText(/expected number, received null/) !== null;
+      const invalidInputShown = screen.queryByText('feedback_invalid_input') !== null;
+      expect(errorStepShown || detailShown || invalidInputShown).toBe(true);
+    });
+  });
+
+  it('shows an inline error and sends nothing for an unparseable or out-of-range coordinate', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    render(<FeedbackModal isOpen={true} onClose={() => {}} />);
+    fireEvent.click(screen.getByText('feedback_cat_missing_station'));
+    fireEvent.change(await screen.findByPlaceholderText('feedback_ph_missing_station'), {
+      target: { value: 'A new charging station near District 1.' },
+    });
+    fireEvent.change(screen.getByLabelText('feedback_field_proposed_lat'), { target: { value: '10.7626, 106.6602' } });
+    fireEvent.change(screen.getByLabelText('feedback_field_proposed_lng'), { target: { value: '200' } });
+    fireEvent.click(screen.getByRole('button', { name: 'feedback_submit' }));
+
+    expect(await screen.findByText('feedback_lat_invalid')).toBeInTheDocument();
+    expect(screen.getByText('feedback_lng_invalid')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

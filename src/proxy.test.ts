@@ -249,3 +249,15 @@ describe('CSP + headers characterization (pins exact behaviour before the proxy 
     ]);
   });
 });
+
+describe('CSP img-src must allow the feedback photo preview', () => {
+  // BUG(p2-feedback-form-failures): FeedbackImageUpload renders its preview from URL.createObjectURL(file),
+  // so img-src must keep blob:. The Vercel Blob host is deliberately not allowlisted.
+  // See docs/bugs/2026-11-01-p2-feedback-form-failures.md
+  it('keeps blob: in img-src (FeedbackImageUpload previews via URL.createObjectURL)', () => {
+    const res = proxy(new NextRequest('http://localhost/plan'));
+    const csp = res.headers.get('content-security-policy') ?? '';
+    const imgSrc = csp.split(';').map((d) => d.trim()).find((d) => d.startsWith('img-src')) ?? '';
+    expect(imgSrc.split(/\s+/)).toContain('blob:');
+  });
+});
