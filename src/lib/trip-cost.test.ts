@@ -301,12 +301,14 @@ describe('computeTripCost — seeded catalog vehicles (NEDC-derived efficiency)'
     brand: 'VinFast',
     model: 'VF 8',
     usableBatteryKwh: 82,
+    batteryCapacityKwh: 87.7,
     officialRangeKm: 471,
+    rangeStandard: 'NEDC',
     efficiencyWhPerKm: (87.7 * 1000) / 471,
   };
 
-  // BUG(p2-trip-cost-accuracy): NEDC-derived efficiencyWhPerKm skips the 1.2x real-world multiplier, so EV kWh/cost is ~11% low. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-trip-cost-accuracy.md
-  it.fails('applies the NEDC real-world correction when efficiencyWhPerKm was synthesised from the NEDC spec', () => {
+  // Regression for p2-trip-cost-accuracy (was it.fails): NEDC-derived efficiencyWhPerKm skipped the 1.2x real-world multiplier. See docs/bugs/2026-11-01-p2-trip-cost-accuracy.md
+  it('applies the NEDC real-world correction when efficiencyWhPerKm was synthesised from the NEDC spec', () => {
     const cost = computeTripCost({
       distanceKm: 300,
       vehicle: SEEDED_VF8_ECO,
@@ -316,5 +318,96 @@ describe('computeTripCost — seeded catalog vehicles (NEDC-derived efficiency)'
     // Intended: 82 / 471 × 100 × 1.2 = 20.89 kWh/100km → 300 km ≈ 62.68 kWh.
     // Shipped:  186.2 Wh/km = 18.62 kWh/100km → 300 km ≈ 55.86 kWh.
     expect(cost.electric.kwh).toBeCloseTo((82 / 471) * 100 * 1.2 * 3, 1);
+  });
+
+  it('treats a lower-case "nedc" range standard as NEDC', () => {
+    const cost = computeTripCost({
+      distanceKm: 300,
+      vehicle: { ...SEEDED_VF8_ECO, rangeStandard: ' nedc ' },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.kwh).toBeCloseTo((82 / 471) * 100 * 1.2 * 3, 1);
+  });
+
+  it('keeps a stored efficiency unchanged for a non-NEDC (WLTP) vehicle', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: { ...SEEDED_VF8_ECO, rangeStandard: 'WLTP', efficiencyWhPerKm: 180 },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.kwh).toBe(18);
+  });
+
+  it('falls back to the stored efficiency for an NEDC vehicle with no battery data', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: {
+        ...SEEDED_VF8_ECO,
+        usableBatteryKwh: null,
+        batteryCapacityKwh: null,
+        efficiencyWhPerKm: 180,
+      },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.kwh).toBe(18);
+  });
+});
+
+describe('computeTripCost — battery basis (usable first, gross as fallback)', () => {
+  it('uses usable battery over gross when both are known', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: { ...VF8, batteryCapacityKwh: 90 },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    // 80 usable / 400 × 100 × 1.2 = 24, not 90 / 400 × 120 = 27
+    expect(cost.electric.kwh).toBe(24);
+  });
+
+  it('uses gross battery when usable battery is unknown (custom vehicles)', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: { ...VF8, usableBatteryKwh: null, batteryCapacityKwh: 60 },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    // 60 / 400 × 100 × 1.2 = 18
+    expect(cost.electric.kwh).toBeCloseTo(18, 10);
+  });
+
+  it('falls back to the 22 kWh/100km default when neither battery figure is known', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: { ...VF8, usableBatteryKwh: null, batteryCapacityKwh: null },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.kwh).toBe(22);
+  });
+});
+
+describe('computeTripCost — free V-GREEN for a typed-in VinFast brand', () => {
+  it('matches the brand case-insensitively and ignores surrounding spaces', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: { ...VF8, brand: ' vinfast ' },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.isFreeAtVGreen).toBe(true);
+  });
+
+  it('requires an exact brand match (no partial match)', () => {
+    const cost = computeTripCost({
+      distanceKm: 100,
+      vehicle: { ...VF8, brand: 'VinFast Motors' },
+      snapshot: SNAPSHOT,
+      today: TODAY_BEFORE_FREE_END,
+    });
+    expect(cost.electric.isFreeAtVGreen).toBe(false);
   });
 });
