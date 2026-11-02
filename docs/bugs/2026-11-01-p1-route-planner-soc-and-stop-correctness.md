@@ -2,6 +2,9 @@
 
 Status: documented, not fixed. Code references are at `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main on 2026-11-01).
 
+> **Status 2026-11-02:** Finding 2 is fixed on this branch: `findChargingDecisionPoints` no longer starts a station search when `remainingRangeKm >= totalRouteKm - cumDist[i]` (usable range already ends at minArrival with the safety factor applied); its regression test now runs as a normal `it`. Precautionary stops are untouched.
+> Still open: Finding 1 (waits on open question 1, planner-side vs ranking-side fix) and Finding 3 (waits on open question 2, the infeasible-result shape). Their tests remain `it.fails`. Owner decisions.
+
 ## Summary
 
 The trip planner shows battery percentages and stop distances that do not match the charging stations it puts on screen. On long trips the real arrival SOC can fall below the user's minimum (12.6% shown as 20.2% on Mapbox HCM -> Hanoi). It also adds a ~28-minute stop when the car can already reach the destination, and it presents impossible trips as valid plans with 0% legs, repeated stations and a warning every ~10 km.

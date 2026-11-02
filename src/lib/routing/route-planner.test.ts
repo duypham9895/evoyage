@@ -430,8 +430,8 @@ describe('BUG p1-route-planner-soc-and-stop-correctness', () => {
   });
 
   // Finding 2 — needless stop when destination is already reachable
-  // BUG(p1-route-planner-soc-and-stop-correctness): search triggers at <80 km remaining range without checking if the destination is reachable. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('adds no charging stop when the destination is reachable above minArrival', () => {
+  // BUG(p1-route-planner-soc-and-stop-correctness): search triggers at <80 km remaining range without checking if the destination is reachable. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
+  it('adds no charging stop when the destination is reachable above minArrival', () => {
     // 200 km route, 260 km usable range → arrives at 80 - 200/4 = 30% without charging.
     const result = planChargingStops({
       encodedPolyline: northRoutePolyline(200),

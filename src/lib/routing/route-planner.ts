@@ -114,8 +114,10 @@ export function findChargingDecisionPoints(input: PlanChargingStopsInput): reado
     const needsSearch = remainingRangeKm < SEARCH_TRIGGER_KM;
     const notNearEnd = cumDist[i] < totalRouteKm - 5;
     const notJustCharged = cumDist[i] > lastDecisionKm + 10;
+    // usableRangeKm already stops at minArrival with the safety factor applied
+    const destinationReachable = remainingRangeKm >= totalRouteKm - cumDist[i];
 
-    if (needsSearch && notNearEnd && notJustCharged) {
+    if (needsSearch && notNearEnd && notJustCharged && !destinationReachable) {
       // Search window: current position forward to max reachable (keep half safety buffer)
       const searchFromKm = cumDist[i];
       const searchToKm = Math.min(
