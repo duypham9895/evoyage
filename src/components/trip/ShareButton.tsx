@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { useLocale } from '@/lib/locale';
@@ -448,10 +449,11 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
         {t('share_button')}
       </button>
 
-      {/* Share Modal */}
-      {modalState !== 'closed' && (
+      {/* Share Modal — portalled to <body> and stacked above FeedbackFAB (z-800) / EViFab (z-750):
+          on mobile this component sits inside MobileBottomSheet's z-40 stacking context. */}
+      {modalState !== 'closed' && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[900] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) handleCloseModal(); }}
           role="dialog" aria-modal="true" aria-label="Share trip"
         >
@@ -579,7 +581,8 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

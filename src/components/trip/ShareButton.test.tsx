@@ -98,3 +98,39 @@ describe('ShareButton — copy link fallback', () => {
     ).toBeInTheDocument();
   });
 });
+
+// Finding 3 (p2-sharing-flow): on mobile ShareButton sits inside MobileBottomSheet (`fixed z-40`), whose
+// stacking context capped the modal below FeedbackFAB (z 800), so the FAB covered the modal's X.
+// jsdom has no layout or stacking, so these pin the two parts of the fix: the modal leaves the sheet's
+// subtree, and its own z-index beats the FAB's.
+describe('ShareButton — modal layering (Finding 3)', () => {
+  const FEEDBACK_FAB_Z = 800;
+
+  function openModalInsideSheet() {
+    render(
+      <div data-testid="sheet">
+        <ShareButton tripPlan={TRIP_PLAN} />
+      </div>,
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: messages.share_button })[0]);
+    return screen.getByRole('dialog');
+  }
+
+  it('renders the share modal as a direct child of document.body, outside the bottom-sheet container', () => {
+    const dialog = openModalInsideSheet();
+    expect(dialog.parentElement).toBe(document.body);
+    expect(screen.getByTestId('sheet')).not.toContainElement(dialog);
+  });
+
+  it('gives the modal overlay a z-index above the feedback FAB', () => {
+    const dialog = openModalInsideSheet();
+    const z = Number(/(?:^|\s)z-\[(\d+)\]/.exec(dialog.className)?.[1]);
+    expect(z).toBeGreaterThan(FEEDBACK_FAB_Z);
+  });
+
+  it('closes the modal when the X button is clicked', () => {
+    openModalInsideSheet();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
