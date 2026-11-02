@@ -27,14 +27,14 @@ describe('PlaceAutocomplete accessibility', () => {
     vi.restoreAllMocks();
   });
 
-  // BUG(p3-accessibility-wcag): the visible <label> is not associated with the combobox, so its name is the placeholder. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
-  it.fails('names the combobox by its visible label, not by the example placeholder (WCAG 1.3.1 / 4.1.2)', () => {
+  // BUG(p3-accessibility-wcag): the visible <label> is not associated with the combobox, so its name is the placeholder. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
+  it('names the combobox by its visible label, not by the example placeholder (WCAG 1.3.1 / 4.1.2)', () => {
     renderOrigin();
     expect(screen.getByRole('combobox', { name: 'Điểm đi' })).toBeInTheDocument();
   });
 
-  // BUG(p3-accessibility-wcag): the visible <label> is not associated with the combobox, so getByLabelText cannot find it. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
-  it.fails('keeps the field label reachable after the user has typed a value', () => {
+  // BUG(p3-accessibility-wcag): the visible <label> is not associated with the combobox, so getByLabelText cannot find it. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
+  it('keeps the field label reachable after the user has typed a value', () => {
     renderOrigin('Quận 1');
     expect(screen.getByLabelText('Điểm đi')).toHaveValue('Quận 1');
   });

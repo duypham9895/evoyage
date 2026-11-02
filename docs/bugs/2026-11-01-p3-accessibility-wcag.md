@@ -2,6 +2,8 @@
 
 Date: 2026-11-01 · Base commit: `64db6f92e0792aa4643b2ba76958ff0843b80567` · Branch: `bug/p3-accessibility-wcag`
 
+> **Status 2026-11-02:** Finding 2 is fixed on this branch: `PlaceAutocomplete` now ties its `<label>` to the combobox with `useId()` + `htmlFor`/`id`, so the field is named by its label ("Điểm đi"); its two regression tests are flipped to `it`. Still open: Finding 1 (contrast). Its three `it.fails` tests stay as they are until Duy signs off on the visual change (owner decision). Also still open: the optional `name` attribute, the eVi chat input label and the related low-severity items, none of which were in scope. Nobody has checked the result with VoiceOver yet.
+
 ## Summary
 
 Labels, inactive tabs, the language toggle and much of the landing page copy use the muted token `#6B6B78`. That gives 3.2–3.75:1 contrast, below the WCAG AA minimum of 4.5:1, so low-vision users and anyone on a phone in sunlight struggle to read core navigation. The origin and destination inputs are also not programmatically tied to their visible labels. A screen reader announces an example placeholder ("VD: Thủ Thiêm, TP.HCM") where it should say the field name ("Điểm đi").
