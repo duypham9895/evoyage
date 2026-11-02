@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIp, vinfastDetailLimiter } from '@/lib/rate-limit';
 import { fetchVinFastDetailWithProgress } from '@/lib/vinfast/vinfast-client';
 import { resolveEntityId } from '@/lib/vinfast/vinfast-entity-resolver';
 
@@ -26,7 +26,7 @@ export async function GET(
 ) {
   const { id: stationId } = await params;
 
-  if (!/^[a-z0-9]{20,36}$/.test(stationId)) {
+  if (!/^[a-z0-9]{1,36}$/.test(stationId)) {
     return new Response(sseEvent({ stage: 'error', code: 'INVALID_ID' }), {
       status: 400,
       headers: sseHeaders(),
@@ -34,7 +34,7 @@ export async function GET(
   }
 
   const ip = getClientIp(request);
-  const limit = await checkRateLimit(`vinfast-detail:${ip}`, 20, 60_000);
+  const limit = await checkRateLimit(`vinfast-detail:${ip}`, 20, 60_000, vinfastDetailLimiter);
   if (!limit.allowed) {
     return new Response(
       sseEvent({ stage: 'error', code: 'RATE_LIMITED' }),

@@ -85,6 +85,9 @@ export const stationsLimiter = hasRedis ? createRedisRatelimiter(30, 60) : null;
 export const vehiclesLimiter = hasRedis ? createRedisRatelimiter(30, 60) : null;
 export const shareCardLimiter = hasRedis ? createRedisRatelimiter(3, 60) : null;
 export const eviLimiter = hasRedis ? createRedisRatelimiter(20, 60) : null;
+// Station detail can launch a headless browser against VinFast on a cache miss,
+// so it needs the distributed limit, not only the per-instance fallback.
+export const vinfastDetailLimiter = hasRedis ? createRedisRatelimiter(20, 60) : null;
 // Groq Whisper is a paid endpoint billed per minute of audio. 10 req/min/IP
 // is generous for a real user (one voice message every ~6 s) and tight enough
 // to cap cost-abuse from anonymous scripted requests.
