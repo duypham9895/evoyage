@@ -13,6 +13,9 @@
 
 const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
 const REQUEST_TIMEOUT_MS = 30_000;
+// Transient upstream statuses ("at capacity" 502s, 429s) worth one retry.
+const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([429, 502, 503, 504]);
+const RETRY_BACKOFF_MS = 5_000;
 
 // Amenity types we surface to drivers — aligned with the categorization in §3b.
 const AMENITY_TYPES = [
@@ -34,7 +37,14 @@ export interface OsmPoi {
   readonly tags: Readonly<Record<string, string>>;
 }
 
-export interface QueryNearbyPoisOptions {
+export interface OverpassRequestOptions {
+  /** Per-request timeout. Default 30s (warmer); the interactive route passes less. */
+  readonly timeoutMs?: number;
+  /** Retries on 429/502/503/504 after a 5s backoff. Default 1; 0 disables. */
+  readonly retries?: number;
+}
+
+export interface QueryNearbyPoisOptions extends OverpassRequestOptions {
   readonly lat: number;
   readonly lng: number;
   readonly radiusMeters: number;
@@ -79,7 +89,25 @@ export async function queryNearbyPois(
   opts: QueryNearbyPoisOptions,
 ): Promise<readonly OsmPoi[]> {
   const body = buildQuery(opts);
+  const timeoutMs = opts.timeoutMs ?? REQUEST_TIMEOUT_MS;
+  let retriesLeft = opts.retries ?? 1;
 
+  for (;;) {
+    try {
+      return await fetchOnce(body, timeoutMs);
+    } catch (err) {
+      const retryable =
+        err instanceof OverpassError &&
+        err.statusCode !== undefined &&
+        RETRYABLE_STATUSES.has(err.statusCode);
+      if (!retryable || retriesLeft <= 0) throw err;
+      retriesLeft--;
+      await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
+    }
+  }
+}
+
+async function fetchOnce(body: string, timeoutMs: number): Promise<readonly OsmPoi[]> {
   let response: Response;
   try {
     response = await fetch(OVERPASS_ENDPOINT, {
@@ -93,11 +121,12 @@ export async function queryNearbyPois(
         Accept: 'application/json',
       },
       body,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new OverpassError('timeout', `Request exceeded ${REQUEST_TIMEOUT_MS}ms`);
+    // AbortSignal.timeout rejects with 'TimeoutError'; keep 'AbortError' too.
+    if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+      throw new OverpassError('timeout', `Request exceeded ${timeoutMs}ms`);
     }
     throw new OverpassError(
       'network_error',

@@ -78,6 +78,7 @@
   "amenities_heading": "Quanh đây",
   "amenities_loading": "Đang tìm địa điểm...",
   "amenities_empty": "Chưa có dữ liệu địa điểm gần trạm này",
+  "amenities_unavailable": "Chưa tải được địa điểm lân cận lúc này. Thử lại sau ít phút nhé.",
   "amenities_google_maps_fallback": "Tìm trên Google Maps",
   "amenities_walking_minutes": "{{minutes}} phút đi bộ",
   "amenities_driving_minutes": "{{minutes}} phút lái",

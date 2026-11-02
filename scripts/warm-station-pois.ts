@@ -1,8 +1,9 @@
 /**
  * Daily warmer for the StationPois cache (Phase 4).
  *
- * Picks the top N most-recently-verified VinFast stations, queries Overpass
- * for each, decorates with walking-time, and upserts into StationPois so
+ * Picks the top N most-recently-verified VinFast stations, fetches tiered
+ * amenities for each (shared with the amenities route via station-pois.ts, so
+ * the cached envelope is one the route can read), and upserts into StationPois so
  * first-time-user latency on those stations is <50ms (cache hit) instead of
  * ~1.5s (Overpass round-trip).
  *
@@ -13,51 +14,16 @@
  * Run: npx tsx scripts/warm-station-pois.ts
  */
 import { createPrismaClient } from '../src/lib/prisma';
-import { queryNearbyPois, OverpassError, type OsmPoi } from '../src/lib/station/overpass-client';
-import { categorizePoi, type AmenityCategory } from '../src/lib/station/categorize-poi';
-import { haversineMeters, walkingTimeMinutes } from '../src/lib/station/walking-distance';
+import { OverpassError } from '../src/lib/station/overpass-client';
+import { cacheExpiresAt, envelope, fetchAmenityRows } from '../src/lib/station/station-pois';
 
 const prisma = createPrismaClient();
 
 const TOP_N = 50;
-const SEARCH_RADIUS_METERS = 500;
-const MAX_WALKING_TIME_MIN = 7;
-const CACHE_TTL_DAYS = 30;
 const REQUEST_PAUSE_MS = 3000; // be polite to Overpass: ~20 req/min
-
-interface AmenityRow {
-  readonly id: number;
-  readonly name: string | null;
-  readonly amenity: string;
-  readonly category: AmenityCategory;
-  readonly walkingMinutes: number;
-  readonly distanceMeters: number;
-  readonly lat: number;
-  readonly lng: number;
-}
-
-function decorate(stationLat: number, stationLng: number) {
-  return (poi: OsmPoi): AmenityRow | null => {
-    const category = categorizePoi(poi);
-    if (!category) return null;
-    const distance = haversineMeters(
-      { lat: stationLat, lng: stationLng },
-      { lat: poi.lat, lng: poi.lng },
-    );
-    const walkRoundTrip = walkingTimeMinutes(distance) * 2;
-    if (walkRoundTrip > MAX_WALKING_TIME_MIN) return null;
-    return {
-      id: poi.id,
-      name: poi.name,
-      amenity: poi.amenity,
-      category,
-      walkingMinutes: walkingTimeMinutes(distance),
-      distanceMeters: Math.round(distance),
-      lat: poi.lat,
-      lng: poi.lng,
-    };
-  };
-}
+// Stop before the workflow's 15-minute timeout kills the job, so the run
+// ends with a summary instead of "cancelled".
+const RUN_BUDGET_MS = 12 * 60 * 1000;
 
 async function main(): Promise<void> {
   console.log(`=== StationPois cache warmer ===\nTarget: top ${TOP_N} stations\n`);
@@ -71,32 +37,28 @@ async function main(): Promise<void> {
 
   console.log(`Selected ${stations.length} stations.\n`);
 
+  const startedAt = Date.now();
   let warmed = 0;
   let failed = 0;
   let skipped = 0;
+  let notReached = 0;
 
   for (const [i, st] of stations.entries()) {
     const label = `[${i + 1}/${stations.length}] ${st.name}`;
     try {
-      const pois = await queryNearbyPois({
-        lat: st.latitude,
-        lng: st.longitude,
-        radiusMeters: SEARCH_RADIUS_METERS,
-      });
+      const { rows, failure } = await fetchAmenityRows(st.latitude, st.longitude);
 
-      const rows = pois
-        .map(decorate(st.latitude, st.longitude))
-        .filter((r): r is AmenityRow => r !== null)
-        .sort((a, b) => a.walkingMinutes - b.walkingMinutes);
-
-      const expiresAt = new Date(Date.now() + CACHE_TTL_DAYS * 24 * 60 * 60 * 1000);
+      const expiresAt = cacheExpiresAt(failure);
       await prisma.stationPois.upsert({
         where: { stationId: st.id },
-        create: { stationId: st.id, poisJson: JSON.stringify(rows), expiresAt },
-        update: { poisJson: JSON.stringify(rows), fetchedAt: new Date(), expiresAt },
+        create: { stationId: st.id, poisJson: envelope(rows, failure), expiresAt },
+        update: { poisJson: envelope(rows, failure), fetchedAt: new Date(), expiresAt },
       });
 
-      if (rows.length === 0) {
+      if (failure) {
+        console.warn(`${label}: 0 POIs (drive band FAILED: ${failure}; cached 1h)`);
+        failed++;
+      } else if (rows.length === 0) {
         console.log(`${label}: 0 POIs (cached empty)`);
         skipped++;
       } else {
@@ -105,7 +67,9 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       const kind = err instanceof OverpassError ? err.kind : 'unknown';
-      console.warn(`${label}: FAILED (${kind})`);
+      const status = err instanceof OverpassError && err.statusCode ? ` HTTP ${err.statusCode}` : '';
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`${label}: FAILED (${kind}${status}) ${message}`);
       failed++;
       // Backoff harder on rate limit
       if (err instanceof OverpassError && err.kind === 'rate_limited') {
@@ -114,13 +78,23 @@ async function main(): Promise<void> {
       }
     }
 
+    if (Date.now() - startedAt >= RUN_BUDGET_MS) {
+      notReached = stations.length - i - 1;
+      if (notReached > 0) {
+        console.log(`\nRun budget (${RUN_BUDGET_MS / 60_000} min) used up; stopping early.`);
+      }
+      break;
+    }
+
     // Politeness pause between requests (skip last)
     if (i < stations.length - 1) {
       await new Promise((r) => setTimeout(r, REQUEST_PAUSE_MS));
     }
   }
 
-  console.log(`\nDone. Warmed ${warmed}, empty ${skipped}, failed ${failed}.`);
+  console.log(
+    `\nDone. Warmed ${warmed}, empty ${skipped}, failed ${failed}, not reached ${notReached}.`,
+  );
 }
 
 main()

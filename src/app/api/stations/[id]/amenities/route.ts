@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, stationsLimiter } from '@/lib/rate-limit';
-import { queryNearbyPois, OverpassError, type OsmPoi } from '@/lib/station/overpass-client';
-import { categorizePoi, type AmenityCategory } from '@/lib/station/categorize-poi';
 import {
-  haversineMeters,
-  walkingTimeMinutes,
-  drivingTimeMinutes,
-} from '@/lib/station/walking-distance';
-import { dedupePois } from '@/lib/station/dedupe-pois';
+  cacheExpiresAt,
+  envelope,
+  failureKind,
+  fetchAmenityRows,
+  readCachedPois,
+  type AmenityFetchResult,
+} from '@/lib/station/station-pois';
 
 /**
  * GET /api/stations/[id]/amenities
@@ -19,103 +19,16 @@ import { dedupePois } from '@/lib/station/dedupe-pois';
  *   walk  — within 500m, round-trip walk ≤ 7 min
  *   drive — within 1500m (only queried if walk tier is empty)
  *
- * Cached in Postgres for 30 days. Tuning changes invalidate cache via the
- * POIS_SCHEMA_VERSION envelope (mismatch ⇒ refetch); no DB migration needed.
+ * Cached in Postgres for 30 days; an Overpass failure is cached for 1 hour
+ * with a `failure` marker so the UI can say "unavailable", not "nothing
+ * nearby". Tuning changes invalidate cache via the POIS_SCHEMA_VERSION
+ * envelope (mismatch ⇒ refetch); no DB migration needed.
  *
  * See docs/specs/2026-05-04-amenities-tiered-radius.md.
  */
 
-const WALK_RADIUS_METERS = 500;
-const WALK_MAX_ROUND_TRIP_MIN = 7;
-const DRIVE_RADIUS_METERS = 1500;
-const CACHE_TTL_DAYS = 30;
-const POIS_SCHEMA_VERSION = 2;
-
-type Tier = 'walk' | 'drive';
-
-interface AmenityRow {
-  readonly id: number;
-  readonly name: string | null;
-  readonly amenity: string;
-  readonly category: AmenityCategory;
-  readonly tier: Tier;
-  readonly walkingMinutes: number;
-  readonly drivingMinutes?: number;
-  readonly distanceMeters: number;
-  readonly lat: number;
-  readonly lng: number;
-}
-
-interface CachedEnvelope {
-  readonly schemaVersion: number;
-  readonly rows: readonly AmenityRow[];
-}
-
-function decorateWalk(stationLat: number, stationLng: number) {
-  return (poi: OsmPoi): AmenityRow | null => {
-    const category = categorizePoi(poi);
-    if (!category) return null;
-    const distance = haversineMeters(
-      { lat: stationLat, lng: stationLng },
-      { lat: poi.lat, lng: poi.lng },
-    );
-    const oneWayMin = walkingTimeMinutes(distance);
-    if (oneWayMin * 2 > WALK_MAX_ROUND_TRIP_MIN) return null;
-    return {
-      id: poi.id,
-      name: poi.name,
-      amenity: poi.amenity,
-      category,
-      tier: 'walk',
-      walkingMinutes: oneWayMin,
-      distanceMeters: Math.round(distance),
-      lat: poi.lat,
-      lng: poi.lng,
-    };
-  };
-}
-
-function decorateDrive(stationLat: number, stationLng: number) {
-  return (poi: OsmPoi): AmenityRow | null => {
-    const category = categorizePoi(poi);
-    if (!category) return null;
-    const distance = haversineMeters(
-      { lat: stationLat, lng: stationLng },
-      { lat: poi.lat, lng: poi.lng },
-    );
-    return {
-      id: poi.id,
-      name: poi.name,
-      amenity: poi.amenity,
-      category,
-      tier: 'drive',
-      walkingMinutes: walkingTimeMinutes(distance),
-      drivingMinutes: drivingTimeMinutes(distance),
-      distanceMeters: Math.round(distance),
-      lat: poi.lat,
-      lng: poi.lng,
-    };
-  };
-}
-
-function readCachedRows(json: string): readonly AmenityRow[] | null {
-  try {
-    const parsed = JSON.parse(json) as CachedEnvelope | readonly AmenityRow[];
-    // Older v1 cache rows were a bare array (no envelope) → schema-mismatch
-    // by definition; force a refetch so tuning changes propagate naturally.
-    if (Array.isArray(parsed)) return null;
-    const env = parsed as CachedEnvelope;
-    if (env.schemaVersion !== POIS_SCHEMA_VERSION) return null;
-    return env.rows;
-  } catch {
-    return null;
-  }
-}
-
-function envelope(rows: readonly AmenityRow[]): string {
-  const payload: CachedEnvelope = { schemaVersion: POIS_SCHEMA_VERSION, rows };
-  return JSON.stringify(payload);
-}
+// Interactive budget: one try per stage, 8s each (the warmer keeps 30s + retry).
+const OVERPASS_OPTIONS = { timeoutMs: 8_000, retries: 0 } as const;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: stationId } = await params;
@@ -140,87 +53,77 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Cache hit (with schema-version match) → short-circuit
   const cached = await prisma.stationPois.findUnique({ where: { stationId } });
   if (cached && cached.expiresAt > new Date()) {
-    const rows = readCachedRows(cached.poisJson);
-    if (rows) {
+    const hit = readCachedPois(cached.poisJson);
+    if (hit) {
       return NextResponse.json({
-        pois: rows,
+        pois: hit.rows,
         cachedAt: cached.fetchedAt.toISOString(),
         fromCache: true,
+        ...(hit.failure ? { error: hit.failure } : {}),
       });
     }
     // Schema mismatch → fall through to refetch (and overwrite the row).
   }
 
-  // Stage 1 — walking band (always)
-  let walkRows: AmenityRow[];
+  // Stage 1 walk band, Stage 2 drive band (see station-pois.ts).
+  let result: AmenityFetchResult;
   try {
-    const osm = await queryNearbyPois({
-      lat: station.latitude,
-      lng: station.longitude,
-      radiusMeters: WALK_RADIUS_METERS,
-    });
-    walkRows = dedupePois(osm)
-      .map(decorateWalk(station.latitude, station.longitude))
-      .filter((r): r is AmenityRow => r !== null)
-      .sort((a, b) => a.walkingMinutes - b.walkingMinutes);
+    result = await fetchAmenityRows(station.latitude, station.longitude, OVERPASS_OPTIONS);
   } catch (err) {
-    return overpassFallback(cached, err);
+    return overpassFallback(stationId, cached, err);
   }
 
-  // Stage 2 — drive band, only when walking band came up empty
-  let driveRows: AmenityRow[] = [];
-  if (walkRows.length === 0) {
-    try {
-      const osm = await queryNearbyPois({
-        lat: station.latitude,
-        lng: station.longitude,
-        radiusMeters: DRIVE_RADIUS_METERS,
-      });
-      driveRows = dedupePois(osm)
-        .map(decorateDrive(station.latitude, station.longitude))
-        .filter((r): r is AmenityRow => r !== null)
-        .sort((a, b) => (a.drivingMinutes ?? 0) - (b.drivingMinutes ?? 0));
-    } catch {
-      // Stage 1 already returned []; persist the empty result so we don't
-      // hammer Overpass on every load. The 30-day TTL will retry naturally.
-      driveRows = [];
-    }
-  }
-
-  const allRows = [...walkRows, ...driveRows];
-  const expiresAt = new Date(Date.now() + CACHE_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const { rows: allRows, failure } = result;
+  const expiresAt = cacheExpiresAt(failure);
   await prisma.stationPois.upsert({
     where: { stationId },
-    create: { stationId, poisJson: envelope(allRows), expiresAt },
-    update: { poisJson: envelope(allRows), fetchedAt: new Date(), expiresAt },
+    create: { stationId, poisJson: envelope(allRows, failure), expiresAt },
+    update: { poisJson: envelope(allRows, failure), fetchedAt: new Date(), expiresAt },
   });
 
   return NextResponse.json({
     pois: allRows,
     cachedAt: new Date().toISOString(),
     fromCache: false,
+    ...(failure ? { error: failure } : {}),
   });
 }
 
-function overpassFallback(
+async function overpassFallback(
+  stationId: string,
   cached: { poisJson: string; fetchedAt: Date } | null,
   err: unknown,
-): NextResponse {
-  // Stage 1 failure: surface stale cache if any so the user still sees
-  // *something*; otherwise return empty for the UI to render the empty state.
-  if (cached) {
-    const rows = readCachedRows(cached.poisJson) ?? [];
+): Promise<NextResponse> {
+  const kind = failureKind(err);
+  // Stage 1 failure: surface stale rows if any so the user still sees
+  // *something*, and keep that row for the next successful fetch to replace.
+  const stale = cached ? readCachedPois(cached.poisJson) : null;
+  if (cached && stale && !stale.failure && stale.rows.length > 0) {
     return NextResponse.json({
-      pois: rows,
+      pois: stale.rows,
       cachedAt: cached.fetchedAt.toISOString(),
       fromCache: true,
-      staleReason: err instanceof OverpassError ? err.kind : 'unknown',
+      staleReason: kind,
     });
+  }
+
+  // Nothing worth serving: cache the failure briefly so the next views don't
+  // each wait on Overpass again. A DB error here must not turn into a 500.
+  const poisJson = envelope([], kind);
+  const expiresAt = cacheExpiresAt(kind);
+  try {
+    await prisma.stationPois.upsert({
+      where: { stationId },
+      create: { stationId, poisJson, expiresAt },
+      update: { poisJson, fetchedAt: new Date(), expiresAt },
+    });
+  } catch (dbErr) {
+    console.error('[amenities] failed to cache Overpass failure', dbErr);
   }
   return NextResponse.json({
     pois: [],
     cachedAt: null,
     fromCache: false,
-    error: err instanceof OverpassError ? err.kind : 'overpass_unknown',
+    error: kind,
   });
 }

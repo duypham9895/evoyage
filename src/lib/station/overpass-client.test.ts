@@ -115,7 +115,7 @@ describe('queryNearbyPois', () => {
     fetchSpy.mockResolvedValueOnce(new Response('Too Many Requests', { status: 429 }));
 
     await expect(
-      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }),
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500, retries: 0 }),
     ).rejects.toMatchObject({ kind: 'rate_limited' });
   });
 
@@ -123,7 +123,7 @@ describe('queryNearbyPois', () => {
     fetchSpy.mockResolvedValueOnce(new Response('Bad Gateway', { status: 502 }));
 
     await expect(
-      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }),
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500, retries: 0 }),
     ).rejects.toMatchObject({ kind: 'network_error' });
   });
 
@@ -170,5 +170,107 @@ describe('queryNearbyPois', () => {
     const ua = (init.headers as Record<string, string>)['User-Agent'];
     expect(ua).toBeTruthy();
     expect(ua).toContain('eVoyage');
+  });
+
+  // BUG(p1-overpass-amenities-and-warm-pois): AbortSignal.timeout rejects with name 'TimeoutError', but the client only checks 'AbortError', so timeouts are reported as network_error. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it('throws OverpassError(timeout) when the request times out (AbortSignal.timeout -> TimeoutError)', async () => {
+    // This is exactly what Node's fetch rejects with when AbortSignal.timeout fires.
+    fetchSpy.mockRejectedValueOnce(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+
+    await expect(
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }),
+    ).rejects.toMatchObject({ kind: 'timeout' });
+  });
+
+  // BUG(p1-overpass-amenities-and-warm-pois): a single transient 502 "at capacity" from overpass-api.de fails the whole query; no retry/backoff or mirror fallback. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it('recovers from a transient 502 (retry with backoff or mirror fallback) and returns POIs', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response('This Overpass API server is currently at capacity', { status: 502 }),
+        )
+        .mockResolvedValue(new Response(JSON.stringify(SAMPLE_RESPONSE), { status: 200 }));
+
+      const result = queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 });
+      // Keep the rejection handled while timers are flushed.
+      const settled = result.then(
+        (pois) => ({ ok: true as const, pois }),
+        (error: unknown) => ({ ok: false as const, error }),
+      );
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+
+      expect(outcome.ok).toBe(true);
+      expect(outcome.ok && outcome.pois).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('with retries: 0, makes a single request and does not wait (interactive route budget)', async () => {
+    fetchSpy.mockResolvedValue(new Response('Bad Gateway', { status: 502 }));
+
+    await expect(
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500, retries: 0 }),
+    ).rejects.toMatchObject({ kind: 'network_error', statusCode: 502 });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a 502 at most once by default, then throws the last error', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchSpy.mockImplementation(async () => new Response('Bad Gateway', { status: 502 }));
+
+      const settled = queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }).catch(
+        (e: unknown) => e,
+      );
+      await vi.runAllTimersAsync();
+      const error = await settled;
+
+      expect(error).toMatchObject({ kind: 'network_error', statusCode: 502 });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry a non-transient 4xx', async () => {
+    fetchSpy.mockImplementation(async () => new Response('Bad Request', { status: 400 }));
+
+    await expect(
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }),
+    ).rejects.toMatchObject({ kind: 'network_error', statusCode: 400 });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry a timeout (would double the wait)', async () => {
+    fetchSpy.mockRejectedValue(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+
+    await expect(
+      queryNearbyPois({ lat: HCM.lat, lng: HCM.lng, radiusMeters: 500 }),
+    ).rejects.toMatchObject({ kind: 'timeout' });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes a custom timeoutMs to AbortSignal.timeout and reports it in the timeout message', async () => {
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
+    fetchSpy.mockRejectedValueOnce(
+      new DOMException('The operation was aborted due to timeout', 'TimeoutError'),
+    );
+
+    const error = await queryNearbyPois({
+      lat: HCM.lat,
+      lng: HCM.lng,
+      radiusMeters: 500,
+      timeoutMs: 8_000,
+    }).catch((e: unknown) => e);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(8_000);
+    expect((error as OverpassError).message).toContain('8000ms');
+    timeoutSpy.mockRestore();
   });
 });

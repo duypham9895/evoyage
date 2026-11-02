@@ -9,9 +9,10 @@
  *
  * UX states:
  *   loading → skeleton text "Finding nearby places..."
- *   empty   → "No nearby place data" + Google Maps fallback link
- *   ready   → up to N rows, sorted by walking minutes ascending
- *   error   → same as empty (fail-soft, never block the user)
+ *   empty       → "No nearby place data" + Google Maps fallback link
+ *   ready       → up to N rows, sorted by walking minutes ascending
+ *   unavailable → request or Overpass failed: "Couldn't load" + the same
+ *                 Google Maps link (fail-soft, never block the user)
  *
  * Each row is a tappable <a> that opens Google Maps at the POI's
  * coordinates — works on iOS/Android natively without any platform
@@ -41,6 +42,8 @@ interface ApiResponse {
   readonly pois: readonly AmenityRow[];
   readonly cachedAt: string | null;
   readonly fromCache: boolean;
+  /** Overpass failure kind when nothing could be loaded. */
+  readonly error?: string;
 }
 
 interface StationAmenitiesProps {
@@ -52,6 +55,7 @@ interface StationAmenitiesProps {
 type State =
   | { kind: 'loading' }
   | { kind: 'empty' }
+  | { kind: 'unavailable' }
   | { kind: 'ready'; pois: readonly AmenityRow[] };
 
 const CATEGORY_DOT_COLOR: Record<AmenityCategory, string> = {
@@ -94,14 +98,14 @@ export default function StationAmenities({
         if (cancelled) return;
         trackAmenitiesViewed(stationId, data.fromCache, data.pois?.length ?? 0);
         if (!data.pois || data.pois.length === 0) {
-          setState({ kind: 'empty' });
+          setState({ kind: data.error ? 'unavailable' : 'empty' });
         } else {
           setState({ kind: 'ready', pois: data.pois });
         }
       })
       .catch(() => {
         if (cancelled) return;
-        setState({ kind: 'empty' });
+        setState({ kind: 'unavailable' });
       });
     return () => {
       cancelled = true;
@@ -116,10 +120,13 @@ export default function StationAmenities({
     );
   }
 
-  if (state.kind === 'empty') {
+  if (state.kind === 'empty' || state.kind === 'unavailable') {
+    const messageKey = (
+      state.kind === 'empty' ? 'amenities_empty' : 'amenities_unavailable'
+    ) as Parameters<typeof t>[0];
     return (
       <div className="text-xs text-[var(--color-muted)] pt-2 space-y-1">
-        <div>{t('amenities_empty' as Parameters<typeof t>[0])}</div>
+        <div>{t(messageKey)}</div>
         <a
           href={googleMapsAreaUrl(stationLat, stationLng)}
           target="_blank"
