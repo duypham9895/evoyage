@@ -284,3 +284,8 @@ input[type="range"]::-moz-range-track {
     display: none;
   }
 }
+
+/* Leaflet fallback basemap: OSM standard tiles are light; darken them to sit on the dark UI. */
+.evoyage-fallback-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+}

@@ -6,6 +6,11 @@ import stationsNearbyFixture from '../fixtures/stations-nearby.json';
 import eviParseFixture from '../fixtures/evi-parse.json';
 import shortUrlFixture from '../fixtures/short-url.json';
 
+const ONE_PX_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 /**
  * Mock all API routes with fixture data.
  * Uses page.route() to intercept fetch requests at the browser level.
@@ -13,6 +18,12 @@ import shortUrlFixture from '../fixtures/short-url.json';
 export async function mockAPIs(page: Page): Promise<void> {
   // Nominatim geocoding (external API called from client)
   // Return query-aware results: Da Lat searches get Da Lat, everything else gets HCM
+  // Leaflet fallback basemap tiles: serve a 1x1 PNG so E2E never hits the
+  // OSM tile server from CI (its usage policy forbids automated load).
+  await page.route('**/tile.openstreetmap.org/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PX_PNG }),
+  );
+
   await page.route('**/nominatim.openstreetmap.org/**', (route) => {
     const url = route.request().url();
     const isDaLat = /da.?lat|đà.?lạt/i.test(decodeURIComponent(url));
