@@ -185,8 +185,8 @@ describe('crawl-vinfast-stations: charger specs', () => {
     expect(stored.portCount).not.toBe(4);
   });
 
-  // BUG(p2-station-data-integrity): ON CONFLICT assigns EXCLUDED power/port/connector values, so each daily crawl wipes enriched specs. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-station-data-integrity.md
-  it.fails('does not overwrite existing maxPowerKw / portCount / chargerTypes / connectorTypes on an existing station', async () => {
+  // Regression (p2-station-data-integrity Finding 1): ON CONFLICT used to assign EXCLUDED power/port/connector values, so each daily crawl wiped enriched specs.
+  it('does not overwrite existing maxPowerKw / portCount / chargerTypes / connectorTypes on an existing station', async () => {
     await runCrawl([row('C.HCM0001')], [{ id: 'db-1', ocmId: 'vinfast-C.HCM0001', entityId: 'e-C.HCM0001' }]);
 
     // Any assignment that lets the crawl's own value win replaces whatever the

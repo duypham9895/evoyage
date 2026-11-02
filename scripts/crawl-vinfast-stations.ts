@@ -244,10 +244,13 @@ async function bulkUpsertStations(
         "province" = EXCLUDED."province",
         "latitude" = EXCLUDED."latitude",
         "longitude" = EXCLUDED."longitude",
-        "chargerTypes" = EXCLUDED."chargerTypes",
-        "connectorTypes" = EXCLUDED."connectorTypes",
-        "portCount" = EXCLUDED."portCount",
-        "maxPowerKw" = EXCLUDED."maxPowerKw",
+        -- "chargerTypes", "connectorTypes", "portCount" and "maxPowerKw" are
+        -- deliberately NOT updated, for the same reason as "stationType" below:
+        -- the CDN feed carries no power, port or connector data, so
+        -- buildStationData can only insert placeholders (150 kW / 4 ports).
+        -- scripts/enrich-vinfast-detail.ts owns the real values; overwriting
+        -- them here would wipe its output every day.
+        -- See docs/bugs/2026-11-01-p2-station-data-integrity.md (Finding 1).
         -- "stationType" deliberately NOT updated: it is NOT NULL in the schema,
         -- and the CDN feed carries no access_type, so buildStationData can only
         -- guess 'public'. Overwriting would discard a real value with a guess.
