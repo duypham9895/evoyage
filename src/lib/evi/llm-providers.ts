@@ -22,5 +22,5 @@ export const MINIMAX_PROVIDER: LLMProvider = {
   name: 'minimax',
   baseURL: 'https://api.minimax.io/v1',
   envVar: 'MINIMAX_API_KEY',
-  defaultModel: 'MiniMax-M2.7',
+  defaultModel: 'MiniMax-M3.1-Flash',
 };
