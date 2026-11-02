@@ -2,7 +2,17 @@
 
 Date: 2026-11-01 · Base commit: `64db6f92e0792aa4643b2ba76958ff0843b80567` · Branch: `bug/p3-accessibility-wcag`
 
-> **Status 2026-11-02:** Finding 2 is fixed on this branch: `PlaceAutocomplete` now ties its `<label>` to the combobox with `useId()` + `htmlFor`/`id`, so the field is named by its label ("Điểm đi"); its two regression tests are flipped to `it`. Still open: Finding 1 (contrast). Its three `it.fails` tests stay as they are until Duy signs off on the visual change (owner decision). Also still open: the optional `name` attribute, the eVi chat input label and the related low-severity items, none of which were in scope. Nobody has checked the result with VoiceOver yet.
+> **Status 2026-11-02:**
+> - **Fixed, Finding 2:** `PlaceAutocomplete` ties its `<label>` to the combobox with `useId()` + `htmlFor`/`id`, so the field is named by its label ("Điểm đi"). Both regression tests are flipped to `it`.
+> - **Fixed in code, Finding 1 (contrast):** informational text moves from `--color-muted` to `--color-text-secondary` on the sites this doc lists: the `PlaceAutocomplete` label, the inactive `MobileTabBar` tab, the `Header` language toggle and the listed `LandingPageContent.tsx` lines. The fix also covers the same kind of text on `/` that the list missed: the "add model" link in `LandingPageContent.tsx`, and in `LandingClient.tsx` both locale toggles, the FAQ answers and the stat-counter labels. Placeholders, borders, hover borders and token values are unchanged. The three `it.fails` contrast tests are flipped to `it`. A new test in `LandingPageContent.test.tsx` checks every token-coloured text on `/` against landing navy, the worst landing background.
+> - **Merge gate, still open:** Duy signs off on before/after screenshots of `/`, `/plan` desktop and `/plan` mobile before merge. The code is reversible, but the change is visual and DESIGN.md asks for his check.
+> - **Fixed, related items:** the `/plan` language toggle's accessible name now starts with its visible text (WCAG 2.5.3). The landing footer headings are `h2`, not `h4`. `/plan` has an `sr-only` `h1` in both layouts.
+> - **Still open:**
+>   - The "infra" role card's name text on `/` (`LandingPageContent.tsx`, inline `color: 'var(--color-muted)'`) is a deliberate third colour tier next to accent and info, so changing it is Duy's design call.
+>   - The FAQ "+" glyph stays muted. It is a state graphic (WCAG 1.4.11, 3:1), but Lighthouse may still count it as text.
+>   - Muted text on `/plan` outside this doc's list ("Gợi ý cho bạn", "TUYẾN ĐƯỜNG", Khứ hồi, `page.tsx` disabled reason) and the wider sweep of about 180 sites are deferred to a follow-up PR.
+>   - Also not done: the optional input `name`, the eVi chat input label, a Lighthouse rerun and a VoiceOver check.
+> - **Defaults taken (reversible, owner may override):** toggle name "EN – Chuyển sang tiếng Anh" / "VI – Switch to Vietnamese". `h1` copy "Lên lộ trình xe điện" / "Plan your EV trip". Footer labels become `h2`. `LandingClient.tsx` text and the "add model" link are counted as part of Finding 1. The "+" glyph and the infra card colour stay muted.
 
 ## Summary
 
