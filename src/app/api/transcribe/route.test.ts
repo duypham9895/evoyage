@@ -87,7 +87,7 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
   });
 
   it('returns transcription on successful Groq response', async () => {
-    fetchSpy.mockResolvedValue(makeResponse(200, { text: 'Đi Đà Lạt cuối tuần' }));
+    fetchSpy.mockImplementation(async () => makeResponse(200, { text: 'Đi Đà Lạt cuối tuần' }));
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
@@ -100,7 +100,7 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
   });
 
   it('hits the Groq audio transcriptions endpoint with Bearer auth', async () => {
-    fetchSpy.mockResolvedValue(makeResponse(200, { text: 'hi' }));
+    fetchSpy.mockImplementation(async () => makeResponse(200, { text: 'hi' }));
 
     const fd = makeAudioFormData();
     await POST(makeRequest(fd));
@@ -122,7 +122,7 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
   });
 
   it('returns 500 with transcription_failed on generic Groq error', async () => {
-    fetchSpy.mockResolvedValue(makeResponse(500, { error: 'server error' }));
+    fetchSpy.mockImplementation(async () => makeResponse(500, { error: 'server error' }));
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
@@ -133,7 +133,7 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
   });
 
   it('returns 503 with provider_unavailable when Groq returns 401', async () => {
-    fetchSpy.mockResolvedValue(makeResponse(401, { error: { message: 'Invalid API Key' } }));
+    fetchSpy.mockImplementation(async () => makeResponse(401, { error: { message: 'Invalid API Key' } }));
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
@@ -144,7 +144,7 @@ describe('POST /api/transcribe (Groq Whisper)', () => {
   });
 
   it('returns empty text when Groq returns null transcript', async () => {
-    fetchSpy.mockResolvedValue(makeResponse(200, { text: null }));
+    fetchSpy.mockImplementation(async () => makeResponse(200, { text: null }));
 
     const fd = makeAudioFormData();
     const response = await POST(makeRequest(fd));
