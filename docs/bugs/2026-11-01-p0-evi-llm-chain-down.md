@@ -2,6 +2,8 @@
 
 Status: open. This note documents the bug and does not fix it. Code references are at commit `64db6f92e0792aa4643b2ba76958ff0843b80567`.
 
+> **Status 2026-11-02:** Finding 3 is fixed on this branch (code only). In `llm-module.ts`, a provider 401/403/404 now falls back. Malformed JSON now throws a fallback-eligible `<provider> returned invalid JSON` error instead of a raw `SyntaxError`. Once a fallback has started, any failure other than `LLMSchemaError` ends as `LLMUnavailableError`. 400 on the primary still does not fall back. All four regression tests pass, and the 401 tests that encoded the old premise were updated. Still open: Finding 2's replacement MiniMax model id (owner decision, see open question 3), the `LLMSchemaError` fallback policy (owner decision against ADR-0002, open question 4), and the ops steps in Findings 1 and 4 (Vercel logs, `OPENAI_API_KEY` rotation), which are not code and are not reproduced here.
+
 ## Summary
 
 On production (https://evoyage.duypham.me), every eVi trip message ends with "Xin lỗi, dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau." (HTTP 503), and the AI trip narrative fails with HTTP 500. Both LLM providers are broken. The OpenAI primary fails fast, most likely on a revoked key. The MiniMax fallback asks for a model, `MiniMax-M2.7`, that MiniMax has retired. A classification bug in `llm-module.ts` also skips the fallback for auth and JSON errors, so it would not help even if it were healthy.
