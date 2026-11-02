@@ -312,6 +312,7 @@
 
   "landing_footer_start": "Bắt đầu",
   "landing_footer_github": "GitHub",
+  "landing_footer_privacy": "Quyền riêng tư",
   "landing_footer_tagline": "Đi xa, đi xanh — không lo hết pin",
   "landing_footer_built": "Phát triển với",
   "landing_footer_copyright": "eVoyage. Mã nguồn mở.",
@@ -537,5 +538,68 @@
   "route_provider_fallback": "Lộ trình tính bằng Mapbox (dịch vụ OSM tạm thời không khả dụng). Quãng đường/thời gian có thể chênh lệch nhẹ.",
 
   "meta_title_default": "eVoyage — Lên kế hoạch chuyến đi xe điện tại Việt Nam",
-  "meta_title_plan": "Lên lộ trình · eVoyage"
+  "meta_title_plan": "Lên lộ trình · eVoyage",
+
+  "privacy_draft_banner": "Bản nháp, đang chờ luật sư xem xét.",
+  "privacy_heading": "Chính sách quyền riêng tư",
+  "privacy_abroad": "Phần lớn các dịch vụ dưới đây được vận hành ngoài Việt Nam, nên khi dùng eVoyage, dữ liệu của bạn sẽ được chuyển ra nước ngoài. Nơi nào đã biết khu vực, trang này ghi rõ; nơi nào chưa biết, trang này cũng nói thẳng.",
+
+  "privacy_section_collect_heading": "eVoyage thu thập những gì",
+  "privacy_section_collect_body": "Tuỳ vào tính năng bạn dùng: điểm đi và điểm đến của chuyến đi, vị trí GPS nếu bạn cho phép, những gì bạn gõ hoặc nói với eVi, góp ý bạn gửi (kể cả ảnh và thông tin liên hệ), báo cáo tình trạng trạm sạc, và các sự kiện sử dụng. eVoyage không có tài khoản người dùng.",
+
+  "privacy_section_why_heading": "Để làm gì",
+  "privacy_section_why_body": "Để tìm đường và trạm sạc cho bạn, để Duy trả lời góp ý, để chống lạm dụng, và để biết phần nào của eVoyage thật sự được dùng.",
+
+  "privacy_section_processors_heading": "Ai nhận dữ liệu, và ở đâu",
+
+  "privacy_processor_posthog_name": "PostHog",
+  "privacy_processor_posthog_body": "eVoyage ghi lại các sự kiện sử dụng, không kèm mã định danh nào do eVoyage đặt. Trình duyệt của bạn gửi các sự kiện này đến PostHog tại Hoa Kỳ, kèm địa chỉ IP và thông tin trình duyệt. Máy chủ PostHog dùng hai thông tin này để tạo một mã định danh thay thế (không phải tên hay email của bạn). Theo tài liệu của PostHog, mã này thay đổi mỗi ngày và nối các sự kiện của bạn trong cùng một ngày.",
+
+  "privacy_processor_supabase_name": "Supabase",
+  "privacy_processor_supabase_body": "Góp ý, báo cáo tình trạng trạm sạc, liên kết chia sẻ và lộ trình lưu tạm được lưu trong cơ sở dữ liệu Supabase của eVoyage tại Singapore. Góp ý và báo cáo trạm sạc còn lưu địa chỉ IP của bạn ở dạng băm (hash), và bản băm này có thể đảo ngược ra IP. Ai có liên kết chia sẻ cũng xem được các địa điểm của chuyến đi đó.",
+
+  "privacy_processor_vercel_name": "Vercel",
+  "privacy_processor_vercel_body": "Mọi thứ bạn gửi lên ứng dụng — kể cả vị trí, địa chỉ chuyến đi, góp ý và bản ghi âm — đều được xử lý trên máy chủ của Vercel. Khu vực máy chủ hiện chưa được thiết lập trong mã nguồn. Ảnh bạn đính kèm khi góp ý cũng được lưu trên Vercel: ai có đường dẫn ảnh đều xem được, và ảnh có thể còn giữ dữ liệu vị trí của máy ảnh, nên bạn hãy xoá phần đó trước khi tải lên.",
+
+  "privacy_processor_resend_name": "Resend",
+  "privacy_processor_resend_body": "Mỗi góp ý đều được gửi đến email của Duy qua Resend, kèm thông tin liên hệ của bạn và địa chỉ trang bạn đang xem. Khu vực xử lý của Resend chưa được thiết lập trong mã nguồn.",
+
+  "privacy_processor_openai_name": "OpenAI",
+  "privacy_processor_openai_body": "Khi bạn lên lộ trình, địa chỉ điểm đi, điểm đến và các trạm sạc dừng chân được gửi đến một nhà cung cấp AI (OpenAI, hoặc MiniMax khi cần dự phòng) để viết phần tóm tắt lộ trình — ngay cả khi bạn chưa mở eVi. Nếu bạn dùng eVi, mô hình còn nhận tin nhắn và tên địa điểm bạn gõ. Toạ độ GPS của bạn không bao giờ được gửi cho mô hình, nhưng địa chỉ tra ra từ GPS thì có thể. Khu vực xử lý của OpenAI chưa được thiết lập trong mã nguồn.",
+
+  "privacy_processor_minimax_name": "MiniMax",
+  "privacy_processor_minimax_body": "MiniMax là nhà cung cấp AI dự phòng, chỉ được dùng khi OpenAI không phản hồi, cho cùng phần tóm tắt lộ trình và tin nhắn eVi. Nơi MiniMax xử lý dữ liệu hiện chưa được xác nhận.",
+
+  "privacy_processor_groq_name": "Groq",
+  "privacy_processor_groq_body": "Nếu bạn nói thay vì gõ, dịch vụ nhận giọng nói của trình duyệt sẽ được thử trước, và có thể gửi âm thanh đến Google (trên Chrome) hoặc Apple (trên Safari). Nếu cách đó không được, bản ghi âm sẽ được gửi đến dịch vụ Whisper của Groq để chuyển thành chữ. Khu vực xử lý của Groq chưa được thiết lập trong mã nguồn.",
+
+  "privacy_processor_mapbox_name": "Mapbox",
+  "privacy_processor_mapbox_body": "Mapbox vẽ bản đồ bạn đang xem. Máy chủ của eVoyage cũng dùng Mapbox để tìm đường và để tạo ảnh chia sẻ chuyến đi, trong đó có điểm đi, điểm đến và đường đi của bạn. Đoạn mã bản đồ của Mapbox còn tự gửi dữ liệu sử dụng về Mapbox, kèm một mã ngẫu nhiên lưu trong trình duyệt của bạn; eVoyage chưa tắt tính năng này. Khu vực xử lý của Mapbox chưa được thiết lập trong mã nguồn.",
+
+  "privacy_processor_openstreetmap_name": "OpenStreetMap Foundation (OSMF)",
+  "privacy_processor_openstreetmap_body": "Khi bạn tìm một địa điểm, hoặc khi eVi tra địa chỉ của bạn, trình duyệt sẽ gửi thông tin đó đến dịch vụ Nominatim của OpenStreetMap, và dịch vụ này cũng thấy địa chỉ IP của bạn. Trên điện thoại, máy tính bảng và cửa sổ trình duyệt hẹp, eVi lấy vị trí của bạn ngay khi trang lên lộ trình mở ra, trước cả khi bạn mở eVi. Nếu bạn cho phép (hoặc đã cho phép từ trước), vị trí GPS sẽ đi thẳng từ trình duyệt đến Nominatim, và máy chủ của eVoyage có thể gửi lại một lần nữa. Địa chỉ điểm đi, điểm đến bạn gõ cũng được máy chủ tra qua Nominatim. Khi bản đồ Mapbox không tải được, hình bản đồ sẽ lấy từ máy chủ của OpenStreetMap.",
+
+  "privacy_processor_osrm_name": "OSRM (router.project-osrm.org)",
+  "privacy_processor_osrm_body": "Máy chủ của eVoyage gửi toạ độ điểm đi, điểm đến và các điểm dừng của chuyến đi đến dịch vụ tìm đường OSRM. Đơn vị vận hành và vị trí của máy chủ này chưa được xác nhận.",
+
+  "privacy_processor_upstash_name": "Upstash",
+  "privacy_processor_upstash_body": "Để chống lạm dụng, địa chỉ IP của bạn được dùng làm khoá giới hạn số lượt gọi trong Upstash Redis, chỉ trong một khoảng ngắn (từ một phút đến một giờ). Khu vực xử lý của Upstash chưa được thiết lập trong mã nguồn.",
+
+  "privacy_processor_google_name": "Google",
+  "privacy_processor_google_body": "Khi bạn chạm \"{{googleMapsLabel}}\", toạ độ điểm đi, điểm đến và các điểm dừng được gửi đến Google ngay lúc đó, không sớm hơn.",
+
+  "privacy_processor_vinfast_name": "VinFast",
+  "privacy_processor_vinfast_body": "Ảnh trạm sạc được tải thẳng từ máy chủ của VinFast, nơi thấy địa chỉ IP của bạn như mọi trang web có hình ảnh. Khu vực máy chủ chưa được xác nhận.",
+
+  "privacy_section_device_heading": "Những gì chỉ nằm trên máy bạn",
+  "privacy_section_device_body": "Một số thứ chỉ được lưu trong trình duyệt của bạn cho đến khi bạn xoá: các chuyến đi gần đây (kèm địa chỉ), sổ tay chuyến đi, email bạn dùng để góp ý, tóm tắt lộ trình đã lưu, xe tuỳ chỉnh, lựa chọn bản đồ và tab, cùng mã sử dụng của Mapbox.",
+
+  "privacy_section_retention_heading": "Dữ liệu được giữ bao lâu",
+  "privacy_section_retention_body": "Báo cáo tình trạng trạm sạc được giữ 180 ngày, lộ trình lưu tạm được giữ 30 ngày. Liên kết chia sẻ hết hạn sau một năm kể từ khi tạo và bị xoá 30 ngày sau đó; các liên kết cũ không có ngày hết hạn thì chưa có giới hạn. Thời gian giữ góp ý, ảnh đã tải lên và email góp ý hiện chưa được xác định.",
+
+  "privacy_section_contact_heading": "Liên hệ Duy",
+  "privacy_contact_body": "Để hỏi về dữ liệu của bạn hoặc gửi yêu cầu về quyền riêng tư, hãy mở trang lên kế hoạch chuyến đi và chạm vào nút tròn \"{{feedbackTitle}}\" ở cạnh phải màn hình. Nút này kéo đi được, và trên điện thoại sẽ ẩn khi bảng bên dưới đang mở hết cỡ. Chọn \"{{feedbackCategory}}\" rồi để lại email để Duy phản hồi. Lưu ý: biểu mẫu cũng lưu địa chỉ trang bạn đang xem.",
+  "privacy_contact_github": "Với câu hỏi không liên quan đến dữ liệu cá nhân, bạn cũng có thể mở một issue trên GitHub. Lưu ý: issue trên GitHub là công khai.",
+
+  "privacy_last_updated": "Cập nhật lần cuối: 02/11/2026"
 }

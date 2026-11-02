@@ -39,4 +39,14 @@ describe('LandingPageContent', () => {
     expect(footer?.querySelector('svg[viewBox="0 0 112 84"]')).toBeInTheDocument();
     expect(footer?.querySelector('.italic')).not.toBeInTheDocument();
   });
+
+  it('links to the privacy page from the footer', () => {
+    const { container } = render(<LandingPageContent />);
+    const footer = container.querySelector('footer');
+    const privacyLink = Array.from(footer?.querySelectorAll('a') ?? []).find(
+      (a) => a.getAttribute('href') === '/privacy',
+    );
+    expect(privacyLink).toBeDefined();
+    expect(privacyLink?.textContent).toBe('Quyền riêng tư');
+  });
 });

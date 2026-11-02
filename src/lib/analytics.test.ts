@@ -68,7 +68,9 @@ describe('analytics', () => {
       expect(isAnalyticsEnabled()).toBe(true);
     });
 
-    it('uses default host when NEXT_PUBLIC_POSTHOG_HOST is missing', async () => {
+    it('uses the PostHog US-region default host when NEXT_PUBLIC_POSTHOG_HOST is missing', async () => {
+      // The CSP (src/proxy.ts) only allows https://*.i.posthog.com — the old
+      // app.posthog.com fallback would be silently blocked by the browser.
       process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_testkey';
       delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
       (process.env as Record<string, string>).NODE_ENV = 'production';
@@ -76,7 +78,7 @@ describe('analytics', () => {
 
       initAnalytics();
       expect(initMock).toHaveBeenCalledWith('phc_testkey', expect.objectContaining({
-        api_host: 'https://app.posthog.com',
+        api_host: 'https://us.i.posthog.com',
       }));
     });
 
@@ -99,8 +101,8 @@ describe('analytics', () => {
       const a = await loadAnalytics();
 
       a.trackPageView('/plan');
-      a.trackTripPlanned('Hanoi', 'Saigon', 1700);
-      a.trackStationTapped('vf-001', 'vinfast');
+      a.trackTripPlanned(1700);
+      a.trackStationTapped('VinFast');
       a.trackFeedbackOpened('bug');
       a.trackEviMessage('text', 42);
       a.trackShareClicked('link');
@@ -122,25 +124,50 @@ describe('analytics', () => {
       expect(captureMock).toHaveBeenCalledWith('$pageview', { path: '/plan' });
     });
 
-    it('trackTripPlanned calls capture with start, end, distance', async () => {
+    it('trackTripPlanned calls capture with only a distance bucket (no city text)', async () => {
       const { initAnalytics, trackTripPlanned } = await loadAnalytics();
       initAnalytics();
-      trackTripPlanned('Hanoi', 'Saigon', 1700);
+      trackTripPlanned(1700);
       expect(captureMock).toHaveBeenCalledWith('trip_planned', {
-        start_city: 'Hanoi',
-        end_city: 'Saigon',
-        distance_km: 1700,
+        distance_bucket: '1000plus',
       });
     });
 
-    it('trackStationTapped calls capture with stationId and provider', async () => {
+    describe('distanceBucket boundaries', () => {
+      it.each([
+        [0, 'lt100'],
+        [99.9, 'lt100'],
+        [100, '100to299'],
+        [299.9, '100to299'],
+        [300, '300to599'],
+        [599.9, '300to599'],
+        [600, '600to999'],
+        [999, '600to999'],
+        [1000, '1000plus'],
+        [Number.NaN, 'lt100'],
+        [-50, 'lt100'],
+      ])('%s km -> %s', async (distanceKm, expectedBucket) => {
+        const { initAnalytics, trackTripPlanned } = await loadAnalytics();
+        initAnalytics();
+        trackTripPlanned(distanceKm);
+        expect(captureMock).toHaveBeenCalledWith('trip_planned', { distance_bucket: expectedBucket });
+      });
+    });
+
+    it('trackStationTapped calls capture with ONLY a provider slug — no station id', async () => {
       const { initAnalytics, trackStationTapped } = await loadAnalytics();
       initAnalytics();
-      trackStationTapped('vf-123', 'vinfast');
+      trackStationTapped('VinFast');
       expect(captureMock).toHaveBeenCalledWith('station_tapped', {
-        station_id: 'vf-123',
         provider: 'vinfast',
       });
+    });
+
+    it('trackStationTapped slugifies an unrecognized provider to "other"', async () => {
+      const { initAnalytics, trackStationTapped } = await loadAnalytics();
+      initAnalytics();
+      trackStationTapped('Some Long-Tail OSM Operator');
+      expect(captureMock).toHaveBeenCalledWith('station_tapped', { provider: 'other' });
     });
 
     it('trackFeedbackOpened calls capture with category', async () => {
@@ -172,6 +199,16 @@ describe('analytics', () => {
       initAnalytics();
       trackShareClicked('qr');
       expect(captureMock).toHaveBeenCalledWith('share_clicked', { share_method: 'qr' });
+    });
+
+    it('trackAmenitiesViewed calls capture with ONLY from_cache and poi_count — no station id', async () => {
+      const { initAnalytics, trackAmenitiesViewed } = await loadAnalytics();
+      initAnalytics();
+      trackAmenitiesViewed(true, 7);
+      expect(captureMock).toHaveBeenCalledWith('amenities_viewed', {
+        from_cache: true,
+        poi_count: 7,
+      });
     });
 
     it('event helpers do not throw if posthog.capture rejects/throws', async () => {
@@ -221,8 +258,6 @@ describe('analytics', () => {
       const { initAnalytics, trackPrecautionaryStopSuggested } = await loadAnalytics();
       initAnalytics();
       trackPrecautionaryStopSuggested({
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: ['sparse', 'peak'],
         pressureScore: 4,
@@ -232,8 +267,6 @@ describe('analytics', () => {
         vehicleBatteryKwh: 82,
       });
       expect(captureMock).toHaveBeenCalledWith('extra_stop_suggested', {
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: ['sparse', 'peak'],
         pressureScore: 4,
@@ -248,8 +281,6 @@ describe('analytics', () => {
       const { initAnalytics, trackPrecautionaryStopAccepted } = await loadAnalytics();
       initAnalytics();
       trackPrecautionaryStopAccepted({
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: [],
         pressureScore: 4,
@@ -259,8 +290,6 @@ describe('analytics', () => {
         vehicleBatteryKwh: 82,
       });
       expect(captureMock).toHaveBeenCalledWith('extra_stop_accepted', {
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: [],
         pressureScore: 4,
@@ -275,8 +304,6 @@ describe('analytics', () => {
       const { initAnalytics, trackPrecautionaryStopDismissed } = await loadAnalytics();
       initAnalytics();
       trackPrecautionaryStopDismissed({
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: [],
         pressureScore: 4,
@@ -286,8 +313,6 @@ describe('analytics', () => {
         vehicleBatteryKwh: 82,
       }, 1234);
       expect(captureMock).toHaveBeenCalledWith('extra_stop_dismissed', {
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: [],
         pressureScore: 4,
@@ -303,8 +328,6 @@ describe('analytics', () => {
       const { initAnalytics, trackPrecautionaryStopUndone } = await loadAnalytics();
       initAnalytics();
       trackPrecautionaryStopUndone({
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: [],
         pressureScore: 4,
@@ -314,8 +337,6 @@ describe('analytics', () => {
         vehicleBatteryKwh: 82,
       });
       expect(captureMock).toHaveBeenCalledWith('extra_stop_undone', {
-        tripId: 'trip-1',
-        stationId: 'station-a',
         reasonPrimary: 'holiday',
         reasonSecondary: [],
         pressureScore: 4,
@@ -386,14 +407,145 @@ describe('analytics', () => {
       const a = await loadAnalytics();
       a.initAnalytics();
 
-      a.trackTripPlanned('Hanoi', 'Saigon', 1700);
+      a.trackTripPlanned(1700);
       const [, payload] = captureMock.mock.calls[0];
       const keys = Object.keys(payload as Record<string, unknown>).sort();
-      expect(keys).toEqual(['distance_km', 'end_city', 'start_city']);
+      expect(keys).toEqual(['distance_bucket']);
       // explicitly forbid PII-leaning keys
       for (const forbidden of ['email', 'name', 'ip', 'lat', 'lng', 'latitude', 'longitude', 'user_id']) {
         expect(keys).not.toContain(forbidden);
       }
+    });
+  });
+
+  describe('trackColorScheme', () => {
+    function stubColorScheme(matches: { dark: boolean; light: boolean }) {
+      vi.stubGlobal('matchMedia', (q: string) => ({
+        matches: q.includes('dark') ? matches.dark : q.includes('light') ? matches.light : false,
+      }));
+    }
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    async function loadInitialized() {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_testkey';
+      (process.env as Record<string, string>).NODE_ENV = 'production';
+      const mod = await loadAnalytics();
+      mod.initAnalytics();
+      return mod;
+    }
+
+    it('reports a dark OS preference', async () => {
+      stubColorScheme({ dark: true, light: false });
+      const { trackColorScheme } = await loadInitialized();
+      trackColorScheme();
+      expect(captureMock).toHaveBeenCalledWith('color_scheme_detected', { scheme: 'dark' });
+    });
+
+    it('reports a light OS preference', async () => {
+      stubColorScheme({ dark: false, light: true });
+      const { trackColorScheme } = await loadInitialized();
+      trackColorScheme();
+      expect(captureMock).toHaveBeenCalledWith('color_scheme_detected', { scheme: 'light' });
+    });
+
+    it('reports no-preference when neither query matches', async () => {
+      stubColorScheme({ dark: false, light: false });
+      const { trackColorScheme } = await loadInitialized();
+      trackColorScheme();
+      expect(captureMock).toHaveBeenCalledWith('color_scheme_detected', { scheme: 'no-preference' });
+    });
+
+    it('is a no-op when analytics never initialized', async () => {
+      stubColorScheme({ dark: true, light: false });
+      delete process.env.NEXT_PUBLIC_POSTHOG_KEY;
+      const { trackColorScheme } = await loadAnalytics();
+      trackColorScheme();
+      expect(captureMock).not.toHaveBeenCalled();
+    });
+
+    it('does not throw when matchMedia is unavailable', async () => {
+      vi.stubGlobal('matchMedia', undefined);
+      const { trackColorScheme } = await loadInitialized();
+      expect(() => trackColorScheme()).not.toThrow();
+      expect(captureMock).not.toHaveBeenCalled();
+    });
+  });
+
+  it('runs cookieless: no cookie, no localStorage identifier (keeps the no-personal-data stance)', async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_testkey';
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    const { initAnalytics } = await loadAnalytics();
+    initAnalytics();
+    const config = initMock.mock.calls[0][1];
+    expect(config).toMatchObject({ cookieless_mode: 'always' });
+    expect(config.persistence).not.toMatch(/cookie|localStorage/);
+  });
+
+  it('never loads external PostHog scripts (keeps script-src surface minimal)', async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_testkey';
+    (process.env as Record<string, string>).NODE_ENV = 'production';
+    const { initAnalytics } = await loadAnalytics();
+    initAnalytics();
+    expect(initMock.mock.calls[0][1]).toMatchObject({ disable_external_dependency_loading: true });
+  });
+
+  describe('buildPostHogConfig', () => {
+    it('installs sanitizeCaptureResult as before_send, by reference', async () => {
+      const { buildPostHogConfig } = await loadAnalytics();
+      const { sanitizeCaptureResult } = await import('./analytics-sanitize');
+      const config = buildPostHogConfig();
+      expect(config.before_send).toBe(sanitizeCaptureResult);
+    });
+
+    it('sets every R6 privacy flag', async () => {
+      const { buildPostHogConfig } = await loadAnalytics();
+      const config = buildPostHogConfig();
+      expect(config).toMatchObject({
+        save_campaign_params: false,
+        save_referrer: false,
+        advanced_disable_flags: true,
+        person_profiles: 'never',
+        cookieless_mode: 'always',
+        persistence: 'memory',
+        disable_external_dependency_loading: true,
+      });
+    });
+
+    it('defaults api_host to the PostHog US region', async () => {
+      delete process.env.NEXT_PUBLIC_POSTHOG_HOST;
+      const { buildPostHogConfig } = await loadAnalytics();
+      expect(buildPostHogConfig().api_host).toBe('https://us.i.posthog.com');
+    });
+
+    it('merges overrides last, so a caller can replace any default', async () => {
+      const { buildPostHogConfig } = await loadAnalytics();
+      const config = buildPostHogConfig({ persistence: 'localStorage', api_host: 'https://override.example' });
+      expect(config.persistence).toBe('localStorage');
+      expect(config.api_host).toBe('https://override.example');
+      // Everything not overridden keeps its default.
+      expect(config.cookieless_mode).toBe('always');
+    });
+  });
+
+  describe('initAnalytics(overrides) — test-only parameter', () => {
+    it('initAnalytics() with no argument produces the plain production config', async () => {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_testkey';
+      (process.env as Record<string, string>).NODE_ENV = 'production';
+      const { initAnalytics, buildPostHogConfig } = await loadAnalytics();
+      initAnalytics();
+      expect(initMock).toHaveBeenCalledWith('phc_testkey', buildPostHogConfig());
+    });
+
+    it('forwards overrides into buildPostHogConfig', async () => {
+      process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_testkey';
+      (process.env as Record<string, string>).NODE_ENV = 'production';
+      const { initAnalytics } = await loadAnalytics();
+      initAnalytics({ request_batching: false, disable_compression: true });
+      expect(initMock).toHaveBeenCalledWith(
+        'phc_testkey',
+        expect.objectContaining({ request_batching: false, disable_compression: true }),
+      );
     });
   });
 });

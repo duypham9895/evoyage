@@ -99,7 +99,7 @@ function buildCsp(nonce: string): string {
     // strict-dynamic; modern browsers ignore 'unsafe-inline' when a nonce is
     // present. Net effect: secure in modern browsers, functional everywhere.
     "style-src 'self' 'unsafe-inline' api.mapbox.com",
-    "connect-src 'self' *.mapbox.com maps.googleapis.com nominatim.openstreetmap.org router.project-osrm.org overpass-api.de *.supabase.com",
+    "connect-src 'self' *.mapbox.com maps.googleapis.com nominatim.openstreetmap.org router.project-osrm.org overpass-api.de *.supabase.com https://*.i.posthog.com",
     "img-src 'self' data: blob: *.openstreetmap.org *.googleapis.com *.mapbox.com *.basemaps.cartocdn.com *.vinfastauto.com",
     "font-src 'self'",
     "worker-src 'self' blob:",

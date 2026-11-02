@@ -7,11 +7,13 @@ import { render } from '@testing-library/react';
 // (NODE_ENV !== 'production'), but mocking lets us assert it was called.
 const initAnalyticsMock = vi.fn();
 const trackPageViewMock = vi.fn();
+const trackColorSchemeMock = vi.fn();
 const usePathnameMock = vi.fn();
 
 vi.mock('@/lib/analytics', () => ({
   initAnalytics: () => initAnalyticsMock(),
   trackPageView: (path: string) => trackPageViewMock(path),
+  trackColorScheme: () => trackColorSchemeMock(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -25,6 +27,7 @@ describe('<AnalyticsProvider />', () => {
   beforeEach(() => {
     initAnalyticsMock.mockReset();
     trackPageViewMock.mockReset();
+    trackColorSchemeMock.mockReset();
     usePathnameMock.mockReset();
   });
 
@@ -32,6 +35,15 @@ describe('<AnalyticsProvider />', () => {
     usePathnameMock.mockReturnValue('/');
     render(<AnalyticsProvider />);
     expect(initAnalyticsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports the OS colour scheme once on mount, after init', () => {
+    usePathnameMock.mockReturnValue('/');
+    const { rerender } = render(<AnalyticsProvider />);
+    usePathnameMock.mockReturnValue('/plan');
+    rerender(<AnalyticsProvider />);
+    expect(trackColorSchemeMock).toHaveBeenCalledTimes(1);
+    expect(initAnalyticsMock.mock.invocationCallOrder[0]).toBeLessThan(trackColorSchemeMock.mock.invocationCallOrder[0]);
   });
 
   it('fires trackPageView for the initial pathname', () => {

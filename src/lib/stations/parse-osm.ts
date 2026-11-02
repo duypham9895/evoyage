@@ -33,6 +33,9 @@ const PROVIDER_RULES: ReadonlyArray<{ match: ReadonlyArray<string>; provider: st
   { match: ['autel'], provider: 'Autel', isVinFast: false },
 ];
 
+/** Every normalized provider name `parseOSMProvider` can return from a known rule (excludes the 'Other' and long-tail raw-text fallbacks). */
+export const KNOWN_PROVIDERS: readonly string[] = PROVIDER_RULES.map((rule) => rule.provider);
+
 export function parseOSMProvider(tags: Record<string, string>): {
   provider: string;
   isVinFast: boolean;

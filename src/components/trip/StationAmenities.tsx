@@ -96,7 +96,7 @@ export default function StationAmenities({
       })
       .then((data) => {
         if (cancelled) return;
-        trackAmenitiesViewed(stationId, data.fromCache, data.pois?.length ?? 0);
+        trackAmenitiesViewed(data.fromCache, data.pois?.length ?? 0);
         if (!data.pois || data.pois.length === 0) {
           setState({ kind: data.error ? 'unavailable' : 'empty' });
         } else {

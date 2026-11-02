@@ -33,6 +33,13 @@ export function getStationIdentity(station: ChargingStationData): string {
   return station.id || `${station.latitude},${station.longitude}`;
 }
 
+/**
+ * Builds the analytics payload for a precautionary-stop event. Deliberately
+ * excludes `tripId` and `stationId` — tripId is a deterministic hash of typed
+ * trip text, and stationId can fall back to raw lat/lng — either would let
+ * PostHog events be linked back to one trip or location (see the PostHog
+ * analytics privacy plan, revision 3+).
+ */
 export function getPrecautionaryStopEventPayload(
   tripPlan: TripPlan,
   stop: TripStop,
@@ -40,12 +47,10 @@ export function getPrecautionaryStopEventPayload(
   const telemetry = stop.precautionaryTelemetry;
   const reasonPrimary = telemetry?.reasonPrimary ?? stop.precautionaryReason ?? 'tightMargin';
   return {
-    tripId: tripPlan.tripId ?? 'unknown',
-    stationId: getStopIdentity(stop),
     reasonPrimary,
     reasonSecondary: telemetry?.reasonSecondary ?? [],
     pressureScore: telemetry?.pressureScore ?? 0,
-    legDistanceKm: telemetry?.legDistanceKm ?? getStopDistance(stop),
+    legDistanceKm: Math.round(telemetry?.legDistanceKm ?? getStopDistance(stop)),
     legSparsityCount: telemetry?.legSparsityCount ?? 0,
     safetyFactor: telemetry?.safetyFactor ?? 0,
     vehicleBatteryKwh: telemetry?.vehicleBatteryKwh ?? 0,

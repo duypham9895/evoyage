@@ -185,7 +185,7 @@ describe('CSP + headers characterization (pins exact behaviour before the proxy 
     "default-src 'self'; " +
     `script-src 'self' 'nonce-${FIXED_NONCE}' 'strict-dynamic' https: 'unsafe-inline' 'wasm-unsafe-eval'; ` +
     "style-src 'self' 'unsafe-inline' api.mapbox.com; " +
-    "connect-src 'self' *.mapbox.com maps.googleapis.com nominatim.openstreetmap.org router.project-osrm.org overpass-api.de *.supabase.com; " +
+    "connect-src 'self' *.mapbox.com maps.googleapis.com nominatim.openstreetmap.org router.project-osrm.org overpass-api.de *.supabase.com https://*.i.posthog.com; " +
     "img-src 'self' data: blob: *.openstreetmap.org *.googleapis.com *.mapbox.com *.basemaps.cartocdn.com *.vinfastauto.com; " +
     "font-src 'self'; " +
     "worker-src 'self' blob:; " +

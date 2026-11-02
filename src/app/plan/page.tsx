@@ -611,9 +611,9 @@ function HomeContent() {
       setTripPlan(data as TripPlan);
       setNearbyStations(null);
       requestRouteResultScroll();
-      // Analytics: aggregate-only payload (city labels + km), no coords/PII.
+      // Analytics: a coarse distance bucket only — no city text, no coords.
       try {
-        trackTripPlanned(start, isLoopTrip ? start : end, (data as TripPlan).totalDistanceKm);
+        trackTripPlanned((data as TripPlan).totalDistanceKm);
       } catch { /* analytics never breaks the flow */ }
       // Auto-expand bottom sheet fully and switch to route tab to show charging details
       setActiveTab('route');
