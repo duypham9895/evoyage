@@ -43,7 +43,7 @@ jobs:
         run: npx tsx scripts/crawl-energy-prices.ts
 
       - name: Sync README energy-prices block
-        run: npx tsx scripts/update-readme-stats.ts
+        run: npx tsx scripts/update-readme-stats.ts --only=energy
 
       # Same token rationale as crawl-stations.yml: PRs made with GITHUB_TOKEN
       # never get the required check. The crawl step now exits non-zero when any

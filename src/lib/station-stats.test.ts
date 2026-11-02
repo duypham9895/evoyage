@@ -5,6 +5,7 @@ import {
   replaceStationsBlock,
   renderEnergyPricesBlock,
   replaceEnergyPricesBlock,
+  syncReadmeBlocks,
 } from './station-stats';
 import stationStats from '@/data/station-stats.json';
 
@@ -154,5 +155,74 @@ describe('replaceEnergyPricesBlock', () => {
   it('returns content unchanged when no markers are present', () => {
     const before = 'no markers here';
     expect(replaceEnergyPricesBlock(before, prices)).toBe(before);
+  });
+});
+
+describe('syncReadmeBlocks', () => {
+  const energy = {
+    gasolineVndPerLiter: 24150,
+    dieselVndPerLiter: 30240,
+    evnHomeVndPerKwh: 2998,
+    vGreenVndPerKwh: 3858,
+  };
+
+  // Regression test for #94: the station sync job used to also rewrite the
+  // energy block (because update-readme-stats.ts always ran both replacers),
+  // which collided with the energy sync job editing the same README lines.
+  it('only: "stations" replaces the count and leaves the energy block byte-identical', () => {
+    const before = [
+      'Stations: <!-- STATIONS_COUNT_START -->old count<!-- STATIONS_COUNT_END --> total.',
+      '<!-- ENERGY_PRICES_START -->',
+      '  - Gasoline RON 95-III: ₫23,750 / liter (Petrolimex)',
+      '<!-- ENERGY_PRICES_END -->',
+    ].join('\n');
+
+    const after = syncReadmeBlocks(before, { only: 'stations', stationCount: 18234, energy });
+
+    expect(after).toContain('<!-- STATIONS_COUNT_START -->18,234+<!-- STATIONS_COUNT_END -->');
+    const energyBlockBefore = before.slice(before.indexOf('<!-- ENERGY_PRICES_START -->'));
+    const energyBlockAfter = after.slice(after.indexOf('<!-- ENERGY_PRICES_START -->'));
+    expect(energyBlockAfter).toBe(energyBlockBefore);
+  });
+
+  it('only: "energy" replaces the energy block and leaves the stations block byte-identical', () => {
+    const before = [
+      'Stations: <!-- STATIONS_COUNT_START -->18,234+<!-- STATIONS_COUNT_END --> total.',
+      '<!-- ENERGY_PRICES_START -->',
+      '  - Gasoline RON 95-III: ₫23,750 / liter (Petrolimex)',
+      '<!-- ENERGY_PRICES_END -->',
+    ].join('\n');
+
+    const after = syncReadmeBlocks(before, { only: 'energy', stationCount: 99999, energy });
+
+    expect(after).toContain('₫24,150');
+    const stationsBlockBefore = before.slice(0, before.indexOf('<!-- ENERGY_PRICES_START -->'));
+    const stationsBlockAfter = after.slice(0, after.indexOf('<!-- ENERGY_PRICES_START -->'));
+    expect(stationsBlockAfter).toBe(stationsBlockBefore);
+  });
+
+  it('with no "only" (local manual run), replaces both blocks', () => {
+    const before = [
+      'Stations: <!-- STATIONS_COUNT_START -->old count<!-- STATIONS_COUNT_END --> total.',
+      '<!-- ENERGY_PRICES_START -->',
+      '  - Gasoline RON 95-III: ₫23,750 / liter (Petrolimex)',
+      '<!-- ENERGY_PRICES_END -->',
+    ].join('\n');
+
+    const after = syncReadmeBlocks(before, { stationCount: 18234, energy });
+
+    expect(after).toContain('<!-- STATIONS_COUNT_START -->18,234+<!-- STATIONS_COUNT_END -->');
+    expect(after).toContain('₫24,150');
+  });
+
+  it('only: "energy" with no energy data passed returns content unchanged', () => {
+    const before = [
+      'Stations: <!-- STATIONS_COUNT_START -->18,234+<!-- STATIONS_COUNT_END --> total.',
+      '<!-- ENERGY_PRICES_START -->',
+      '  - Gasoline RON 95-III: ₫23,750 / liter (Petrolimex)',
+      '<!-- ENERGY_PRICES_END -->',
+    ].join('\n');
+
+    expect(syncReadmeBlocks(before, { only: 'energy', stationCount: 99999 })).toBe(before);
   });
 });

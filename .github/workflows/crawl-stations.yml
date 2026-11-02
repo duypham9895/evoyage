@@ -76,7 +76,7 @@ jobs:
         run: npx tsx scripts/promote-crowdsourced-stations.ts
 
       - name: Sync README station count
-        run: npx tsx scripts/update-readme-stats.ts
+        run: npx tsx scripts/update-readme-stats.ts --only=stations
 
       # Pushes and opens the PR with AUTOMATION_PAT, not GITHUB_TOKEN. GitHub runs
       # no workflows for pushes/PRs made with GITHUB_TOKEN, so the required
