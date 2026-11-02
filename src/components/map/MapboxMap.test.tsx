@@ -222,7 +222,7 @@ afterEach(() => {
 
 describe('MapboxMap precautionary stops', () => {
   it('renders required stops as solid numbered 24px pins', () => {
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'test-token');
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
     render(<MapboxMap tripPlan={makeTripPlan()} />);
 
     const marker = screen.getByLabelText('Charging stops 1: Required Stop');
@@ -232,7 +232,7 @@ describe('MapboxMap precautionary stops', () => {
   });
 
   it('renders precautionary stops as hollow 16px dashed pins without ordinals', () => {
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'test-token');
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
     render(<MapboxMap tripPlan={makeTripPlan()} />);
 
     const marker = screen.getByLabelText('Suggested stop 2, Suggested Top-up, 18 min top-up, can be skipped');
@@ -243,7 +243,7 @@ describe('MapboxMap precautionary stops', () => {
   });
 
   it('opens a mini-popup with why and dismiss controls', () => {
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'test-token');
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
     render(<MapboxMap tripPlan={makeTripPlan()} />);
 
     fireEvent.click(screen.getByLabelText('Suggested stop 2, Suggested Top-up, 18 min top-up, can be skipped'));
@@ -254,7 +254,7 @@ describe('MapboxMap precautionary stops', () => {
   });
 
   it('reveals the reason copy inside the mini-popup', () => {
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'test-token');
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
     render(<MapboxMap tripPlan={makeTripPlan()} />);
 
     fireEvent.click(screen.getByLabelText('Suggested stop 2, Suggested Top-up, 18 min top-up, can be skipped'));
@@ -266,7 +266,7 @@ describe('MapboxMap precautionary stops', () => {
 
   it('shares map dismissals with the timeline card state', () => {
     vi.useFakeTimers();
-    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'test-token');
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
     render(<SharedHarness />);
 
     expect(screen.getAllByLabelText('Suggested stop 2, Suggested Top-up, 18 min top-up, can be skipped')).toHaveLength(2);
