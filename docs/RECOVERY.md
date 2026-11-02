@@ -84,7 +84,7 @@ These steps assume Severity 2 — the Supabase project is gone and you're starti
    ```
    Repeat for `preview` and `development` environments if you use them.
 
-8. **Redeploy production** so the new env vars are baked into the Prisma client at build time.
+8. **Redeploy production** so the running instance picks up the new env vars — the adapter in `src/lib/prisma.ts` reads `DATABASE_URL` at runtime, not at build time.
    ```bash
    vercel deploy --prod
    ```

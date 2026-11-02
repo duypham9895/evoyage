@@ -11,7 +11,7 @@
  *
  * Run: npx tsx scripts/poll-vinfast-station-status.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { chromium, type Cookie } from 'playwright';
 import { computeCookieExpiry } from '../src/lib/station/cookie-expiry';
 import { pollStationStatus } from '../src/lib/station/poll-status';
@@ -28,7 +28,7 @@ import {
   type VinfastLocatorRaw,
 } from '../src/lib/station/vinfast-api-client';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const KEEP_LAST_N_ROWS = 3;
 const JOB_NAME = 'Poll Station Status';
 const MAX_ATTEMPTS = 3;

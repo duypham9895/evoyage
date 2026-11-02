@@ -12,7 +12,7 @@
  * Run: npx tsx scripts/seed-manual-stations.ts [path/to/file.csv]
  *      Defaults to data/manual-stations.csv when no path is given.
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -20,7 +20,7 @@ import { resolve } from 'node:path';
 import { parseManualCsv, type ManualStationRow } from '../src/lib/stations/parse-manual-csv';
 import { bboxDelta, isDuplicateCandidate } from '../src/lib/stations/dedup';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const DEDUP_RADIUS_M = 50;
 const DEFAULT_PATH = 'data/manual-stations.csv';

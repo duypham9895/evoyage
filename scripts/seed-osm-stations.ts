@@ -8,12 +8,12 @@
  * existing VinFast / EVPower stations within 50m so we never overwrite
  * higher-quality rows.
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 
 import { parseOSMConnectors, parseOSMMaxPower, parseOSMProvider } from '../src/lib/stations/parse-osm';
 import { bboxDelta, isDuplicateCandidate } from '../src/lib/stations/dedup';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const VIETNAM_BBOX = '8.0,102.0,23.5,110.0';
 const DEDUP_RADIUS_M = 50;

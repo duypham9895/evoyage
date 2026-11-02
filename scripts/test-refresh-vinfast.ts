@@ -4,10 +4,10 @@
  *
  * Run: npx tsx scripts/test-refresh-vinfast.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { Impit } from 'impit';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const BATCH_SIZE = 500;
 
 const LOCATOR_PAGE = 'https://vinfastauto.com/vn_vi/tim-kiem-showroom-tram-sac';

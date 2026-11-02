@@ -5,9 +5,9 @@
  * Run: npx tsx scripts/fetch-universal-stations.ts
  */
 import { writeFileSync } from 'fs';
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   const apiKey = process.env.OPEN_CHARGE_MAP_API_KEY ?? '';
