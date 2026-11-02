@@ -565,8 +565,7 @@ describe('POST /api/evi/parse', () => {
     expect(data.tripParams.currentBattery).toBe(80);
   });
 
-  // BUG(p2-evi-conversation-ux): a trip request with no destination is reported as complete. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
-  it.fails('asks for the destination instead of completing when endLocation is missing', async () => {
+  it('asks for the destination instead of completing when endLocation is missing', async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       endLocation: null,
       vehicleBrand: 'VinFast',
@@ -588,8 +587,7 @@ describe('POST /api/evi/parse', () => {
     expect(data.displayMessage).not.toMatch(/^Đã hiểu!/);
   });
 
-  // BUG(p2-evi-conversation-ux): a destination that geocodes to nothing (endLat null) is reported as complete. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
-  it.fails('asks again instead of completing when the destination cannot be geocoded', async () => {
+  it('asks again instead of completing when the destination cannot be geocoded', async () => {
     mockParseTrip.mockResolvedValue(baseTripExtraction({
       endLocation: 'Nơi không tồn tại xyz',
       vehicleBrand: 'VinFast',
@@ -609,5 +607,89 @@ describe('POST /api/evi/parse', () => {
     expect(data.tripParams.endLat).toBeNull();
     expect(data.isComplete).toBe(false);
     expect(['location_input', 'free_text']).toContain(data.followUpType);
+  });
+
+  it('names the destination it could not find and keeps the raw text', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: 'Nơi không tồn tại xyz',
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+      followUpQuestion: 'Câu hỏi khác của LLM',
+    }));
+    mockSearchPlaces.mockResolvedValue([]);
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const res = await POST(createRequest({
+      message: 'Đi Nơi không tồn tại xyz bằng VF8',
+      history: [],
+      userLocation: { lat: 21.0, lng: 105.8 },
+    }));
+
+    const data = await res.json();
+
+    expect(data.followUpType).toBe('free_text');
+    expect(data.followUpQuestion).toContain('Nơi không tồn tại xyz');
+    expect(data.displayMessage).toBe(data.followUpQuestion);
+    expect(data.tripParams.end).toBe('Nơi không tồn tại xyz');
+  });
+
+  it('asks for the destination when geocoding the destination throws', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: 'Đà Lạt',
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+    }));
+    mockSearchPlaces.mockRejectedValue(new Error('nominatim down'));
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const res = await POST(createRequest({
+      message: 'Đi Đà Lạt bằng VF8',
+      history: [],
+      userLocation: { lat: 21.0, lng: 105.8 },
+    }));
+
+    const data = await res.json();
+
+    expect(data.isComplete).toBe(false);
+    expect(data.followUpType).toBe('free_text');
+  });
+
+  it('asks for the vehicle before the destination when both are missing', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: null,
+      missingFields: ['vehicle', 'end_location'],
+    }));
+
+    const res = await POST(createRequest({
+      message: 'Lên kế hoạch chuyến đi',
+      history: [],
+      userLocation: { lat: 21.0, lng: 105.8 },
+    }));
+
+    const data = await res.json();
+
+    expect(data.isComplete).toBe(false);
+    expect(data.followUpType).toBe('vehicle_pick');
+  });
+
+  it('asks for the start before the destination when both are missing and GPS is off', async () => {
+    mockParseTrip.mockResolvedValue(baseTripExtraction({
+      endLocation: null,
+      vehicleBrand: 'VinFast',
+      vehicleModel: 'VF 8',
+      missingFields: ['start_location', 'end_location'],
+    }));
+    mockFindMany.mockResolvedValue([MOCK_VF8 as never]);
+
+    const res = await POST(createRequest({
+      message: 'Tôi lái VF 8 Plus',
+      history: [],
+      userLocation: null,
+    }));
+
+    const data = await res.json();
+
+    expect(data.isComplete).toBe(false);
+    expect(data.followUpType).toBe('location_input');
   });
 });
