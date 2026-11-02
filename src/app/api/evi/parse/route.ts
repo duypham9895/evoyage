@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
 
   const vehicleMissing = extraction.missingFields.includes('vehicle') || vehicleResolution.type !== 'match';
   const startMissing = extraction.missingFields.includes('start_location') && !userLocation;
+  const endMissing = !extraction.endLocation || endLat === null;
 
   if (vehicleMissing && vehicleResolution.type !== 'match') {
     followUpType = 'vehicle_pick';
@@ -189,6 +190,11 @@ export async function POST(request: NextRequest) {
   } else if (startMissing) {
     followUpType = 'location_input';
     followUpQuestion = extraction.followUpQuestion ?? 'Bạn xuất phát từ đâu?';
+  } else if (endMissing) {
+    followUpType = 'free_text';
+    followUpQuestion = extraction.endLocation
+      ? `eVi chưa tìm thấy "${extraction.endLocation}" trên bản đồ. Bạn muốn đi đâu?`
+      : (extraction.followUpQuestion ?? 'Bạn muốn đi đâu?');
   }
 
   const isComplete = followUpType === null;

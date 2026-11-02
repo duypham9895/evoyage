@@ -396,6 +396,7 @@ function HomeContent() {
   // "Edit" — fill form and expand sheet so user can see & modify inputs
   const handleTripParsed = useCallback((params: EViTripParams) => {
     fillFormFromEVi(params);
+    setIsEViOpen(false);
     setActiveTab('route');
     handleDesktopTabChange('planTrip'); // Desktop: switch sidebar to form view so user can edit inputs
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
@@ -419,6 +420,7 @@ function HomeContent() {
 
   // "Find nearby stations" — switch to stations tab on both mobile and desktop
   const handleFindNearbyStations = useCallback(() => {
+    setIsEViOpen(false);
     setActiveTab('stations');
     handleDesktopTabChange('stations');
     setBottomSheetSnap({ point: 'half', trigger: Date.now() });
@@ -1172,7 +1174,7 @@ function HomeContent() {
           <DesktopTabBar activeTab={desktopSidebarTab} onTabChange={handleDesktopTabChange} />
 
           {/* Sidebar content — 150ms fade-in transition on tab switch */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {desktopSidebarTab === 'notebook' ? (
               <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-notebook" aria-labelledby="desktop-tab-notebook">
                 <TripNotebook
@@ -1247,15 +1249,16 @@ function HomeContent() {
 
                 {(tripPlan || isPlanning) && (
                   <div ref={routeResultRef} data-testid="route-result-anchor" className="scroll-mt-3">
-                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={selectedVehicle?.efficiencyWhPerKm ?? null} vehicleBrand={activeVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={activeVehicle?.officialRangeKm} vehicleBatteryCapacityKwh={activeVehicle?.batteryCapacityKwh} vehicleRangeStandard={selectedVehicle?.rangeStandard} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} minArrivalPercent={minArrival} />
+                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={selectedVehicle?.efficiencyWhPerKm ?? null} vehicleBrand={activeVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={activeVehicle?.officialRangeKm} vehicleBatteryCapacityKwh={activeVehicle?.batteryCapacityKwh} vehicleRangeStandard={selectedVehicle?.rangeStandard} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} minArrivalPercent={minArrival} />
                   </div>
                 )}
               </div>
-            ) : (
-              <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className="flex flex-col h-full -m-4">
-                <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
-              </div>
-            )}
+            ) : null}
+            {/* eVi stays mounted (hidden) on other tabs so the chat survives tab switches, as on mobile.
+                Rendered after the active panel so the hidden chat never comes first in DOM order. */}
+            <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className={`${desktopSidebarTab === 'evi' ? 'flex' : 'hidden'} flex-col h-full -m-4`}>
+              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
+            </div>
           </div>
         </aside>
 
