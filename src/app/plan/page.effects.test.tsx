@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import PlanPage from './page';
 
 /**
  * Characterization tests for the react-hooks-compiler refactor of
@@ -146,7 +147,6 @@ afterEach(() => {
 });
 
 async function renderPlanPage(): Promise<ReactNode> {
-  const PlanPage = (await import('./page')).default;
   render(<PlanPage />);
   await screen.findByTestId('mock-locate-button');
   return null;

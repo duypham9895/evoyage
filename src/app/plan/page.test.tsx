@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import PlanPage from './page';
 
 /**
  * Regression net for the /api/route error path.
@@ -62,7 +63,6 @@ describe('plan page — /api/route failure handling', () => {
       })),
     ));
 
-    const PlanPage = (await import('./page')).default;
     render(<PlanPage />);
 
     const calculate = await screen.findByRole('button', { name: 'Tính lộ trình' });
@@ -82,7 +82,6 @@ describe('plan page — /api/route failure handling', () => {
       })),
     ));
 
-    const PlanPage = (await import('./page')).default;
     render(<PlanPage />);
 
     const calculate = await screen.findByRole('button', { name: 'Tính lộ trình' });

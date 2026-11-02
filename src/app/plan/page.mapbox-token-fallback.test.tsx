@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { useEffect, useState } from 'react';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
@@ -54,6 +54,16 @@ vi.mock('@/components/trip/EViFab', () => ({ default: () => null }));
 vi.mock('@/components/trip/EViMobileSheet', () => ({ default: () => null }));
 vi.mock('@/components/trip/EViNudge', () => ({ default: () => null }));
 vi.mock('@/components/feedback/FeedbackFAB', () => ({ default: () => null }));
+
+// Each test calls vi.resetModules() + vi.stubEnv() before importing './page',
+// so a top-level import isn't possible here — the module must be
+// re-evaluated per test to pick up the stubbed env var. This warm-up pays
+// the one-time cost of transforming the page's module graph outside any
+// test's timeout window; vi.resetModules() clears the module registry, not
+// vitest's transform cache, so later per-test imports stay fast.
+beforeAll(async () => {
+  await import('./page');
+}, 20000);
 
 beforeEach(() => {
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
