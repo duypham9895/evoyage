@@ -78,6 +78,7 @@
   "amenities_heading": "Around here",
   "amenities_loading": "Finding nearby places...",
   "amenities_empty": "No nearby place data for this station yet",
+  "amenities_unavailable": "Couldn't load nearby places right now. Try again in a little while.",
   "amenities_google_maps_fallback": "Search on Google Maps",
   "amenities_walking_minutes": "{{minutes}} min walk",
   "amenities_driving_minutes": "{{minutes}} min drive",

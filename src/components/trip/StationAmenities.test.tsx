@@ -21,6 +21,7 @@ const translations: Record<string, string> = {
   amenities_unnamed_sit_down: 'Restaurant',
   amenities_unnamed_essentials: 'Essential service',
   amenities_unnamed_fuel: 'Gas station',
+  amenities_unavailable: "Couldn't load nearby places right now",
 };
 
 vi.mock('@/lib/locale', () => ({
@@ -190,12 +191,52 @@ describe('StationAmenities', () => {
     expect(link.href).toContain(`${STATION_LNG}`);
   });
 
-  it('shows empty state on fetch network failure (graceful degradation)', async () => {
+  it('shows the unavailable state (not "no data") on fetch network failure', async () => {
     fetchSpy.mockRejectedValueOnce(new Error('ECONNRESET'));
     render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
 
     await waitFor(() => {
-      expect(screen.getByText('No nearby place data for this station yet')).toBeInTheDocument();
+      expect(screen.getByText("Couldn't load nearby places right now")).toBeInTheDocument();
+    });
+    expect(screen.queryByText('No nearby place data for this station yet')).not.toBeInTheDocument();
+    expect(screen.getByText('Search on Google Maps')).toBeInTheDocument();
+  });
+
+  it('shows the unavailable state when the API returns empty pois with an Overpass error', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ pois: [], cachedAt: null, fromCache: false, error: 'timeout' }),
+        { status: 200 },
+      ),
+    );
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Couldn't load nearby places right now")).toBeInTheDocument();
+    });
+    const link = screen.getByText('Search on Google Maps').closest('a') as HTMLAnchorElement;
+    expect(link.href).toContain('google.com/maps');
+  });
+
+  it('shows the unavailable state on a non-OK response (e.g. rate limited)', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('{}', { status: 429 }));
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Couldn't load nearby places right now")).toBeInTheDocument();
+    });
+  });
+
+  it('still renders stale POIs when the API flags a staleReason', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ...SAMPLE_OK, fromCache: true, staleReason: 'timeout' }), {
+        status: 200,
+      }),
+    );
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Phở 24')).toBeInTheDocument();
     });
   });
 
