@@ -6,10 +6,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 /**
  * Trip cost props for custom vehicles.
  *
- * TripSummary only mounts its cost hero/breakdown when
- * vehicleEfficiencyWhPerKm > 0. page.tsx derives that prop from
- * selectedVehicle only, and selecting a custom vehicle always nulls
- * selectedVehicle — so custom-vehicle trips never show a trip cost.
+ * Selecting a custom vehicle always nulls selectedVehicle, so page.tsx must
+ * read the TripSummary cost props from the active (custom) vehicle.
  *
  * TripSummary is stubbed so the test reads the exact props page.tsx passes.
  */
@@ -98,9 +96,18 @@ describe('plan page — trip cost props with a custom vehicle', () => {
     expect(capturedTripSummaryProps.tripPlan).toMatchObject({ totalDistanceKm: 120 });
   }, 20000);
 
-  // BUG(p2-trip-cost-accuracy): page.tsx derives TripSummary cost props from selectedVehicle only, so custom vehicles never get a trip cost. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-trip-cost-accuracy.md
-  it.fails('passes a positive vehicleEfficiencyWhPerKm so the trip cost section can render', async () => {
+  // Regression for p2-trip-cost-accuracy (was it.fails): page.tsx derived TripSummary cost props from selectedVehicle only, so custom vehicles never got a trip cost. See docs/bugs/2026-11-01-p2-trip-cost-accuracy.md
+  // TripSummary now renders the cost section from battery + range when efficiency is missing
+  // (covered in TripSummary.test.tsx), so the contract here is that the custom vehicle's
+  // brand, battery and range reach TripSummary. Efficiency stays null: a synthesised
+  // battery/range efficiency would skip the NEDC real-world correction.
+  it('passes the custom vehicle brand, battery and range so the trip cost section can render', async () => {
     await planWithCustomVehicle();
-    expect(capturedTripSummaryProps.vehicleEfficiencyWhPerKm).toBeGreaterThan(0);
+    expect(capturedTripSummaryProps).toMatchObject({
+      vehicleBrand: 'VinFast',
+      vehicleBatteryCapacityKwh: 87.7,
+      vehicleOfficialRangeKm: 471,
+    });
+    expect(capturedTripSummaryProps.vehicleEfficiencyWhPerKm ?? null).toBeNull();
   }, 20000);
 });

@@ -52,6 +52,10 @@ interface TripSummaryProps {
   readonly vehicleUsableBatteryKwh?: number | null;
   /** Vehicle official range (km) — for kWh/100km derivation when efficiency is missing. */
   readonly vehicleOfficialRangeKm?: number | null;
+  /** Gross battery (kWh) — fallback when usable battery is unknown (custom vehicles). */
+  readonly vehicleBatteryCapacityKwh?: number | null;
+  /** Range standard (e.g. 'NEDC') — NEDC catalog efficiency gets the real-world correction. */
+  readonly vehicleRangeStandard?: string | null;
   readonly onSelectAlternativeStation?: (stopIndex: number, station: RankedStation) => void;
   readonly onBackToChat?: () => void;
   /** Phase 2 — called when the user taps a what-if card to replan with that
@@ -304,12 +308,16 @@ function TripCostSection({
   vehicleBrand,
   vehicleUsableBatteryKwh,
   vehicleOfficialRangeKm,
+  vehicleBatteryCapacityKwh,
+  vehicleRangeStandard,
 }: {
   readonly distanceKm: number;
-  readonly efficiencyWhPerKm: number;
+  readonly efficiencyWhPerKm?: number | null;
   readonly vehicleBrand?: string | null;
   readonly vehicleUsableBatteryKwh?: number | null;
   readonly vehicleOfficialRangeKm?: number | null;
+  readonly vehicleBatteryCapacityKwh?: number | null;
+  readonly vehicleRangeStandard?: string | null;
 }) {
   const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
@@ -322,8 +330,10 @@ function TripCostSection({
       brand: vehicleBrand ?? '',
       model: '',
       usableBatteryKwh: vehicleUsableBatteryKwh ?? null,
+      batteryCapacityKwh: vehicleBatteryCapacityKwh ?? null,
       officialRangeKm: vehicleOfficialRangeKm ?? 0,
-      efficiencyWhPerKm: efficiencyWhPerKm > 0 ? efficiencyWhPerKm : null,
+      rangeStandard: vehicleRangeStandard ?? null,
+      efficiencyWhPerKm: efficiencyWhPerKm != null && efficiencyWhPerKm > 0 ? efficiencyWhPerKm : null,
     },
   });
 
@@ -682,7 +692,7 @@ function TripOverviewCard({
 
 // ── Main Component ──
 
-export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime, precautionaryStopInteractions, minArrivalPercent = DEFAULT_MIN_ARRIVAL }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, vehicleBatteryCapacityKwh, vehicleRangeStandard, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime, precautionaryStopInteractions, minArrivalPercent = DEFAULT_MIN_ARRIVAL }: TripSummaryProps) {
   const { t, tBi, locale } = useLocale();
   const tripPlanResetKey = tripPlan
     ? (tripPlan.tripId ?? `${tripPlan.startAddress}|${tripPlan.endAddress}|${tripPlan.polyline}`)
@@ -844,13 +854,17 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
       <TripOverviewCard tripPlan={displayedTripPlan} onSelectDepartureTime={onSelectDepartureTime} minArrivalPercent={minArrivalPercent} />
 
       {/* Cost hero — emotional payoff of choosing EV */}
-      {vehicleEfficiencyWhPerKm != null && vehicleEfficiencyWhPerKm > 0 && (
+      {((vehicleEfficiencyWhPerKm ?? 0) > 0 ||
+        (((vehicleUsableBatteryKwh ?? 0) > 0 || (vehicleBatteryCapacityKwh ?? 0) > 0) &&
+          (vehicleOfficialRangeKm ?? 0) > 0)) && (
         <TripCostSection
           distanceKm={tripPlan.totalDistanceKm}
           efficiencyWhPerKm={vehicleEfficiencyWhPerKm}
           vehicleBrand={vehicleBrand}
           vehicleUsableBatteryKwh={vehicleUsableBatteryKwh}
           vehicleOfficialRangeKm={vehicleOfficialRangeKm}
+          vehicleBatteryCapacityKwh={vehicleBatteryCapacityKwh}
+          vehicleRangeStandard={vehicleRangeStandard}
         />
       )}
 
