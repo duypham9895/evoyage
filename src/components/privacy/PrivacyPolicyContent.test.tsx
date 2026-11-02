@@ -136,16 +136,18 @@ describe('<PrivacyPolicyContent />', () => {
       expect(posthogEn.textContent).not.toMatch(/anonymous/i);
     });
 
-    it('3g: the openstreetmap entry says the browser sends GPS directly, before eVi opens, on phones/tablets/narrow windows — both languages', () => {
+    it('3g: the openstreetmap entry says eVi reads location only after you open it, and the browser sends GPS directly — both languages', () => {
       render(<PrivacyPolicyContent />);
       const osmVi = screen.getByTestId('privacy-processor-openstreetmap');
-      expect(osmVi.textContent).toMatch(/trước cả khi bạn mở eVi/);
-      expect(osmVi.textContent).toMatch(/điện thoại, máy tính bảng và cửa sổ trình duyệt hẹp/);
+      expect(osmVi.textContent).toMatch(/chỉ lấy vị trí của bạn sau khi bạn mở eVi/);
+      expect(osmVi.textContent).toMatch(/đi thẳng từ trình duyệt đến Nominatim/);
+      expect(osmVi.textContent).not.toMatch(/trước cả khi bạn mở eVi/);
 
       clickEnToggle();
       const osmEn = screen.getByTestId('privacy-processor-openstreetmap');
-      expect(osmEn.textContent).toMatch(/before you ever open eVi/);
-      expect(osmEn.textContent).toMatch(/phones, tablets and narrow browser windows/);
+      expect(osmEn.textContent).toMatch(/only after you open eVi/);
+      expect(osmEn.textContent).toMatch(/straight from your browser to Nominatim/);
+      expect(osmEn.textContent).not.toMatch(/before you ever open eVi/);
     });
 
     it('3h: the posthog entry contains the pseudonymous daily-ID sentence — both languages', () => {

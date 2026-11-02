@@ -60,6 +60,7 @@ export default function EViMobileSheet({
           onPlanTrip={onPlanTrip}
           onFindNearbyStations={onFindNearbyStations}
           isPlanning={isPlanning}
+          isActive={isOpen}
         />
       </div>
     </div>

@@ -73,7 +73,7 @@ function shouldFetchExploratorySuggestions(response: EViParseResponse): boolean 
 
 // ── Hook ──
 
-export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
+export function useEVi(locale: 'vi' | 'en' = 'vi', active = true): UseEViReturn {
   const [state, setState] = useState<EViState>('idle');
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
   const [lastResponse, setLastResponse] = useState<EViParseResponse | null>(null);
@@ -124,8 +124,9 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
     localeRef.current = locale;
   });
 
-  // ── Geolocation (mount only) ──
+  // ── Geolocation (once eVi is active, i.e. visible to the user) ──
   useEffect(() => {
+    if (!active || userLocationRef.current) return;
     let cancelled = false;
 
     async function fetchLocation() {
@@ -179,7 +180,7 @@ export function useEVi(locale: 'vi' | 'en' = 'vi'): UseEViReturn {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [active]);
 
   // ── fetchSuggestions (non-blocking, fire-and-forget) ──
   const fetchSuggestions = useCallback((

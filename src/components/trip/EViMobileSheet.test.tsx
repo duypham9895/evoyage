@@ -18,7 +18,9 @@ vi.mock('@/lib/haptics', () => ({
 }));
 
 vi.mock('@/components/EVi', () => ({
-  default: () => <div data-testid="evi-stub">eVi content</div>,
+  default: ({ isActive }: { isActive?: boolean }) => (
+    <div data-testid="evi-stub" data-active={String(isActive)}>eVi content</div>
+  ),
 }));
 
 describe('EViMobileSheet', () => {
@@ -42,6 +44,13 @@ describe('EViMobileSheet', () => {
     expect(screen.getByTestId('evi-stub')).toBeInTheDocument();
     const container = screen.getByTestId('evi-stub').closest('[role="dialog"]');
     expect(container?.className).toMatch(/hidden/);
+  });
+
+  it('tells EVi it is inactive while the sheet is closed, so it does not read location', () => {
+    const { rerender } = render(<EViMobileSheet isOpen={false} {...props} />);
+    expect(screen.getByTestId('evi-stub')).toHaveAttribute('data-active', 'false');
+    rerender(<EViMobileSheet isOpen={true} {...props} />);
+    expect(screen.getByTestId('evi-stub')).toHaveAttribute('data-active', 'true');
   });
 
   it('calls onClose when close button clicked', () => {
