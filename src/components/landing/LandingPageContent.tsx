@@ -403,7 +403,7 @@ function LandingContent() {
 
             {/* Links */}
             <div>
-              <h4 className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wider mb-4">Links</h4>
+              <h2 className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wider mb-4">Links</h2>
               <div className="flex flex-col gap-2">
                 <a href="/plan" className="text-[var(--color-foreground)] text-sm hover:text-[var(--color-accent)] transition-colors py-3 inline-block">
                   {t('landing_footer_start')}
@@ -424,9 +424,9 @@ function LandingContent() {
 
             {/* Built with */}
             <div>
-              <h4 className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wider mb-4">
+              <h2 className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wider mb-4">
                 {t('landing_footer_built')}
-              </h4>
+              </h2>
               <div className="flex flex-col gap-2 text-sm text-[var(--color-muted)]">
                 <span>Claude Code</span>
                 <span>Next.js</span>

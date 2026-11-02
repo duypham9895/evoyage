@@ -49,4 +49,16 @@ describe('LandingPageContent', () => {
     expect(privacyLink).toBeDefined();
     expect(privacyLink?.textContent).toBe('Quyền riêng tư');
   });
+
+  it('never skips a heading level, so screen-reader heading navigation stays in order', () => {
+    const { container } = render(<LandingPageContent />);
+    const levels = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      .map((h) => Number(h.tagName[1]));
+
+    expect(levels.length).toBeGreaterThan(0);
+    levels.forEach((level, i) => {
+      const previous = i === 0 ? 1 : levels[i - 1];
+      expect(level - previous, `heading ${i} jumps from h${previous} to h${level}`).toBeLessThanOrEqual(1);
+    });
+  });
 });
