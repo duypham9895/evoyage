@@ -77,6 +77,8 @@ vi.mock('@/components/trip/StationDetailExpander', () => ({ default: () => null 
 vi.mock('@/components/trip/StopPopularity', () => ({ default: () => null }));
 vi.mock('@/components/trip/StationTrustChip', () => ({ default: () => null }));
 
+const { flyToMock } = vi.hoisted(() => ({ flyToMock: vi.fn() }));
+
 vi.mock('mapbox-gl', () => ({
   default: {
     LngLatBounds: class {
@@ -121,7 +123,7 @@ vi.mock('react-map-gl/mapbox', async () => {
         <button type="button" onClick={onClose}>Close popup</button>
       </div>
     ),
-    useMap: () => ({ current: { fitBounds: vi.fn() } }),
+    useMap: () => ({ current: { fitBounds: vi.fn(), flyTo: flyToMock } }),
   };
 });
 
@@ -282,5 +284,34 @@ describe('MapboxMap precautionary stops', () => {
     expect(screen.queryByLabelText('Suggested stop 2, Suggested Top-up, 18 min top-up, can be skipped')).not.toBeInTheDocument();
     expect(screen.queryByText('Suggested Top-up')).not.toBeInTheDocument();
     expect(screen.getByText('You skipped a top-up here · Undo')).toBeInTheDocument();
+  });
+});
+
+describe('MapboxMap nearby stations (locate button)', () => {
+  it('draws nearby stations and the user dot, and flies to the user', () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
+    flyToMock.mockClear();
+    render(
+      <MapboxMap
+        tripPlan={null}
+        nearbyStations={[{ ...makeStation('Nearby One'), distanceKm: 1.2 }]}
+        userLocation={{ lat: 10.78, lng: 106.7 }}
+      />,
+    );
+
+    expect(screen.getAllByTestId('nearby-station-marker')).toHaveLength(1);
+    // user dot + one station
+    expect(screen.getAllByTestId('map-marker')).toHaveLength(2);
+    expect(flyToMock).toHaveBeenCalledWith(expect.objectContaining({ center: [106.7, 10.78] }));
+
+    fireEvent.click(screen.getByLabelText('Nearby One'));
+    expect(screen.getByTestId('map-popup')).toHaveTextContent('1.2 km');
+  });
+
+  it('draws nothing extra when there are no nearby stations', () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
+    render(<MapboxMap tripPlan={null} nearbyStations={null} userLocation={{ lat: 10.78, lng: 106.7 }} />);
+
+    expect(screen.queryByTestId('map-marker')).not.toBeInTheDocument();
   });
 });

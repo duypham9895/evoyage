@@ -54,6 +54,7 @@ describe('fetchTrafficAwareDirections', () => {
     );
 
     const departAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    departAt.setUTCMilliseconds(0);
     await fetchTrafficAwareDirections({
       origin: HCM,
       destination: DALAT,
@@ -62,7 +63,26 @@ describe('fetchTrafficAwareDirections', () => {
     });
 
     const url = fetchSpy.mock.calls[0]![0] as string;
-    expect(url).toContain(`depart_at=${encodeURIComponent(departAt.toISOString())}`);
+    expect(url).toContain(`depart_at=${encodeURIComponent(departAt.toISOString().replace('.000Z', 'Z'))}`);
+  });
+
+  // BUG(p2-planner-ui-state-and-map): depart_at is sent as toISOString() (.sssZ), which Mapbox rejects with 422 InvalidInput. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
+  it('formats depart_at in a Mapbox-accepted format (YYYY-MM-DDThh:mm:ssZ, no milliseconds)', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify(SAMPLE_OK_RESPONSE), { status: 200 }),
+    );
+
+    const departAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await fetchTrafficAwareDirections({
+      origin: HCM,
+      destination: DALAT,
+      accessToken: ACCESS_TOKEN,
+      departAt,
+    });
+
+    const url = new URL(fetchSpy.mock.calls[0]![0] as string);
+    // Live Mapbox, 2026-11-01: "...T03:00:00.000Z" -> 422 InvalidInput; "...T03:00:00Z" -> 200 Ok.
+    expect(url.searchParams.get('depart_at')).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
   });
 
   it('omits depart_at when departAt is "now"', async () => {

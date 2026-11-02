@@ -92,7 +92,7 @@ describe('TripNotebook', () => {
     store.save({ ...SAMPLE, vehicleId: 'vf-8' });
     store.save({ ...SAMPLE, vehicleId: 'vf-9', end: 'Vũng Tàu' });
 
-    const resolveVehicleName = vi.fn((id: string | null) =>
+    const resolveVehicleName = vi.fn(({ vehicleId: id }: { vehicleId: string | null }) =>
       id === 'vf-8' ? 'VinFast VF 8' : id === 'vf-9' ? 'VinFast VF 9' : null,
     );
 

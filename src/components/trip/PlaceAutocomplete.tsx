@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, useId } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useId } from 'react';
 import { searchPlaces, type NominatimResult } from '@/lib/geo/nominatim';
 
 interface PlaceAutocompleteProps {
@@ -14,6 +14,19 @@ interface PlaceAutocompleteProps {
 }
 
 const DEBOUNCE_MS = 400;
+// Matches the listbox's mobile max-h-[240px]: open upward only when it fits.
+const LISTBOX_MAX_HEIGHT_PX = 240;
+
+/** Top edge of the nearest ancestor that clips overflow, or of the viewport. */
+function clipTopFor(el: HTMLElement): number {
+  for (let node = el.parentElement; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'hidden') {
+      return node.getBoundingClientRect().top;
+    }
+  }
+  return 0;
+}
 
 export default function PlaceAutocomplete({
   value,
@@ -34,6 +47,17 @@ export default function PlaceAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [gpsError, setGpsError] = useState(false);
+  const [opensUpward, setOpensUpward] = useState(true);
+
+  // Below sm the list opens upward (clear of the on-screen keyboard), but at the
+  // top of the bottom sheet there is no room above and the scroll container
+  // clips it. Measure on open and flip downward when it would not fit.
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!isOpen || !container) return;
+    const spaceAbove = container.getBoundingClientRect().top - clipTopFor(container);
+    setOpensUpward(spaceAbove >= LISTBOX_MAX_HEIGHT_PX);
+  }, [isOpen]);
 
   const handleUseMyLocation = useCallback(async () => {
     if (!navigator.geolocation) return;
@@ -231,7 +255,7 @@ export default function PlaceAutocomplete({
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul id={listboxId} role="listbox" className="absolute z-50 w-full bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto bottom-full mb-1 sm:bottom-auto sm:top-full sm:mt-1 sm:mb-0">
+        <ul id={listboxId} role="listbox" className={`absolute z-50 w-full bg-[var(--color-surface)] border border-[var(--color-surface-hover)] rounded-lg shadow-lg overflow-hidden max-h-[240px] sm:max-h-[200px] overflow-y-auto ${opensUpward ? 'bottom-full mb-1' : 'top-full mt-1'} sm:bottom-auto sm:top-full sm:mt-1 sm:mb-0`}>
           {suggestions.map((result, index) => (
             <li key={result.placeId} role="option" aria-selected={index === activeIndex}>
               <button

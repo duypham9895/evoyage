@@ -23,7 +23,7 @@ export interface TripNotebookI18n extends TripNotebookEntryI18n {
 
 interface TripNotebookProps {
   readonly store: NotebookStore;
-  readonly resolveVehicleName: (vehicleId: string | null) => string | null;
+  readonly resolveVehicleName: (trip: SavedTrip) => string | null;
   readonly onReplan: (trip: SavedTrip) => void;
   readonly i18n: TripNotebookI18n;
 }
@@ -84,7 +84,7 @@ export default function TripNotebook({
           <li key={trip.id}>
             <TripNotebookEntry
               trip={trip}
-              vehicleName={resolveVehicleName(trip.vehicleId)}
+              vehicleName={resolveVehicleName(trip)}
               onReplan={onReplan}
               onPin={handlePin}
               onDelete={handleDelete}

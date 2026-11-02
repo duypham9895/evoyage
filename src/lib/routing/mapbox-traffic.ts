@@ -84,7 +84,8 @@ export async function fetchTrafficAwareDirections(
     overview: 'full',
   });
   if (departAt !== 'now') {
-    params.set('depart_at', departAt.toISOString());
+    // Mapbox rejects fractional seconds ("...T03:00:00.000Z" -> 422 InvalidInput).
+    params.set('depart_at', departAt.toISOString().replace(/\.\d{3}Z$/, 'Z'));
   }
 
   const url = `${TRAFFIC_BASE}/${coords}?${params}`;

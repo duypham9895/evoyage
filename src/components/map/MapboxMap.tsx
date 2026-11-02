@@ -30,6 +30,7 @@ import {
   escapeHtml,
 } from '@/lib/geo/map-utils';
 import { isUsableMapboxToken } from '@/lib/map/mapbox-token';
+import type { NearbyStationMarker } from './Map';
 
 export interface WaypointMarkerData {
   readonly lat: number;
@@ -41,6 +42,8 @@ interface MapboxMapProps {
   readonly tripPlan: TripPlan | null;
   readonly waypoints?: readonly WaypointMarkerData[];
   readonly precautionaryStopInteractions?: PrecautionaryStopInteractions;
+  readonly nearbyStations?: readonly NearbyStationMarker[] | null;
+  readonly userLocation?: { lat: number; lng: number } | null;
 }
 
 const ROUTE_LAYER = {
@@ -509,7 +512,116 @@ function TripOverlay({
   );
 }
 
-export default function MapboxMap({ tripPlan, waypoints, precautionaryStopInteractions }: MapboxMapProps) {
+function NearbyOverlay({
+  nearbyStations,
+  userLocation,
+}: {
+  readonly nearbyStations: readonly NearbyStationMarker[];
+  readonly userLocation?: { lat: number; lng: number } | null;
+}) {
+  const { t } = useLocale();
+  const { current: mapRef } = useMap();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = nearbyStations.find((s) => s.id === selectedId) ?? null;
+
+  // Fly to the user, mirroring the Leaflet map's locate behaviour.
+  // Depend on the numbers: page.tsx builds a new userLocation object every render.
+  const userLat = userLocation?.lat;
+  const userLng = userLocation?.lng;
+  useEffect(() => {
+    if (!mapRef || userLat == null || userLng == null) return;
+    mapRef.flyTo({ center: [userLng, userLat], zoom: 14, duration: 1000 });
+  }, [mapRef, userLat, userLng]);
+
+  return (
+    <>
+      {userLocation && (
+        <Marker latitude={userLocation.lat} longitude={userLocation.lng} anchor="center">
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: '50%',
+              background: '#5B9BFF',
+              boxShadow: '0 0 0 6px rgba(91,155,255,0.3)',
+            }}
+          />
+        </Marker>
+      )}
+
+      {nearbyStations.map((station) => (
+        <Marker
+          key={station.id}
+          latitude={station.latitude}
+          longitude={station.longitude}
+          anchor="center"
+          onClick={(e: { originalEvent: MouseEvent }) => {
+            e.originalEvent.stopPropagation();
+            setSelectedId(selectedId === station.id ? null : station.id);
+          }}
+        >
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={station.name}
+            data-testid="nearby-station-marker"
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              setSelectedId(selectedId === station.id ? null : station.id);
+            }}
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: '50%',
+              background: PROVIDER_COLORS[station.provider] ?? DEFAULT_MARKER_COLOR,
+              border: '2px solid #0F0F11',
+              cursor: 'pointer',
+            }}
+          />
+        </Marker>
+      ))}
+
+      {selected && (
+        <Popup
+          latitude={selected.latitude}
+          longitude={selected.longitude}
+          offset={12}
+          closeOnClick={false}
+          onClose={() => setSelectedId(null)}
+        >
+          <div style={{ fontFamily: 'system-ui', maxWidth: 240 }}>
+            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{selected.name}</h3>
+            <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{selected.address}</p>
+            <p style={{ fontSize: 11, margin: 0, color: '#888' }}>
+              {selected.distanceKm.toFixed(1)} km | {selected.maxPowerKw}kW | {selected.provider}
+            </p>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                marginTop: 8,
+                padding: '4px 12px',
+                background: '#00D4AA',
+                color: '#0F0F11',
+                borderRadius: 4,
+                textDecoration: 'none',
+                fontSize: 12,
+                fontWeight: 'bold',
+              }}
+            >
+              {t('nearby_navigate')}
+            </a>
+          </div>
+        </Popup>
+      )}
+    </>
+  );
+}
+
+export default function MapboxMap({ tripPlan, waypoints, precautionaryStopInteractions, nearbyStations, userLocation }: MapboxMapProps) {
   const rawMapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const mapboxToken = isUsableMapboxToken(rawMapboxToken) ? rawMapboxToken!.trim() : '';
   const tripPlanResetKey = tripPlan
@@ -543,6 +655,9 @@ export default function MapboxMap({ tripPlan, waypoints, precautionaryStopIntera
           waypoints={waypoints}
           stopInteractions={stopInteractions}
         />
+      )}
+      {nearbyStations && nearbyStations.length > 0 && (
+        <NearbyOverlay nearbyStations={nearbyStations} userLocation={userLocation} />
       )}
     </MapGL>
   );

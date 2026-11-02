@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import type { Locale } from '@/types';
+import { readStoredLocale, writeStoredLocale } from '@/lib/locale-storage';
 import vi from '@/locales/vi.json';
 import en from '@/locales/en.json';
 
@@ -41,6 +42,12 @@ const LocaleContext = createContext<LocaleContextType>({
 export function LocaleProvider({ children }: { readonly children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>('vi');
 
+  // Apply the persisted choice after mount (the server always renders 'vi').
+  useEffect(() => {
+    const stored = readStoredLocale();
+    if (stored) setLocale(stored);
+  }, []);
+
   // Keep <html lang> in sync with the current locale. The root layout
   // hardcodes lang="vi" (see src/app/layout.tsx) because it can't read
   // client state during SSR. Without this effect, screen readers pronounce
@@ -51,7 +58,11 @@ export function LocaleProvider({ children }: { readonly children: ReactNode }) {
   }, [locale]);
 
   const toggleLocale = useCallback(() => {
-    setLocale((prev) => (prev === 'vi' ? 'en' : 'vi'));
+    setLocale((prev) => {
+      const next = prev === 'vi' ? 'en' : 'vi';
+      writeStoredLocale(next);
+      return next;
+    });
   }, []);
 
   const t = useCallback(
