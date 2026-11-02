@@ -291,14 +291,26 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
   const warnings: NoStationWarning[] = [];
   const batterySegments: BatterySegment[] = [];
 
+  // One warning per station-less stretch: skip while no stop was added since the last one
+  let stopCountAtLastWarning = -1;
   const pushNoStationWarning = (dp: ChargingDecisionPoint) => {
+    if (stopCountAtLastWarning === chargingStops.length) return;
+    stopCountAtLastWarning = chargingStops.length;
+
+    // Blame compatibility only when it is the cause: every station is VinFast-only,
+    // or VinFast-only stations sit near this point
+    const blockedByCompatibility = !isVinFast && (
+      (stations.length > 0 && compatibleStations.length === 0)
+      || findStationsNearPoint(dp.point, stations.filter((s) => s.isVinFastOnly), FALLBACK_RADIUS_KM).length > 0
+    );
+
     warnings.push({
       type: 'NO_COMPATIBLE_STATION',
       distanceFromStartKm: dp.distanceKm,
-      messageVi: isVinFast
+      messageVi: !blockedByCompatibility
         ? '⚠️ Không tìm thấy trạm sạc trong khu vực này.'
         : '⚠️ Không tìm thấy trạm sạc tương thích — trạm VinFast không hỗ trợ xe ' + vehicle.brand + '.',
-      messageEn: isVinFast
+      messageEn: !blockedByCompatibility
         ? '⚠️ No charging station found in this area.'
         : `⚠️ No compatible stations found — VinFast stations don't support ${vehicle.brand} vehicles.`,
     });

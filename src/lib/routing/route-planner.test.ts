@@ -459,13 +459,13 @@ describe('BUG p1-route-planner-soc-and-stop-correctness', () => {
     });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): one NO_COMPATIBLE_STATION warning is emitted every ~10 km of a station-less stretch. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('emits a single warning for one continuous station-less stretch', () => {
+  it('emits a single warning for one continuous station-less stretch', () => {
     // Filter by type: an infeasible verdict added as a new warning type (open question 2) must not fail this.
     expect(noStationsTrip().warnings.filter((w) => w.type === 'NO_COMPATIBLE_STATION')).toHaveLength(1);
   });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): warning text blames VinFast incompatibility even when no station of any brand exists. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('does not blame VinFast compatibility when there are no stations at all', () => {
+  it('does not blame VinFast compatibility when there are no stations at all', () => {
     const { warnings } = noStationsTrip();
     // This guard is tied to today's result shape. Update it once open question 2 (infeasible result shape) is decided.
     expect(warnings.length).toBeGreaterThan(0);
@@ -537,5 +537,51 @@ describe('planChargingStops stop correctness', () => {
       rankedStationsPerStop: new Map([[0, [ranked(a)]], [1, [ranked(a), ranked(b)]]]),
     });
     expect(plan.chargingStops.map(stopStationName)).toEqual(['A', 'B']);
+  });
+
+  const emptyDpAt = (km: number) => ({ ...dpAt(km, []), useCorridorScoring: false });
+  const planWithDps = (
+    dps: ReturnType<typeof dpAt>[],
+    stations: readonly ChargingStationData[],
+    vehicle: typeof TEST_VF | typeof BYD_SEAL = TEST_VF,
+    rankedMap?: ReadonlyMap<number, readonly RankedStation[]>,
+  ) =>
+    planChargingStops({
+      encodedPolyline: northRoutePolyline(300),
+      totalDistanceKm: 300,
+      vehicle,
+      currentBatteryPercent: 80,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.8,
+      stations,
+      precomputedDecisionPoints: dps,
+      rankedStationsPerStop: rankedMap,
+    });
+  const noStationWarnings = (plan: ChargingPlanResult) =>
+    plan.warnings.filter((w) => w.type === 'NO_COMPATIBLE_STATION');
+
+  it('emits one warning per station-less stretch when a stop separates two stretches', () => {
+    const a = onRoute('A', 100);
+    const plan = planWithDps(
+      [emptyDpAt(40), emptyDpAt(50), dpAt(100, [a]), emptyDpAt(150), emptyDpAt(160)],
+      [a],
+      TEST_VF,
+      new Map([[2, [ranked(a)]]]),
+    );
+    expect(noStationWarnings(plan).map((w) => w.distanceFromStartKm)).toEqual([40, 150]);
+  });
+
+  it('blames VinFast compatibility when VinFast-only stations sit near the station-less point', () => {
+    const vinfastOnly = { ...onRouteStation('VF only', 102), isVinFastOnly: true };
+    const farCompatible = onRouteStation('Far', 290);
+    const [warning] = noStationWarnings(planWithDps([emptyDpAt(100)], [vinfastOnly, farCompatible], BYD_SEAL));
+    expect(warning.messageEn).toContain("VinFast stations don't support BYD");
+  });
+
+  it('uses the generic text for a non-VinFast car when no VinFast-only station is nearby', () => {
+    const farVinfastOnly = { ...onRouteStation('VF only', 250), isVinFastOnly: true };
+    const farCompatible = onRouteStation('Far', 290);
+    const [warning] = noStationWarnings(planWithDps([emptyDpAt(100)], [farVinfastOnly, farCompatible], BYD_SEAL));
+    expect(warning.messageEn).toBe('⚠️ No charging station found in this area.');
   });
 });
