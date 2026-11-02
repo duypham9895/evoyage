@@ -20,13 +20,10 @@ station-status poll, POI warming.
 `/api/cron/poll-station-status` — authenticated with `CRON_SECRET`, constant-time compared.
 
 **GitHub Actions** (`.github/workflows/`): crawl-stations, crawl-energy-prices,
-refresh-vinfast-cookies, poll-station-status, warm-station-pois, deploy, release.
+poll-station-status, warm-station-pois, deploy, release.
 
 ## Known failure modes
 
-- **Cookie expiry cascade.** When `refresh-vinfast-cookies` fails, `poll-station-status`
-  fails downstream with `{"ok":false,"reason":"cookies_expired"}` and multiplies the
-  alarm volume 2–3×. Diagnose the *upstream* job first. (audit C1/C2)
 - **Cloudflare challenge.** VinFast fronts its locator with Cloudflare. Detection lives
   in `src/lib/station/vinfast-browser-client.ts`; retry classification in
   `src/lib/station/vinfast-upstream-error.ts`. A challenge page can return HTTP 200 with

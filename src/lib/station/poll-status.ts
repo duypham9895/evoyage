@@ -72,7 +72,7 @@ export async function pollStationStatus(
       reason: 'cookies_missing',
       stationsPolled: 0,
       observationsInserted: 0,
-      errors: ['No VinfastApiCookies row found; run the weekly refresh job'],
+      errors: ['No VinfastApiCookies row found; run the poll-station-status workflow'],
     };
   }
 

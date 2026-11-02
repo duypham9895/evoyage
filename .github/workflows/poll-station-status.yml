@@ -11,8 +11,8 @@ name: Poll Station Status
 # scripts/poll-vinfast-station-status.ts opens its own Chromium context, mints
 # its own cookies, calls persistCookies() and only then polls — pollStationStatus
 # reads back the row it just wrote, and its fetchLocators is stubbed to the
-# payload already in memory. It does NOT depend on refresh-vinfast-cookies.yml
-# at runtime. Raising the cadence is a sampling decision, not a cost or a
+# payload already in memory. It does NOT depend on any other workflow at
+# runtime. Raising the cadence is a sampling decision, not a cost or a
 # cookie-lifetime constraint.
 #
 # Production finding 2026-05-25: VinFast/Cloudflare accepts the browser
@@ -22,8 +22,7 @@ name: Poll Station Status
 
 on:
   schedule:
-    # Every 2 hours, 5 minutes past the hour (gives the cookie-refresh
-    # workflow time to finish its top-of-hour run before we poll).
+    # Every 2 hours, 5 minutes past the hour.
     - cron: '5 */2 * * *'
   workflow_dispatch:
 

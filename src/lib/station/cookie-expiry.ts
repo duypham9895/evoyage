@@ -1,7 +1,7 @@
 /**
  * Compute a conservative expiry timestamp for a fresh cookie set.
  *
- * Used by `scripts/refresh-vinfast-cookies.ts` to decide when the
+ * Used by `scripts/poll-vinfast-station-status.ts` to decide when the
  * VinfastApiCookies row should be considered stale by the hourly poller.
  *
  * Rule: take the smallest cookie expiry that is at least 1 hour out,

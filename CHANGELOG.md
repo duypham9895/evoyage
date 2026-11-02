@@ -22,6 +22,12 @@ ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops).
   (`docs/operations/precautionary-stops-rollout.md`).
 - **Route E logo system** (`b3d366c`) — `src/components/brand/EVoyageLogo.tsx`.
 
+### Removed
+- **`refresh-vinfast-cookies` workflow and script** (#98) — the legacy `/vn_vi/get-locators`
+  endpoint it verified against now always answers `200 {"data":[]}`, so the job could never
+  go red. `poll-station-status.yml` mints and persists its own `VinfastApiCookies` row on
+  every run and never depended on this job's output.
+
 ### Changed
 - **Production domain moved to `evoyage.duypham.me`** (`7706e14`).
 - **Map provider choice hidden** from the UI (`171773d`).

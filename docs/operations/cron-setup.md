@@ -5,7 +5,6 @@ Operator runbook for the `/api/cron/poll-station-status` and `/api/cron/aggregat
 **Architecture (v2, 2026-05-03)**: Both endpoints are invoked by GitHub Actions workflows (`poll-station-status.yml` and `aggregate-popularity.yml`) using authenticated curl — keeping the whole pipeline inside infrastructure we already operate. This replaces the original spec's external `cron-job.org` dependency to remove operator-setup burden.
 
 Production cadence:
-- Cookie refresh: every 2 hours (`refresh-vinfast-cookies.yml`)
 - Polling: every 2 hours, offset by 5 minutes (`poll-station-status.yml`)
 - Popularity aggregation: daily at 02:00 AM Vietnam (`aggregate-popularity.yml`) — also prunes observations >90 days
 - Reliability aggregation: daily at 02:30 AM Vietnam (`aggregate-reliability.yml`) — staggered 30 min after popularity to avoid simultaneous DB load (ADR-0007 layer 2)
@@ -61,11 +60,10 @@ You should see one row with `expiresAt` ~7 days in the future and a non-trivial 
 
 ### 3. GitHub Actions workflows (auto-configured)
 
-The polling and aggregation are invoked by three workflows that live alongside the cookie-refresh job:
+The polling and aggregation are invoked by three workflows:
 
 | Workflow file | Schedule | Purpose |
 |---|---|---|
-| `refresh-vinfast-cookies.yml` | every 2 hours | Playwright refreshes CF cookies into `VinfastApiCookies` |
 | `poll-station-status.yml` | every 2 hours, +5 min offset | curl `/api/cron/poll-station-status` |
 | `aggregate-popularity.yml` | daily 19:00 UTC (02:00 AM VN) | curl `/api/cron/aggregate-popularity` |
 | `aggregate-reliability.yml` | daily 19:30 UTC (02:30 AM VN) | curl `/api/cron/aggregate-reliability` (ADR-0007) |
@@ -97,7 +95,7 @@ After workflows merge to main, manually trigger each via `workflow_dispatch`:
 |---|---|---|
 | Poll endpoint returns `{ ok: false, reason: "cookies_expired" }` | Weekly refresh hasn't run or expired early | Trigger `workflow_dispatch` on **Refresh VinFast Cookies** |
 | Poll endpoint returns `{ ok: false, reason: "cookies_missing" }` | Database row missing entirely | Same as above — trigger workflow |
-| Poll endpoint returns `{ ok: false, reason: "upstream_failed", errors: ["cloudflare_blocked: ..."] }` | Cookies invalidated by V-GREEN-side change | Trigger workflow; if still blocked, investigate `scripts/refresh-vinfast-cookies.ts` against current vinfastauto.com behavior |
+| Poll endpoint returns `{ ok: false, reason: "upstream_failed", errors: ["cloudflare_blocked: ..."] }` | Cookies invalidated by V-GREEN-side change | Trigger workflow; if still blocked, investigate `scripts/poll-vinfast-station-status.ts` against current vinfastauto.com behavior |
 | GHA workflow shows 401 errors | `CRON_SECRET` rotated in Vercel without updating GHA secret | Update `gh secret set CRON_SECRET` to match Vercel value |
 | Observation table growing too fast | A station's status flapping every hour (broken sensor) | Inspect with `SELECT "stationId", COUNT(*) FROM "StationStatusObservation" WHERE "observedAt" > NOW() - INTERVAL '1 day' GROUP BY 1 ORDER BY 2 DESC LIMIT 10;` |
 
