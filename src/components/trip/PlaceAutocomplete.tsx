@@ -217,6 +217,7 @@ export default function PlaceAutocomplete({
           onKeyDown={handleKeyDown}
           onFocus={() => !disabled && suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
+          aria-label={label ? undefined : placeholder}
           autoComplete="off"
           role="combobox"
           aria-expanded={isOpen}
