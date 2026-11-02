@@ -22,6 +22,7 @@ import {
 } from '../src/lib/station/partition-out-of-service';
 import { assertPlausibleStationCount } from '../src/lib/station/station-count-plausibility';
 import { hasEnoughStatusCoverage } from '../src/lib/station/status-coverage';
+import { isInNeighbourCountry } from '../src/lib/geo/neighbour-country';
 import {
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
@@ -293,7 +294,8 @@ async function main() {
     const lat = parseFloat(s.lat);
     const lng = parseFloat(s.lng);
     if (isNaN(lat) || isNaN(lng)) return false;
-    return isInVietnam(lat, lng);
+    // The bbox alone contains most of Laos and Cambodia.
+    return isInVietnam(lat, lng) && !isInNeighbourCountry(lat, lng);
   });
 
   // partitionOutOfService trusts charging_status to mark existing stations
