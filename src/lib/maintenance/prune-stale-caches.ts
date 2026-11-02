@@ -10,9 +10,10 @@
  *   TTL; we trust upstream and re-fetch on demand. Prune anything not
  *   touched in 30 days so the table doesn't drift toward XL.
  * - ShortUrl: backs links people may still be opening, so only rows the
- *   resolver already refuses are eligible — resolveShortUrl() returns null
- *   once expiresAt has passed (src/lib/short-url.ts:105), which makes deleting
- *   an expired row observationally identical to keeping it. The extra 30-day
+ *   resolver already refuses are eligible — resolveShortUrl() reports "expired"
+ *   once expiresAt has passed (src/lib/short-url.ts:111), so the link is dead
+ *   either way; deleting it only changes the recipient's banner from
+ *   "expired" to "not found". The extra 30-day
  *   grace leaves room to raise the 1-year TTL retroactively before rows go.
  *   Rows with expiresAt = NULL are the pre-Phase-2 legacy links that never
  *   expire on read; deleting one WOULD break a live link, so they are excluded

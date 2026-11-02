@@ -21,7 +21,7 @@ import * as shortUrlPage from './page';
 const params = (code: string) => ({ params: Promise.resolve({ code }) });
 
 beforeEach(() => {
-  vi.mocked(resolveShortUrl).mockResolvedValue(SHARED_PARAMS);
+  vi.mocked(resolveShortUrl).mockResolvedValue({ status: 'ok', params: SHARED_PARAMS });
 });
 
 afterEach(() => {
@@ -32,6 +32,34 @@ describe('/s/[code] short link', () => {
   it('redirects a resolved code to /plan with the stored trip params', async () => {
     await expect(shortUrlPage.default(params('AbC1234'))).rejects.toThrow(
       `NEXT_REDIRECT:/plan?${SHARED_PARAMS}`,
+    );
+  });
+
+  it('redirects a malformed code to /plan?error=link-not-found', async () => {
+    await expect(shortUrlPage.default(params('bad!'))).rejects.toThrow(
+      'NEXT_REDIRECT:/plan?error=link-not-found',
+    );
+  });
+
+  it('redirects an unknown code to /plan?error=link-not-found', async () => {
+    vi.mocked(resolveShortUrl).mockResolvedValue({ status: 'not-found' });
+    await expect(shortUrlPage.default(params('AbC1234'))).rejects.toThrow(
+      'NEXT_REDIRECT:/plan?error=link-not-found',
+    );
+  });
+
+  it('redirects an expired code to /plan?error=link-expired, not link-not-found', async () => {
+    vi.mocked(resolveShortUrl).mockResolvedValue({ status: 'expired' });
+    await expect(shortUrlPage.default(params('AbC1234'))).rejects.toThrow(
+      'NEXT_REDIRECT:/plan?error=link-expired',
+    );
+  });
+
+  it('redirects to /plan?error=link-unavailable when resolving the code throws (e.g. DB down)', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(resolveShortUrl).mockRejectedValue(new Error('db down'));
+    await expect(shortUrlPage.default(params('AbC1234'))).rejects.toThrow(
+      'NEXT_REDIRECT:/plan?error=link-unavailable',
     );
   });
 

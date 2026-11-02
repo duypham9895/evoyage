@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { resolveShortUrl, incrementAccessCount } from '@/lib/short-url';
+import { resolveShortUrl, incrementAccessCount, type ResolveShortUrlResult } from '@/lib/short-url';
 
 interface ShortUrlPageProps {
   readonly params: Promise<{ code: string }>;
@@ -13,16 +13,20 @@ export default async function ShortUrlRedirect({ params }: ShortUrlPageProps) {
     redirect('/plan?error=link-not-found');
   }
 
-  let urlParams: string | null = null;
+  let result: ResolveShortUrlResult | null = null;
 
   try {
-    urlParams = await resolveShortUrl(code);
+    result = await resolveShortUrl(code);
   } catch (err) {
     console.error(`[short-url] Resolution failed for code "${code}":`, err);
-    redirect('/plan?error=link-not-found');
+    redirect('/plan?error=link-unavailable');
   }
 
-  if (!urlParams) {
+  if (result.status === 'expired') {
+    redirect('/plan?error=link-expired');
+  }
+
+  if (result.status === 'not-found') {
     redirect('/plan?error=link-not-found');
   }
 
@@ -30,5 +34,5 @@ export default async function ShortUrlRedirect({ params }: ShortUrlPageProps) {
   incrementAccessCount(code);
 
   // 307 Temporary Redirect to the plan page with full params
-  redirect(`/plan?${urlParams}`);
+  redirect(`/plan?${result.params}`);
 }
