@@ -38,7 +38,7 @@
     "mapbox-gl": "^3.34.1",
     "nanoid": "^5.1.16",
     "next": "16.4.3",
-    "openai": "^6.39.1",
+    "openai": "^7.45.1",
     "playwright-core": "^1.58.2",
     "posthog-js": "^1.442.1",
     "prisma": "^6.19.3",
