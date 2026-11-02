@@ -273,6 +273,7 @@ function StationDetailExpanderInner({
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let sawTerminal = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -309,6 +310,7 @@ function StationDetailExpanderInner({
               setStaleAge(event.staleAgeMs ?? 0);
             }
 
+            if (event.stage === 'done' || event.stage === 'error') sawTerminal = true;
             if (event.stage === 'error') {
               setCooldownRemaining(RETRY_COOLDOWN_MS / 1000);
             }
@@ -316,6 +318,12 @@ function StationDetailExpanderInner({
             // skip malformed events
           }
         }
+      }
+
+      if (!sawTerminal) {
+        setStage('error');
+        setMessage(t('station_detail_temp_unavailable'));
+        setCooldownRemaining(RETRY_COOLDOWN_MS / 1000);
       }
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {

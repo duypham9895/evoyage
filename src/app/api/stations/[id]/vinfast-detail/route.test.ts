@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server';
 vi.mock('@/lib/rate-limit', () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, remaining: 19, retryAfterSec: 0 }),
   getClientIp: vi.fn().mockReturnValue('203.0.113.42'),
+  vinfastDetailLimiter: { name: 'vinfast-detail-limiter' },
 }));
 
 vi.mock('@/lib/prisma', () => ({
@@ -28,6 +29,7 @@ vi.mock('@/lib/vinfast/vinfast-entity-resolver', () => ({
 import { GET } from './route';
 import { prisma } from '@/lib/prisma';
 import { resolveEntityId } from '@/lib/vinfast/vinfast-entity-resolver';
+import { checkRateLimit, vinfastDetailLimiter } from '@/lib/rate-limit';
 
 const mockFindStation = vi.mocked(prisma.chargingStation.findUnique);
 const mockResolveEntityId = vi.mocked(resolveEntityId);
@@ -86,11 +88,30 @@ describe('GET /api/stations/[id]/vinfast-detail — id validation', () => {
     expect(body).toContain('INVALID_ID');
   });
 
-  // BUG(p0-vinfast-detail-invalid-id): id regex {20,36} rejects the 17-char ids the VinFast crawler writes. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-vinfast-detail-invalid-id.md
-  it.fails('serves detail for a 17-char crawler-generated VinFast station id', async () => {
+  // BUG(p0-vinfast-detail-invalid-id): id regex {20,36} rejects the 17-char ids the VinFast crawler writes. See docs/bugs/2026-11-01-p0-vinfast-detail-invalid-id.md
+  it('serves detail for a 17-char crawler-generated VinFast station id', async () => {
     const { status, body } = await callRoute(CRAWLER_ID);
     expect(body).not.toContain('INVALID_ID');
     expect(status).toBe(200);
     expect(body).toContain('"stage":"done"');
+  });
+});
+
+describe('GET /api/stations/[id]/vinfast-detail — rate limiting', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindStation.mockImplementation((async (args: { where: { id: string } }) =>
+      vinfastStation(args.where.id)) as never);
+    mockResolveEntityId.mockResolvedValue({ entityId: null } as never);
+  });
+
+  it('uses the distributed limiter, not only the per-instance fallback', async () => {
+    await callRoute(CRAWLER_ID);
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalledWith(
+      'vinfast-detail:203.0.113.42',
+      20,
+      60_000,
+      vinfastDetailLimiter,
+    );
   });
 });

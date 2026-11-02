@@ -37,8 +37,8 @@ describe('StationDetailExpander — SSE stream handling', () => {
     expect(screen.getByText('station_detail_retry_after')).toBeInTheDocument();
   });
 
-  // BUG(p0-vinfast-detail-invalid-id): stream that closes without a done/error event leaves the expander loading forever. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-vinfast-detail-invalid-id.md
-  it.fails('leaves the loading state with an error when the stream ends without a terminal event', async () => {
+  // BUG(p0-vinfast-detail-invalid-id): stream that closes without a done/error event leaves the expander loading forever. See docs/bugs/2026-11-01-p0-vinfast-detail-invalid-id.md
+  it('leaves the loading state with an error when the stream ends without a terminal event', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       sseResponse(['data: {"stage":"fetching"}\n\n']),
     );
