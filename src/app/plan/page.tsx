@@ -210,6 +210,10 @@ function HomeContent() {
 
   // Auto-snap bottom sheet to half when results load
   const [bottomSheetSnap, setBottomSheetSnap] = useState<{ point: 'peek' | 'half' | 'full'; trigger: number } | undefined>(undefined);
+  // Settled snap reported by the sheet. Mobile FABs sit just above the half
+  // snap, so at full they would cover the sheet content — hide them there.
+  const [sheetSnapPoint, setSheetSnapPoint] = useState<'peek' | 'half' | 'full'>('half');
+  const hideMobileFabs = sheetSnapPoint === 'full';
 
   // URL state sync
   const { syncToUrl } = useUrlState();
@@ -967,6 +971,7 @@ function HomeContent() {
         <MobileBottomSheet
           initialSnap="half"
           snapTo={bottomSheetSnap}
+          onSnapChange={setSheetSnapPoint}
           onSwipeLeft={handleSwipeLeft}
           onSwipeRight={handleSwipeRight}
         >
@@ -1083,7 +1088,7 @@ function HomeContent() {
         </MobileBottomSheet>
 
         {/* eVi FAB + full-screen sheet (mobile only) */}
-        <EViFab onOpen={() => setIsEViOpen(true)} isOpen={isEViOpen} />
+        {!hideMobileFabs && <EViFab onOpen={() => setIsEViOpen(true)} isOpen={isEViOpen} />}
         <EViMobileSheet
           isOpen={isEViOpen}
           onClose={() => setIsEViOpen(false)}
@@ -1094,11 +1099,11 @@ function HomeContent() {
         />
 
         {/* Feedback FAB */}
-        <FeedbackFAB />
+        <FeedbackFAB hidden={hideMobileFabs} />
 
         {/* eVi discoverability nudge — one-time-per-session */}
         <EViNudge
-          shouldShow={showEviNudge}
+          shouldShow={showEviNudge && !hideMobileFabs}
           onOpenEvi={handleOpenEviFromNudge}
           onDismiss={handleDismissEviNudge}
         />

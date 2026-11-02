@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import MobileBottomSheet from './MobileBottomSheet';
 
@@ -127,6 +127,25 @@ describe('MobileBottomSheet', () => {
     rerender(<MobileBottomSheet snapTo={snapTo}>other content</MobileBottomSheet>);
 
     expect(heightPx()).toBeCloseTo(HALF_HEIGHT, 1);
+  });
+
+  it('reports snap changes from drags and from a parent snapTo via onSnapChange', () => {
+    const onSnapChange = vi.fn();
+    const { rerender } = render(
+      <MobileBottomSheet onSnapChange={onSnapChange}>content</MobileBottomSheet>,
+    );
+    expect(onSnapChange).toHaveBeenLastCalledWith('half');
+
+    dragBy(-(FULL_HEIGHT - HALF_HEIGHT));
+    fireEvent.mouseUp(window);
+    expect(onSnapChange).toHaveBeenLastCalledWith('full');
+
+    rerender(
+      <MobileBottomSheet onSnapChange={onSnapChange} snapTo={{ point: 'peek', trigger: 1 }}>
+        content
+      </MobileBottomSheet>,
+    );
+    expect(onSnapChange).toHaveBeenLastCalledWith('peek');
   });
 
   it('disables the height transition only while dragging', () => {

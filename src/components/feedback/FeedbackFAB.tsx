@@ -31,6 +31,8 @@ interface FeedbackFABProps {
     readonly stationId: string;
     readonly stationName: string;
   };
+  /** Hide the button (modal and open-feedback event keep working). */
+  readonly hidden?: boolean;
 }
 
 function clampY(y: number): number {
@@ -38,7 +40,7 @@ function clampY(y: number): number {
   return Math.max(48, Math.min(y, window.innerHeight - BUTTON_SIZE - 48));
 }
 
-export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
+export default function FeedbackFAB({ stationContext, hidden = false }: FeedbackFABProps) {
   const { t } = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [showPulse, setShowPulse] = useState(false);
@@ -251,6 +253,7 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
 
   return (
     <>
+      {!hidden && (
       <button
         onClick={handleOpen}
         onPointerDown={onPointerDown}
@@ -279,6 +282,7 @@ export default function FeedbackFAB({ stationContext }: FeedbackFABProps) {
           <line x1="12" y1="7" x2="12" y2="13" />
         </svg>
       </button>
+      )}
 
       {isOpen && (
         <FeedbackModal
