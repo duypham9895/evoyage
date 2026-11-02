@@ -126,6 +126,19 @@ After a full rebuild, the app works immediately for trip planning, station looku
 
 None of these block normal use. Worth posting an honest banner ("we recently rebuilt our DB — accuracy improves over the next 30 days") if a recovery happens during a high-traffic period.
 
+## Rolling back a bad deploy
+
+Production deploys only come from `.github/workflows/deploy.yml` on a push to `main` (`vercel.json` turns off Vercel's git deploys). After deploying, the workflow's `Smoke-test production` step checks `/api/health` and `/api/vehicles`. If that fails, the GitHub deployment is marked failed and the run turns red, but **nothing rolls back automatically**. The broken build stays live until someone acts.
+
+**Code-only rollback (the fast path):**
+
+1. Vercel dashboard → project → Deployments. Find the last good production deployment and choose **Instant Rollback**.
+2. Or from a shell with a Vercel token: `vercel rollback <deployment-id-or-url> --yes`, and `vercel rollback status` to watch it.
+3. Re-run the smoke checks below (`/api/health`, `/api/vehicles`), then fix forward on `main`.
+4. Check in the dashboard whether the production domain is still pinned to the rolled-back deployment. If it is, the next deploy from `main` may need to be promoted by hand (`vercel promote <deployment>`). This runbook has not been exercised yet, so confirm this the first time.
+
+**Schema changes are not rolled back.** `prisma db push` changes to production stay in place, and an instant rollback only swaps the code. Keep schema changes additive (new nullable columns, new tables) so the previous build still runs against the new schema. Do not `git revert` a column addition: the `Check Prisma schema vs production DB` drift gate in `deploy.yml` compares against prod, which still has the column, so it is expected to block the revert PR (reasoned, not yet observed). Fix forward instead.
+
 ## Post-recovery checklist
 
 After step 9, verify each item before declaring the incident resolved.
@@ -134,6 +147,7 @@ After step 9, verify each item before declaring the incident resolved.
 - [ ] GitHub Actions secrets updated; the next scheduled cron run succeeds.
 - [ ] Daily VinFast crawler workflow is enabled (not on the disabled schedule from commit `06be101`).
 - [ ] Smoke-test endpoints:
+  - `https://evoyage.duypham.me/api/health` answers 200 with `"db":"up"`. Right after a rebuild `observations.stale` is `true` and the aggregate crons fail on freshness until the first status poll lands; that is expected.
   - `https://evoyage.duypham.me/api/vehicles` returns 15 EV models.
   - `https://evoyage.duypham.me/api/stations/nearby?lat=10.78&lng=106.69` returns a non-empty list.
   - The map view loads stations without console errors.
