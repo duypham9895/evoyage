@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { hydrateRoot } from 'react-dom/client';
+import PlanPage from './page';
 
 /**
  * Hydration safety for the URL/localStorage restore (react-hooks compiler
@@ -46,8 +47,6 @@ afterEach(() => {
 describe('plan page — URL restore hydration safety', () => {
   it('server HTML has no restored values; hydration settles to the URL values with no mismatch warning', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    const PlanPage = (await import('./page')).default;
 
     const html = renderToString(<PlanPage />);
     // SSR never ran the restore — inputs must not contain the URL values.
