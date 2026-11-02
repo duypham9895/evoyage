@@ -23,6 +23,7 @@ import {
 import { assertPlausibleStationCount } from '../src/lib/station/station-count-plausibility';
 import { hasEnoughStatusCoverage } from '../src/lib/station/status-coverage';
 import { isInNeighbourCountry } from '../src/lib/geo/neighbour-country';
+import { partitionPlaceholderCoordinates } from '../src/lib/station/placeholder-coordinates';
 import {
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
@@ -244,10 +245,13 @@ async function bulkUpsertStations(
         "province" = EXCLUDED."province",
         "latitude" = EXCLUDED."latitude",
         "longitude" = EXCLUDED."longitude",
-        "chargerTypes" = EXCLUDED."chargerTypes",
-        "connectorTypes" = EXCLUDED."connectorTypes",
-        "portCount" = EXCLUDED."portCount",
-        "maxPowerKw" = EXCLUDED."maxPowerKw",
+        -- "chargerTypes", "connectorTypes", "portCount" and "maxPowerKw" are
+        -- deliberately NOT updated, for the same reason as "stationType" below:
+        -- the CDN feed carries no power, port or connector data, so
+        -- buildStationData can only insert placeholders (150 kW / 4 ports).
+        -- scripts/enrich-vinfast-detail.ts owns the real values; overwriting
+        -- them here would wipe its output every day.
+        -- See docs/bugs/2026-11-01-p2-station-data-integrity.md (Finding 1).
         -- "stationType" deliberately NOT updated: it is NOT NULL in the schema,
         -- and the CDN feed carries no access_type, so buildStationData can only
         -- guess 'public'. Overwriting would discard a real value with a guess.
@@ -290,13 +294,17 @@ async function main() {
   // Category selection happens in fetchVinfastCarChargingStationsFromCdn, which
   // throws `empty_result` rather than returning zero rows. Only coordinate
   // validity is left to check here.
-  const valid = allStations.filter((s) => {
+  const inVietnam = allStations.filter((s) => {
     const lat = parseFloat(s.lat);
     const lng = parseFloat(s.lng);
     if (isNaN(lat) || isNaN(lng)) return false;
     // The bbox alone contains most of Laos and Cambodia.
     return isInVietnam(lat, lng) && !isInNeighbourCountry(lat, lng);
   });
+  // The feed sends some out-of-region stations at a placeholder point in HCM
+  // District 1; skip them rather than store a location hundreds of km wrong.
+  // Rows already in the DB are left as they are (retiring them is Finding 3).
+  const { kept: valid, dropped: placeholderRows } = partitionPlaceholderCoordinates(inVietnam);
 
   // partitionOutOfService trusts charging_status to mark existing stations
   // OUTOFSERVICE; a feed that silently drops the field would otherwise make
@@ -383,6 +391,7 @@ async function main() {
   console.log(`  Out of service in feed: ${skippedOutOfService}`);
   console.log(`  Marked out of service (existing): ${markedOutOfService}`);
   console.log(`  Skipped (out of service, not in DB): ${skippedNew}`);
+  console.log(`  Skipped (placeholder coordinates): ${placeholderRows.length}`);
   console.log(`  Mappings saved: ${mappingsSaved}`);
 
   writeFileSync(
