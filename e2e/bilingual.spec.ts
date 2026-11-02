@@ -30,7 +30,7 @@ test.describe('F8: Bilingual — Vietnamese <-> English', () => {
     await expect(viPlanText).toBeVisible({ timeout: 5_000 });
 
     // Step 7: Toggle back to English — /plan page uses Header component with aria-label
-    const langToggle2 = page.getByRole('button', { name: /Toggle language/i });
+    const langToggle2 = page.getByRole('button', { name: /^(EN|VI)\b/ });
     await langToggle2.click();
 
     // Step 8: Verify English text appears
