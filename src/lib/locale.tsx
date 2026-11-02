@@ -45,6 +45,9 @@ export function LocaleProvider({ children }: { readonly children: ReactNode }) {
   // Apply the persisted choice after mount (the server always renders 'vi').
   useEffect(() => {
     const stored = readStoredLocale();
+    // The server always renders 'vi'; the stored choice can only be read after
+    // hydration, so this one post-mount sync is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setLocale(stored);
   }, []);
 
