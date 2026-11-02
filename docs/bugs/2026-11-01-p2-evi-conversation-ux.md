@@ -2,7 +2,14 @@
 
 All file:line references are at `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main).
 
-> **Status 2026-11-02:** On branch `bug/p2-evi-conversation-ux`, Finding 2 is fixed (`handleTripParsed` and `handleFindNearbyStations` now call `setIsEViOpen(false)`) and Finding 3 is fixed with option 1 (desktop `EVi` stays mounted and is hidden with `hidden`/`flex` on other tabs; the desktop `TripSummary` now gets `onBackToChat`). The four tests for these findings are flipped to `it` and pass. Finding 1 stays open: its two tests remain `it.fails` until the owner decides whether eVi asks for the vehicle or the destination first. Neither fix has been checked in a real browser yet.
+> **Status 2026-11-02:** On branch `bug/p2-evi-conversation-ux`, all three findings are fixed.
+> - Finding 1: `route.ts` now has a final `endMissing` branch (no `endLocation`, or `endLat` null after geocoding, including when `searchPlaces` throws). It returns `followUpType: 'free_text'` with a destination question. An ungeocodable place is named back to the user (`eVi chưa tìm thấy "X" trên bản đồ. Bạn muốn đi đâu?`), and `tripParams.end` keeps the raw text. Both F1 tests are flipped to `it`. Four guard tests were added: the ungeocodable message, a geocoder outage, vehicle-before-destination, and start-before-destination.
+> - Finding 2: `handleTripParsed` and `handleFindNearbyStations` now call `setIsEViOpen(false)`.
+> - Finding 3: fixed with option 1. Desktop `EVi` stays mounted and is hidden with `hidden`/`flex` on other tabs, and the desktop `TripSummary` now gets `onBackToChat`.
+> - All six regression tests are `it` and pass.
+> - Still unverified: none of these fixes has been checked in a real browser at phone or desktop width (open question 4). The live-LLM frequency question (open question 1) is unmeasured, but it no longer blocks the fix.
+> - Behaviour change: if Nominatim is down or throttled, eVi now asks for the destination again instead of returning a "complete" trip with no coordinates.
+> - Defaults taken (reversible, owner may override): when several things are missing, eVi asks in the order vehicle, then start, then destination (this answers open question 2). The destination follow-up is `free_text`, not `location_input`, because the `location_input` widget is labelled "starting point" and switching would need new locale keys plus a contract field. The question text is hard-coded Vietnamese, like the rest of the route.
 
 ## Summary
 
