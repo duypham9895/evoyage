@@ -237,7 +237,7 @@ describe('MapboxMap precautionary stops', () => {
 
     const marker = screen.getByLabelText('Suggested stop 2, Suggested Top-up, 18 min top-up, can be skipped');
     expect(marker).toHaveStyle({ width: '16px', height: '16px' });
-    expect(marker).toHaveStyle('background: transparent');
+    expect(marker.style.background).toBe('transparent');
     expect(marker.getAttribute('style')).toContain('1.5px dashed');
     expect(marker).not.toHaveTextContent('2');
   });
