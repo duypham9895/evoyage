@@ -1,5 +1,7 @@
 # P1: Vercel functions run in iad1, database is in ap-southeast-1
 
+> **Status 2026-11-02:** fixed on this branch — `vercel.json` now pins `"regions": ["sin1"]` (owner authorised shipping on 2026-11-02). Verify after deploy: `x-vercel-id` shows `::sin1::` and DB-route TTFB drops. Still open: why `/api/vehicles` takes 6-12 s (not a region issue).
+
 ## Summary
 
 Every serverless function runs in Vercel's default region, iad1 (US East). The Supabase Postgres database is in ap-southeast-1 (Singapore). A user in Vietnam is routed hkg1 edge → iad1 function → Singapore DB, so every Prisma round trip crosses the Pacific. DB-backed API calls take seconds even when they run a single query.

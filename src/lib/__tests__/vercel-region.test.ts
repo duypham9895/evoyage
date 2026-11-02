@@ -12,8 +12,8 @@ describe('Vercel function region', () => {
     regions?: unknown;
   };
 
-  // BUG(p1-vercel-function-region-latency): vercel.json pins no region, so functions run in iad1 far from the ap-southeast-1 DB. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-vercel-function-region-latency.md
-  it.fails('pins serverless functions to sin1, next to the ap-southeast-1 database', () => {
+  // BUG(p1-vercel-function-region-latency): vercel.json pins no region, so functions run in iad1 far from the ap-southeast-1 DB. See docs/bugs/2026-11-01-p1-vercel-function-region-latency.md
+  it('pins serverless functions to sin1, next to the ap-southeast-1 database', () => {
     expect(vercelConfig.regions).toEqual(['sin1']);
   });
 });
