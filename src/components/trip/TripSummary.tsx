@@ -77,12 +77,13 @@ const GAUGE_GRADIENT_CLASS: Record<BatteryLevel, string> = {
 
 // ── Status helpers ──
 
-type StatusKey = 'ACTIVE' | 'BUSY' | 'UNAVAILABLE' | 'INACTIVE';
+type StatusKey = 'ACTIVE' | 'BUSY' | 'UNAVAILABLE' | 'OUTOFSERVICE' | 'INACTIVE';
 
 const STATUS_DOT_COLOR: Record<StatusKey, string> = {
   ACTIVE: 'bg-[var(--color-safe)]',
   BUSY: 'bg-[var(--color-warn)]',
   UNAVAILABLE: 'bg-[var(--color-danger)]',
+  OUTOFSERVICE: 'bg-[var(--color-danger)]',
   INACTIVE: 'bg-[var(--color-muted)]',
 };
 
@@ -90,6 +91,7 @@ const STATUS_TEXT_COLOR: Record<StatusKey, string> = {
   ACTIVE: 'text-[var(--color-safe)]',
   BUSY: 'text-[var(--color-warn)]',
   UNAVAILABLE: 'text-[var(--color-danger)]',
+  OUTOFSERVICE: 'text-[var(--color-danger)]',
   INACTIVE: 'text-[var(--color-muted)]',
 };
 
@@ -97,6 +99,7 @@ const STATUS_LOCALE_KEY: Record<StatusKey, string> = {
   ACTIVE: 'station_status_active',
   BUSY: 'station_status_busy',
   UNAVAILABLE: 'station_status_unavailable',
+  OUTOFSERVICE: 'station_status_unavailable',
   INACTIVE: 'station_status_inactive',
 };
 
