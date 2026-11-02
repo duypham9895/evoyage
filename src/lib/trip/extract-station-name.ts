@@ -11,6 +11,8 @@
  * can compose ordinal labels like "Trạm 1", "Trạm 2" if desired.
  */
 
+import { stripDirectionTag } from '@/lib/stations/format-station-name';
+
 const MAX_LEN = 14;
 const SHORT_TWO_WORDS_THRESHOLD = 8;
 const FALLBACK = 'Trạm';
@@ -30,7 +32,7 @@ function truncate(s: string): string {
 }
 
 export function extractStationShortName(fullName: string): string {
-  const trimmed = fullName.trim();
+  const trimmed = stripDirectionTag(fullName);
   if (!trimmed) return FALLBACK;
 
   let stripped = trimmed;

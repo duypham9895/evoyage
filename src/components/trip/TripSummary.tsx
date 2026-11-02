@@ -23,6 +23,7 @@ import { computeTripCost } from '@/lib/trip-cost';
 import { buildGoogleMapsUrl } from '@/lib/trip/google-maps-url';
 import { extractCityName } from '@/lib/trip/extract-city';
 import { extractStationShortName } from '@/lib/trip/extract-station-name';
+import { formatStationName } from '@/lib/stations/format-station-name';
 import { detectPasses } from '@/lib/trip/detect-passes';
 import { evaluatePeakHour } from '@/lib/trip/peak-hour-model';
 import { usePrecautionaryStopInteractions, type PrecautionaryStopInteractions } from '@/hooks/usePrecautionaryStopInteractions';
@@ -210,7 +211,7 @@ function QuickStats({
         href={navigateUrl}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`${navigateLabel} ${station.name}`}
+        aria-label={`${navigateLabel} ${formatStationName(station.name)}`}
         onClick={onNavigate}
         className="text-xs px-3 py-1 min-h-[32px] flex items-center rounded-full bg-[var(--color-accent)] text-[var(--color-background)] font-semibold hover:opacity-90 transition-opacity"
       >
@@ -931,10 +932,10 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
             const cardAriaLabel = isPrecautionary
               ? t('extra_stop_aria_label' as Parameters<typeof t>[0], {
                   n: String(i + 1),
-                  name: station.name,
+                  name: formatStationName(station.name),
                   minutes: String(Math.round(chargeTime)),
                 })
-              : `${t('charging_stops')} ${i + 1}: ${station.name}`;
+              : `${t('charging_stops')} ${i + 1}: ${formatStationName(station.name)}`;
             const dismissDialogTitleId = `dismiss-${i}-${stopId.replace(/[^A-Za-z0-9_-]/g, '-')}-title`;
 
             return (
@@ -956,7 +957,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       <span className="w-6 h-6 rounded-full bg-[var(--color-accent)] text-[var(--color-background)] text-xs font-bold flex items-center justify-center shrink-0">
                         {i + 1}
                       </span>
-                      <span className="text-sm font-semibold line-clamp-2" title={station.name}>{station.name}</span>
+                      <span className="text-sm font-semibold line-clamp-2" title={formatStationName(station.name)}>{formatStationName(station.name)}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {isPrecautionary && (
@@ -1039,7 +1040,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       <button
                         type="button"
                         onClick={() => stopInteractions.requestDismiss(stopId)}
-                        aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: station.name })}
+                        aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: formatStationName(station.name) })}
                         className="text-xs font-medium text-[var(--color-muted)] opacity-100 lg:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--color-foreground)] transition-[opacity,color]"
                       >
                         {t('extra_stop_dismiss' as Parameters<typeof t>[0])}
@@ -1185,8 +1186,8 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                                 }}
                                 className="w-full flex items-center justify-between px-3 py-2.5 min-h-[48px] hover:bg-[var(--color-surface-hover)] transition-colors border-b border-[var(--color-surface-hover)] last:border-b-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-accent)]"
                               >
-                                <span className="text-xs font-medium truncate min-w-0 flex-1 text-left" title={alt.station.name}>
-                                  {alt.station.name}
+                                <span className="text-xs font-medium truncate min-w-0 flex-1 text-left" title={formatStationName(alt.station.name)}>
+                                  {formatStationName(alt.station.name)}
                                 </span>
                                 <div className="flex items-center gap-3 shrink-0 text-xs ml-2">
                                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${altRankColor}`}>

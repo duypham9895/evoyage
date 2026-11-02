@@ -1,5 +1,6 @@
 import type { ChargingStop, ChargingStopWithAlternatives } from '@/types';
 import { getStopStation } from '@/types';
+import { formatStationName } from '@/lib/stations/format-station-name';
 
 export const VIETNAM_CENTER = { lat: 14.0583, lng: 108.2772 };
 export const VIETNAM_ZOOM = 6;
@@ -33,7 +34,7 @@ export function buildStopPopupHtml(
   navigateLabel: string,
 ): string {
   const station = getStopStation(stop);
-  const name = escapeHtml(station.name);
+  const name = escapeHtml(formatStationName(station.name));
   const address = escapeHtml(station.address);
   const provider = escapeHtml(station.provider);
   const connectors = escapeHtml(station.connectorTypes.join(', '));

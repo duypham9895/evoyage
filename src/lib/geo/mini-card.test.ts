@@ -22,6 +22,12 @@ describe('mini-card', () => {
       expect(html).toContain('VinFast Charging Quận 1');
     });
 
+    it('shows a feed "<chiều đi>" tag as plain "(chiều đi)" text', () => {
+      const html = renderMiniCardHtml({ ...baseData, name: 'Trạm dừng nghỉ Km 45 <chiều đi>' });
+      expect(html).toContain('Trạm dừng nghỉ Km 45 (chiều đi)');
+      expect(html).not.toContain('&lt;chiều đi&gt;');
+    });
+
     it('renders distance', () => {
       const html = renderMiniCardHtml(baseData);
       expect(html).toContain('0.8 km');

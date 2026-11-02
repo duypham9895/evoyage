@@ -21,6 +21,7 @@ import {
   trackPrecautionaryStopDismissed,
 } from '@/lib/analytics';
 import { decodePolyline } from '@/lib/geo/polyline';
+import { formatStationName } from '@/lib/stations/format-station-name';
 import {
   VIETNAM_CENTER,
   VIETNAM_ZOOM,
@@ -106,10 +107,10 @@ function StopMarker({
   const markerLabel = isPrecautionary
     ? t('extra_stop_aria_label' as Parameters<typeof t>[0], {
         n: String(index + 1),
-        name: station.name,
+        name: formatStationName(station.name),
         minutes: String(chargeTimeMin),
       })
-    : `${t('charging_stops')} ${index + 1}: ${station.name}`;
+    : `${t('charging_stops')} ${index + 1}: ${formatStationName(station.name)}`;
   const markerSize = isPrecautionary ? 16 : 24;
 
   const selectMarker = () => onSelect(isSelected ? null : index);
@@ -169,7 +170,7 @@ function StopMarker({
           onClose={() => onSelect(null)}
         >
           <div style={{ fontFamily: 'system-ui', maxWidth: 250 }}>
-            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(station.name)}</h3>
+            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(formatStationName(station.name))}</h3>
             <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(station.address)}</p>
             <p style={{ fontSize: 12, margin: 0 }}>
               <span style={{ color: '#FF4D4F', fontWeight: 'bold' }}>
@@ -198,7 +199,7 @@ function StopMarker({
                   <button
                     type="button"
                     onClick={() => stopInteractions.requestDismiss(stopId)}
-                    aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: station.name })}
+                    aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: formatStationName(station.name) })}
                     style={{ border: 0, padding: 0, background: 'transparent', color: '#666', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   >
                     {t('extra_stop_dismiss' as Parameters<typeof t>[0])}
@@ -331,7 +332,7 @@ function AlternativeMarker({
             <div style={{ fontSize: 10, fontWeight: 'bold', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
               {t('popup_backup_for_stop', { n: String(stopIdx + 1) })}
             </div>
-            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(station.name)}</h3>
+            <h3 style={{ fontWeight: 'bold', margin: '0 0 4px' }}>{escapeHtml(formatStationName(station.name))}</h3>
             <p style={{ fontSize: 12, margin: '0 0 4px', color: '#666' }}>{escapeHtml(station.address)}</p>
             <p style={{ fontSize: 11, margin: '0 0 4px', color: '#888' }}>
               {station.maxPowerKw}kW | {station.connectorTypes.join(', ')} | {station.provider}

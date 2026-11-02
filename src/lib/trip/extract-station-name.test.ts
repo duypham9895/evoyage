@@ -48,4 +48,9 @@ describe('extractStationShortName', () => {
   it('handles inputs that are already short and clean', () => {
     expect(extractStationShortName('Cát Bà')).toBe('Cát Bà');
   });
+
+  it('drops a "<chiều đi>" / "<chiều về>" feed tag instead of using it as the label', () => {
+    expect(extractStationShortName('Trạm dừng nghỉ Phan Thiết <chiều đi>')).toBe('Phan Thiết');
+    expect(extractStationShortName('Trạm dừng nghỉ Phan Thiết <chiều về>')).toBe('Phan Thiết');
+  });
 });
