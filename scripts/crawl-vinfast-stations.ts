@@ -23,6 +23,7 @@ import {
 import { assertPlausibleStationCount } from '../src/lib/station/station-count-plausibility';
 import { hasEnoughStatusCoverage } from '../src/lib/station/status-coverage';
 import { isInNeighbourCountry } from '../src/lib/geo/neighbour-country';
+import { partitionPlaceholderCoordinates } from '../src/lib/station/placeholder-coordinates';
 import {
   getErrorMessage,
   isRecoverableVinfastBrowserAccessError,
@@ -293,13 +294,17 @@ async function main() {
   // Category selection happens in fetchVinfastCarChargingStationsFromCdn, which
   // throws `empty_result` rather than returning zero rows. Only coordinate
   // validity is left to check here.
-  const valid = allStations.filter((s) => {
+  const inVietnam = allStations.filter((s) => {
     const lat = parseFloat(s.lat);
     const lng = parseFloat(s.lng);
     if (isNaN(lat) || isNaN(lng)) return false;
     // The bbox alone contains most of Laos and Cambodia.
     return isInVietnam(lat, lng) && !isInNeighbourCountry(lat, lng);
   });
+  // The feed sends some out-of-region stations at a placeholder point in HCM
+  // District 1; skip them rather than store a location hundreds of km wrong.
+  // Rows already in the DB are left as they are (retiring them is Finding 3).
+  const { kept: valid, dropped: placeholderRows } = partitionPlaceholderCoordinates(inVietnam);
 
   // partitionOutOfService trusts charging_status to mark existing stations
   // OUTOFSERVICE; a feed that silently drops the field would otherwise make
@@ -386,6 +391,7 @@ async function main() {
   console.log(`  Out of service in feed: ${skippedOutOfService}`);
   console.log(`  Marked out of service (existing): ${markedOutOfService}`);
   console.log(`  Skipped (out of service, not in DB): ${skippedNew}`);
+  console.log(`  Skipped (placeholder coordinates): ${placeholderRows.length}`);
   console.log(`  Mappings saved: ${mappingsSaved}`);
 
   writeFileSync(

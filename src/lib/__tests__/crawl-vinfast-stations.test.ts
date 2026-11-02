@@ -216,8 +216,8 @@ describe('crawl-vinfast-stations: charger specs', () => {
 });
 
 describe('crawl-vinfast-stations: coordinate validation', () => {
-  // BUG(p2-station-data-integrity): feed rows with Hanoi/Da Nang addresses share one placeholder coordinate in HCM District 1 and are stored as-is. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-station-data-integrity.md
-  it.fails('does not upsert out-of-region stations stacked on the feed placeholder coordinate', async () => {
+  // Regression (p2-station-data-integrity Finding 2): feed rows with Hanoi/Da Nang addresses share one placeholder coordinate in HCM District 1 and used to be stored as-is.
+  it('does not upsert out-of-region stations stacked on the feed placeholder coordinate', async () => {
     const real = [row('C.HCM0001'), row('C.HCM0002', { lat: '10.790000', lng: '106.710000' })];
     // Same shape as prod: many distinct Hanoi stations (province_id 2483), all
     // at one HCM coordinate. Any of the detection signals in the fix direction
