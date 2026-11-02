@@ -48,10 +48,10 @@ const jsonLd = {
 };
 
 export default async function LandingPage() {
-  // Middleware sets x-nonce on the request headers; read it here so the
+  // The proxy sets x-nonce on the request headers; read it here so the
   // JSON-LD <script> below is allowed under the nonce-based CSP set by
-  // src/middleware.ts. Falls back to no nonce in environments where
-  // middleware is bypassed (dev SSR shortcut, test snapshot).
+  // src/proxy.ts. Falls back to no nonce in environments where
+  // the proxy is bypassed (dev SSR shortcut, test snapshot).
   const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   // Defense-in-depth: also escape any '</' in the JSON-LD payload so a

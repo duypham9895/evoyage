@@ -1,8 +1,8 @@
 /**
  * PATCH /api/admin/feedback/[id]
  *
- * Updates the feedback workflow status. Gated by the same middleware that
- * gates /admin/* — the matcher in src/middleware.ts covers /admin/:path*
+ * Updates the feedback workflow status. Gated by the same proxy that
+ * gates /admin/* — the matcher in src/proxy.ts covers /admin/:path*
  * AND /api/admin/:path* through the explicit matcher entries below.
  *
  * Sets resolvedAt automatically when transitioning to RESOLVED.

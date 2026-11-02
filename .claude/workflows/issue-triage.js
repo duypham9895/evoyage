@@ -106,7 +106,7 @@ Check live state carefully:
   src/app/api/evi/parse/route.ts does it. Read both fully.
 - C23: vercel.json — is there a "crons" array? Which cron routes exist under src/app/api/cron/?
 - C24: next.config.ts CSP headers + src/app/page.tsx jsonLd dangerouslySetInnerHTML. Is unsafe-inline
-  still present? Is the JSON escaped? Is there a nonce middleware (check middleware.ts)?
+  still present? Is the JSON escaped? Is there a nonce-setting proxy (check proxy.ts)?
 - C25: grep -rn "console.log" src/ --include=*.ts --include=*.tsx | grep -v test  — how many remain, where?
 - C26: package.json engines field present?
 Also do a FRESH security sweep beyond the audit: grep for hardcoded secrets, unvalidated user input reaching

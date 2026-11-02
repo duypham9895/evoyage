@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Admin — eVoyage',
-  // Belt-and-braces — middleware already returns 401 + X-Robots-Tag: noindex
+  // Belt-and-braces — the proxy already returns 401 + X-Robots-Tag: noindex
   // on unauth, but pages must also opt out of indexing for the rare path
   // where a crawler somehow reaches a 200.
   robots: { index: false, follow: false, noarchive: true, nosnippet: true },
