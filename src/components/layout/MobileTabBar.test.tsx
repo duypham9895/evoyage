@@ -118,8 +118,8 @@ describe('MobileTabBar', () => {
     const vehicleTab = container.querySelector('[aria-selected="true"]');
     expect(vehicleTab?.querySelector('span.rounded-full')).toBeNull();
   });
-  // BUG(p3-accessibility-wcag): inactive tab text uses --color-muted (#6B6B78), 3.65:1 on the background. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
-  it.fails('renders inactive tab text with at least 4.5:1 contrast on the page background (WCAG 1.4.3)', () => {
+  // BUG(p3-accessibility-wcag): inactive tab text uses --color-muted (#6B6B78), 3.65:1 on the background. Fixed: text-secondary. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
+  it('renders inactive tab text with at least 4.5:1 contrast on the page background (WCAG 1.4.3)', () => {
     render(
       <MobileTabBar
         activeTab="route"

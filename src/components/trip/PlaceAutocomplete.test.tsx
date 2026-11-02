@@ -52,8 +52,8 @@ describe('PlaceAutocomplete accessibility', () => {
     expect(screen.getByRole('combobox', { name: 'Tìm điểm dừng' })).toBeInTheDocument();
   });
 
-  // BUG(p3-accessibility-wcag): the field label uses --color-muted (#6B6B78), 3.30:1 on the surface card. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
-  it.fails('renders the field label with at least 4.5:1 contrast on the surface card (WCAG 1.4.3)', () => {
+  // BUG(p3-accessibility-wcag): the field label uses --color-muted (#6B6B78), 3.30:1 on the surface card. Fixed: text-secondary. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
+  it('renders the field label with at least 4.5:1 contrast on the surface card (WCAG 1.4.3)', () => {
     renderOrigin();
     const label = screen.getByText('Điểm đi');
     const fg = tokenHex(textColorToken(label.className));

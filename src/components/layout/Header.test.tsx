@@ -47,8 +47,8 @@ describe('Header', () => {
     expect(name.length).toBeGreaterThan((toggle!.textContent ?? '').length);
   });
 
-  // BUG(p3-accessibility-wcag): language toggle text uses --color-muted (#6B6B78), 3.30:1 on the header surface. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
-  it.fails('renders the language toggle text with at least 4.5:1 contrast on the header surface (WCAG 1.4.3)', () => {
+  // BUG(p3-accessibility-wcag): language toggle text uses --color-muted (#6B6B78), 3.30:1 on the header surface. Fixed: text-secondary. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
+  it('renders the language toggle text with at least 4.5:1 contrast on the header surface (WCAG 1.4.3)', () => {
     render(
       <LocaleProvider>
         <Header />

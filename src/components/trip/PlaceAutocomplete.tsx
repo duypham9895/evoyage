@@ -205,7 +205,7 @@ export default function PlaceAutocomplete({
 
   return (
     <div ref={containerRef} className="relative">
-      <label htmlFor={inputId} className="text-xs text-[var(--color-muted)] mb-1 block">
+      <label htmlFor={inputId} className="text-xs text-[var(--color-text-secondary)] mb-1 block">
         {label}
       </label>
       <div className="relative">
