@@ -38,6 +38,9 @@ function clickEnToggle() {
 
 describe('<PrivacyPolicyContent />', () => {
   beforeEach(() => {
+    // The landing locale is persisted in localStorage since 3592c83; without
+    // this, a toggle in one test leaks into the next.
+    localStorage.clear();
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
