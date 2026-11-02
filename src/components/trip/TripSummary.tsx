@@ -910,13 +910,12 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
               ? PRECAUTIONARY_REASON_LOCALE_KEY[stop.precautionaryReason]
               : null;
 
-            const rankLabel = rank === 'best' ? t('stations_best')
-              : rank === 'ok' ? t('stations_ok')
+            // The selected station is always top-ranked, so "best" on it says nothing.
+            const rankLabel = rank === 'ok' ? t('stations_ok')
               : rank === 'slow' ? t('stations_slow')
               : null;
 
-            const rankColor = rank === 'best' ? 'text-[var(--color-safe)] bg-[var(--color-safe)]/10'
-              : rank === 'ok' ? 'text-[var(--color-warn)] bg-[var(--color-warn)]/10'
+            const rankColor = rank === 'ok' ?'text-[var(--color-warn)] bg-[var(--color-warn)]/10'
               : rank === 'slow' ? 'text-[var(--color-danger)] bg-[var(--color-danger)]/10'
               : '';
 

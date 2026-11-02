@@ -417,6 +417,39 @@ describe('TripSummary — backup station visibility', () => {
   });
 });
 
+// P05-best-label: the selected station is always the top-ranked one, so a "Best"
+// badge on every primary stop carries no information. Alternatives keep their rank.
+describe('TripSummary — rank badge on primary stop', () => {
+  it('does not show "Best" on the selected stop, but still shows it on an alternative ranked best', () => {
+    const primary = makeRankedStation(makeStation('Primary Station'));
+    const tiedBackup = makeRankedStation(makeStation('Tied Backup'));
+
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({
+          chargingStops: [
+            {
+              selected: primary,
+              alternatives: [tiedBackup],
+              distanceAlongRouteKm: 80,
+              batteryPercentAtArrival: 20,
+              batteryPercentAfterCharge: 80,
+            },
+          ],
+          totalChargingTimeMin: 18,
+        })}
+        isLoading={false}
+      />,
+    );
+
+    // Locale mock returns the key for untranslated strings, so the badge text is 'stations_best'.
+    // Exactly one "best" badge — on the alternative row, none on the primary stop card.
+    const bestLabels = screen.getAllByText('stations_best');
+    expect(bestLabels).toHaveLength(1);
+    expect(screen.getByRole('option', { name: /Tied Backup/ })).toContainElement(bestLabels[0]);
+  });
+});
+
 describe('TripSummary — precautionary stops', () => {
   it('renders precautionary stops with suggested treatment and top-up duration copy', () => {
     const station = makeStation('Precautionary Midpoint');
