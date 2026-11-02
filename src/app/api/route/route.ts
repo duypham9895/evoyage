@@ -18,7 +18,7 @@ import { RELIABILITY_THRESHOLD } from '@/lib/routing/reliability-score';
 import { trackReliabilityCalibration } from '@/lib/analytics';
 import { cumulativeDistances, decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
-import { findForeignSegment } from '@/lib/geo/neighbour-country';
+import { findForeignSegment, isInNeighbourCountry } from '@/lib/geo/neighbour-country';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/routing/station-ranker';
 import { estimateDetourTimeSec, haversineDistance, type StationWithRouteInfo } from '@/lib/routing/station-finder';
@@ -405,10 +405,12 @@ export async function POST(request: NextRequest) {
       parkingFee: s.parkingFee ?? null,
     }));
 
-    // Filter out stations that are unavailable or inactive
+    // Filter out stations that are unavailable or inactive, and the few
+    // Laos/Cambodia rows the bbox-only station sync let in.
     const availableStations = stations.filter((s) => {
       const status = s.chargingStatus?.toUpperCase();
-      return !status || !EXCLUDED_STATION_STATUS_SET.has(status);
+      return (!status || !EXCLUDED_STATION_STATUS_SET.has(status))
+        && !isInNeighbourCountry(s.latitude, s.longitude);
     });
 
     // Smart station ranking: corridor scoring + Matrix API fallback

@@ -291,6 +291,34 @@ describe('POST /api/route station selection', () => {
       }),
     }));
   });
+
+  it('never routes to a station in Laos/Cambodia, even when the route passes it', async () => {
+    // Same geometry as the corridor fixture, shifted onto lat 15.11 through
+    // Pakse (Laos): the station sits just past VF 3's ~109 km reach.
+    const { fetchDirections } = await import('@/lib/routing/osrm');
+    vi.mocked(fetchDirections).mockResolvedValueOnce({
+      polyline: encodePolyline([
+        { lat: 15.11, lng: 104.85 },
+        { lat: 15.11, lng: 105.85 },
+        { lat: 15.11, lng: 106.85 },
+      ], 5),
+      distanceMeters: 215_000,
+      durationSeconds: 10_800,
+      startAddress: 'A',
+      endAddress: 'B',
+      startCoord: { lat: 15.11, lng: 104.85 },
+      endCoord: { lat: 15.11, lng: 106.85 },
+      provider: 'osrm',
+    });
+    findStationsMock.mockResolvedValueOnce([
+      corridorStation({ id: 'laos-station', province: 'Tây Nguyên / Highlands', latitude: 15.11, longitude: 105.9 }),
+    ]);
+
+    const plan = await postRoute(VF3_BODY);
+
+    expect(plan.error).toBeUndefined();
+    expect(JSON.stringify(plan.chargingStops)).not.toContain('laos-station');
+  });
 });
 
 // ── Provider resilience ──
