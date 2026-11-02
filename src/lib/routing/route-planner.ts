@@ -268,6 +268,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
     encodedPolyline,
     vehicle,
     currentBatteryPercent,
+    minArrivalPercent,
     rangeSafetyFactor,
     stations,
     rankedStationsPerStop,
@@ -333,19 +334,39 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       ?.filter((r) => stationKey(r.station) !== prevKey);
 
     if (rankedStations && rankedStations.length > 0) {
-      const best = rankedStations[0];
       const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
+      // A ranked station can sit before or after the decision point: plan the stop
+      // at the station's own route km (corridor candidates carry it).
+      const stationRouteKm = (r: RankedStation) =>
+        (r.station as StationWithRouteInfo).nearestRouteKm ?? dp.distanceKm;
+      const arrivalAt = (r: RankedStation) =>
+        currentBattery
+        - ((stationRouteKm(r) - lastStopKm + getStationDetourKm(r.station, dp)) / effectiveMaxRange) * 100;
+      // The next point the car must reach from this stop: the next decision point
+      // with stations, else the destination.
+      const nextTargetKm = decisionPoints
+        .slice(dpIdx + 1)
+        .find((next) => next.candidates.length > 0)?.distanceKm ?? totalRouteKm;
+      const keepsNextLegAboveMin = (r: RankedStation) => {
+        const departure = dp.isPrecautionary
+          ? Math.max(arrivalAt(r), chargeTargetPercent)
+          : chargeTargetPercent;
+        return departure - ((nextTargetKm - stationRouteKm(r)) / effectiveMaxRange) * 100 >= minArrivalPercent;
+      };
+      // Highest-ranked station that keeps both legs above minArrival, else the
+      // highest-ranked one reachable above minArrival, else the top-ranked one.
+      const best = rankedStations.find((r) => arrivalAt(r) >= minArrivalPercent && keepsNextLegAboveMin(r))
+        ?? rankedStations.find((r) => arrivalAt(r) >= minArrivalPercent)
+        ?? rankedStations[0];
+      const stopKm = stationRouteKm(best);
       // ADR-0006: drop far-detour alternatives, return all within budget;
       // applyBackupPressure (called post-planning) trims to per-stop nMax.
       const alternatives = rankedStations
-        .slice(1)
+        .filter((r) => r !== best)
         .filter((r) => r.detourDriveTimeSec <= ALTERNATIVE_DETOUR_BUDGET_SEC);
 
       // Account for detour: station may be off-route, add round-trip distance
-      const detourKm = getStationDetourKm(best.station, dp);
-      const totalDrivenKm = routeDistanceKm + detourKm;
-      const batteryUsedPercent = (totalDrivenKm / effectiveMaxRange) * 100;
-      const arrivalBattery = Math.max(0, currentBattery - batteryUsedPercent);
+      const arrivalBattery = Math.max(0, arrivalAt(best));
       const departureBattery = dp.isPrecautionary
         ? Math.max(arrivalBattery, chargeTargetPercent)
         : chargeTargetPercent;
@@ -356,7 +377,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
 
       batterySegments.push({
         startKm: lastStopKm,
-        endKm: dp.distanceKm,
+        endKm: stopKm,
         startBatteryPercent: currentBattery,
         endBatteryPercent: arrivalBattery,
         label: `${lastStopName} → ${best.station.name}`,
@@ -365,7 +386,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       chargingStops.push({
         selected: best,
         alternatives,
-        distanceAlongRouteKm: dp.distanceKm,
+        distanceAlongRouteKm: stopKm,
         batteryPercentAtArrival: arrivalBattery,
         batteryPercentAfterCharge: departureBattery,
         ...(dp.isPrecautionary ? { isPrecautionary: true as const } : {}),
@@ -374,7 +395,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       });
 
       currentBattery = departureBattery;
-      lastStopKm = dp.distanceKm;
+      lastStopKm = stopKm;
     } else if (dp.candidates.length > 0) {
       // Fallback to haversine nearest station from candidates
       const nearest = findNearestStation(

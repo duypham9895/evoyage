@@ -376,20 +376,20 @@ describe('BUG p1-route-planner-soc-and-stop-correctness', () => {
     });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): stop km comes from dp.distanceKm, not the selected station's route km. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('stop distanceAlongRouteKm equals the selected station\'s own route km', () => {
+  it('stop distanceAlongRouteKm equals the selected station\'s own route km', () => {
     const stop = planWithShiftedRanking().chargingStops[0] as ChargingStopWithAlternatives;
     expect(stop.distanceAlongRouteKm).toBeCloseTo(stationKm, 0);
   });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): arrival SOC is computed for dp.distanceKm (150 km), not the shown station (110 km). Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('arrival SOC at a stop is computed for the selected station\'s position', () => {
+  it('arrival SOC at a stop is computed for the selected station\'s position', () => {
     const stop = planWithShiftedRanking().chargingStops[0] as ChargingStopWithAlternatives;
     // 80% - 110 km / 400 km = 52.5%  (buggy value: 80% - 150/400 = 42.5%)
     expect(stop.batteryPercentAtArrival).toBeCloseTo(52.5, 0);
   });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): when ranking picks an earlier station than the simulated decision point, the real next leg breaks minArrival while the plan shows it as OK. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('real SOC between the shown stations never drops below minArrival when ranking prefers an earlier candidate', () => {
+  it('real SOC between the shown stations never drops below minArrival when ranking prefers an earlier candidate', () => {
     // Window 1 (~km 180-245) holds stations at 185 and 240; the simulator charges at 240.
     // Window 2 (from 240) only holds a station at 480.
     const stations = [185, 240, 480].map((km) => onRouteStation(`S${km}`, km));
@@ -537,6 +537,39 @@ describe('planChargingStops stop correctness', () => {
       rankedStationsPerStop: new Map([[0, [ranked(a)]], [1, [ranked(a), ranked(b)]]]),
     });
     expect(plan.chargingStops.map(stopStationName)).toEqual(['A', 'B']);
+  });
+
+  it('ends each battery segment at the selected station\'s route km and starts the next leg there', () => {
+    const early = onRoute('Early', 210);
+    const late = onRoute('Late', 240);
+    const plan = planWithDps([dpAt(240, [late, early])], [early, late], TEST_VF, new Map([[0, [ranked(early), ranked(late)]]]));
+    const stop = plan.chargingStops[0] as ChargingStopWithAlternatives;
+    expect(stop.selected.station.name).toBe('Early');
+    expect(stop.distanceAlongRouteKm).toBeCloseTo(210, 0);
+    expect(plan.batterySegments).toHaveLength(plan.chargingStops.length + 1);
+    expect(plan.batterySegments[0].endKm).toBeCloseTo(210, 0);
+    expect(plan.batterySegments[1].startKm).toBeCloseTo(210, 0);
+    expect(stop.alternatives.map((a) => a.station.name)).toEqual(['Late']);
+  });
+
+  it('skips a top-ranked station whose next leg would drop below minArrival', () => {
+    // Early (km 185) is reachable: 80 - 46.25 = 33.75%.
+    // But Early → next decision point at km 480 is 295 km: 80 - 73.75 = 6.25% → too low.
+    const early = onRoute('Early', 185);
+    const late = onRoute('Late', 240);
+    const next = onRoute('Next', 480);
+    const plan = planChargingStops({
+      encodedPolyline: northRoutePolyline(600),
+      totalDistanceKm: 600,
+      vehicle: TEST_VF,
+      currentBatteryPercent: 80,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.8,
+      stations: [early, late, next],
+      precomputedDecisionPoints: [dpAt(240, [late, early]), dpAt(480, [next])],
+      rankedStationsPerStop: new Map([[0, [ranked(early), ranked(late)]], [1, [ranked(next)]]]),
+    });
+    expect(plan.chargingStops.map(stopStationName)).toEqual(['Late', 'Next']);
   });
 
   const emptyDpAt = (km: number) => ({ ...dpAt(km, []), useCorridorScoring: false });
