@@ -514,6 +514,10 @@ function HomeContent() {
 
   // Plan trip — POST to /api/route
   const handlePlanTrip = useCallback(async () => {
+    // Read and clear the notebook attribution first, so no early return below
+    // can leak it into the next unrelated plan.
+    const sourceNotebookEntryId = planningNotebookEntryIdRef.current;
+    planningNotebookEntryIdRef.current = null;
     if (!start || !end) {
       setError('Please enter start and end locations');
       return;
@@ -535,8 +539,6 @@ function HomeContent() {
     setBottomSheetSnap({ point: 'full', trigger: Date.now() });
     requestRouteResultScroll();
 
-    const sourceNotebookEntryId = planningNotebookEntryIdRef.current;
-    planningNotebookEntryIdRef.current = null;
     const controller = new AbortController();
     planAbortRef.current = controller;
 
@@ -680,6 +682,15 @@ function HomeContent() {
   // traffic/popularity/holiday may have changed since the original plan).
   const handleReplanFromNotebook = useCallback(
     async (trip: SavedTrip) => {
+      // Re-plan is the user's latest action: cancel any in-flight calc so the
+      // saved trip actually runs instead of being swallowed by the re-entry guard.
+      if (planAbortRef.current) {
+        planAbortRef.current.abort();
+        planAbortRef.current = null;
+        clearPlanTimers();
+        setIsPlanning(false);
+        setIsSlowPlanning(false);
+      }
       planningNotebookEntryIdRef.current = trip.id;
       setStart(trip.start);
       setEnd(trip.end);
@@ -713,7 +724,7 @@ function HomeContent() {
       trackTripReplannedFromNotebook(daysSinceSaved);
       setAutoPlanRequestId((id) => id + 1);
     },
-    [notebook],
+    [notebook, clearPlanTimers],
   );
 
   // Notebook vehicle label: read it from the saved trip, not from the current

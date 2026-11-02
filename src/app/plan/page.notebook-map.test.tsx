@@ -156,8 +156,8 @@ async function renderPlanPage() {
 }
 
 describe('plan page — notebook re-plan attribution', () => {
-  // BUG(p2-planner-ui-state-and-map): Re-plan pressed during an in-flight calc leaks planningNotebookEntryIdRef into the next unrelated plan, so that plan is never saved. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
-  it.fails('saves the next unrelated plan as a new notebook entry after a re-plan was swallowed by an in-flight calc', async () => {
+  // BUG(p2-planner-ui-state-and-map): Re-plan pressed during an in-flight calc leaks planningNotebookEntryIdRef into the next unrelated plan, so that plan is never saved. Fixed: Re-plan now cancels the in-flight calc and runs the saved trip. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
+  it('cancels the in-flight calc on Re-plan, runs the saved trip, and saves the next unrelated plan as a new entry', async () => {
     localStorage.setItem('ev-desktop-tab', 'planTrip');
     window.history.replaceState(
       null,
@@ -167,14 +167,17 @@ describe('plan page — notebook re-plan attribution', () => {
     seedNotebook([savedTrip({})]);
 
     let releaseFirstRoute: (() => void) | null = null;
-    let routeCalls = 0;
-    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    const routeCalls: Array<{ body: { start?: string }; signal?: AbortSignal }> = [];
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string, init?: RequestInit) => {
       if (url === '/api/route') {
-        routeCalls += 1;
-        if (routeCalls === 1) {
+        routeCalls.push({ body: JSON.parse(String(init?.body ?? '{}')), signal: init?.signal ?? undefined });
+        if (routeCalls.length === 1) {
           return new Promise<Response>((resolve) => {
             releaseFirstRoute = () => resolve(jsonResponse(routeResponse('A', 'B', 'trip-ab')));
           });
+        }
+        if (routeCalls.length === 2) {
+          return Promise.resolve(jsonResponse(routeResponse('SavedStart', 'SavedEnd', 'trip-saved')));
         }
         return Promise.resolve(jsonResponse(routeResponse('Hanoi', 'Da Nang', 'trip-hn-dn')));
       }
@@ -185,18 +188,22 @@ describe('plan page — notebook re-plan attribution', () => {
 
     // 1. Start a plan for A -> B and keep it in flight.
     fireEvent.click(await screen.findByRole('button', { name: 'Tính lộ trình' }));
-    await waitFor(() => expect(routeCalls).toBe(1));
+    await waitFor(() => expect(routeCalls).toHaveLength(1));
 
-    // 2. While it is in flight, open the notebook and press Re-plan.
+    // 2. While it is in flight, open the notebook and press Re-plan: the
+    // in-flight calc is aborted and the saved trip is planned instead.
     fireEvent.click(screen.getByRole('tab', { name: 'Đã lưu' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Mở lại' }));
-    // The auto-plan for the saved trip is swallowed by `if (planAbortRef.current) return;`.
-    await act(async () => { await Promise.resolve(); });
-    expect(routeCalls).toBe(1);
+    await waitFor(() => expect(routeCalls).toHaveLength(2));
+    expect(routeCalls[0]!.signal?.aborted).toBe(true);
+    expect(routeCalls[1]!.body.start).toBe('SavedStart');
+    await waitFor(() =>
+      expect((capturedLeafletProps.tripPlan as { tripId?: string } | null)?.tripId).toBe('trip-saved'),
+    );
 
-    // 3. The in-flight plan lands.
+    // 3. The aborted plan's late response must not overwrite the re-plan.
     await act(async () => { releaseFirstRoute!(); });
-    await waitFor(() => expect(capturedLeafletProps.tripPlan).not.toBeNull());
+    expect((capturedLeafletProps.tripPlan as { tripId?: string } | null)?.tripId).toBe('trip-saved');
 
     // 4. The user plans a brand-new, unrelated trip.
     const onPlanTrip = capturedEViProps.onPlanTrip as (params: unknown) => void;
@@ -208,13 +215,55 @@ describe('plan page — notebook re-plan attribution', () => {
         currentBattery: 70, minArrival: 15, rangeSafetyFactor: 0.8,
       });
     });
-    await waitFor(() => expect(routeCalls).toBe(2));
+    await waitFor(() => expect(routeCalls).toHaveLength(3));
     await waitFor(() =>
       expect((capturedLeafletProps.tripPlan as { tripId?: string } | null)?.tripId).toBe('trip-hn-dn'),
     );
 
-    // Correct behaviour: the new trip is saved as its own notebook entry.
-    // Bug: notebook.touch('saved-1') runs instead of save(), so no Hanoi entry exists.
+    // The new trip is saved as its own notebook entry, not attributed to saved-1.
+    await waitFor(() =>
+      expect(readNotebook().some((entry) => entry.start === 'Hanoi' && entry.end === 'Da Nang')).toBe(true),
+    );
+  }, 20000);
+
+  it('does not attribute the next plan to a notebook entry whose Re-plan failed validation', async () => {
+    localStorage.setItem('ev-desktop-tab', 'planTrip');
+    window.history.replaceState(null, '', '/plan');
+    // Catalogue trip whose vehicle lookup fails, with no vehicle selected:
+    // the Re-plan auto-plan stops at "Please select a vehicle".
+    seedNotebook([savedTrip({ vehicleId: 'vf8-catalogue', customVehicle: null, vehicleName: 'VinFast VF 8' })]);
+
+    let routeCalls = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/route') {
+        routeCalls += 1;
+        return Promise.resolve(jsonResponse(routeResponse('Hanoi', 'Da Nang', 'trip-hn-dn')));
+      }
+      if (url.startsWith('/api/vehicles?id=')) {
+        return Promise.resolve(new Response('boom', { status: 500 }));
+      }
+      return Promise.resolve(jsonResponse({ vehicles: [] }));
+    }));
+
+    await renderPlanPage();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Đã lưu' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mở lại' }));
+    await waitFor(() => expect(screen.getAllByText('Please select a vehicle').length).toBeGreaterThan(0));
+    expect(routeCalls).toBe(0);
+
+    const onPlanTrip = capturedEViProps.onPlanTrip as (params: unknown) => void;
+    act(() => {
+      onPlanTrip({
+        start: 'Hanoi', startLat: 21.0, startLng: 105.8,
+        end: 'Da Nang', endLat: 16.0, endLng: 108.2,
+        vehicleId: 'vf8-catalogue', vehicleName: 'VinFast VF 8',
+        vehicleData: { id: 'vf8-catalogue', brand: 'VinFast', model: 'VF 8', batteryCapacityKwh: 87.7, officialRangeKm: 471 },
+        currentBattery: 70, minArrival: 15, rangeSafetyFactor: 0.8,
+      });
+    });
+    await waitFor(() => expect(routeCalls).toBe(1));
+
     await waitFor(() =>
       expect(readNotebook().some((entry) => entry.start === 'Hanoi' && entry.end === 'Da Nang')).toBe(true),
     );
