@@ -11,7 +11,7 @@
  *
  * Run: npx tsx scripts/crawl-evpower-stations.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,7 +23,7 @@ import {
 } from '../src/lib/stations/parse-evpower';
 import { bboxDelta, isDuplicateCandidate } from '../src/lib/stations/dedup';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const LOAD_MAP_URL = 'https://evpower.vn/ajax/loadMap';
 const DEDUP_RADIUS_M = 50;

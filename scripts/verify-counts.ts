@@ -2,9 +2,9 @@
  * Recovery verification — print row counts for every table.
  * Run: npx tsx scripts/verify-counts.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   const counts = await Promise.all([

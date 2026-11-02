@@ -14,13 +14,13 @@
  *
  * Run: npx tsx scripts/promote-crowdsourced-stations.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { createHash } from 'node:crypto';
 
 import { clusterMissingStationFeedback, type FeedbackPoint } from '../src/lib/stations/cluster-feedback';
 import { bboxDelta, isDuplicateCandidate } from '../src/lib/stations/dedup';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const DEDUP_RADIUS_M = 50;
 

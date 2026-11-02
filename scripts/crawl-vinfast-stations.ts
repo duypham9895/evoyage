@@ -9,7 +9,7 @@
  *
  * Run: npx tsx scripts/crawl-vinfast-stations.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
@@ -28,7 +28,7 @@ import {
 } from '../src/lib/station/vinfast-upstream-error';
 import { VinfastApiError, type VinfastLocatorRaw } from '../src/lib/station/vinfast-api-client';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const BATCH_SIZE = 1000;
 const MAX_ATTEMPTS = 3;

@@ -3,9 +3,9 @@
  *
  * Run: npx tsx scripts/seed-vietnam-models.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const VIETNAM_MODELS = [
   // ── VinFast ──

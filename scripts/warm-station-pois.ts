@@ -12,12 +12,12 @@
  *
  * Run: npx tsx scripts/warm-station-pois.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 import { queryNearbyPois, OverpassError, type OsmPoi } from '../src/lib/station/overpass-client';
 import { categorizePoi, type AmenityCategory } from '../src/lib/station/categorize-poi';
 import { haversineMeters, walkingTimeMinutes } from '../src/lib/station/walking-distance';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const TOP_N = 50;
 const SEARCH_RADIUS_METERS = 500;

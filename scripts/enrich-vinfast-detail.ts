@@ -11,9 +11,9 @@
  *
  * Run: npx tsx scripts/enrich-vinfast-detail.ts
  */
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../src/lib/prisma';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 const VINFAST_API = 'https://api.service.finaldivision.com/stations/charging-stations';
 const LOCATOR_PAGE = 'https://vinfastauto.com/vn_en/tim-kiem-showroom-tram-sac';
