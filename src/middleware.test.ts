@@ -158,3 +158,15 @@ describe('middleware matcher (admin auth must not depend on a dot in the path)',
     expect(dispatch('/plan')?.headers.get('content-security-policy')).toContain("'nonce-");
   });
 });
+
+describe('CSP (issue #93: mapbox-gl 3.33 compiles WASM for RTL text / draco / meshopt)', () => {
+  it("allows 'wasm-unsafe-eval' in script-src", () => {
+    const csp = dispatch('/plan')?.headers.get('content-security-policy');
+    expect(csp).toMatch(/script-src [^;]*'wasm-unsafe-eval'/);
+  });
+
+  it("does not add the broader 'unsafe-eval'", () => {
+    const csp = dispatch('/plan')?.headers.get('content-security-policy');
+    expect(csp).not.toContain("'unsafe-eval'");
+  });
+});

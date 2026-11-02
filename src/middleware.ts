@@ -88,7 +88,10 @@ function buildCsp(nonce: string): string {
     "default-src 'self'",
     // Script: nonce-based. 'strict-dynamic' lets nonce'd scripts load further
     // scripts without each transitive load needing its own nonce.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'`,
+    // 'wasm-unsafe-eval' lets mapbox-gl ≥3.33 compile the WASM it loads for
+    // RTL text, draco, meshopt and building-gen — it permits WASM compilation
+    // only, not JS eval/new Function.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline' 'wasm-unsafe-eval'`,
     // 'unsafe-inline' is a fallback for older browsers that ignore nonce +
     // strict-dynamic; modern browsers ignore 'unsafe-inline' when a nonce is
     // present. Net effect: secure in modern browsers, functional everywhere.

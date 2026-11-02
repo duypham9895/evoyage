@@ -77,6 +77,9 @@ test.describe('CSP smoke — required security headers', () => {
     // Header keys are lowercased by Playwright's request API.
     expect(headers['content-security-policy'], 'CSP header missing').toBeDefined();
     expect(headers['content-security-policy']).toMatch(/script-src .*'nonce-[^']+'/);
+    // Issue #93: mapbox-gl 3.33 compiles WASM (RTL text, draco, meshopt) and
+    // needs 'wasm-unsafe-eval' in script-src, or that compile step is CSP-blocked.
+    expect(headers['content-security-policy']).toMatch(/script-src [^;]*'wasm-unsafe-eval'/);
     expect(headers['strict-transport-security']).toMatch(/max-age=\d+/);
     expect(headers['x-frame-options']).toBe('DENY');
     expect(headers['x-content-type-options']).toBe('nosniff');
@@ -85,6 +88,23 @@ test.describe('CSP smoke — required security headers', () => {
     expect(headers['content-security-policy']).toContain("object-src 'none'");
     expect(headers['content-security-policy']).toContain("form-action 'self'");
     expect(headers['content-security-policy']).toContain("base-uri 'self'");
+  });
+
+  test('/plan allows compiling WebAssembly (issue #93)', async ({ page }) => {
+    // Minimal valid WASM module (header + version, no sections). Instantiating
+    // it in-page is independent of the Mapbox token or any real .wasm asset —
+    // it only proves the CSP lets the browser compile WASM at all.
+    await page.goto('/plan');
+    const result = await page.evaluate(async () => {
+      try {
+        const bytes = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+        await WebAssembly.instantiate(bytes);
+        return { ok: true, error: null };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    });
+    expect(result.ok, `WebAssembly.instantiate failed: ${result.error}`).toBe(true);
   });
 
   test('admin routes are noindex even on auth-failure responses', async ({ request }) => {
