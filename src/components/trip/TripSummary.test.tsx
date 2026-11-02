@@ -450,6 +450,32 @@ describe('TripSummary — rank badge on primary stop', () => {
   });
 });
 
+describe('TripSummary — stop status label', () => {
+  it('shows the out-of-service label for a stop whose chargingStatus is OUTOFSERVICE', () => {
+    const station = { ...makeStation('Maintenance Station'), chargingStatus: 'OUTOFSERVICE' };
+
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({
+          chargingStops: [
+            {
+              selected: makeRankedStation(station),
+              alternatives: [],
+              distanceAlongRouteKm: 80,
+              batteryPercentAtArrival: 20,
+              batteryPercentAfterCharge: 80,
+            },
+          ],
+          totalChargingTimeMin: 18,
+        })}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
+  });
+});
+
 describe('TripSummary — precautionary stops', () => {
   it('renders precautionary stops with suggested treatment and top-up duration copy', () => {
     const station = makeStation('Precautionary Midpoint');
