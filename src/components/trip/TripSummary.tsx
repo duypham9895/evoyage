@@ -15,7 +15,8 @@ import {
   trackPrecautionaryStopSuggested,
   trackPrecautionaryStopUndone,
 } from '@/lib/analytics';
-import { getStopStation } from '@/types';
+import { getStopStation, DEFAULT_MIN_ARRIVAL } from '@/types';
+import { getBatteryLevel, type BatteryLevel } from '@/lib/battery-level';
 import type { TripPlan, RankedStation, ChargingStationData } from '@/types';
 import { calculateSavings, formatVnd } from '@/lib/trip/cost';
 import { computeTripCost } from '@/lib/trip-cost';
@@ -56,21 +57,23 @@ interface TripSummaryProps {
    *  departure time. Receives an ISO 8601 string. */
   readonly onSelectDepartureTime?: (iso: string) => void;
   readonly precautionaryStopInteractions?: PrecautionaryStopInteractions;
+  /** User's minimum arrival charge — anchors battery colours (danger/warn/safe). */
+  readonly minArrivalPercent?: number;
 }
 
 // ── Battery color helpers ──
 
-function getBatteryColor(percent: number): string {
-  if (percent > 40) return 'text-[var(--color-safe)]';
-  if (percent > 20) return 'text-[var(--color-warn)]';
-  return 'text-[var(--color-danger)]';
-}
+const BATTERY_TEXT_CLASS: Record<BatteryLevel, string> = {
+  safe: 'text-[var(--color-safe)]',
+  warn: 'text-[var(--color-warn)]',
+  danger: 'text-[var(--color-danger)]',
+};
 
-function getGaugeGradient(arrivalPercent: number): string {
-  if (arrivalPercent > 40) return 'from-[var(--color-safe)]/70 to-[var(--color-safe)]';
-  if (arrivalPercent > 20) return 'from-[var(--color-warn)] to-[var(--color-safe)]';
-  return 'from-[var(--color-danger)] to-[var(--color-safe)]';
-}
+const GAUGE_GRADIENT_CLASS: Record<BatteryLevel, string> = {
+  safe: 'from-[var(--color-safe)]/70 to-[var(--color-safe)]',
+  warn: 'from-[var(--color-warn)] to-[var(--color-safe)]',
+  danger: 'from-[var(--color-danger)] to-[var(--color-safe)]',
+};
 
 // ── Status helpers ──
 
@@ -111,14 +114,17 @@ function BatteryGauge({
   arrivalPercent,
   departurePercent,
   chargeTimeMin,
+  minArrivalPercent,
 }: {
   readonly arrivalPercent: number;
   readonly departurePercent: number;
   readonly chargeTimeMin: number;
+  readonly minArrivalPercent: number;
 }) {
   const arrival = Math.round(arrivalPercent);
   const departure = Math.round(departurePercent);
-  const gradient = getGaugeGradient(arrival);
+  const level = getBatteryLevel(arrival, minArrivalPercent);
+  const gradient = GAUGE_GRADIENT_CLASS[level];
 
   return (
     <div className="flex items-center gap-3 mt-2">
@@ -142,7 +148,7 @@ function BatteryGauge({
       </div>
       {/* Battery text */}
       <div className="flex items-center gap-1.5 text-sm font-bold font-[family-name:var(--font-mono)] shrink-0">
-        <span className={getBatteryColor(arrival)}>{arrival}%</span>
+        <span className={BATTERY_TEXT_CLASS[level]}>{arrival}%</span>
         <span className="text-[var(--color-muted)] text-xs font-normal">→</span>
         <span className="text-[var(--color-safe)]">{departure}%</span>
       </div>
@@ -279,8 +285,8 @@ function RouteBriefing({
 
 /**
  * Hero pill showing electricity-vs-gasoline savings as the emotional payoff
- * of choosing EV. Renders above the trip overview card so the savings number
- * is the first thing a driver sees in the summary.
+ * of choosing EV. Renders just below the trip overview card, which answers
+ * "will I make it?" first.
  *
  * When EV is more expensive than gasoline (rare, possible with stale fuel
  * pricing), the copy uses neutral muted color — we don't shame the driver.
@@ -438,9 +444,11 @@ function formatEta(totalMin: number, locale: 'vi' | 'en', baseIso?: string): str
 function TripOverviewCard({
   tripPlan,
   onSelectDepartureTime,
+  minArrivalPercent,
 }: {
   readonly tripPlan: TripPlan;
   readonly onSelectDepartureTime?: (iso: string) => void;
+  readonly minArrivalPercent: number;
 }) {
   const { t, locale } = useLocale();
 
@@ -448,9 +456,12 @@ function TripOverviewCard({
   const endCity = extractCityName(tripPlan.endAddress);
 
   const totalTimeMin = tripPlan.totalDurationMin + tripPlan.totalChargingTimeMin;
-  const totalTimeStr = formatHM(totalTimeMin);
   const driveStr = formatHM(tripPlan.totalDurationMin);
   const chargeStr = formatHM(tripPlan.totalChargingTimeMin);
+  // totalTimeMin already includes charging — say so whenever there is a stop.
+  const totalTimeStr = tripPlan.chargingStops.length > 0
+    ? t('trip_time_incl_charging' as Parameters<typeof t>[0], { time: formatHM(totalTimeMin), charge: chargeStr })
+    : formatHM(totalTimeMin);
 
   const eta = formatEta(totalTimeMin, locale, tripPlan.departureAtIso);
   const hasPickedDeparture = tripPlan.departureAtIso != null;
@@ -551,7 +562,7 @@ function TripOverviewCard({
         <h3 className="text-base font-semibold font-[family-name:var(--font-heading)] text-[var(--color-foreground)]">
           {startCity} → {endCity}
         </h3>
-        <p className="text-base font-bold text-[var(--color-accent)]">
+        <p className={`text-base font-bold ${BATTERY_TEXT_CLASS[getBatteryLevel(arrivalBattery, minArrivalPercent)]}`}>
           {t('trip_arrival_battery_hero', { percent: String(arrivalBattery) })}
         </p>
         <p className="text-sm text-[var(--color-muted)]">
@@ -571,6 +582,7 @@ function TripOverviewCard({
           endCity={endCity}
           arrivalBatteryPercent={arrivalBattery}
           totalDistanceKm={tripPlan.totalDistanceKm}
+          minArrivalPercent={minArrivalPercent}
           stops={timelineStops}
           swipeHint={t('trip_timeline_swipe_hint')}
           ariaStopLabel={(n, name, arrive, depart, mins) =>
@@ -666,7 +678,7 @@ function TripOverviewCard({
 
 // ── Main Component ──
 
-export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime, precautionaryStopInteractions }: TripSummaryProps) {
+export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPerKm, vehicleBrand, vehicleUsableBatteryKwh, vehicleOfficialRangeKm, onSelectAlternativeStation, onBackToChat, onSelectDepartureTime, precautionaryStopInteractions, minArrivalPercent = DEFAULT_MIN_ARRIVAL }: TripSummaryProps) {
   const { t, tBi, locale } = useLocale();
   const tripPlanResetKey = tripPlan
     ? (tripPlan.tripId ?? `${tripPlan.startAddress}|${tripPlan.endAddress}|${tripPlan.polyline}`)
@@ -824,7 +836,10 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         )}
       </div>
 
-      {/* Cost hero — emotional payoff of choosing EV; first thing user sees */}
+      {/* Overview first — arrival battery + ETA answer "will I make it?" */}
+      <TripOverviewCard tripPlan={displayedTripPlan} onSelectDepartureTime={onSelectDepartureTime} minArrivalPercent={minArrivalPercent} />
+
+      {/* Cost hero — emotional payoff of choosing EV */}
       {vehicleEfficiencyWhPerKm != null && vehicleEfficiencyWhPerKm > 0 && (
         <TripCostSection
           distanceKm={tripPlan.totalDistanceKm}
@@ -841,8 +856,6 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         narrative={narrativeState.narrative}
         isLoading={narrativeState.isLoading}
       />
-
-      <TripOverviewCard tripPlan={displayedTripPlan} onSelectDepartureTime={onSelectDepartureTime} />
 
       {/* No charging needed pill — only when literally no charging stops AND no warnings */}
       {displayedTripPlan.chargingStops.length === 0 && displayedTripPlan.warnings.length === 0 && (
@@ -981,6 +994,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       arrivalPercent={arrivalBattery}
                       departurePercent={departureBattery}
                       chargeTimeMin={chargeTime}
+                      minArrivalPercent={minArrivalPercent}
                     />
                     {isPrecautionary && (
                       <div className="mt-1 text-[11px] text-[var(--color-muted)] font-[family-name:var(--font-mono)]">

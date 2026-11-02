@@ -64,6 +64,7 @@
   "trip_duration_with_eta": "~{{time}} · arrive at {{eta}} if leaving now",
   "trip_duration_with_eta_picked": "~{{time}} · arrive at {{eta}}",
   "trip_duration_only": "~{{time}}",
+  "trip_time_incl_charging": "{{time}} incl. {{charge}} charging",
   "trip_whatif_current": "Selected",
   "trip_whatif_plus_2h": "Wait 2 hours",
   "trip_whatif_tomorrow_morning": "Tomorrow 6:30 AM",

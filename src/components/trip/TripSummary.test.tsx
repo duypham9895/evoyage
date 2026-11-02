@@ -21,6 +21,7 @@ const translations: Record<string, string> = {
   trip_arrival_battery_hero: '{{percent}}% battery when you arrive',
   trip_duration_with_eta: '~{{time}} · arrive at {{eta}} if leaving now',
   trip_duration_only: '~{{time}}',
+  trip_time_incl_charging: '{{time}} incl. {{charge}} charging',
   trip_totals_compact: '{{distance}} km · {{stops}} stops',
   trip_backup_summary_one: 'Includes 1 backup station',
   trip_backup_summary_many: 'Includes {{count}} backup stations',
@@ -679,5 +680,51 @@ describe('TripSummary — precautionary stops', () => {
     expect(
       screen.getByLabelText('Suggested stop 1, Precautionary Midpoint, 18 min top-up, can be skipped'),
     ).toBeInTheDocument();
+  });
+});
+
+describe('TripSummary — results hero (will I make it)', () => {
+  it('shows the arrival battery card before the cost section and the route briefing', () => {
+    render(
+      <TripSummary tripPlan={makeTripPlan()} isLoading={false} vehicleEfficiencyWhPerKm={150} />,
+    );
+    const hero = screen.getByText('50% battery when you arrive');
+    const cost = screen.getByTestId('trip-cost-section');
+    expect(hero.compareDocumentPosition(cost) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('colours the arrival battery by the minimum arrival, not always green', () => {
+    const { rerender } = render(
+      <TripSummary tripPlan={makeTripPlan({ arrivalBatteryPercent: 18 })} isLoading={false} minArrivalPercent={15} />,
+    );
+    expect(screen.getByText('18% battery when you arrive')).toHaveClass('text-[var(--color-warn)]');
+
+    rerender(
+      <TripSummary tripPlan={makeTripPlan({ arrivalBatteryPercent: 18 })} isLoading={false} minArrivalPercent={20} />,
+    );
+    expect(screen.getByText('18% battery when you arrive')).toHaveClass('text-[var(--color-danger)]');
+
+    rerender(
+      <TripSummary tripPlan={makeTripPlan({ arrivalBatteryPercent: 50 })} isLoading={false} minArrivalPercent={15} />,
+    );
+    expect(screen.getByText('50% battery when you arrive')).toHaveClass('text-[var(--color-safe)]');
+  });
+
+  it('says the total time includes charging when there is a charging stop', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan({
+          chargingStops: [makeChargingStop('Stop A', 60, 30, 80, 40)],
+          totalChargingTimeMin: 40,
+        })}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByText(/~2h10m incl\. 40m charging/)).toBeInTheDocument();
+  });
+
+  it('does not mention charging in the total time when there are no stops', () => {
+    render(<TripSummary tripPlan={makeTripPlan()} isLoading={false} />);
+    expect(screen.queryByText(/incl\./)).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,8 @@
 'use client';
 
+import { getBatteryLevel, type BatteryLevel } from '@/lib/battery-level';
+import { DEFAULT_MIN_ARRIVAL } from '@/types';
+
 /**
  * Visual milestone strip rendered inside the Trip Overview card.
  *
@@ -8,7 +11,7 @@
  * - One column per node: start city → each charging stop → end city
  * - Per-node battery state, distance from previous, charge time at stop
  * - 3+ stops (5+ nodes) → horizontal scroll with swipe hint
- * - Color logic: endpoints accent; stop dots warn if arrival<30, else safe
+ * - Color logic: endpoints accent; stop dots by getBatteryLevel(arrival, minArrivalPercent)
  *
  * No icons by project convention (DESIGN.md "Less Icons, More Humanity").
  */
@@ -27,6 +30,8 @@ export interface RouteTimelineProps {
   readonly endCity: string;
   readonly arrivalBatteryPercent: number;
   readonly totalDistanceKm: number;
+  /** User's minimum arrival charge — anchors the stop battery colours. */
+  readonly minArrivalPercent?: number;
   readonly stops: readonly RouteTimelineStop[];
   readonly swipeHint: string;
   readonly ariaStopLabel: (
@@ -40,17 +45,17 @@ export interface RouteTimelineProps {
 
 const NODES_THAT_NEED_SCROLL = 5;
 
-function dotClassForStop(arrivalPercent: number): string {
-  return arrivalPercent < 30
-    ? 'bg-[var(--color-warn)]'
-    : 'bg-[var(--color-safe)]';
-}
+const STOP_DOT_CLASS: Record<BatteryLevel, string> = {
+  danger: 'bg-[var(--color-danger)]',
+  warn: 'bg-[var(--color-warn)]',
+  safe: 'bg-[var(--color-safe)]',
+};
 
-function textClassForStop(arrivalPercent: number): string {
-  return arrivalPercent < 30
-    ? 'text-[var(--color-warn)]'
-    : 'text-[var(--color-safe)]';
-}
+const STOP_TEXT_CLASS: Record<BatteryLevel, string> = {
+  danger: 'text-[var(--color-danger)]',
+  warn: 'text-[var(--color-warn)]',
+  safe: 'text-[var(--color-safe)]',
+};
 
 export default function RouteTimeline({
   startCity,
@@ -58,6 +63,7 @@ export default function RouteTimeline({
   endCity,
   arrivalBatteryPercent,
   totalDistanceKm,
+  minArrivalPercent = DEFAULT_MIN_ARRIVAL,
   stops,
   swipeHint,
   ariaStopLabel,
@@ -99,8 +105,9 @@ export default function RouteTimeline({
 
           {/* Stop milestones */}
           {stops.map((stop, i) => {
-            const dotCls = dotClassForStop(stop.arrivalPercent);
-            const textCls = textClassForStop(stop.arrivalPercent);
+            const level = getBatteryLevel(stop.arrivalPercent, minArrivalPercent);
+            const dotCls = STOP_DOT_CLASS[level];
+            const textCls = STOP_TEXT_CLASS[level];
             return (
               <li
                 key={i}
