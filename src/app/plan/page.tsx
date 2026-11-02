@@ -1174,11 +1174,7 @@ function HomeContent() {
           <DesktopTabBar activeTab={desktopSidebarTab} onTabChange={handleDesktopTabChange} />
 
           {/* Sidebar content — 150ms fade-in transition on tab switch */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-            {/* eVi stays mounted (hidden) on other tabs so the chat survives tab switches, as on mobile */}
-            <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className={`${desktopSidebarTab === 'evi' ? 'flex' : 'hidden'} flex-col h-full -m-4`}>
-              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
-            </div>
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
             {desktopSidebarTab === 'notebook' ? (
               <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-notebook" aria-labelledby="desktop-tab-notebook">
                 <TripNotebook
@@ -1258,6 +1254,11 @@ function HomeContent() {
                 )}
               </div>
             ) : null}
+            {/* eVi stays mounted (hidden) on other tabs so the chat survives tab switches, as on mobile.
+                Rendered after the active panel so the hidden chat never comes first in DOM order. */}
+            <div role="tabpanel" id="desktop-tabpanel-evi" aria-labelledby="desktop-tab-evi" className={`${desktopSidebarTab === 'evi' ? 'flex' : 'hidden'} flex-col h-full -m-4`}>
+              <EVi onTripParsed={handleTripParsed} onPlanTrip={handleEViPlanTrip} onFindNearbyStations={handleFindNearbyStations} isPlanning={isPlanning} />
+            </div>
           </div>
         </aside>
 
