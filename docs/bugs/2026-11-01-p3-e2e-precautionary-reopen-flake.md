@@ -2,6 +2,8 @@
 
 Group: `p3-e2e-precautionary-reopen-flake` · Date: 2026-11-01 · Checked at `64db6f92e0792aa4643b2ba76958ff0843b80567`
 
+> **Status 2026-11-02:** Finding 2 and Finding 3 are fixed on this branch. `mockAPIs` now returns the single fixture vehicle for `?id=` (404 if unknown), and the regression test is a plain `it`. The spec's Open locator is now exact (`/^(Open|Mở lại)$/`). The spec passed once serially on Desktop Chrome after the fix; the parallel repro was not re-run. Finding 1 (hang after reload under parallel workers) stays open: the stalling layer is not established, and the CI retry policy and the `?id=` fetch timeout are owner decisions.
+
 ## Summary
 
 The only E2E test for "dismissed precautionary stop survives a saved-trip reopen" does not do its job.

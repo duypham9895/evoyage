@@ -43,8 +43,8 @@ describe('E2E vehicles mock (e2e/helpers/app.ts)', () => {
     expect(Array.isArray(body.vehicles)).toBe(true);
   });
 
-  // BUG(p3-e2e-precautionary-reopen-flake): the vehicles mock answers ?id= lookups with the list shape, unlike the real API. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p3-e2e-precautionary-reopen-flake.md
-  it.fails('returns a single vehicle object for an ?id= lookup, like GET /api/vehicles?id=', async () => {
+  // BUG(p3-e2e-precautionary-reopen-flake): the vehicles mock answers ?id= lookups with the list shape, unlike the real API. See docs/bugs/2026-11-01-p3-e2e-precautionary-reopen-flake.md
+  it('returns a single vehicle object for an ?id= lookup, like GET /api/vehicles?id=', async () => {
     const body = (await fulfilledBodyFor('http://localhost:3001/api/vehicles?id=vf8-plus')) as Record<string, unknown>;
     expect(body).not.toHaveProperty('vehicles');
     expect(body).toMatchObject({ id: 'vf8-plus', brand: 'VinFast', model: 'VF 8' });
