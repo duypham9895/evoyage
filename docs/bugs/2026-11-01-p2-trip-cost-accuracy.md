@@ -2,6 +2,12 @@
 
 Date: 2026-11-01 · Code refs at `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Branch `bug/p2-trip-cost-accuracy`
 
+> **Status 2026-11-02:**
+> - **Fixed, finding 1 (fix shape B):** `computeTripCost` now takes `rangeStandard` and `batteryCapacityKwh`. For an `NEDC` vehicle with a known battery and range, it derives battery ÷ range × 1.2 and ignores the stored (synthesised) `efficiencyWhPerKm`. A non-NEDC or unknown-standard vehicle still uses a stored efficiency as before. VF 8 Eco over 300 km: 55.86 → 62.68 kWh (about +12% on home and V-GREEN ₫). The page's inline battery/range efficiency fallback is removed at both call sites.
+> - **Fixed, finding 2:** both TripSummary call sites read brand, gross battery and range from the active vehicle (selected or custom). TripSummary renders the cost section when efficiency is known, or when a battery figure and range are known. The `page.trip-cost.test.tsx` regression was rewritten around the new contract (custom battery and range reach TripSummary, efficiency stays null), because the old assertion required the synthesised efficiency that finding 1 removes.
+> - **Still open:** fix shape A (stop synthesising efficiency in `scripts/seed-vietnam-models.ts` and null the prod values) is not done. It needs a prod data write, and is no longer needed for correct numbers once B is in. Open question 4 (custom-vehicle repro in a real browser) has not been run. The "related low-severity items" below stay out of scope.
+> - Defaults taken (reversible, owner may override): (1) fix shape B, code only, no DB change; (2) usable battery first, gross battery as fallback (custom vehicles only have gross); (3) a custom vehicle typed in as brand "VinFast" (case-insensitive, trimmed, exact match) gets the free V-GREEN flag, same as routing already trusts the brand; (4) a custom vehicle has no range standard, so it takes battery ÷ range × 1.2.
+
 ## Summary
 
 The trip cost hero ("Save X vs gasoline") and its breakdown are wrong or missing.
