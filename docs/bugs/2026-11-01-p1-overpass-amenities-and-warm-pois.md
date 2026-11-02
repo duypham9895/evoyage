@@ -2,6 +2,8 @@
 
 Date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Branch: `bug/p1-overpass-amenities-and-warm-pois`
 
+> **Status 2026-11-02:** Fixed on this branch: a fetch `TimeoutError` is now classified as `timeout` (Finding 1, part); the warmer now writes the route's v2 envelope via a shared `src/lib/station/station-pois.ts` (walk/drive decoration, Stage 1/2 fetch, `envelope`/`readCachedRows`), and its failure log includes the HTTP status and message (Finding 2, parts). Still open, tests left as `it.fails`: the Stage 1 negative-cache row and its TTL (owner decision on TTL and on telling "unavailable" from "nothing nearby"), and retry/backoff or mirror fallback for 502s (owner decision on mirror and usage policy). Also not done: the lower interactive timeout, the warmer run deadline and non-zero exit, and the workflow `timeout-minutes`/`TOP_N` review.
+
 ## Summary
 
 When a driver opens a station's amenities, eVoyage calls the public Overpass server live. That server is often slow or "at capacity", so the panel waits 7-37 s and then shows nothing. The failure is not cached, so the next view waits again. The daily job that should pre-fill the cache has been cancelled 14 of the last 15 days. Even on the day it succeeded, it wrote rows in a format the amenities route ignores.

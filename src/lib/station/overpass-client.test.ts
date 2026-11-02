@@ -172,8 +172,8 @@ describe('queryNearbyPois', () => {
     expect(ua).toContain('eVoyage');
   });
 
-  // BUG(p1-overpass-amenities-and-warm-pois): AbortSignal.timeout rejects with name 'TimeoutError', but the client only checks 'AbortError', so timeouts are reported as network_error. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
-  it.fails('throws OverpassError(timeout) when the request times out (AbortSignal.timeout -> TimeoutError)', async () => {
+  // BUG(p1-overpass-amenities-and-warm-pois): AbortSignal.timeout rejects with name 'TimeoutError', but the client only checks 'AbortError', so timeouts are reported as network_error. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it('throws OverpassError(timeout) when the request times out (AbortSignal.timeout -> TimeoutError)', async () => {
     // This is exactly what Node's fetch rejects with when AbortSignal.timeout fires.
     fetchSpy.mockRejectedValueOnce(
       new DOMException('The operation was aborted due to timeout', 'TimeoutError'),

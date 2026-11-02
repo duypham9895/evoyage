@@ -48,8 +48,8 @@ afterEach(() => {
 });
 
 describe('scripts/warm-station-pois.ts', () => {
-  // BUG(p1-overpass-amenities-and-warm-pois): the warmer writes a bare v1 array that the amenities route treats as a cache miss, so warmed rows are useless and overwrite valid v2 rows. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
-  it.fails('writes poisJson in the route\'s schema-versioned envelope ({ schemaVersion: 2, rows[].tier })', async () => {
+  // BUG(p1-overpass-amenities-and-warm-pois): the warmer writes a bare v1 array that the amenities route treats as a cache miss, so warmed rows are useless and overwrite valid v2 rows. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it('writes poisJson in the route\'s schema-versioned envelope ({ schemaVersion: 2, rows[].tier })', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     mockQuery.mockResolvedValueOnce([
       { id: 1, lat: 11.3888, lng: 107.5426, name: 'Cafe', amenity: 'cafe', tags: {} },
@@ -66,8 +66,8 @@ describe('scripts/warm-station-pois.ts', () => {
     expect(parsed.rows[0].tier).toBe('walk');
   });
 
-  // BUG(p1-overpass-amenities-and-warm-pois): failures log only err.kind, so the CI log cannot show the HTTP status (e.g. 502 "at capacity"). Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
-  it.fails('logs the Overpass HTTP status code when a station fails', async () => {
+  // BUG(p1-overpass-amenities-and-warm-pois): failures log only err.kind, so the CI log cannot show the HTTP status (e.g. 502 "at capacity"). See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
+  it('logs the Overpass HTTP status code when a station fails', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     mockQuery.mockRejectedValueOnce(

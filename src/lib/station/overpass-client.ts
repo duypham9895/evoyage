@@ -96,7 +96,8 @@ export async function queryNearbyPois(
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
+    // AbortSignal.timeout rejects with 'TimeoutError'; keep 'AbortError' too.
+    if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
       throw new OverpassError('timeout', `Request exceeded ${REQUEST_TIMEOUT_MS}ms`);
     }
     throw new OverpassError(
