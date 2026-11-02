@@ -377,7 +377,7 @@
   "feedback_upload_uploading": "Đang tải lên…",
   "feedback_upload_remove": "Xoá",
   "feedback_upload_preview_alt": "Xem trước ảnh đính kèm",
-  "feedback_upload_hint": "JPEG, PNG, WEBP hoặc HEIC. Tối đa 5 MB.",
+  "feedback_upload_hint": "JPEG, PNG hoặc WEBP. Tối đa 5 MB.",
   "feedback_upload_too_large": "Ảnh quá lớn (tối đa 5 MB).",
   "feedback_upload_invalid_type": "Tệp này không phải định dạng ảnh được hỗ trợ.",
   "feedback_upload_rate_limited": "Quá nhiều lượt tải lên. Vui lòng thử lại sau.",
@@ -559,7 +559,7 @@
   "privacy_processor_supabase_body": "Góp ý, báo cáo tình trạng trạm sạc, liên kết chia sẻ và lộ trình lưu tạm được lưu trong cơ sở dữ liệu Supabase của eVoyage tại Singapore. Góp ý và báo cáo trạm sạc còn lưu địa chỉ IP của bạn ở dạng băm có khóa (HMAC), không lưu IP gốc. Bản băm này chỉ không thể đảo ngược ra IP khi khóa băm bí mật của eVoyage được cấu hình; nếu thiếu khóa, hệ thống dùng bản băm thường và bản băm đó có thể đảo ngược. Ai có liên kết chia sẻ cũng xem được các địa điểm của chuyến đi đó.",
 
   "privacy_processor_vercel_name": "Vercel",
-  "privacy_processor_vercel_body": "Mọi thứ bạn gửi lên ứng dụng — kể cả vị trí, địa chỉ chuyến đi, góp ý và bản ghi âm — đều được xử lý trên máy chủ của Vercel. Khu vực máy chủ hiện chưa được thiết lập trong mã nguồn. Ảnh bạn đính kèm khi góp ý cũng được lưu trên Vercel: ai có đường dẫn ảnh đều xem được, và ảnh có thể còn giữ dữ liệu vị trí của máy ảnh, nên bạn hãy xoá phần đó trước khi tải lên.",
+  "privacy_processor_vercel_body": "Mọi thứ bạn gửi lên ứng dụng — kể cả vị trí, địa chỉ chuyến đi, góp ý và bản ghi âm — đều được xử lý trên máy chủ của Vercel. Khu vực máy chủ hiện chưa được thiết lập trong mã nguồn. Ảnh bạn đính kèm khi góp ý cũng được lưu trên Vercel: ai có đường dẫn ảnh đều xem được. Trước khi lưu, eVoyage xoá các thông tin ẩn trong ảnh, kể cả dữ liệu vị trí của máy ảnh.",
 
   "privacy_processor_resend_name": "Resend",
   "privacy_processor_resend_body": "Mỗi góp ý đều được gửi đến email của Duy qua Resend, kèm thông tin liên hệ của bạn và địa chỉ trang bạn đang xem. Khu vực xử lý của Resend chưa được thiết lập trong mã nguồn.",

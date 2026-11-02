@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import sharp from 'sharp';
 import { __resetRateLimitForTests } from '@/lib/rate-limit';
 
 // Mock @vercel/blob BEFORE the route picks it up.
@@ -10,12 +11,27 @@ vi.mock('@vercel/blob', () => ({
 
 import { POST } from './route';
 
-// Minimal valid magic-byte payloads for each accepted type.
-const JPEG_MAGIC = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-const PNG_MAGIC = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00]);
-const WEBP_MAGIC = new Uint8Array([
-  0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50,
-]);
+// The route re-encodes images to strip metadata, so the payloads must be
+// real, decodable images. Each carries EXIF with a camera make and GPS
+// coordinates, like a phone photo would.
+type ImageFormat = 'jpeg' | 'png' | 'webp';
+function makeImageWithGps(format: ImageFormat): Promise<Buffer> {
+  return sharp({ create: { width: 4, height: 4, channels: 3, background: '#ff0000' } })
+    [format]()
+    .withExif({
+      IFD0: { Make: 'TestCam' },
+      IFD3: { GPSLatitudeRef: 'N', GPSLatitude: '10/1 46/1 0/1', GPSLongitudeRef: 'E', GPSLongitude: '106/1 42/1 0/1' },
+    })
+    .toBuffer();
+}
+let JPEG_MAGIC: Uint8Array;
+let PNG_MAGIC: Uint8Array;
+let WEBP_MAGIC: Uint8Array;
+beforeAll(async () => {
+  JPEG_MAGIC = new Uint8Array(await makeImageWithGps('jpeg'));
+  PNG_MAGIC = new Uint8Array(await makeImageWithGps('png'));
+  WEBP_MAGIC = new Uint8Array(await makeImageWithGps('webp'));
+});
 const HEIC_MAGIC = new Uint8Array([
   0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63,
 ]);
@@ -119,11 +135,37 @@ describe('POST /api/feedback/upload', () => {
     expect(data.contentType).toBe('image/webp');
   });
 
-  it('accepts HEIC via magic bytes', async () => {
+  it('rejects HEIC with 415 — it cannot be decoded to strip its metadata', async () => {
     const res = await POST(makeFormRequest(file(HEIC_MAGIC, 'image/heic')));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(415);
     const data = await res.json();
-    expect(data.contentType).toBe('image/heic');
+    expect(data.error).toBe('invalid_type');
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 415 when bytes have an image signature but cannot be decoded', async () => {
+    const truncated = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    const res = await POST(makeFormRequest(file(truncated, 'image/jpeg')));
+    expect(res.status).toBe(415);
+    expect(putMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['jpeg', 'image/jpeg'],
+    ['png', 'image/png'],
+    ['webp', 'image/webp'],
+  ] as const)('strips EXIF (incl. GPS) from %s before storing, keeping the format', async (format, mime) => {
+    const input = await makeImageWithGps(format);
+    expect((await sharp(input).metadata()).exif, 'fixture must carry EXIF').toBeDefined();
+
+    const res = await POST(makeFormRequest(file(new Uint8Array(input), mime)));
+    expect(res.status).toBe(200);
+    const [, stored, opts] = putMock.mock.calls[0]!;
+    const meta = await sharp(stored as Buffer).metadata();
+    expect(meta.format).toBe(format);
+    expect(meta.exif).toBeUndefined();
+    expect(Buffer.from(stored as Buffer).includes('TestCam')).toBe(false);
+    expect(opts).toMatchObject({ contentType: mime });
   });
 
   it('returns 429 after the 5-per-hour rate limit', async () => {

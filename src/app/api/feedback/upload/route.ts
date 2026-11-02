@@ -8,12 +8,17 @@
  * Rate limit: 5 uploads/hour/IP (paid storage; real reporters attach 2-3
  * photos per submission — anything beyond that is likely abuse).
  *
+ * Every image is re-encoded with sharp before storing, which drops all
+ * metadata (EXIF, including GPS location). HEIC is rejected because the
+ * bundled sharp cannot decode it, so its metadata could not be removed.
+ *
  * If BLOB_READ_WRITE_TOKEN is unset, returns 503 and the feedback form
  * gracefully falls back to "no attachment" — the rest of the flow works.
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { customAlphabet } from 'nanoid';
+import sharp from 'sharp';
 import { checkRateLimit, getClientIp, feedbackUploadLimiter } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +30,6 @@ const ALLOWED_TYPES: ReadonlySet<string> = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
-  'image/heic',
 ]);
 const SLUG = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 12);
 
@@ -34,7 +38,6 @@ function extensionFromType(mime: string): string {
     case 'image/jpeg': return 'jpg';
     case 'image/png': return 'png';
     case 'image/webp': return 'webp';
-    case 'image/heic': return 'heic';
     default: return 'bin';
   }
 }
@@ -107,7 +110,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const sniffedType = detectImageType(new Uint8Array(buf));
   if (!sniffedType || !ALLOWED_TYPES.has(sniffedType)) {
     return NextResponse.json(
-      { error: 'invalid_type', message: 'Only JPEG / PNG / WEBP / HEIC images are accepted' },
+      { error: 'invalid_type', message: 'Only JPEG / PNG / WEBP images are accepted' },
+      { status: 415 },
+    );
+  }
+
+  // Re-encode to strip metadata. rotate() first bakes in the EXIF orientation,
+  // since the orientation tag is dropped with the rest.
+  let stripped: Buffer;
+  try {
+    stripped = await sharp(buf)
+      .rotate()
+      .toFormat(sniffedType === 'image/jpeg' ? 'jpeg' : sniffedType === 'image/png' ? 'png' : 'webp')
+      .toBuffer();
+  } catch {
+    return NextResponse.json(
+      { error: 'invalid_type', message: 'Only JPEG / PNG / WEBP images are accepted' },
       { status: 415 },
     );
   }
@@ -115,7 +133,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const filename = `feedback/${new Date().toISOString().slice(0, 10)}/${SLUG()}.${extensionFromType(sniffedType)}`;
 
   try {
-    const blob = await put(filename, buf, {
+    const blob = await put(filename, stripped, {
       access: 'public',
       contentType: sniffedType,
       // addRandomSuffix=true would defeat our SLUG; set false so the URL is

@@ -1211,7 +1211,7 @@ if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`
 |---|---|---|---|---|
 | Feedback: email, name, phone, description, proposed station coordinates and operator, `pageUrl` = full `window.location.href` (trip start/end coordinates and typed addresses), `routeParams`, userAgent, viewport, `ipHash`, imageUrl | Answer feedback | Supabase Postgres | Singapore (`ap-southeast-1`, per `.env.example` and `docs/RECOVERY.md`; confirm in the Supabase dashboard) | Not defined. Never pruned. |
 | Feedback email: category, description, email, name, phone, station id and name, steps, use case, correct info, rating, pageUrl, userAgent, viewport. Not included: ipHash, routeParams, proposed coordinates, proposedProvider, imageUrl | Notify Duy | Resend, then the `FEEDBACK_EMAIL_TO` inbox | Outside Vietnam; region not set in code | Not defined |
-| Feedback images: public to anyone with the URL, and EXIF (possibly GPS) is not stripped | Feedback evidence | Vercel Blob | Outside Vietnam; region not set in code | Not defined |
+| Feedback images: public to anyone with the URL. Metadata (EXIF, incl. GPS location) is stripped server-side by re-encoding with sharp before storing; HEIC is rejected | Feedback evidence | Vercel Blob | Outside Vietnam; region not set in code | Not defined |
 | `StationStatusReport`: ipHash, userAgent | Station status | Supabase | Singapore | 180 days |
 | `ShortUrl.params`: start/end coordinates, typed addresses. Anyone with the short link can see the trip. | Share links | Supabase | Singapore | 1 year, then deleted after 30 more days. Legacy `expiresAt=NULL` rows: no limit. |
 | `RouteCache`: start/end coordinates rounded to 4 dp (~11 m) | Route cache | Supabase | Singapore | 30 days (read TTL 24 h) |
