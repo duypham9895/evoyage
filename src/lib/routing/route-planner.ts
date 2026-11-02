@@ -252,6 +252,11 @@ function getStationDetourKm(
   return distKm * 2; // round trip
 }
 
+/** Same identity rule as getStationIdentity in lib/trip/precautionary-stop-display. */
+function stationKey(station: ChargingStationData): string {
+  return station.id || `${station.latitude},${station.longitude}`;
+}
+
 /**
  * Core route planning algorithm — builds charging stops from decision points.
  *
@@ -286,14 +291,34 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
   const warnings: NoStationWarning[] = [];
   const batterySegments: BatterySegment[] = [];
 
+  const pushNoStationWarning = (dp: ChargingDecisionPoint) => {
+    warnings.push({
+      type: 'NO_COMPATIBLE_STATION',
+      distanceFromStartKm: dp.distanceKm,
+      messageVi: isVinFast
+        ? '⚠️ Không tìm thấy trạm sạc trong khu vực này.'
+        : '⚠️ Không tìm thấy trạm sạc tương thích — trạm VinFast không hỗ trợ xe ' + vehicle.brand + '.',
+      messageEn: isVinFast
+        ? '⚠️ No charging station found in this area.'
+        : `⚠️ No compatible stations found — VinFast stations don't support ${vehicle.brand} vehicles.`,
+    });
+  };
+
   for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
     const dp = decisionPoints[dpIdx];
 
     // Route distance from last stop to this decision point
     const routeDistanceKm = dp.distanceKm - lastStopKm;
 
+    // Never charge at the station used for the previous stop
+    const prevKey = chargingStops.length > 0
+      ? stationKey(getStopStation(chargingStops[chargingStops.length - 1]))
+      : null;
+
     // Try ranked stations first (from Matrix API or corridor scoring)
-    const rankedStations = rankedStationsPerStop?.get(dpIdx);
+    const rankedStations = rankedStationsPerStop
+      ?.get(dpIdx)
+      ?.filter((r) => stationKey(r.station) !== prevKey);
 
     if (rankedStations && rankedStations.length > 0) {
       const best = rankedStations[0];
@@ -340,7 +365,10 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       lastStopKm = dp.distanceKm;
     } else if (dp.candidates.length > 0) {
       // Fallback to haversine nearest station from candidates
-      const nearest = findNearestStation(dp.point, compatibleStations);
+      const nearest = findNearestStation(
+        dp.point,
+        compatibleStations.filter((s) => stationKey(s) !== prevKey),
+      );
 
       if (nearest !== null) {
         const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
@@ -380,19 +408,13 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
 
         currentBattery = departureBattery;
         lastStopKm = dp.distanceKm;
+      } else {
+        // Only candidate was the previous stop's station
+        pushNoStationWarning(dp);
       }
     } else {
       // No candidates at all — generate warning
-      warnings.push({
-        type: 'NO_COMPATIBLE_STATION',
-        distanceFromStartKm: dp.distanceKm,
-        messageVi: isVinFast
-          ? '⚠️ Không tìm thấy trạm sạc trong khu vực này.'
-          : '⚠️ Không tìm thấy trạm sạc tương thích — trạm VinFast không hỗ trợ xe ' + vehicle.brand + '.',
-        messageEn: isVinFast
-          ? '⚠️ No charging station found in this area.'
-          : `⚠️ No compatible stations found — VinFast stations don't support ${vehicle.brand} vehicles.`,
-      });
+      pushNoStationWarning(dp);
     }
   }
 

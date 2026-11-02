@@ -493,13 +493,13 @@ describe('BUG p1-route-planner-soc-and-stop-correctness', () => {
   };
 
   // BUG(p1-route-planner-soc-and-stop-correctness): the same station can be selected for two consecutive stops. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('never selects the same station for two consecutive stops', () => {
+  it('never selects the same station for two consecutive stops', () => {
     // No ranking passed: exercises the haversine fallback (findNearestStation).
     expectNoConsecutiveDuplicates(planChargingStops(duplicateStationInput));
   });
 
   // BUG(p1-route-planner-soc-and-stop-correctness): same duplicate via the ranked branch, which prod uses when a Mapbox token is set. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-route-planner-soc-and-stop-correctness.md
-  it.fails('never selects the same station for two consecutive stops when stops come from a ranking', () => {
+  it('never selects the same station for two consecutive stops when stops come from a ranking', () => {
     // Mimic route.ts: rank each decision point's own candidates.
     const dps = findChargingDecisionPoints(duplicateStationInput);
     const rankedMap = new Map<number, readonly RankedStation[]>(
@@ -508,5 +508,34 @@ describe('BUG p1-route-planner-soc-and-stop-correctness', () => {
     expectNoConsecutiveDuplicates(
       planChargingStops({ ...duplicateStationInput, precomputedDecisionPoints: dps, rankedStationsPerStop: rankedMap }),
     );
+  });
+});
+
+describe('planChargingStops stop correctness', () => {
+  const dpAt = (km: number, candidates: readonly ChargingStationData[]) => ({
+    polylineIndex: km,
+    distanceKm: km,
+    point: { lat: kmToLat(km), lng: NORTH_LNG },
+    candidates,
+    useCorridorScoring: true,
+  });
+  const onRoute = (name: string, km: number) =>
+    ({ ...onRouteStation(name, km), distanceToRouteKm: 0, nearestRouteKm: km, nearestRouteIdx: km }) as StationWithRouteInfo;
+
+  it('skips the previous stop\'s station when it is ranked first again and picks the next one', () => {
+    const a = onRoute('A', 200);
+    const b = onRoute('B', 390);
+    const plan = planChargingStops({
+      encodedPolyline: northRoutePolyline(600),
+      totalDistanceKm: 600,
+      vehicle: TEST_VF,
+      currentBatteryPercent: 80,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.8,
+      stations: [a, b],
+      precomputedDecisionPoints: [dpAt(200, [a]), dpAt(400, [a, b])],
+      rankedStationsPerStop: new Map([[0, [ranked(a)]], [1, [ranked(a), ranked(b)]]]),
+    });
+    expect(plan.chargingStops.map(stopStationName)).toEqual(['A', 'B']);
   });
 });
