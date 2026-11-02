@@ -482,4 +482,58 @@ describe('useEVi', () => {
       expect(secondBody.previousVehicleId).toBeNull();
     });
   });
+
+  describe('geolocation gating (privacy)', () => {
+    function grantGps() {
+      mockPermissionsQuery.mockResolvedValue({ state: 'granted' });
+      mockGetCurrentPosition.mockImplementation((resolve: PositionCallback) =>
+        resolve({ coords: { latitude: 10.77, longitude: 106.7 } } as GeolocationPosition),
+      );
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ display_name: 'Quận 1, TP.HCM' }),
+      });
+    }
+
+    it('does not read GPS or call Nominatim while eVi is not active (sheet closed)', async () => {
+      grantGps();
+      renderHook(() => useEVi('vi', false));
+      // Let any pending microtasks (permission query) settle
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(mockPermissionsQuery).not.toHaveBeenCalled();
+      expect(mockGetCurrentPosition).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('reads GPS and reverse-geocodes via Nominatim once eVi becomes active', async () => {
+      grantGps();
+      const { result, rerender } = renderHook(
+        ({ active }: { active: boolean }) => useEVi('vi', active),
+        { initialProps: { active: false } },
+      );
+      expect(mockGetCurrentPosition).not.toHaveBeenCalled();
+
+      rerender({ active: true });
+
+      await waitFor(() => {
+        expect(result.current.userLocation).toEqual({
+          lat: 10.77,
+          lng: 106.7,
+          address: 'Quận 1, TP.HCM',
+        });
+      });
+      expect(mockGetCurrentPosition).toHaveBeenCalledTimes(1);
+      expect(String(mockFetch.mock.calls[0][0])).toContain('nominatim.openstreetmap.org/reverse');
+    });
+
+    it('defaults to active (desktop tab mounts eVi only when shown)', async () => {
+      grantGps();
+      const { result } = renderHook(() => useEVi('vi'));
+      await waitFor(() => {
+        expect(result.current.userLocation).not.toBeNull();
+      });
+    });
+  });
 });

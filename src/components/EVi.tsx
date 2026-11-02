@@ -21,6 +21,8 @@ interface EViProps {
   readonly onPlanTrip?: (params: EViTripParams) => void;
   readonly onFindNearbyStations?: () => void;
   readonly isPlanning?: boolean;
+  /** False while eVi is mounted but hidden (mobile sheet closed); location is not read until true. */
+  readonly isActive?: boolean;
 }
 
 // ── Constants ──
@@ -151,7 +153,7 @@ const CHIP_SECONDARY = 'px-3.5 py-2 rounded-full text-[13px] font-medium bg-[var
 
 // ── Main Component ──
 
-export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, isPlanning = false }: EViProps) {
+export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, isPlanning = false, isActive = true }: EViProps) {
   const { t, locale } = useLocale();
   const {
     state,
@@ -164,7 +166,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
     isSuggestionsLoading,
     sendMessage,
     reset,
-  } = useEVi(locale);
+  } = useEVi(locale, isActive);
   const {
     isSupported,
     isListening,
