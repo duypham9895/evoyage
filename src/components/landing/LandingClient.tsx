@@ -73,7 +73,7 @@ export function LandingNavbar({
       <div className="hidden md:flex items-center gap-4">
         <button
           onClick={onLocaleChangeAction}
-          className="px-3 py-1.5 text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
+          className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>
@@ -89,7 +89,7 @@ export function LandingNavbar({
       <div className="flex md:hidden items-center gap-3">
         <button
           onClick={onLocaleChangeAction}
-          className="px-2 py-1 text-xs text-[var(--color-muted)] border border-[var(--color-surface-hover)] rounded-lg"
+          className="px-2 py-1 text-xs text-[var(--color-text-secondary)] border border-[var(--color-surface-hover)] rounded-lg"
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>
@@ -146,7 +146,7 @@ export function FAQAccordion({
               openIndex === i ? 'max-h-[500px] pb-5' : 'max-h-0'
             }`}
           >
-            <p className="text-[var(--color-muted)] text-[15px] leading-relaxed">
+            <p className="text-[var(--color-text-secondary)] text-[15px] leading-relaxed">
               {item.answer}
             </p>
           </div>
@@ -235,7 +235,7 @@ export function StatCounter({
       <div className="font-[family-name:var(--font-heading)] font-bold text-4xl md:text-[56px] text-[var(--color-accent)] leading-tight">
         {displayed}{suffix}
       </div>
-      <div className="text-[var(--color-muted)] text-base mt-2">{label}</div>
+      <div className="text-[var(--color-text-secondary)] text-base mt-2">{label}</div>
     </div>
   );
 }

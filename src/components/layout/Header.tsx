@@ -5,7 +5,7 @@ import EVoyageLogo from '@/components/brand/EVoyageLogo';
 import { useLocale } from '@/lib/locale';
 
 export default function Header() {
-  const { locale, toggleLocale } = useLocale();
+  const { locale, toggleLocale, t } = useLocale();
 
   return (
     <header className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 bg-[var(--color-surface)] border-b border-[var(--color-surface-hover)] z-50 relative">
@@ -18,8 +18,8 @@ export default function Header() {
         {/* Language toggle */}
         <button
           onClick={toggleLocale}
-          className="px-3 py-2.5 sm:px-3 sm:py-1.5 min-h-[44px] min-w-[44px] text-xs sm:text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
-          aria-label="Toggle language"
+          className="px-3 py-2.5 sm:px-3 sm:py-1.5 min-h-[44px] min-w-[44px] text-xs sm:text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors rounded-lg border border-[var(--color-surface-hover)] hover:border-[var(--color-muted)]"
+          aria-label={t('language_toggle_aria')}
         >
           {locale === 'vi' ? 'EN' : 'VI'}
         </button>

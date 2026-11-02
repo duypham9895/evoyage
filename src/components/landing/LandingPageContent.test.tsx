@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { render } from '@testing-library/react';
 import LandingPageContent from './LandingPageContent';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 vi.mock('./VietnamMap', () => ({
   default: () => <div data-testid="vietnam-map" />,
@@ -48,5 +49,34 @@ describe('LandingPageContent', () => {
     );
     expect(privacyLink).toBeDefined();
     expect(privacyLink?.textContent).toBe('Quyền riêng tư');
+  });
+
+  it('never skips a heading level, so screen-reader heading navigation stays in order', () => {
+    const { container } = render(<LandingPageContent />);
+    const levels = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+      .map((h) => Number(h.tagName[1]));
+
+    expect(levels.length).toBeGreaterThan(0);
+    levels.forEach((level, i) => {
+      const previous = i === 0 ? 1 : levels[i - 1];
+      expect(level - previous, `heading ${i} jumps from h${previous} to h${level}`).toBeLessThanOrEqual(1);
+    });
+  });
+
+  // Landing navy is the darkest-contrast landing background for light text (see the bug doc's table).
+  it('renders every token-coloured text at least 4.5:1 on the landing navy background (WCAG 1.4.3)', () => {
+    const { container } = render(<LandingPageContent />);
+    const tokenPattern = /(?:^|\s)text-\[var\(--color-/;
+    // Dark-on-accent buttons (the background token) sit on the accent fill, not on navy.
+    // Glyph-only elements (the FAQ "+") are state graphics under WCAG 1.4.11 (3:1), not text.
+    const coloured = Array.from(container.querySelectorAll<HTMLElement>('[class]'))
+      .filter((el) => tokenPattern.test(el.className) && textColorToken(el.className) !== 'background')
+      .filter((el) => /\p{L}|\p{N}/u.test(el.textContent ?? ''));
+
+    expect(coloured.length).toBeGreaterThan(0);
+    const failing = coloured
+      .map((el) => ({ token: textColorToken(el.className), text: el.textContent?.trim().slice(0, 40) }))
+      .filter(({ token }) => contrastRatio(tokenHex(token), tokenHex('landing-navy')) < AA_NORMAL_TEXT);
+    expect(failing).toEqual([]);
   });
 });

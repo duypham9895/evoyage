@@ -113,7 +113,7 @@ function LandingContent() {
                 {t('landing_hero_h1')}
               </h1>
 
-              <p className="text-[var(--color-muted)] text-base md:text-lg leading-relaxed mb-8 max-w-lg">
+              <p className="text-[var(--color-text-secondary)] text-base md:text-lg leading-relaxed mb-8 max-w-lg">
                 {t('landing_hero_subtitle')}
               </p>
 
@@ -128,18 +128,18 @@ function LandingContent() {
               <div className="flex flex-wrap gap-6 md:gap-10 mt-10 text-sm">
                 <div>
                   <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">{formatStationCount(stationStats.count, locale)}+</span>
-                  <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_stations')}</span>
+                  <span className="text-[var(--color-text-secondary)] ml-2">{t('landing_hero_stat_stations')}</span>
                 </div>
                 <div>
                   <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">{VINFAST_MODELS.length}+</span>
-                  <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_models')}</span>
+                  <span className="text-[var(--color-text-secondary)] ml-2">{t('landing_hero_stat_models')}</span>
                 </div>
                 <div>
                   <span className="text-[var(--color-foreground)] font-bold text-xl font-[family-name:var(--font-heading)]">{VIETNAM_PROVINCE_COUNT}</span>
-                  <span className="text-[var(--color-muted)] ml-2">{t('landing_hero_stat_provinces')}</span>
+                  <span className="text-[var(--color-text-secondary)] ml-2">{t('landing_hero_stat_provinces')}</span>
                 </div>
               </div>
-              <p className="text-[var(--color-muted)] text-xs mt-3 max-w-md">
+              <p className="text-[var(--color-text-secondary)] text-xs mt-3 max-w-md">
                 {t('landing_hero_stats_freshness').replace(
                   '{{date}}',
                   formatLastUpdated(stationStats.lastUpdated, locale),
@@ -184,7 +184,7 @@ function LandingContent() {
                   <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg md:text-[22px] text-[var(--color-foreground)] mb-3">
                     {item.title}
                   </h3>
-                  <p className="text-[var(--color-muted)] text-sm md:text-[15px] leading-relaxed">
+                  <p className="text-[var(--color-text-secondary)] text-sm md:text-[15px] leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -216,7 +216,7 @@ function LandingContent() {
                   <h3 className="font-[family-name:var(--font-heading)] font-semibold text-lg md:text-[22px] text-[var(--color-foreground)] mb-2">
                     {t(`landing_feat${n}_title`, n === 2 ? { count: stationStats.count } : undefined)}
                   </h3>
-                  <p className="text-[var(--color-muted)] text-sm leading-relaxed">
+                  <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                     {t(`landing_feat${n}_desc`)}
                   </p>
                 </div>
@@ -234,7 +234,7 @@ function LandingContent() {
               <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[var(--color-foreground)] mb-3">
                 {t('landing_models_title')}
               </h2>
-              <p className="text-[var(--color-muted)] text-base">{t('landing_models_subtitle')}</p>
+              <p className="text-[var(--color-text-secondary)] text-base">{t('landing_models_subtitle')}</p>
             </div>
           </ScrollAnimator>
 
@@ -257,15 +257,15 @@ function LandingContent() {
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-[var(--color-muted)]">{t('landing_models_range')}</span>
+                      <span className="text-[var(--color-text-secondary)]">{t('landing_models_range')}</span>
                       <p className="text-[var(--color-foreground)] font-medium">{car.rangeKm} km</p>
                     </div>
                     <div>
-                      <span className="text-[var(--color-muted)]">{t('landing_models_battery')}</span>
+                      <span className="text-[var(--color-text-secondary)]">{t('landing_models_battery')}</span>
                       <p className="text-[var(--color-foreground)] font-medium">{car.batteryKwh} kWh</p>
                     </div>
                     <div className="col-span-2">
-                      <span className="text-[var(--color-muted)]">{t('landing_models_charge')}</span>
+                      <span className="text-[var(--color-text-secondary)]">{t('landing_models_charge')}</span>
                       <p className="text-[var(--color-foreground)] font-medium">{car.dcChargeMin} min (10-80%)</p>
                     </div>
                   </div>
@@ -278,7 +278,7 @@ function LandingContent() {
             <div className="text-center mt-8">
               <a
                 href="/plan"
-                className="inline-flex items-center gap-2 text-[var(--color-muted)] hover:text-[var(--color-foreground)] text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] text-sm font-medium transition-colors"
               >
                 {t('landing_models_add')}
                 <span aria-hidden>→</span>
@@ -305,7 +305,7 @@ function LandingContent() {
               <div className="font-[family-name:var(--font-heading)] font-bold text-4xl md:text-[56px] text-[var(--color-accent)] leading-tight">
                 24/7
               </div>
-              <div className="text-[var(--color-muted)] text-base mt-2">{t('landing_stats_free')}</div>
+              <div className="text-[var(--color-text-secondary)] text-base mt-2">{t('landing_stats_free')}</div>
             </div>
           </div>
         </div>
@@ -337,7 +337,7 @@ function LandingContent() {
               <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[var(--color-foreground)] mb-4">
                 {t('landing_built_with_ai_title')}
               </h2>
-              <p className="text-[var(--color-muted)] text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
+              <p className="text-[var(--color-text-secondary)] text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
                 {t('landing_built_with_ai_desc')}
               </p>
             </div>
@@ -354,7 +354,7 @@ function LandingContent() {
                   key={item.role}
                   className="bg-[var(--color-surface)] rounded-2xl p-4 md:p-6 border border-[var(--color-surface-hover)] text-center"
                 >
-                  <div className="text-[var(--color-muted)] text-xs uppercase tracking-wider mb-2">
+                  <div className="text-[var(--color-text-secondary)] text-xs uppercase tracking-wider mb-2">
                     {item.role}
                   </div>
                   <div className="font-semibold text-sm md:text-base" style={{ color: item.color }}>
@@ -374,7 +374,7 @@ function LandingContent() {
             <h2 className="font-[family-name:var(--font-heading)] font-semibold text-2xl md:text-[40px] text-[var(--color-foreground)] mb-4">
               {t('landing_cta_h2')}
             </h2>
-            <p className="text-[var(--color-muted)] text-base md:text-lg mb-10">
+            <p className="text-[var(--color-text-secondary)] text-base md:text-lg mb-10">
               {t('landing_cta_subtitle')}
             </p>
             <a
@@ -396,14 +396,14 @@ function LandingContent() {
             {/* Logo & tagline */}
             <div>
               <EVoyageLogo size="md" className="mb-2" />
-              <p className="text-[var(--color-muted)] text-sm font-light">
+              <p className="text-[var(--color-text-secondary)] text-sm font-light">
                 {t('landing_footer_tagline')}
               </p>
             </div>
 
             {/* Links */}
             <div>
-              <h4 className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wider mb-4">Links</h4>
+              <h2 className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wider mb-4">Links</h2>
               <div className="flex flex-col gap-2">
                 <a href="/plan" className="text-[var(--color-foreground)] text-sm hover:text-[var(--color-accent)] transition-colors py-3 inline-block">
                   {t('landing_footer_start')}
@@ -424,10 +424,10 @@ function LandingContent() {
 
             {/* Built with */}
             <div>
-              <h4 className="text-[var(--color-muted)] text-xs font-medium uppercase tracking-wider mb-4">
+              <h2 className="text-[var(--color-text-secondary)] text-xs font-medium uppercase tracking-wider mb-4">
                 {t('landing_footer_built')}
-              </h4>
-              <div className="flex flex-col gap-2 text-sm text-[var(--color-muted)]">
+              </h2>
+              <div className="flex flex-col gap-2 text-sm text-[var(--color-text-secondary)]">
                 <span>Claude Code</span>
                 <span>Next.js</span>
                 <span>Mapbox</span>
@@ -438,7 +438,7 @@ function LandingContent() {
 
           {/* Copyright */}
           <div className="border-t border-[var(--color-surface)] mt-8 pt-6">
-            <p className="text-[var(--color-muted)] text-[13px] text-center">
+            <p className="text-[var(--color-text-secondary)] text-[13px] text-center">
               &copy; {new Date().getFullYear()} {t('landing_footer_copyright')}
             </p>
           </div>

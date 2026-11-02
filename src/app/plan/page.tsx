@@ -1011,6 +1011,7 @@ function HomeContent() {
     return (
       <div className="h-[100dvh] flex flex-col relative">
         <Header />
+        <h1 className="sr-only">{t('plan_page_heading')}</h1>
         <ErrorBanner />
 
         {/* Full-screen map — isolate stacking context so Leaflet z-indexes don't escape */}
@@ -1165,6 +1166,7 @@ function HomeContent() {
   return (
     <div className="h-screen flex flex-col">
       <Header />
+      <h1 className="sr-only">{t('plan_page_heading')}</h1>
       <ErrorBanner />
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

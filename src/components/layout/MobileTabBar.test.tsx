@@ -5,6 +5,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import MobileTabBar from './MobileTabBar';
 import vi_dict from '@/locales/vi.json';
 import en_dict from '@/locales/en.json';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 let mockLocale: 'vi' | 'en' = 'vi';
 const dicts = { vi: vi_dict, en: en_dict } as const;
@@ -116,5 +117,19 @@ describe('MobileTabBar', () => {
     expect(routeTab.querySelector('span.rounded-full')).toBeInTheDocument();
     const vehicleTab = container.querySelector('[aria-selected="true"]');
     expect(vehicleTab?.querySelector('span.rounded-full')).toBeNull();
+  });
+  // BUG(p3-accessibility-wcag): inactive tab text uses --color-muted (#6B6B78), 3.65:1 on the background. Fixed: text-secondary. See docs/bugs/2026-11-01-p3-accessibility-wcag.md
+  it('renders inactive tab text with at least 4.5:1 contrast on the page background (WCAG 1.4.3)', () => {
+    render(
+      <MobileTabBar
+        activeTab="route"
+        onTabChange={vi.fn()}
+        hasVehicle={false}
+        hasRoute={false}
+      />,
+    );
+    const inactive = screen.getByRole('tab', { name: 'Xe' });
+    const fg = tokenHex(textColorToken(inactive.className));
+    expect(contrastRatio(fg, tokenHex('background'))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 });

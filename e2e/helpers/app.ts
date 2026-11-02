@@ -183,13 +183,13 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
   // Navigate to the route/trip form
   await switchToTab(page, isMobile ? 'Route' : 'Plan Trip');
 
-  // Enter start location (combobox with Vietnamese placeholder "VD: Thủ Thiêm, TP.HCM")
-  const startInput = page.getByRole('combobox', { name: /Thủ Thiêm|Thu Thiem/i });
+  // Enter start location (combobox named by its visible label "Điểm đi")
+  const startInput = page.getByRole('combobox', { name: /^(Điểm đi|Starting point)$/ });
   await startInput.fill('Ho Chi Minh City');
   await selectFirstPlaceSuggestion(page);
 
-  // Enter end location (combobox with Vietnamese placeholder "VD: Vũng Tàu")
-  const endInput = page.getByRole('combobox', { name: /Vũng Tàu|Vung Tau/i });
+  // Enter end location (combobox named by its visible label "Điểm đến")
+  const endInput = page.getByRole('combobox', { name: /^(Điểm đến|Destination)$/ });
   await endInput.fill('Da Lat');
   await selectFirstPlaceSuggestion(page);
 

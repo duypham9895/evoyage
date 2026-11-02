@@ -38,6 +38,7 @@ export default function PlaceAutocomplete({
   disabled = false,
 }: PlaceAutocompleteProps) {
   const listboxId = useId();
+  const inputId = useId();
   const [suggestions, setSuggestions] = useState<readonly NominatimResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -204,17 +205,19 @@ export default function PlaceAutocomplete({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="text-xs text-[var(--color-muted)] mb-1 block">
+      <label htmlFor={inputId} className="text-xs text-[var(--color-text-secondary)] mb-1 block">
         {label}
       </label>
       <div className="relative">
         <input
+          id={inputId}
           type="text"
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => !disabled && suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
+          aria-label={label ? undefined : placeholder}
           autoComplete="off"
           role="combobox"
           aria-expanded={isOpen}

@@ -601,5 +601,8 @@
   "privacy_contact_body": "Để hỏi về dữ liệu của bạn hoặc gửi yêu cầu về quyền riêng tư, hãy mở trang lên kế hoạch chuyến đi và chạm vào nút tròn \"{{feedbackTitle}}\" ở cạnh phải màn hình. Nút này kéo đi được, và trên điện thoại sẽ ẩn khi bảng bên dưới đang mở hết cỡ. Chọn \"{{feedbackCategory}}\" rồi để lại email để Duy phản hồi. Lưu ý: biểu mẫu cũng lưu địa chỉ trang bạn đang xem.",
   "privacy_contact_github": "Với câu hỏi không liên quan đến dữ liệu cá nhân, bạn cũng có thể mở một issue trên GitHub. Lưu ý: issue trên GitHub là công khai.",
 
-  "privacy_last_updated": "Cập nhật lần cuối: 02/11/2026"
+  "privacy_last_updated": "Cập nhật lần cuối: 02/11/2026",
+  "language_toggle_aria": "EN – Chuyển sang tiếng Anh",
+  "language_toggle_aria": "EN – Chuyển sang tiếng Anh",
+  "plan_page_heading": "Lên lộ trình xe điện"
 }

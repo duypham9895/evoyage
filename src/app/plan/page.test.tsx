@@ -92,3 +92,34 @@ describe('plan page — /api/route failure handling', () => {
     });
   }, 20000);
 });
+
+describe('plan page — heading structure', () => {
+  function setMobile(matches: boolean) {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  it.each([
+    ['desktop', false],
+    ['mobile', true],
+  ])('gives the %s layout exactly one h1 naming the page, for screen-reader heading navigation', async (_layout, mobile) => {
+    setMobile(mobile);
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })),
+    ));
+
+    render(<PlanPage />);
+
+    const headings = await screen.findAllByRole('heading', { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent('Lên lộ trình xe điện');
+  }, 20000);
+});
