@@ -10,10 +10,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 const aggregateReliabilityMock = vi.fn();
+const checkObservationFreshnessMock = vi.fn();
 
 vi.mock('@/lib/prisma', () => ({ prisma: {} }));
 vi.mock('@/lib/station/aggregate-reliability', () => ({
   aggregateReliability: (...a: unknown[]) => aggregateReliabilityMock(...a),
+}));
+vi.mock('@/lib/station/observation-freshness', () => ({
+  checkObservationFreshness: (...a: unknown[]) => checkObservationFreshnessMock(...a),
 }));
 
 import { POST } from './route';
@@ -22,6 +26,13 @@ const SECRET = 'test-cron-secret-0123456789abcdef';
 const ORIGINAL_SECRET = process.env.CRON_SECRET;
 
 const OK_RESULT = { ok: true, stationsUpserted: 128, errors: [] as string[] };
+const FRESH = { ok: true, lastObservedAt: new Date('2026-11-02T10:05:00Z'), ageHours: 2 };
+const STALE = {
+  ok: false,
+  lastObservedAt: new Date('2026-09-30T12:19:00Z'),
+  ageHours: 768,
+  error: 'newest observation is 768h old, older than the 24h limit',
+};
 
 function makeRequest(authorization?: string): NextRequest {
   const headers = new Headers();
@@ -37,6 +48,8 @@ const authorized = () => makeRequest(`Bearer ${SECRET}`);
 beforeEach(() => {
   aggregateReliabilityMock.mockReset();
   aggregateReliabilityMock.mockResolvedValue(OK_RESULT);
+  checkObservationFreshnessMock.mockReset();
+  checkObservationFreshnessMock.mockResolvedValue(FRESH);
   process.env.CRON_SECRET = SECRET;
 });
 
@@ -121,6 +134,40 @@ describe('POST /api/cron/aggregate-reliability', () => {
       aggregateReliabilityMock.mockRejectedValue(new Error('prisma is down'));
 
       await expect(POST(authorized())).rejects.toThrow('prisma is down');
+    });
+  });
+
+  // Finding A of docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md.
+  describe('observation freshness', () => {
+    it('reports ok=false when the newest observation is stale, even if the upsert succeeded', async () => {
+      checkObservationFreshnessMock.mockResolvedValue(STALE);
+
+      const res = await POST(authorized());
+
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).toContain('"ok":false');
+      expect(JSON.parse(body)).toMatchObject({
+        stationsUpserted: 128,
+        freshness: { ok: false, ageHours: 768, error: STALE.error },
+      });
+      expect(aggregateReliabilityMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports the freshness block alongside ok=true when observations are fresh', async () => {
+      const data = await (await POST(authorized())).json();
+
+      expect(data.ok).toBe(true);
+      expect(data.freshness).toMatchObject({ ok: true, ageHours: 2 });
+      expect(checkObservationFreshnessMock).toHaveBeenCalledWith({ prisma: {} });
+    });
+
+    it('keeps ok=false from the job when observations are fresh', async () => {
+      aggregateReliabilityMock.mockResolvedValue({ ok: false, stationsUpserted: 0, errors: ['boom'] });
+
+      const data = await (await POST(authorized())).json();
+
+      expect(data.ok).toBe(false);
     });
   });
 });

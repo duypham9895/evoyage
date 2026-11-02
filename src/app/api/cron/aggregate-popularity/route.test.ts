@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 
 const aggregatePopularityMock = vi.fn();
 const pruneStaleCachesMock = vi.fn();
+const checkObservationFreshnessMock = vi.fn();
 
 // `@/lib/cron-auth` is deliberately NOT mocked: its own edge cases live in
 // src/lib/cron-auth.test.ts, and what is untested here is that the real gate is
@@ -13,6 +14,9 @@ vi.mock('@/lib/station/aggregate-popularity', () => ({
 }));
 vi.mock('@/lib/maintenance/prune-stale-caches', () => ({
   pruneStaleCaches: (...args: unknown[]) => pruneStaleCachesMock(...args),
+}));
+vi.mock('@/lib/station/observation-freshness', () => ({
+  checkObservationFreshness: (...args: unknown[]) => checkObservationFreshnessMock(...args),
 }));
 
 import { POST } from './route';
@@ -48,9 +52,19 @@ function cachesOk(errors: string[] = []) {
   };
 }
 
+const FRESH = { ok: true, lastObservedAt: new Date('2026-11-02T10:05:00Z'), ageHours: 2 };
+const STALE = {
+  ok: false,
+  lastObservedAt: new Date('2026-09-30T12:19:00Z'),
+  ageHours: 768,
+  error: 'newest observation is 768h old, older than the 24h limit',
+};
+
 beforeEach(() => {
   aggregatePopularityMock.mockReset();
   pruneStaleCachesMock.mockReset();
+  checkObservationFreshnessMock.mockReset();
+  checkObservationFreshnessMock.mockResolvedValue(FRESH);
   process.env.CRON_SECRET = SECRET;
 });
 
@@ -208,5 +222,48 @@ describe('POST /api/cron/aggregate-popularity', () => {
     pruneStaleCachesMock.mockRejectedValue(new Error('prune exploded'));
 
     await expect(POST(makeRequest())).rejects.toThrow('prune exploded');
+  });
+
+  // Finding A of docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md:
+  // a dead poller left this job green for weeks because every step "succeeded"
+  // on an empty observation window.
+  describe('observation freshness', () => {
+    it('reports ok=false when the newest observation is stale, even if every step succeeded', async () => {
+      aggregatePopularityMock.mockResolvedValue(popularityOk());
+      pruneStaleCachesMock.mockResolvedValue(cachesOk());
+      checkObservationFreshnessMock.mockResolvedValue(STALE);
+
+      const res = await POST(makeRequest());
+
+      expect(res.status).toBe(200);
+      const body = await res.text();
+      expect(body).toContain('"ok":false');
+      expect(JSON.parse(body).freshness).toEqual({
+        ...STALE,
+        lastObservedAt: '2026-09-30T12:19:00.000Z',
+      });
+    });
+
+    it('reports the freshness block alongside ok=true when observations are fresh', async () => {
+      aggregatePopularityMock.mockResolvedValue(popularityOk());
+      pruneStaleCachesMock.mockResolvedValue(cachesOk());
+
+      const data = await (await POST(makeRequest())).json();
+
+      expect(data.ok).toBe(true);
+      expect(data.freshness).toMatchObject({ ok: true, ageHours: 2 });
+      expect(checkObservationFreshnessMock).toHaveBeenCalledWith({ prisma: {} });
+    });
+
+    it('still runs the aggregation and the prunes when observations are stale', async () => {
+      aggregatePopularityMock.mockResolvedValue(popularityOk());
+      pruneStaleCachesMock.mockResolvedValue(cachesOk());
+      checkObservationFreshnessMock.mockResolvedValue(STALE);
+
+      await POST(makeRequest());
+
+      expect(aggregatePopularityMock).toHaveBeenCalledTimes(1);
+      expect(pruneStaleCachesMock).toHaveBeenCalledTimes(1);
+    });
   });
 });
