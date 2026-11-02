@@ -2,7 +2,7 @@
 
 ## Overview
 
-eVoyage is a Next.js App Router application for planning EV road trips across Vietnam. It combines real-time charging station data from VinFast's network with AI-powered trip planning via OpenAI gpt-5, with MiniMax M2.7 as fallback.
+eVoyage is a Next.js App Router application for planning EV road trips across Vietnam. It combines real-time charging station data from VinFast's network with AI-powered trip planning via OpenAI gpt-5, with MiniMax M3.1 Flash as fallback.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ eVoyage is a Next.js App Router application for planning EV road trips across Vi
 │                                                   │
 │  VinFast API ─── Station data (SSE streaming)     │
 │  OpenAI gpt-5 ── AI chat (primary)                │
-│  MiniMax M2.7 ── AI chat (fallback)               │
+│  MiniMax M3.1 ── AI chat (fallback)               │
 │  Mapbox ──────── Map tiles + Directions API       │
 │  OSRM ────────── Routing fallback                 │
 │  Nominatim ───── Geocoding / place search         │
@@ -179,7 +179,7 @@ User taps station → /api/stations/[id]/vinfast-detail
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Map provider | Mapbox (primary), OSRM (fallback) | Mapbox has superior Vietnamese coverage; OSRM as free fallback |
-| AI model | OpenAI gpt-5 (primary) + MiniMax M2.7 (fallback) via OpenAI-compatible API | Strong JSON-mode reliability, good Vietnamese understanding, provider redundancy per ADR-0002 + ADR-0010 |
+| AI model | OpenAI gpt-5 (primary) + MiniMax M3.1 Flash (fallback) via OpenAI-compatible API | Strong JSON-mode reliability, good Vietnamese understanding, provider redundancy per ADR-0002 + ADR-0010 |
 | Station data | VinFast API + SSE primary; OSM, EVPower, manual CSV, and crowdsourced promotion as secondary | Multi-source coverage per ADR-0001; SSE used only for real-time VinFast detail (ADR-0003) |
 | Mobile layout | Bottom sheet over full-screen map | Matches driver mental model (Google Maps, Grab) |
 | i18n | JSON key-based with runtime locale | Simple, type-safe, auto-tested for key sync |

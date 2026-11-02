@@ -14,7 +14,7 @@ Extends the global gstack review checklist with eVoyage-specific checks.
 - VinFast API proxy endpoints must not expose internal error details to clients
 
 ### LLM Output Trust Boundary
-- MiniMax M2.7 responses must be validated with Zod before use
+- MiniMax M3.1 Flash responses must be validated with Zod before use
 - `<think>` tags must be stripped from AI responses before parsing
 - Never trust AI-generated JSON structure without schema validation
 - Suggestion text must be length-limited (max 40 chars) before rendering

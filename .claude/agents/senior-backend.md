@@ -59,7 +59,7 @@ grep -rln "checkRateLimit" src/app/api/
 | Mapbox Directions | `src/lib/routing/` | Google Directions |
 | Nominatim geocoding | `src/lib/nominatim.ts` | none — autocomplete degrades |
 | VinFast station API | `src/lib/station/`, `src/lib/vinfast/` | cached data, no realtime detail |
-| OpenAI gpt-5 → MiniMax M2.7 | `src/lib/evi/llm-module.ts` (ADR-0002, ADR-0010) | provider chain |
+| OpenAI gpt-5 → MiniMax M3.1 Flash | `src/lib/evi/llm-module.ts` (ADR-0002, ADR-0010) | provider chain |
 | Resend | feedback email | feedback still saved |
 | Upstash Redis | `src/lib/rate-limit.ts` | in-memory Map (weaker) |
 

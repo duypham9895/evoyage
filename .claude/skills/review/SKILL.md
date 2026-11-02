@@ -30,7 +30,7 @@ Run `npm ci` first if `node_modules` is absent.
 
 ## Note on the checklist's LLM section
 
-`checklist.md` names MiniMax M2.7 as the model behind eVi. Per ADR-0010 the chain is
-now **OpenAI gpt-5 primary, MiniMax M2.7 fallback**. The trust-boundary rules apply to
+`checklist.md` names MiniMax M3.1 Flash as the model behind eVi. Per ADR-0010 the chain is
+now **OpenAI gpt-5 primary, MiniMax M3.1 Flash fallback**. The trust-boundary rules apply to
 whichever provider answers — validate with Zod, strip `<think>` tags, never trust
 AI-generated JSON structure, length-limit suggestion text.

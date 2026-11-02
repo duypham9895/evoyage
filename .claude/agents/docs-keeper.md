@@ -44,7 +44,7 @@ grep -rn "process.env\." src scripts --include=*.ts -o | sort -u   # env vars in
 
 - Test count claims. Ground truth 2026-09-30: **1467 tests / 133 files**. Docs have at
   various points claimed 446, 606, 690, 728, and 1237.
-- LLM provider. ADR-0010 makes **OpenAI gpt-5 primary, MiniMax M2.7 fallback**. Older
+- LLM provider. ADR-0010 makes **OpenAI gpt-5 primary, MiniMax M3.1 Flash fallback**. Older
   docs name MiniMax or MiMo as primary.
 - Province count: **34** (28 provinces + 6 cities) after the 2025 administrative reform,
   not 63.
