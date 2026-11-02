@@ -5,6 +5,7 @@ import { useLocale } from '@/lib/locale';
 import { hapticLight } from '@/lib/haptics';
 import { emitStationHighlight } from '@/lib/events/station-events';
 import { trackStationTapped } from '@/lib/analytics';
+import { getStationStatusKey } from '@/lib/station/status-label-key';
 import type { NearbyStationInfo } from '@/lib/evi/types';
 import { formatStationName } from '@/lib/stations/format-station-name';
 
@@ -19,17 +20,6 @@ const STATUS_COLORS: Record<string, string> = {
   unavailable: 'text-[var(--color-muted)]',
   INACTIVE: 'text-[var(--color-muted)]',
   inactive: 'text-[var(--color-muted)]',
-};
-
-const STATUS_KEYS: Record<string, string> = {
-  ACTIVE: 'nearby_active',
-  active: 'nearby_active',
-  BUSY: 'nearby_busy',
-  busy: 'nearby_busy',
-  UNAVAILABLE: 'nearby_inactive',
-  unavailable: 'nearby_inactive',
-  INACTIVE: 'nearby_inactive',
-  inactive: 'nearby_inactive',
 };
 
 // ── Component ──
@@ -59,9 +49,7 @@ export default function StationCard({ station }: StationCardProps) {
     ? (STATUS_COLORS[station.chargingStatus] ?? 'text-[var(--color-muted)]')
     : 'text-[var(--color-muted)]';
 
-  const statusKey = station.chargingStatus
-    ? (STATUS_KEYS[station.chargingStatus] ?? 'map_status_unknown')
-    : 'map_status_unknown';
+  const statusKey = getStationStatusKey(station.chargingStatus);
 
   const statusLabel = t(statusKey as Parameters<typeof t>[0]);
 

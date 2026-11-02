@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, stationsLimiter } from '@/lib/rate-limit';
 import { safeJsonArray } from '@/lib/safe-json';
+import { findStationsInBoxNearest } from '@/lib/stations/nearest-in-box';
 import { findStationsNearPoint, filterCompatibleStations } from '@/lib/routing/station-finder';
 import { getEffectivePowerKw, calculateChargeTimeMin } from '@/lib/routing/station-ranker';
 import type { ChargingStationData } from '@/types';
@@ -64,12 +65,11 @@ export async function POST(request: NextRequest) {
   const minLng = longitude - degBuffer;
   const maxLng = longitude + degBuffer;
 
-  const rawStations = await prisma.chargingStation.findMany({
-    where: {
-      latitude: { gte: minLat, lte: maxLat },
-      longitude: { gte: minLng, lte: maxLng },
-    },
-    take: 500,
+  // Nearest first, so the 500 cap drops the far rows, not the near ones.
+  const rawStations = await findStationsInBoxNearest({
+    minLat, maxLat, minLng, maxLng,
+    center: { lat: latitude, lng: longitude },
+    limit: 500,
   });
 
   const stations: ChargingStationData[] = rawStations.map((s) => ({

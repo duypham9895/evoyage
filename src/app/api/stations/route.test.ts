@@ -14,6 +14,7 @@ vi.mock('@/lib/prisma', () => ({
     chargingStation: {
       findMany: vi.fn().mockResolvedValue([]),
     },
+    $queryRaw: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -22,9 +23,11 @@ vi.mock('@/lib/prisma', () => ({
 import { GET } from './route';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { prisma } from '@/lib/prisma';
+import { fakeStationQueryRaw, parseStationBoxQuery } from '@/lib/__tests__/fake-station-query-raw';
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
 const mockFindMany = vi.mocked(prisma.chargingStation.findMany);
+const mockQueryRaw = vi.mocked(prisma.$queryRaw);
 
 // ── Mock data ──
 
@@ -46,6 +49,11 @@ function makeRequest(query = ''): NextRequest {
   return new NextRequest(`http://localhost/api/stations${query}`);
 }
 
+/** The box, filters, centre and limit of the single raw (bounds) query. */
+function rawQueryOfLastCall() {
+  return parseStationBoxQuery(mockQueryRaw.mock.calls.at(-1)![0] as never);
+}
+
 /** The `where` object passed to the single findMany call. */
 function whereOfLastCall(): Record<string, unknown> {
   const arg = mockFindMany.mock.calls.at(-1)![0] as { where: Record<string, unknown> };
@@ -56,6 +64,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 29, retryAfterSec: 0 });
   mockFindMany.mockResolvedValue([]);
+  mockQueryRaw.mockResolvedValue([] as never);
 });
 
 describe('GET /api/stations', () => {
@@ -123,24 +132,25 @@ describe('GET /api/stations', () => {
       const res = await GET(makeRequest('?bounds=10.7,106.6,10.8,106.8'));
 
       expect(res.status).toBe(200);
-      const where = whereOfLastCall();
-      expect(where.latitude).toEqual({ gte: 10.7, lte: 10.8 });
-      expect(where.longitude).toEqual({ gte: 106.6, lte: 106.8 });
+      const q = rawQueryOfLastCall();
+      expect([q.minLat, q.maxLat]).toEqual([10.7, 10.8]);
+      expect([q.minLng, q.maxLng]).toEqual([106.6, 106.8]);
     });
 
     it('normalises a reversed box (max given before min)', async () => {
       await GET(makeRequest('?bounds=10.8,106.8,10.7,106.6'));
 
-      const where = whereOfLastCall();
-      expect(where.latitude).toEqual({ gte: 10.7, lte: 10.8 });
-      expect(where.longitude).toEqual({ gte: 106.6, lte: 106.8 });
+      const q = rawQueryOfLastCall();
+      expect([q.minLat, q.maxLat]).toEqual([10.7, 10.8]);
+      expect([q.minLng, q.maxLng]).toEqual([106.6, 106.8]);
     });
 
     it('accepts negative coordinates', async () => {
       const res = await GET(makeRequest('?bounds=-10.8,-106.8,-10.7,-106.6'));
 
       expect(res.status).toBe(200);
-      expect(whereOfLastCall().latitude).toEqual({ gte: -10.8, lte: -10.7 });
+      const q = rawQueryOfLastCall();
+      expect([q.minLat, q.maxLat]).toEqual([-10.8, -10.7]);
     });
 
     // Regression guard: these are the only two shapes the app actually sends.
@@ -153,7 +163,7 @@ describe('GET /api/stations', () => {
       const res = await GET(makeRequest(`?bounds=${bounds}`));
 
       expect(res.status).toBe(200);
-      expect(whereOfLastCall().latitude).toBeDefined();
+      expect(rawQueryOfLastCall().minLat).toBeCloseTo(lat - deg);
     });
 
     it('accepts the NearbyStations boundsFromRadius shape', async () => {
@@ -166,7 +176,44 @@ describe('GET /api/stations', () => {
       const res = await GET(makeRequest(`?bounds=${bounds}`));
 
       expect(res.status).toBe(200);
-      expect(whereOfLastCall().longitude).toBeDefined();
+      expect(rawQueryOfLastCall().minLng).toBeCloseTo(lng - lngDelta);
+    });
+  });
+
+  describe('bounds — nearest-first ordering before the 500 cap', () => {
+    it('orders by distance from the box centre, then caps at 500', async () => {
+      await GET(makeRequest('?bounds=10.7,106.6,10.8,106.8'));
+
+      const q = rawQueryOfLastCall();
+      expect(q.center?.lat).toBeCloseTo(10.75);
+      expect(q.center?.lng).toBeCloseTo(106.7);
+      expect(q.limit).toBe(500);
+      expect(mockFindMany).not.toHaveBeenCalled();
+    });
+
+    it('passes vinFastOnly and an allowlisted provider through to the box query', async () => {
+      await GET(makeRequest('?bounds=10.7,106.6,10.8,106.8&vinFastOnly=false&provider=EVONE'));
+
+      const q = rawQueryOfLastCall();
+      expect(q.vinFastOnly).toBe(false);
+      expect(q.provider).toBe('EVONE');
+    });
+
+    it('applies no vinFastOnly or provider filter to the box query when they are absent or not allowlisted', async () => {
+      await GET(makeRequest('?bounds=10.7,106.6,10.8,106.8&vinFastOnly=maybe&provider=DROP%20TABLE'));
+
+      const q = rawQueryOfLastCall();
+      expect(q.vinFastOnly).toBeUndefined();
+      expect(q.provider).toBeUndefined();
+    });
+
+    it('parses the JSON string columns of raw rows back into arrays', async () => {
+      mockQueryRaw.mockResolvedValue([STATION_ROW] as never);
+
+      const data = await (await GET(makeRequest('?bounds=10.7,106.6,10.8,106.8'))).json();
+
+      expect(data.count).toBe(1);
+      expect(data.stations[0].connectorTypes).toEqual(['CCS2']);
     });
   });
 
@@ -195,6 +242,7 @@ describe('GET /api/stations', () => {
       await GET(makeRequest('?bounds=abc'));
 
       expect(mockFindMany).not.toHaveBeenCalled();
+      expect(mockQueryRaw).not.toHaveBeenCalled();
     });
   });
 
@@ -216,6 +264,7 @@ describe('GET /api/stations', () => {
       await GET(makeRequest('?bounds=0,0,100,200'));
 
       expect(mockFindMany).not.toHaveBeenCalled();
+      expect(mockQueryRaw).not.toHaveBeenCalled();
     });
   });
 
@@ -311,5 +360,38 @@ describe('GET /api/stations', () => {
         null,
       );
     });
+  });
+});
+
+// ── Regression: 500-row cap applied before distance ordering ──
+
+type FakeRow = { id: string; name: string; latitude: number; longitude: number };
+
+describe('GET /api/stations — dense-city radius box', () => {
+  // Regression (p1-nearby-stations-status-and-cap): take:500 after orderBy name dropped the nearest stations in a >500-row box. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+  it('keeps the station nearest the box centre when the box holds more than 500 stations', async () => {
+    const CENTER = { lat: 10.7769, lng: 106.7009 }; // District 1, HCMC
+    // 600 stations ~15 km out, all alphabetically before the nearest one
+    const far: FakeRow[] = Array.from({ length: 600 }, (_, i) => ({
+      ...STATION_ROW,
+      id: `far-${i}`,
+      name: `A station ${String(i).padStart(3, '0')}`,
+      latitude: CENTER.lat + 0.135,
+      longitude: CENTER.lng + (i - 300) * 0.0005,
+    }));
+    const nearest: FakeRow = {
+      ...STATION_ROW,
+      id: 'nearest',
+      name: 'Vincom Center Dong Khoi, Ham B6',
+      latitude: CENTER.lat + 0.001,
+      longitude: CENTER.lng + 0.001,
+    };
+    mockQueryRaw.mockImplementation(fakeStationQueryRaw([...far, nearest]) as never);
+
+    // Same 25 km box NearbyStations builds via boundsFromRadius(center, 25)
+    const res = await GET(makeRequest('?bounds=10.5517,106.4724,11.0021,106.9294'));
+    const data = await res.json();
+
+    expect(data.stations.map((s: { id: string }) => s.id)).toContain('nearest');
   });
 });

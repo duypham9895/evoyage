@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { ChargingStation } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, stationsLimiter } from '@/lib/rate-limit';
 import { safeJsonArray } from '@/lib/safe-json';
+import { findStationsInBoxNearest } from '@/lib/stations/nearest-in-box';
 
 /**
  * GET /api/stations — Get charging stations with optional filters.
@@ -60,6 +62,7 @@ export async function GET(request: NextRequest) {
     where.provider = provider;
   }
 
+  let stations: ChargingStation[];
   if (bounds) {
     const parsedBounds = BoundsParam.safeParse(bounds);
     if (!parsedBounds.success) {
@@ -92,15 +95,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    where.latitude = { gte: minLat, lte: maxLat };
-    where.longitude = { gte: minLng, lte: maxLng };
+    // Nearest-to-centre first, so the 500 cap drops the far rows, not the near ones.
+    stations = await findStationsInBoxNearest({
+      minLat, maxLat, minLng, maxLng,
+      center: { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 },
+      vinFastOnly: where.isVinFastOnly as boolean | undefined,
+      provider,
+      limit: 500,
+    });
+  } else {
+    stations = await prisma.chargingStation.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      take: 500,
+    });
   }
-
-  const stations = await prisma.chargingStation.findMany({
-    where,
-    orderBy: { name: 'asc' },
-    take: 500,
-  });
 
   // Parse JSON string fields back to arrays
   const parsed = stations.map((s) => ({

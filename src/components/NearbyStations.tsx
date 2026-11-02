@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocale } from '@/lib/locale';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { haversineDistance } from '@/lib/routing/station-finder';
+import { getStationStatusKey } from '@/lib/station/status-label-key';
 import { hapticLight } from '@/lib/haptics';
 import PlaceAutocomplete from '@/components/trip/PlaceAutocomplete';
 import type { NominatimResult } from '@/lib/geo/nominatim';
@@ -62,14 +63,6 @@ function truncateAddress(address: string): string {
     return `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
   }
   return parts[0] ?? address;
-}
-
-function getStatusKey(status: string | null): string {
-  if (!status) return 'nearby_active';
-  const lower = status.toLowerCase();
-  if (lower.includes('available') || lower.includes('active') || lower === 'hoạt động') return 'nearby_active';
-  if (lower.includes('busy') || lower.includes('in use') || lower === 'bận') return 'nearby_busy';
-  return 'nearby_inactive';
 }
 
 function getStatusColor(statusKey: string): string {
@@ -262,7 +255,7 @@ function StationCard({
   readonly onNavigate: () => void;
 }) {
   const { t } = useLocale();
-  const statusKey = getStatusKey(station.chargingStatus);
+  const statusKey = getStationStatusKey(station.chargingStatus);
   const statusColor = getStatusColor(statusKey);
 
   return (

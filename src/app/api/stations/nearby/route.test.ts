@@ -12,9 +12,7 @@ vi.mock('@/lib/rate-limit', () => ({
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
-    chargingStation: {
-      findMany: vi.fn().mockResolvedValue([]),
-    },
+    $queryRaw: vi.fn().mockResolvedValue([]),
     eVVehicle: {
       findUnique: vi.fn().mockResolvedValue(null),
     },
@@ -26,9 +24,10 @@ vi.mock('@/lib/prisma', () => ({
 import { POST } from './route';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { prisma } from '@/lib/prisma';
+import { fakeStationQueryRaw, parseStationBoxQuery } from '@/lib/__tests__/fake-station-query-raw';
 
 const mockCheckRateLimit = vi.mocked(checkRateLimit);
-const mockFindManyStations = vi.mocked(prisma.chargingStation.findMany);
+const mockQueryRaw = vi.mocked(prisma.$queryRaw);
 const mockFindUniqueVehicle = vi.mocked(prisma.eVVehicle.findUnique);
 
 // ── Mock Data ──
@@ -129,13 +128,13 @@ describe('POST /api/stations/nearby', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 29, retryAfterSec: 0 });
-    mockFindManyStations.mockResolvedValue([]);
+    mockQueryRaw.mockResolvedValue([]);
     mockFindUniqueVehicle.mockResolvedValue(null);
   });
 
   // D1: Valid request → returns sorted stations with distance
   it('returns stations sorted by distance with distanceKm', async () => {
-    mockFindManyStations.mockResolvedValue([
+    mockQueryRaw.mockResolvedValue([
       toPrismaRow(STATION_DISTRICT_3),
       toPrismaRow(STATION_DISTRICT_1),
     ] as never);
@@ -166,7 +165,7 @@ describe('POST /api/stations/nearby', () => {
 
   // D2: With vehicleId → includes compatibility + charge time
   it('includes compatibility and charge time when vehicleId is provided', async () => {
-    mockFindManyStations.mockResolvedValue([
+    mockQueryRaw.mockResolvedValue([
       toPrismaRow(STATION_DISTRICT_1),
     ] as never);
     mockFindUniqueVehicle.mockResolvedValue(MOCK_VF8_VEHICLE as never);
@@ -195,7 +194,7 @@ describe('POST /api/stations/nearby', () => {
 
   // D3: Without vehicleId → stations only, no charge time
   it('returns stations without charge time when vehicleId is absent', async () => {
-    mockFindManyStations.mockResolvedValue([
+    mockQueryRaw.mockResolvedValue([
       toPrismaRow(STATION_DISTRICT_1),
       toPrismaRow(STATION_DISTRICT_3),
     ] as never);
@@ -253,7 +252,7 @@ describe('POST /api/stations/nearby', () => {
 
   // D6: Vehicle not found → returns stations without charge time
   it('returns stations without charge time when vehicleId is not found in DB', async () => {
-    mockFindManyStations.mockResolvedValue([
+    mockQueryRaw.mockResolvedValue([
       toPrismaRow(STATION_DISTRICT_1),
     ] as never);
     mockFindUniqueVehicle.mockResolvedValue(null);
@@ -274,10 +273,20 @@ describe('POST /api/stations/nearby', () => {
     expect(data.stations[0].estimatedChargeTimeMin).toBeNull();
   });
 
+  it('queries the box nearest-first from the request point, capped at 500', async () => {
+    await POST(createRequest({ latitude: CENTER_LAT, longitude: CENTER_LNG, radiusKm: 8 }));
+
+    const q = parseStationBoxQuery(mockQueryRaw.mock.calls.at(-1)![0] as never);
+    expect(q.center).toEqual({ lat: CENTER_LAT, lng: CENTER_LNG });
+    expect(q.limit).toBe(500);
+    expect(q.minLat).toBeCloseTo(CENTER_LAT - 0.1);
+    expect(q.maxLng).toBeCloseTo(CENTER_LNG + 0.1);
+  });
+
   // D7: No stations in radius → empty array
   it('returns empty array when no stations are within radius', async () => {
     // Return stations from DB, but they are far away (beyond radiusKm)
-    mockFindManyStations.mockResolvedValue([
+    mockQueryRaw.mockResolvedValue([
       toPrismaRow(STATION_FAR_AWAY),
     ] as never);
 
@@ -292,5 +301,39 @@ describe('POST /api/stations/nearby', () => {
 
     expect(data.stations).toHaveLength(0);
     expect(data.count).toBe(0);
+  });
+});
+
+// ── Regression: 500-row cap applied before distance sort ──
+
+describe('POST /api/stations/nearby — dense-city radius', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckRateLimit.mockResolvedValue({ allowed: true, remaining: 29, retryAfterSec: 0 });
+    mockFindUniqueVehicle.mockResolvedValue(null);
+  });
+
+  // Regression (p1-nearby-stations-status-and-cap): take:500 with no orderBy dropped the nearest stations when the bbox held >500 rows. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+  it('returns the nearest station when the bounding box holds more than 500 stations', async () => {
+    // 600 stations ~15 km out, stored (heap order) before the nearest one
+    const far = Array.from({ length: 600 }, (_, i) => toPrismaRow({
+      ...STATION_DISTRICT_3,
+      id: `far-${i}`,
+      latitude: CENTER_LAT + 0.135,
+      longitude: CENTER_LNG + (i - 300) * 0.0005,
+    }));
+    const nearest = toPrismaRow({
+      ...STATION_DISTRICT_1,
+      id: 'nearest',
+      latitude: CENTER_LAT + 0.001,
+      longitude: CENTER_LNG + 0.001,
+    });
+    // Fake of Postgres for the raw box query: box filter, distance ORDER BY only if present, then LIMIT
+    mockQueryRaw.mockImplementation(fakeStationQueryRaw([...far, nearest]) as never);
+
+    const res = await POST(createRequest({ latitude: CENTER_LAT, longitude: CENTER_LNG, radiusKm: 25 }));
+    const data = await res.json();
+
+    expect(data.stations[0]?.station.id).toBe('nearest');
   });
 });
