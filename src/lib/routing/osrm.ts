@@ -12,6 +12,8 @@
  */
 
 import { fetchDirectionsMapboxFromCoords } from './mapbox-directions-fallback';
+import { decodePolyline } from '../geo/polyline';
+import { findForeignSegment } from '../geo/neighbour-country';
 
 interface DirectionsResult {
   readonly polyline: string;
@@ -124,6 +126,64 @@ async function callOsrm(coordinates: string): Promise<{
   };
 }
 
+/** Internal: Mapbox Directions with a prebuilt OSRM-style coordinate string (precision-5). */
+async function callMapboxDirections(coordinates: string, mapboxToken: string): Promise<{
+  polyline: string;
+  distanceMeters: number;
+  durationSeconds: number;
+}> {
+  const params = new URLSearchParams({
+    access_token: mapboxToken,
+    geometries: 'polyline',
+    overview: 'full',
+  });
+  const response = await fetch(
+    `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?${params}`,
+    { signal: AbortSignal.timeout(10000) },
+  );
+  if (!response.ok) {
+    throw new Error(`Mapbox Directions API error: ${response.status}`);
+  }
+  const data = await response.json();
+  if (!data.routes?.length) {
+    throw new Error('Mapbox Directions: No route found');
+  }
+  const route = data.routes[0];
+  return {
+    polyline: route.geometry,
+    distanceMeters: Math.round(route.distance),
+    durationSeconds: Math.round(route.duration),
+  };
+}
+
+/**
+ * Border guard, shared by all three exported functions. The public OSRM graph
+ * covers all of mainland Southeast Asia, so e.g. HCM -> Ha Noi can come back
+ * through Cambodia and Laos. When the OSRM route runs through Laos/Cambodia,
+ * retry ONCE with Mapbox (only then: Mapbox costs money) on the same
+ * coordinates and use it if it stays in Vietnam. Otherwise keep the OSRM
+ * route; /api/route attaches a ROUTE_LEAVES_VIETNAM warning to the plan.
+ */
+async function keepInVietnam(
+  route: { polyline: string; distanceMeters: number; durationSeconds: number },
+  coordinates: string,
+): Promise<{ polyline: string; distanceMeters: number; durationSeconds: number; provider: 'osrm' | 'mapbox' }> {
+  if (!findForeignSegment(decodePolyline(route.polyline, 5))) return { ...route, provider: 'osrm' };
+
+  const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
+  if (!mapboxToken) return { ...route, provider: 'osrm' };
+
+  console.warn('[routing] OSRM route leaves Vietnam (Laos/Cambodia); retrying once with Mapbox Directions.');
+  try {
+    const mapbox = await callMapboxDirections(coordinates, mapboxToken);
+    if (!findForeignSegment(decodePolyline(mapbox.polyline, 5))) return { ...mapbox, provider: 'mapbox' };
+  } catch (mapboxError) {
+    const reason = mapboxError instanceof Error ? mapboxError.message : String(mapboxError);
+    console.warn(`[routing] Mapbox border retry failed (${reason}); keeping the OSRM route.`);
+  }
+  return { ...route, provider: 'osrm' };
+}
+
 /**
  * Fetch driving directions from OSRM, with transparent Mapbox fallback on
  * 5xx / network failure. See module header for the fallback policy.
@@ -146,14 +206,13 @@ export async function fetchDirections(
   const coordinates = `${startCoord.lng},${startCoord.lat};${endCoord.lng},${endCoord.lat}`;
 
   try {
-    const route = await callOsrm(coordinates);
+    const route = await keepInVietnam(await callOsrm(coordinates), coordinates);
     return {
       ...route,
       startAddress: origin,
       endAddress: destination,
       startCoord,
       endCoord,
-      provider: 'osrm',
     };
   } catch (osrmError) {
     if (!shouldFallback(osrmError)) throw osrmError;
@@ -191,14 +250,13 @@ export async function fetchDirectionsFromCoords(
   const coordinates = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
 
   try {
-    const route = await callOsrm(coordinates);
+    const route = await keepInVietnam(await callOsrm(coordinates), coordinates);
     return {
       ...route,
       startAddress,
       endAddress,
       startCoord: origin,
       endCoord: destination,
-      provider: 'osrm',
     };
   } catch (osrmError) {
     if (!shouldFallback(osrmError)) throw osrmError;
@@ -249,14 +307,13 @@ export async function fetchDirectionsWithWaypoints(
   const coordinates = coordParts.join(';');
 
   try {
-    const route = await callOsrm(coordinates);
+    const route = await keepInVietnam(await callOsrm(coordinates), coordinates);
     return {
       ...route,
       startAddress: origin,
       endAddress: destination,
       startCoord,
       endCoord,
-      provider: 'osrm',
     };
   } catch (osrmError) {
     if (!shouldFallback(osrmError)) throw osrmError;
@@ -270,30 +327,11 @@ export async function fetchDirectionsWithWaypoints(
     );
 
     // For waypointed routes we send the same coordinate string to Mapbox.
-    // The fallback client only supports start+end directly, so we pass them
-    // and append the waypoints by reusing the same precision-5 + driving
-    // parameters via a small inline call.
-    const params = new URLSearchParams({
-      access_token: mapboxToken,
-      geometries: 'polyline',
-      overview: 'full',
-    });
-    const response = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?${params}`,
-      { signal: AbortSignal.timeout(10000) },
-    );
-    if (!response.ok) {
-      throw new Error(`Mapbox Directions API error: ${response.status}`);
-    }
-    const data = await response.json();
-    if (!data.routes?.length) {
-      throw new Error('Mapbox Directions: No route found');
-    }
-    const route = data.routes[0];
+    // The fallback client only supports start+end directly, so we reuse the
+    // same precision-5 + driving parameters via callMapboxDirections.
+    const route = await callMapboxDirections(coordinates, mapboxToken);
     return {
-      polyline: route.geometry,
-      distanceMeters: Math.round(route.distance),
-      durationSeconds: Math.round(route.duration),
+      ...route,
       startAddress: origin,
       endAddress: destination,
       startCoord,

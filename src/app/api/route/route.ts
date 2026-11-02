@@ -18,13 +18,14 @@ import { RELIABILITY_THRESHOLD } from '@/lib/routing/reliability-score';
 import { trackReliabilityCalibration } from '@/lib/analytics';
 import { cumulativeDistances, decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
+import { findForeignSegment, isInNeighbourCountry } from '@/lib/geo/neighbour-country';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/routing/station-ranker';
 import { estimateDetourTimeSec, haversineDistance, type StationWithRouteInfo } from '@/lib/routing/station-finder';
 import { chargeTargetForDecisionPoint } from '@/lib/routing/top-up-target';
 import { safeJsonArray } from '@/lib/safe-json';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
-import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
+import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, NoStationWarning, TripPlan, RankedStation } from '@/types';
 import { CHARGE_TARGET_PERCENT } from '@/types';
 
 const routeRequestSchema = z.object({
@@ -228,7 +229,9 @@ export async function POST(request: NextRequest) {
       }
       if (routeCoordsAvailable) {
         const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm');
-        if (cached) {
+        // Rows cached before the border guard may run through Laos/Cambodia;
+        // treat them as a miss so the guarded OSRM client re-routes.
+        if (cached && !findForeignSegment(decodePolyline(cached.polyline))) {
           return {
             polyline: cached.polyline,
             distanceMeters: cached.distanceMeters,
@@ -246,11 +249,14 @@ export async function POST(request: NextRequest) {
           start,
           end,
         );
-        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
-          polyline: fetched.polyline,
-          distanceMeters: fetched.distanceMeters,
-          durationSeconds: fetched.durationSeconds,
-        });
+        // Never cache a route that still leaves Vietnam (it gets flagged below).
+        if (!findForeignSegment(decodePolyline(fetched.polyline))) {
+          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
+            polyline: fetched.polyline,
+            distanceMeters: fetched.distanceMeters,
+            durationSeconds: fetched.durationSeconds,
+          });
+        }
         return fetched;
       }
       return fetchDirections(start, end);
@@ -336,6 +342,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // The OSRM client already retried on Mapbox when its route ran through
+    // Laos/Cambodia. If the route still leaves Vietnam (no token, Mapbox
+    // failed or also crossed), plan anyway but say so up front.
+    const foreignSegment = findForeignSegment(routePoints);
+    const borderWarning: NoStationWarning | null = foreignSegment
+      ? {
+          type: 'ROUTE_LEAVES_VIETNAM',
+          distanceFromStartKm: Math.round(foreignSegment.firstExitKm),
+          messageVi: 'Tuyến đường này đi qua lãnh thổ Lào/Campuchia. Hãy kiểm tra lại điểm đi, điểm đến hoặc thêm một điểm dừng trong Việt Nam.',
+          messageEn: 'This route passes through Laos/Cambodia. Check your start and end points, or add a stop inside Vietnam.',
+        }
+      : null;
+
     // Use reduce instead of Math.min/max(...array) to avoid stack overflow
     // on large polylines (V8 limits spread to ~65K arguments)
     const BUFFER_DEG = 0.5; // ~55km buffer around route corridor
@@ -386,10 +405,12 @@ export async function POST(request: NextRequest) {
       parkingFee: s.parkingFee ?? null,
     }));
 
-    // Filter out stations that are unavailable or inactive
+    // Filter out stations that are unavailable or inactive, and the few
+    // Laos/Cambodia rows the bbox-only station sync let in.
     const availableStations = stations.filter((s) => {
       const status = s.chargingStatus?.toUpperCase();
-      return !status || !EXCLUDED_STATION_STATUS_SET.has(status);
+      return (!status || !EXCLUDED_STATION_STATUS_SET.has(status))
+        && !isInNeighbourCountry(s.latitude, s.longitude);
     });
 
     // Smart station ranking: corridor scoring + Matrix API fallback
@@ -708,7 +729,7 @@ export async function POST(request: NextRequest) {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
       totalDurationMin: adjustedDurationMin,
       chargingStops: enrichedChargingStops,
-      warnings: plan.warnings,
+      warnings: borderWarning ? [borderWarning, ...plan.warnings] : plan.warnings,
       batterySegments: plan.batterySegments,
       arrivalBatteryPercent: plan.arrivalBatteryPercent,
       totalChargingTimeMin,

@@ -12,6 +12,7 @@ import { createPrismaClient } from '../src/lib/prisma';
 
 import { parseOSMConnectors, parseOSMMaxPower, parseOSMProvider } from '../src/lib/stations/parse-osm';
 import { bboxDelta, isDuplicateCandidate } from '../src/lib/stations/dedup';
+import { isInNeighbourCountry } from '../src/lib/geo/neighbour-country';
 
 const prisma = createPrismaClient();
 
@@ -122,8 +123,14 @@ async function main(): Promise<void> {
   let updated = 0;
   let skippedDuplicate = 0;
   let skippedInvalid = 0;
+  let skippedForeign = 0;
 
   for (const el of elements) {
+    // VIETNAM_BBOX also covers most of Laos and Cambodia.
+    if (isInNeighbourCountry(el.lat, el.lon)) {
+      skippedForeign += 1;
+      continue;
+    }
     const parsed = parseOverpassElement(el);
     if (!parsed) {
       skippedInvalid += 1;
@@ -185,6 +192,7 @@ async function main(): Promise<void> {
   console.log(`Updated:           ${updated}`);
   console.log(`Skipped (dup):     ${skippedDuplicate}`);
   console.log(`Skipped (invalid): ${skippedInvalid}`);
+  console.log(`Skipped (foreign): ${skippedForeign}`);
 }
 
 main()

@@ -151,7 +151,7 @@ export interface ChargingStop {
 }
 
 export interface NoStationWarning {
-  readonly type: 'NO_COMPATIBLE_STATION' | 'INSUFFICIENT_MARGIN_AFTER_SKIP';
+  readonly type: 'NO_COMPATIBLE_STATION' | 'INSUFFICIENT_MARGIN_AFTER_SKIP' | 'ROUTE_LEAVES_VIETNAM';
   readonly distanceFromStartKm: number;
   readonly messageVi: string;
   readonly messageEn: string;
