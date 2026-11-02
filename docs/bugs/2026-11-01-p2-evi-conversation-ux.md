@@ -2,6 +2,8 @@
 
 All file:line references are at `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main).
 
+> **Status 2026-11-02:** On branch `bug/p2-evi-conversation-ux`, Finding 2 is fixed (`handleTripParsed` and `handleFindNearbyStations` now call `setIsEViOpen(false)`) and Finding 3 is fixed with option 1 (desktop `EVi` stays mounted and is hidden with `hidden`/`flex` on other tabs; the desktop `TripSummary` now gets `onBackToChat`). The four tests for these findings are flipped to `it` and pass. Finding 1 stays open: its two tests remain `it.fails` until the owner decides whether eVi asks for the vehicle or the destination first. Neither fix has been checked in a real browser yet.
+
 ## Summary
 
 eVi, the trip assistant, breaks the conversation in three places. It says "Đã hiểu! Lên kế hoạch..." for a trip that has no destination. On mobile, "Edit" and "Find stations nearby" do their work behind the full-screen eVi sheet, which stays open, so nothing seems to happen. On desktop, eVi's own "Plan trip" and "Edit" buttons (or any tab switch) wipe the chat history.

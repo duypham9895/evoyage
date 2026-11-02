@@ -152,8 +152,8 @@ describe('plan page — mobile eVi sheet handoff', () => {
     );
   }
 
-  // BUG(p2-evi-conversation-ux): mobile "Edit" fills the form behind the still-open full-screen eVi sheet. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
-  it.fails('closes the eVi sheet when the user taps Edit (onTripParsed)', async () => {
+  // BUG(p2-evi-conversation-ux): mobile "Edit" fills the form behind the still-open full-screen eVi sheet. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
+  it('closes the eVi sheet when the user taps Edit (onTripParsed)', async () => {
     await openMobileSheet();
 
     const onTripParsed = capturedSheetProps.onTripParsed as (params: unknown) => void;
@@ -166,8 +166,8 @@ describe('plan page — mobile eVi sheet handoff', () => {
     );
   }, 20000);
 
-  // BUG(p2-evi-conversation-ux): mobile "Find stations nearby" switches tabs behind the still-open full-screen eVi sheet. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
-  it.fails('closes the eVi sheet when the user taps Find stations nearby', async () => {
+  // BUG(p2-evi-conversation-ux): mobile "Find stations nearby" switches tabs behind the still-open full-screen eVi sheet. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
+  it('closes the eVi sheet when the user taps Find stations nearby', async () => {
     await openMobileSheet();
 
     const onFindNearbyStations = capturedSheetProps.onFindNearbyStations as () => void;
@@ -216,8 +216,8 @@ describe('plan page — desktop eVi conversation survives tab switches', () => {
     await screen.findByTestId('mock-evi-conversation');
   }
 
-  // BUG(p2-evi-conversation-ux): desktop eVi "Plan trip" switches the sidebar tab and unmounts EVi, wiping the chat. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
-  it.fails('keeps the eVi conversation after Plan trip and returning to the eVi tab', async () => {
+  // BUG(p2-evi-conversation-ux): desktop eVi "Plan trip" switches the sidebar tab and unmounts EVi, wiping the chat. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
+  it('keeps the eVi conversation after Plan trip and returning to the eVi tab', async () => {
     await startDesktopConversation();
 
     const onPlanTrip = capturedEViProps.onPlanTrip as (params: unknown) => void;
@@ -229,8 +229,8 @@ describe('plan page — desktop eVi conversation survives tab switches', () => {
     expect(screen.getByTestId('mock-evi-conversation')).toHaveValue('Đi Đà Nẵng bằng VF 8');
   }, 20000);
 
-  // BUG(p2-evi-conversation-ux): desktop eVi "Edit" switches the sidebar tab and unmounts EVi, wiping the chat. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
-  it.fails('keeps the eVi conversation after Edit and returning to the eVi tab', async () => {
+  // BUG(p2-evi-conversation-ux): desktop eVi "Edit" switches the sidebar tab and unmounts EVi, wiping the chat. See docs/bugs/2026-11-01-p2-evi-conversation-ux.md
+  it('keeps the eVi conversation after Edit and returning to the eVi tab', async () => {
     await startDesktopConversation();
 
     const onTripParsed = capturedEViProps.onTripParsed as (params: unknown) => void;
