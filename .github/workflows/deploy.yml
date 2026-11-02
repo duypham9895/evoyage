@@ -219,6 +219,35 @@ jobs:
 
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
+      # Finding D of docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md:
+      # a URL from `vercel deploy` does not prove the live site answers. Probe
+      # the production domain (the raw deployment URL may sit behind Deployment
+      # Protection), retrying while the alias moves. This only reports: a
+      # failure marks the GitHub deployment failed and turns the run red. It
+      # never rolls back; see "Rolling back a bad deploy" in docs/RECOVERY.md.
+      # Stale station data is NOT a failure here (/api/health answers 200 with
+      # observations.stale); the scheduled crons alert on that.
+      - name: Smoke-test production
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -eo pipefail
+          code=000
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o health.json -w '%{http_code}' --max-time 20 https://evoyage.duypham.me/api/health || true)
+            [ "$code" = 200 ] && break
+            echo "Attempt $attempt: /api/health answered $code, retrying in 10 s"
+            sleep 10
+          done
+          if [ "$code" != 200 ]; then
+            echo "::error::/api/health answered $code after 6 attempts"
+            exit 1
+          fi
+          echo "Health: $(cat health.json)"
+          if ! curl -sf --max-time 20 https://evoyage.duypham.me/api/vehicles | jq -e '.vehicles | length > 0' >/dev/null; then
+            echo "::error::/api/vehicles did not return a non-empty vehicle list"
+            exit 1
+          fi
+
       - name: Mark deployment success
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:

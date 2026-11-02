@@ -79,4 +79,17 @@ describe('aggregateReliability', () => {
     expect(fullSql).toContain('ON CONFLICT');
     expect(fullSql).toContain('"stationId"');
   });
+
+  // BUG(p2-cron-silent-noops-and-observability): an empty 30-day observation window upserts 0 rows yet returns ok:true, so the workflow gate (grep "ok":false) stays green. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md
+  it.fails('reports an unhealthy run when the 30-day window upserts zero stations', async () => {
+    const prisma = makePrismaMock();
+    // 0 rows = no StationStatusObservation inside the window (poller stalled).
+    prisma.$executeRaw.mockResolvedValue(0);
+
+    const result = await aggregateReliability(makeDeps(prisma));
+
+    expect(result.stationsUpserted).toBe(0);
+    expect(result.ok).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
 });

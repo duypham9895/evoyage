@@ -177,4 +177,27 @@ describe('queryStationPopularity', () => {
       },
     });
   });
+
+  // BUG(p2-cron-silent-noops-and-observability): a heatmap row last refreshed a year ago still yields a ready verdict because the reader never checks updatedAt. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md
+  it.fails('treats a heatmap row not refreshed for a year as insufficient-data', async () => {
+    const prisma = makePrismaMock();
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+    prisma.stationPopularity.findUnique.mockResolvedValue({
+      stationId: 'st-1',
+      dayOfWeek: 5,
+      hour: 17,
+      busyProbability: 0.75,
+      sampleCount: 50, // above threshold — only freshness should reject it
+      updatedAt: new Date(Date.now() - ONE_YEAR_MS),
+    });
+
+    const result = await queryStationPopularity({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      prisma: prisma as any,
+      stationId: 'st-1',
+      arrivalAtIso: ARRIVAL_FRIDAY_5PM_VN,
+    });
+
+    expect(result.kind).toBe('insufficient-data');
+  });
 });

@@ -1119,7 +1119,7 @@ jobs:
 |---|---|
 | Supabase outage | App shows cached station data (last successful fetch). Route planning degrades gracefully. |
 | Google Maps API quota exceeded | Show error message: "API limit reached. Try again tomorrow." Set budget cap in Google Cloud. |
-| Vercel deployment failure | Automatic rollback to previous deployment (Vercel built-in). |
+| Vercel deployment failure | A failed build is never promoted, but a deploy that builds and then breaks the app is not rolled back automatically. The post-deploy smoke check in `deploy.yml` turns the run red; roll back by hand per `docs/RECOVERY.md` ("Rolling back a bad deploy"). |
 | Database corruption | Supabase auto-backups. Restore from daily backup (7-day retention on free tier). |
 | Cron job failure | Station data stays stale (uses previous week's data). Manual trigger via admin endpoint. |
 
