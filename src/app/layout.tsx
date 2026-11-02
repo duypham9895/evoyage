@@ -49,12 +49,12 @@ export default async function RootLayout({
 }>) {
   // Read the request headers at the root layout. This forces dynamic
   // rendering for every page (otherwise statically-generated routes never
-  // see the middleware-set `x-nonce`, and Next.js can't apply the nonce to
+  // see the proxy-set `x-nonce`, and Next.js can't apply the nonce to
   // its hydration chunks → strict-dynamic CSP blocks everything client-side).
   // The headers() call is the canonical way to force dynamic rendering in
   // App Router; we don't actually need the value here. (D.8b smoke-test
   // 2026-05-24 found /plan was static, so its chunks were blocked even
-  // though the middleware was setting the nonce header on the response.)
+  // though the proxy was setting the nonce header on the response.)
   await headers();
 
   return (

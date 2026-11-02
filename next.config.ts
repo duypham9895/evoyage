@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// Note: Content-Security-Policy moved out of next.config.ts to src/middleware.ts
+// Note: Content-Security-Policy moved out of next.config.ts to src/proxy.ts
 // in 2026-05-24 so the policy can carry a per-request nonce (script-src
 // 'nonce-…' instead of 'unsafe-inline'). Other static security headers stay
 // here because they don't need per-request data.

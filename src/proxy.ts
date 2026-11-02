@@ -20,11 +20,12 @@ const ADMIN_USERNAME = 'admin';
 const REALM = 'eVoyage Admin';
 
 /**
- * Constant-time string compare suitable for Edge Runtime, which has no
- * access to node:crypto's `timingSafeEqual`. The length-mismatch early-return
- * leaks one bit of information (whether lengths match), which is acceptable
- * here — ADMIN_USERNAME and ADMIN_TOKEN have known fixed lengths client-side,
- * so an attacker varying input length learns nothing useful.
+ * Constant-time string compare, written without node:crypto's `timingSafeEqual`
+ * so it works unchanged on any runtime this file might run under. The
+ * length-mismatch early-return leaks one bit of information (whether lengths
+ * match), which is acceptable here — ADMIN_USERNAME and ADMIN_TOKEN have
+ * known fixed lengths client-side, so an attacker varying input length learns
+ * nothing useful.
  */
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -74,10 +75,12 @@ function checkAdminAuth(request: NextRequest): NextResponse | null {
 
 /** Generate a base64 nonce. 16 bytes = 128 bits — plenty for per-request anti-replay. */
 function generateNonce(): string {
-  // crypto.randomBytes isn't available on edge runtime; use Web Crypto.
+  // Web Crypto's getRandomValues is global on every runtime this file might
+  // run under (Node 18+ included), so no node:crypto dependency is needed.
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-  // Buffer not on edge either — use btoa with a binary string built from bytes.
+  // Avoid Buffer so the code stays runtime-agnostic — build a binary string
+  // from the bytes and hand it to btoa instead.
   let bin = '';
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin);
@@ -107,7 +110,7 @@ function buildCsp(nonce: string): string {
   ].join('; ');
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   // Compare case-insensitively. Next resolves DYNAMIC routes case-insensitively,
   // so /API/ADMIN/FEEDBACK/<id> reaches the same handler as the lowercase form.
