@@ -43,7 +43,7 @@ test.describe('Option C: precautionary stop dismissal flow', () => {
     await waitForAppReady(page);
     await switchToTab(page, 'Saved');
 
-    const openSavedTrip = page.getByRole('button', { name: /Open|Mở lại/ }).first();
+    const openSavedTrip = page.getByRole('button', { name: /^(Open|Mở lại)$/ }).first();
     await expect(openSavedTrip).toBeVisible({ timeout: 5_000 });
     await Promise.all([
       page.waitForResponse((resp) => resp.url().includes('/api/route') && resp.status() === 200),

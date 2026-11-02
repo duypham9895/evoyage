@@ -47,13 +47,23 @@ export async function mockAPIs(page: Page): Promise<void> {
     return route.continue();
   });
 
-  await page.route('**/api/vehicles**', (route) =>
-    route.fulfill({
+  // Mirrors GET /api/vehicles: ?id= returns one vehicle (or 404), otherwise the list.
+  await page.route('**/api/vehicles**', (route) => {
+    const id = new URL(route.request().url()).searchParams.get('id');
+    if (id) {
+      const vehicle = vehiclesFixture.vehicles.find((v) => v.id === id);
+      return route.fulfill({
+        status: vehicle ? 200 : 404,
+        contentType: 'application/json',
+        body: JSON.stringify(vehicle ?? { error: 'Vehicle not found' }),
+      });
+    }
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(vehiclesFixture),
-    }),
-  );
+    });
+  });
 
   await page.route('**/api/stations/nearby', (route) =>
     route.fulfill({
