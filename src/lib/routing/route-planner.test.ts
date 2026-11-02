@@ -617,4 +617,56 @@ describe('planChargingStops stop correctness', () => {
     const [warning] = noStationWarnings(planWithDps([emptyDpAt(100)], [farVinfastOnly, farCompatible], BYD_SEAL));
     expect(warning.messageEn).toBe('⚠️ No charging station found in this area.');
   });
+
+  const unreachableWarnings = (plan: ChargingPlanResult) =>
+    plan.warnings.filter((w) => w.type === 'UNREACHABLE_SEGMENT');
+
+  it('flags an infeasible station-less trip with exactly one UNREACHABLE_SEGMENT warning', () => {
+    // 300 km, no stations, 320 km effective range: 100 - 93.75 = 6.25% at the destination.
+    const plan = planChargingStops({
+      encodedPolyline: northRoutePolyline(300),
+      totalDistanceKm: 300,
+      vehicle: { ...GENERIC_TINY, officialRangeKm: 400, batteryCapacityKwh: 80 },
+      currentBatteryPercent: 100,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.8,
+      stations: [],
+    });
+    const unreachable = unreachableWarnings(plan);
+    expect(unreachable).toHaveLength(1);
+    // Battery reaches 15% after (100 - 15)% of 320 km = 272 km.
+    expect(unreachable[0].distanceFromStartKm).toBe(272);
+    expect(unreachable[0].messageEn).toContain('15%');
+    expect(unreachable[0].messageVi).toContain('15%');
+  });
+
+  it('flags each leg that ends below minArrival once', () => {
+    // Tiny car (48 km effective range) on 120 km with one station at km 9:
+    // the leg after that stop cannot reach the destination.
+    const plan = planChargingStops({
+      encodedPolyline: northRoutePolyline(120),
+      totalDistanceKm: 120,
+      vehicle: GENERIC_TINY,
+      currentBatteryPercent: 100,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.8,
+      stations: [onRouteStation('Only station', 9)],
+    });
+    expect(plan.chargingStops).toHaveLength(1);
+    expect(unreachableWarnings(plan)).toHaveLength(1);
+  });
+
+  it('adds no UNREACHABLE_SEGMENT warning to a feasible trip', () => {
+    const plan = planChargingStops({
+      encodedPolyline: northRoutePolyline(600),
+      totalDistanceKm: 600,
+      vehicle: TEST_VF,
+      currentBatteryPercent: 80,
+      minArrivalPercent: 15,
+      rangeSafetyFactor: 0.8,
+      stations: [185, 240, 480].map((km) => onRouteStation(`S${km}`, km)),
+    });
+    expect(plan.chargingStops.length).toBeGreaterThan(0);
+    expect(unreachableWarnings(plan)).toHaveLength(0);
+  });
 });

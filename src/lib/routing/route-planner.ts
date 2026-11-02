@@ -317,6 +317,20 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
     });
   };
 
+  // Flag a leg whose arrival falls below minArrival instead of presenting it as fine
+  const pushUnreachableWarning = (legStartKm: number, legStartBattery: number, arrivalPercent: number) => {
+    if (Math.round(arrivalPercent) >= minArrivalPercent) return;
+    const km = Math.round(
+      legStartKm + (Math.max(0, legStartBattery - minArrivalPercent) / 100) * effectiveMaxRange,
+    );
+    warnings.push({
+      type: 'UNREACHABLE_SEGMENT',
+      distanceFromStartKm: km,
+      messageVi: `⚠️ Chuyến đi này có thể không khả thi: pin sẽ xuống dưới ${minArrivalPercent}% tại khoảng km ${km}. Hãy kiểm tra lại các điểm sạc trước khi đi.`,
+      messageEn: `⚠️ This trip may not be feasible: the battery would drop below ${minArrivalPercent}% around km ${km}. Check your charging options before you go.`,
+    });
+  };
+
   for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
     const dp = decisionPoints[dpIdx];
 
@@ -366,6 +380,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
         .filter((r) => r.detourDriveTimeSec <= ALTERNATIVE_DETOUR_BUDGET_SEC);
 
       // Account for detour: station may be off-route, add round-trip distance
+      pushUnreachableWarning(lastStopKm, currentBattery, arrivalAt(best));
       const arrivalBattery = Math.max(0, arrivalAt(best));
       const departureBattery = dp.isPrecautionary
         ? Math.max(arrivalBattery, chargeTargetPercent)
@@ -409,6 +424,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
         const detourKm = nearest.distanceKm * 2;
         const totalDrivenKm = routeDistanceKm + detourKm;
         const batteryUsedPercent = (totalDrivenKm / effectiveMaxRange) * 100;
+        pushUnreachableWarning(lastStopKm, currentBattery, currentBattery - batteryUsedPercent);
         const arrivalBattery = Math.max(0, currentBattery - batteryUsedPercent);
         const departureBattery = dp.isPrecautionary
           ? Math.max(arrivalBattery, chargeTargetPercent)
@@ -454,6 +470,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
   // Final battery segment
   const finalDistanceTraveled = totalRouteKm - lastStopKm;
   const finalBatteryUsed = (finalDistanceTraveled / effectiveMaxRange) * 100;
+  pushUnreachableWarning(lastStopKm, currentBattery, currentBattery - finalBatteryUsed);
   const arrivalBatteryPercent = Math.max(0, Math.round(currentBattery - finalBatteryUsed));
 
   const lastStopName = chargingStops.length > 0
