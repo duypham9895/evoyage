@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo, useSyncExternalStore
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import { hapticLight } from '@/lib/haptics';
+import { isUsableMapboxToken } from '@/lib/map/mapbox-token';
 import { trackTripPlanned, trackDeparturePicked, trackTripReplannedFromNotebook } from '@/lib/analytics';
 import { createNotebookStore, type SavedTrip } from '@/lib/trip/notebook-store';
 import TripNotebook, { type TripNotebookI18n } from '@/components/trip/TripNotebook';
@@ -67,7 +68,7 @@ function getGeolocationSupportedServerSnapshot(): boolean {
 
 function HomeContent() {
   const { mode } = useMapMode();
-  const hasMapboxToken = Boolean(process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN);
+  const hasMapboxToken = isUsableMapboxToken(process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN);
   const activeMapMode = hasMapboxToken ? mode : 'osm';
   const { t } = useLocale();
   const isMobile = useIsMobile();

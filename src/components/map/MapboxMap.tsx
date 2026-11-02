@@ -28,6 +28,7 @@ import {
   DEFAULT_MARKER_COLOR,
   escapeHtml,
 } from '@/lib/geo/map-utils';
+import { isUsableMapboxToken } from '@/lib/map/mapbox-token';
 
 export interface WaypointMarkerData {
   readonly lat: number;
@@ -508,7 +509,8 @@ function TripOverlay({
 }
 
 export default function MapboxMap({ tripPlan, waypoints, precautionaryStopInteractions }: MapboxMapProps) {
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
+  const rawMapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const mapboxToken = isUsableMapboxToken(rawMapboxToken) ? rawMapboxToken!.trim() : '';
   const tripPlanResetKey = tripPlan
     ? (tripPlan.tripId ?? `${tripPlan.startAddress}|${tripPlan.endAddress}|${tripPlan.polyline}`)
     : null;
