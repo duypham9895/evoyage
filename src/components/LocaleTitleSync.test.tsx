@@ -13,6 +13,7 @@ function ToggleButton() {
 
 afterEach(() => {
   document.title = '';
+  localStorage.clear();
 });
 
 describe('LocaleTitleSync', () => {

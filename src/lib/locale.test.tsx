@@ -40,7 +40,7 @@ afterEach(() => {
 
 describe('LocaleProvider persistence', () => {
   // BUG(p2-planner-ui-state-and-map): LocaleProvider keeps the locale in memory only (useState('vi')), so a reload resets EN to VI. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
-  it.fails('keeps English after the provider remounts (page reload)', async () => {
+  it('keeps English after the provider remounts (page reload)', async () => {
     const first = render(<LocaleProvider><PlanLocaleProbe /></LocaleProvider>);
     act(() => { first.getByText('toggle-plan').click(); });
     expect(first.getByTestId('plan-locale').textContent).toBe('en');
@@ -51,7 +51,7 @@ describe('LocaleProvider persistence', () => {
   });
 
   // BUG(p2-planner-ui-state-and-map): the landing page's locale (LandingWrapper) is a separate in-memory state, so EN chosen on / is lost on /plan. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
-  it.fails('carries English chosen on the landing page into the /plan LocaleProvider', async () => {
+  it('carries English chosen on the landing page into the /plan LocaleProvider', async () => {
     const landing = render(<LandingWrapper><LandingToggle /></LandingWrapper>);
     act(() => { landing.getByText('toggle-landing').click(); });
     expect(landing.getByTestId('landing-locale').textContent).toBe('en');

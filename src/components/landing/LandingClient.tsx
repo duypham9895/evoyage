@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
 import EVoyageLogo from '@/components/brand/EVoyageLogo';
+import { readStoredLocale, writeStoredLocale } from '@/lib/locale-storage';
 
 /* ─── Scroll Animation Observer ─────────────────────────── */
 
@@ -244,8 +245,18 @@ export function StatCounter({
 export function LandingWrapper({ children }: { readonly children: ReactNode }) {
   const [locale, setLocale] = useState<'vi' | 'en'>('vi');
 
+  // Same persisted locale as /plan's LocaleProvider, applied after mount.
+  useEffect(() => {
+    const stored = readStoredLocale();
+    if (stored) setLocale(stored);
+  }, []);
+
   const toggleLocale = useCallback(() => {
-    setLocale((prev) => (prev === 'vi' ? 'en' : 'vi'));
+    setLocale((prev) => {
+      const next = prev === 'vi' ? 'en' : 'vi';
+      writeStoredLocale(next);
+      return next;
+    });
   }, []);
 
   return (
