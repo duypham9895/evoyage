@@ -15,12 +15,12 @@ test.describe('F10: URL State — Share Link Restoration', () => {
     // Desktop: "Plan Trip" | Mobile: "Route" (locations are on Route tab)
     await switchToTab(page, isMobile ? 'Route' : 'Plan Trip');
 
-    // Step 3: Verify form auto-filled — start location (combobox with Vietnamese placeholder)
-    const startInput = page.getByRole('combobox', { name: /Thủ Thiêm|Thu Thiem/i });
+    // Step 3: Verify form auto-filled — start location (combobox named by its visible label)
+    const startInput = page.getByRole('combobox', { name: /^(Điểm đi|Starting point)$/ });
     await expect(startInput).toHaveValue(/Ho Chi Minh|HCM|Hồ Chí Minh/i, { timeout: 5_000 });
 
     // Verify end location
-    const endInput = page.getByRole('combobox', { name: /Vũng Tàu|Vung Tau/i });
+    const endInput = page.getByRole('combobox', { name: /^(Điểm đến|Destination)$/ });
     await expect(endInput).toHaveValue(/Da Lat|Đà Lạt/i, { timeout: 5_000 });
 
     // Step 4: Verify vehicle loaded from URL
