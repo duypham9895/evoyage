@@ -114,8 +114,10 @@ export function findChargingDecisionPoints(input: PlanChargingStopsInput): reado
     const needsSearch = remainingRangeKm < SEARCH_TRIGGER_KM;
     const notNearEnd = cumDist[i] < totalRouteKm - 5;
     const notJustCharged = cumDist[i] > lastDecisionKm + 10;
+    // usableRangeKm already stops at minArrival with the safety factor applied
+    const destinationReachable = remainingRangeKm >= totalRouteKm - cumDist[i];
 
-    if (needsSearch && notNearEnd && notJustCharged) {
+    if (needsSearch && notNearEnd && notJustCharged && !destinationReachable) {
       // Search window: current position forward to max reachable (keep half safety buffer)
       const searchFromKm = cumDist[i];
       const searchToKm = Math.min(
@@ -250,6 +252,11 @@ function getStationDetourKm(
   return distKm * 2; // round trip
 }
 
+/** Same identity rule as getStationIdentity in lib/trip/precautionary-stop-display. */
+function stationKey(station: ChargingStationData): string {
+  return station.id || `${station.latitude},${station.longitude}`;
+}
+
 /**
  * Core route planning algorithm — builds charging stops from decision points.
  *
@@ -261,6 +268,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
     encodedPolyline,
     vehicle,
     currentBatteryPercent,
+    minArrivalPercent,
     rangeSafetyFactor,
     stations,
     rankedStationsPerStop,
@@ -284,29 +292,96 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
   const warnings: NoStationWarning[] = [];
   const batterySegments: BatterySegment[] = [];
 
+  // One warning per station-less stretch: skip while no stop was added since the last one
+  let stopCountAtLastWarning = -1;
+  const pushNoStationWarning = (dp: ChargingDecisionPoint) => {
+    if (stopCountAtLastWarning === chargingStops.length) return;
+    stopCountAtLastWarning = chargingStops.length;
+
+    // Blame compatibility only when it is the cause: every station is VinFast-only,
+    // or VinFast-only stations sit near this point
+    const blockedByCompatibility = !isVinFast && (
+      (stations.length > 0 && compatibleStations.length === 0)
+      || findStationsNearPoint(dp.point, stations.filter((s) => s.isVinFastOnly), FALLBACK_RADIUS_KM).length > 0
+    );
+
+    warnings.push({
+      type: 'NO_COMPATIBLE_STATION',
+      distanceFromStartKm: dp.distanceKm,
+      messageVi: !blockedByCompatibility
+        ? '⚠️ Không tìm thấy trạm sạc trong khu vực này.'
+        : '⚠️ Không tìm thấy trạm sạc tương thích — trạm VinFast không hỗ trợ xe ' + vehicle.brand + '.',
+      messageEn: !blockedByCompatibility
+        ? '⚠️ No charging station found in this area.'
+        : `⚠️ No compatible stations found — VinFast stations don't support ${vehicle.brand} vehicles.`,
+    });
+  };
+
+  // Flag a leg whose arrival falls below minArrival instead of presenting it as fine
+  const pushUnreachableWarning = (legStartKm: number, legStartBattery: number, arrivalPercent: number) => {
+    if (Math.round(arrivalPercent) >= minArrivalPercent) return;
+    const km = Math.round(
+      legStartKm + (Math.max(0, legStartBattery - minArrivalPercent) / 100) * effectiveMaxRange,
+    );
+    warnings.push({
+      type: 'UNREACHABLE_SEGMENT',
+      distanceFromStartKm: km,
+      messageVi: `⚠️ Chuyến đi này có thể không khả thi: pin sẽ xuống dưới ${minArrivalPercent}% tại khoảng km ${km}. Hãy kiểm tra lại các điểm sạc trước khi đi.`,
+      messageEn: `⚠️ This trip may not be feasible: the battery would drop below ${minArrivalPercent}% around km ${km}. Check your charging options before you go.`,
+    });
+  };
+
   for (let dpIdx = 0; dpIdx < decisionPoints.length; dpIdx++) {
     const dp = decisionPoints[dpIdx];
 
     // Route distance from last stop to this decision point
     const routeDistanceKm = dp.distanceKm - lastStopKm;
 
+    // Never charge at the station used for the previous stop
+    const prevKey = chargingStops.length > 0
+      ? stationKey(getStopStation(chargingStops[chargingStops.length - 1]))
+      : null;
+
     // Try ranked stations first (from Matrix API or corridor scoring)
-    const rankedStations = rankedStationsPerStop?.get(dpIdx);
+    const rankedStations = rankedStationsPerStop
+      ?.get(dpIdx)
+      ?.filter((r) => stationKey(r.station) !== prevKey);
 
     if (rankedStations && rankedStations.length > 0) {
-      const best = rankedStations[0];
       const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
+      // A ranked station can sit before or after the decision point: plan the stop
+      // at the station's own route km (corridor candidates carry it).
+      const stationRouteKm = (r: RankedStation) =>
+        (r.station as StationWithRouteInfo).nearestRouteKm ?? dp.distanceKm;
+      const arrivalAt = (r: RankedStation) =>
+        currentBattery
+        - ((stationRouteKm(r) - lastStopKm + getStationDetourKm(r.station, dp)) / effectiveMaxRange) * 100;
+      // The next point the car must reach from this stop: the next decision point
+      // with stations, else the destination.
+      const nextTargetKm = decisionPoints
+        .slice(dpIdx + 1)
+        .find((next) => next.candidates.length > 0)?.distanceKm ?? totalRouteKm;
+      const keepsNextLegAboveMin = (r: RankedStation) => {
+        const departure = dp.isPrecautionary
+          ? Math.max(arrivalAt(r), chargeTargetPercent)
+          : chargeTargetPercent;
+        return departure - ((nextTargetKm - stationRouteKm(r)) / effectiveMaxRange) * 100 >= minArrivalPercent;
+      };
+      // Highest-ranked station that keeps both legs above minArrival, else the
+      // highest-ranked one reachable above minArrival, else the top-ranked one.
+      const best = rankedStations.find((r) => arrivalAt(r) >= minArrivalPercent && keepsNextLegAboveMin(r))
+        ?? rankedStations.find((r) => arrivalAt(r) >= minArrivalPercent)
+        ?? rankedStations[0];
+      const stopKm = stationRouteKm(best);
       // ADR-0006: drop far-detour alternatives, return all within budget;
       // applyBackupPressure (called post-planning) trims to per-stop nMax.
       const alternatives = rankedStations
-        .slice(1)
+        .filter((r) => r !== best)
         .filter((r) => r.detourDriveTimeSec <= ALTERNATIVE_DETOUR_BUDGET_SEC);
 
       // Account for detour: station may be off-route, add round-trip distance
-      const detourKm = getStationDetourKm(best.station, dp);
-      const totalDrivenKm = routeDistanceKm + detourKm;
-      const batteryUsedPercent = (totalDrivenKm / effectiveMaxRange) * 100;
-      const arrivalBattery = Math.max(0, currentBattery - batteryUsedPercent);
+      pushUnreachableWarning(lastStopKm, currentBattery, arrivalAt(best));
+      const arrivalBattery = Math.max(0, arrivalAt(best));
       const departureBattery = dp.isPrecautionary
         ? Math.max(arrivalBattery, chargeTargetPercent)
         : chargeTargetPercent;
@@ -317,7 +392,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
 
       batterySegments.push({
         startKm: lastStopKm,
-        endKm: dp.distanceKm,
+        endKm: stopKm,
         startBatteryPercent: currentBattery,
         endBatteryPercent: arrivalBattery,
         label: `${lastStopName} → ${best.station.name}`,
@@ -326,7 +401,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       chargingStops.push({
         selected: best,
         alternatives,
-        distanceAlongRouteKm: dp.distanceKm,
+        distanceAlongRouteKm: stopKm,
         batteryPercentAtArrival: arrivalBattery,
         batteryPercentAfterCharge: departureBattery,
         ...(dp.isPrecautionary ? { isPrecautionary: true as const } : {}),
@@ -335,10 +410,13 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
       });
 
       currentBattery = departureBattery;
-      lastStopKm = dp.distanceKm;
+      lastStopKm = stopKm;
     } else if (dp.candidates.length > 0) {
       // Fallback to haversine nearest station from candidates
-      const nearest = findNearestStation(dp.point, compatibleStations);
+      const nearest = findNearestStation(
+        dp.point,
+        compatibleStations.filter((s) => stationKey(s) !== prevKey),
+      );
 
       if (nearest !== null) {
         const chargeTargetPercent = chargeTargetForDecisionPoint(dp, vehicle);
@@ -346,6 +424,7 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
         const detourKm = nearest.distanceKm * 2;
         const totalDrivenKm = routeDistanceKm + detourKm;
         const batteryUsedPercent = (totalDrivenKm / effectiveMaxRange) * 100;
+        pushUnreachableWarning(lastStopKm, currentBattery, currentBattery - batteryUsedPercent);
         const arrivalBattery = Math.max(0, currentBattery - batteryUsedPercent);
         const departureBattery = dp.isPrecautionary
           ? Math.max(arrivalBattery, chargeTargetPercent)
@@ -378,25 +457,20 @@ export function planChargingStops(input: PlanChargingStopsInput): ChargingPlanRe
 
         currentBattery = departureBattery;
         lastStopKm = dp.distanceKm;
+      } else {
+        // Only candidate was the previous stop's station
+        pushNoStationWarning(dp);
       }
     } else {
       // No candidates at all — generate warning
-      warnings.push({
-        type: 'NO_COMPATIBLE_STATION',
-        distanceFromStartKm: dp.distanceKm,
-        messageVi: isVinFast
-          ? '⚠️ Không tìm thấy trạm sạc trong khu vực này.'
-          : '⚠️ Không tìm thấy trạm sạc tương thích — trạm VinFast không hỗ trợ xe ' + vehicle.brand + '.',
-        messageEn: isVinFast
-          ? '⚠️ No charging station found in this area.'
-          : `⚠️ No compatible stations found — VinFast stations don't support ${vehicle.brand} vehicles.`,
-      });
+      pushNoStationWarning(dp);
     }
   }
 
   // Final battery segment
   const finalDistanceTraveled = totalRouteKm - lastStopKm;
   const finalBatteryUsed = (finalDistanceTraveled / effectiveMaxRange) * 100;
+  pushUnreachableWarning(lastStopKm, currentBattery, currentBattery - finalBatteryUsed);
   const arrivalBatteryPercent = Math.max(0, Math.round(currentBattery - finalBatteryUsed));
 
   const lastStopName = chargingStops.length > 0
