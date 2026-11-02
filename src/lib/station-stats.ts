@@ -66,3 +66,27 @@ export function replaceEnergyPricesBlock(
 ): string {
   return content.replace(ENERGY_PRICES_BLOCK_RE, renderEnergyPricesBlock(prices));
 }
+
+export interface SyncReadmeBlocksOptions {
+  /** Restrict the sync to one block, so the station and energy crawl jobs don't
+   *  each rewrite the other's README section (see #94). Omit to sync both. */
+  readonly only?: 'stations' | 'energy';
+  readonly stationCount?: number;
+  readonly energy?: EnergyPricesReadmeBlock;
+}
+
+/**
+ * Sync one or both README blocks from auto-crawled data. Pure function — no
+ * file I/O — so `scripts/update-readme-stats.ts` can stay a thin wrapper.
+ */
+export function syncReadmeBlocks(content: string, options: SyncReadmeBlocksOptions = {}): string {
+  const { only, stationCount, energy } = options;
+  let result = content;
+  if (only !== 'energy' && stationCount !== undefined) {
+    result = replaceStationsBlock(result, stationCount);
+  }
+  if (only !== 'stations' && energy !== undefined) {
+    result = replaceEnergyPricesBlock(result, energy);
+  }
+  return result;
+}
