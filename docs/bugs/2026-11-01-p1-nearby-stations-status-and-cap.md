@@ -2,6 +2,8 @@
 
 Status: open, documented only. Code refs are at `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main). No cited file changed between the audit HEAD `bfa3a3b` and this base.
 
+> **Status 2026-11-02:** Finding 1 is fixed on this branch. `getStatusKey` in `NearbyStations.tsx` and the `STATUS_KEYS` map in `StationCard.tsx` are replaced by one exact-match helper, `src/lib/station/status-label-key.ts`: ACTIVE -> active, BUSY -> busy, UNAVAILABLE/INACTIVE/OUTOFSERVICE -> inactive, null or unknown -> `map_status_unknown`. This also fixes the related StationCard OUTOFSERVICE item. The three Finding 1 tests now run as `it`. Finding 2 (500-row cap before distance ordering) stays open, and its two tests stay `it.fails`: the fix shape (SQL ORDER BY distance vs moving the UI to `/nearby`) is an owner decision (open question 2). Null showing "Status unknown" follows the recommended answer to open question 1; the owner can still change it.
+
 ## Summary
 
 On the Nearby tab (`/plan`), most stations in central HCMC show a green "Active" / "Hoạt động" badge even when the charger is INACTIVE or UNAVAILABLE. In the live 5 km box around District 1 that is 233 of 396 stations (59%). Drivers get sent to chargers that do not work.

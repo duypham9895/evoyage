@@ -579,22 +579,22 @@ describe('NearbyStations', () => {
       });
     }
 
-    // BUG(p1-nearby-stations-status-and-cap): 'inactive'.includes('active') so INACTIVE renders the green Active badge. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
-    it.fails('shows INACTIVE stations as Inactive, not Active', async () => {
+    // BUG(p1-nearby-stations-status-and-cap): 'inactive'.includes('active') so INACTIVE renders the green Active badge. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+    it('shows INACTIVE stations as Inactive, not Active', async () => {
       await renderWithStatus('INACTIVE');
       expect(screen.queryByText('Active')).not.toBeInTheDocument();
       expect(screen.getByText('Inactive')).toBeInTheDocument();
     });
 
-    // BUG(p1-nearby-stations-status-and-cap): 'unavailable'.includes('available') so UNAVAILABLE renders the green Active badge. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
-    it.fails('shows UNAVAILABLE stations as Inactive, not Active', async () => {
+    // BUG(p1-nearby-stations-status-and-cap): 'unavailable'.includes('available') so UNAVAILABLE renders the green Active badge. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+    it('shows UNAVAILABLE stations as Inactive, not Active', async () => {
       await renderWithStatus('UNAVAILABLE');
       expect(screen.queryByText('Active')).not.toBeInTheDocument();
       expect(screen.getByText('Inactive')).toBeInTheDocument();
     });
 
-    // BUG(p1-nearby-stations-status-and-cap): a null status defaults to the green Active badge. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
-    it.fails('does not claim a station with no status is Active', async () => {
+    // BUG(p1-nearby-stations-status-and-cap): a null status defaults to the green Active badge. See docs/bugs/2026-11-01-p1-nearby-stations-status-and-cap.md
+    it('does not claim a station with no status is Active', async () => {
       await renderWithStatus(null);
       expect(screen.queryByText('Active')).not.toBeInTheDocument();
     });
