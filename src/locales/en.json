@@ -556,7 +556,7 @@
   "privacy_processor_posthog_body": "We record usage events that contain no identifier set by us. Your browser sends them to PostHog in the United States together with your IP address and browser information. PostHog's servers turn those two into a pseudonymous ID, which PostHog's documentation describes as changing daily. That ID links your events within the same day.",
 
   "privacy_processor_supabase_name": "Supabase",
-  "privacy_processor_supabase_body": "Feedback, station status reports, share links and cached routes are stored in eVoyage's Supabase database in Singapore. Feedback and status reports also keep a hashed form of your IP address, and that hash can be turned back into the IP. Anyone with a share link can see the places on that trip.",
+  "privacy_processor_supabase_body": "Feedback, station status reports, share links and cached routes are stored in eVoyage's Supabase database in Singapore. Feedback and status reports also keep a keyed (HMAC) hash of your IP address, not the IP itself. The hash cannot be turned back into the IP only while eVoyage's secret hashing key is configured; without that key it falls back to a plain hash that can be. Anyone with a share link can see the places on that trip.",
 
   "privacy_processor_vercel_name": "Vercel",
   "privacy_processor_vercel_body": "Everything you send to the app — including your location, trip addresses, feedback and voice recordings — is processed on Vercel's servers. The region is not set in our code yet. Photos you attach to feedback are stored on Vercel too: anyone with the photo's link can view it, and it may still carry your camera's location data, so remove that before uploading.",

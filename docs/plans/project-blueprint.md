@@ -1215,7 +1215,7 @@ if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`
 | `StationStatusReport`: ipHash, userAgent | Station status | Supabase | Singapore | 180 days |
 | `ShortUrl.params`: start/end coordinates, typed addresses. Anyone with the short link can see the trip. | Share links | Supabase | Singapore | 1 year, then deleted after 30 more days. Legacy `expiresAt=NULL` rows: no limit. |
 | `RouteCache`: start/end coordinates rounded to 4 dp (~11 m) | Route cache | Supabase | Singapore | 30 days (read TTL 24 h) |
-| `ipHash` is unsalted SHA-256, so every IPv4 address can be recovered | — | — | — | — |
+| `ipHash` is HMAC-SHA256 keyed by `IP_HASH_SECRET` (`src/lib/security/hash-ip.ts`), so it cannot be reversed while that secret is set. If the secret is missing it falls back to unsalted SHA-256 (every IPv4 address recoverable) and logs a `[SECURITY]` warning. Rows written before the switch still hold the old unsalted hash. | — | — | — | — |
 | Raw IP as the rate-limit key | Abuse protection | Upstash Redis | Outside Vietnam; region not set in code | One limit window (60 s–1 h) |
 | Everything sent to the app is processed on Vercel's servers: IP, user agent, GPS for nearby stations, trip start/end coordinates, eVi text and location, feedback, and voice audio | Hosting and API processing | Vercel | Function region not set in code (`vercel.json` has no `regions`) | Set by Vercel |
 | GPS from "use my location" and typed place searches, sent from the browser (OSMF sees the user's IP) | Place search | OpenStreetMap Nominatim (OSMF) | Outside Vietnam | Not under our control |

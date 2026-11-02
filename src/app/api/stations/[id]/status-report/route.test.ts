@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { createHmac } from 'crypto';
 
 // ── Mocks ──
 
@@ -75,6 +76,18 @@ describe('POST /api/stations/[id]/status-report', () => {
     expect(mockUpdateStation).toHaveBeenCalledTimes(1);
     expect(mockUpdateStation.mock.calls[0][0].where).toEqual({ id: STATION_ID });
     expect(mockUpdateStation.mock.calls[0][0].data.lastVerifiedAt).toBeInstanceOf(Date);
+  });
+
+  it('stores a keyed HMAC of the IP when IP_HASH_SECRET is set (not reversible plain SHA-256)', async () => {
+    vi.stubEnv('IP_HASH_SECRET', 'test-secret');
+    try {
+      await POST(buildRequest({ status: 'WORKING' }), PARAMS);
+      expect(mockCreateReport.mock.calls[0][0].data.ipHash).toBe(
+        createHmac('sha256', 'test-secret').update('203.0.113.42').digest('hex'),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('records a BROKEN report without touching lastVerifiedAt', async () => {

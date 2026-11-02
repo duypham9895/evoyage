@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { createHmac } from 'crypto';
 import { __resetRateLimitForTests } from '@/lib/rate-limit';
 
 const createMock = vi.fn();
@@ -68,6 +69,19 @@ describe('POST /api/feedback', () => {
     expect(writeCall.data.ipHash).toMatch(/^[0-9a-f]{64}$/);
     // SHA-256 of '203.0.113.42' computed offline:
     expect(writeCall.data.ipHash).not.toContain('203.0.113.42');
+  });
+
+  it('stores a keyed HMAC of the IP when IP_HASH_SECRET is set (not reversible plain SHA-256)', async () => {
+    vi.stubEnv('IP_HASH_SECRET', 'test-secret');
+    try {
+      await POST(makeRequest(VALID, { ip: '203.0.113.42' }));
+      const writeCall = createMock.mock.calls[0]![0] as { data: { ipHash: string } };
+      expect(writeCall.data.ipHash).toBe(
+        createHmac('sha256', 'test-secret').update('203.0.113.42').digest('hex'),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('persists imageUrl when provided', async () => {

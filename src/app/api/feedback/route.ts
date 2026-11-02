@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { hashIp } from '@/lib/security/hash-ip';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -27,11 +27,6 @@ const feedbackLimiter = hasRedis
       prefix: 'evoyage:ratelimit',
     })
   : null;
-
-/** Hash IP with SHA-256 for privacy-safe storage */
-function hashIp(ip: string): string {
-  return createHash('sha256').update(ip).digest('hex');
-}
 
 /**
  * POST /api/feedback — Submit user feedback.
