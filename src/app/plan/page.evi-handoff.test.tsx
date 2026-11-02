@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 /**
  * Regression tests for how src/app/plan/page.tsx hands off from the eVi chat
@@ -73,9 +73,18 @@ vi.mock('@/components/map/MapLocateButton', () => ({
   default: () => <button type="button" data-testid="mock-locate-button">locate</button>,
 }));
 
-let capturedEViProps: Record<string, unknown> = {};
+// Receives EVi's latest props after each commit (assigning a module variable
+// during render breaks react-hooks rules).
+const eviPropsSpy = vi.fn<(props: Record<string, unknown>) => void>();
+function lastEViProps(): Record<string, unknown> {
+  const call = eviPropsSpy.mock.lastCall;
+  if (!call) throw new Error('EVi was never rendered');
+  return call[0];
+}
 function MockEVi(props: Record<string, unknown>) {
-  capturedEViProps = props;
+  useEffect(() => {
+    eviPropsSpy(props);
+  });
   const [draft, setDraft] = useState('');
   return (
     <input
@@ -120,7 +129,7 @@ beforeEach(() => {
   Element.prototype.scrollTo = vi.fn();
   Element.prototype.scrollIntoView = vi.fn();
   window.history.replaceState(null, '', `/plan?cv=${encodeURIComponent(CUSTOM_VEHICLE)}`);
-  capturedEViProps = {};
+  eviPropsSpy.mockReset();
   capturedSheetProps = {};
   vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
     const body = typeof url === 'string' && url.includes('/api/route') ? ROUTE_RESPONSE : { vehicles: [] };
@@ -220,7 +229,7 @@ describe('plan page — desktop eVi conversation survives tab switches', () => {
   it('keeps the eVi conversation after Plan trip and returning to the eVi tab', async () => {
     await startDesktopConversation();
 
-    const onPlanTrip = capturedEViProps.onPlanTrip as (params: unknown) => void;
+    const onPlanTrip = lastEViProps().onPlanTrip as (params: unknown) => void;
     act(() => {
       onPlanTrip(TRIP_PARAMS);
     });
@@ -233,7 +242,7 @@ describe('plan page — desktop eVi conversation survives tab switches', () => {
   it('keeps the eVi conversation after Edit and returning to the eVi tab', async () => {
     await startDesktopConversation();
 
-    const onTripParsed = capturedEViProps.onTripParsed as (params: unknown) => void;
+    const onTripParsed = lastEViProps().onTripParsed as (params: unknown) => void;
     act(() => {
       onTripParsed(TRIP_PARAMS);
     });
