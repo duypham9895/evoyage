@@ -2,6 +2,8 @@
 
 Date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Prod: https://evoyage.duypham.me
 
+> **Status 2026-11-02 (main `d660c18`):** the client half of finding 1 (truthy-token check) is fixed by #122, which falls back to OSM for a non-`pk.` token. Finding 2 is fixed on this branch (`route.ts` uses the entered names on a Mapbox cache miss). **Still open:** the root cause of finding 1, `deploy.yml`'s `vercel pull` writing `"[SENSITIVE]"` into `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` (owner action: un-flag the var in Vercel, or pass it to the build step from a GitHub secret). Until then prod runs on OSM. Line numbers below are for `64db6f9`; `page.tsx` refs are +1 on current main.
+
 ## Summary
 
 The map on `/plan` is solid black for every user, on mobile and desktop. The client bundle holds the literal string `"[SENSITIVE]"` as the Mapbox token. Mapbox rejects it with 401, and the app never falls back to the OSM map because it treats any non-empty string as a valid token. A second bug rides on the same path: on a first-time (uncached) route, the trip header, share card and share text show raw coordinates like `10.7737 → 11.9083` instead of place names.

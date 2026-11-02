@@ -287,8 +287,8 @@ export async function POST(request: NextRequest) {
             polyline: normalizedPolyline,
             distanceMeters: mapboxResult.distanceMeters,
             durationSeconds: mapboxResult.durationSeconds,
-            startAddress: mapboxResult.startAddress,
-            endAddress: mapboxResult.endAddress,
+            startAddress: start,
+            endAddress: end,
             startCoord: mapboxResult.startCoord,
             endCoord: mapboxResult.endCoord,
           };

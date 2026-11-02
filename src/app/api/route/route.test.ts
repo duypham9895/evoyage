@@ -362,8 +362,8 @@ describe('POST /api/route provider resilience', () => {
     expect(plan.error).toBeUndefined();
   });
 
-  // BUG(p0-mapbox-token-sensitive-placeholder): Mapbox cache-miss branch returns "lat,lng" strings as start/end addresses instead of the user-entered names. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p0-mapbox-token-sensitive-placeholder.md
-  it.fails('returns the user-entered start/end names on a Mapbox cache miss, not coordinate strings', async () => {
+  // BUG(p0-mapbox-token-sensitive-placeholder): Mapbox cache-miss branch returns "lat,lng" strings as start/end addresses instead of the user-entered names. See docs/bugs/2026-11-01-p0-mapbox-token-sensitive-placeholder.md
+  it('returns the user-entered start/end names on a Mapbox cache miss, not coordinate strings', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'server-token';
     const { fetchDirectionsMapbox } = await import('@/lib/routing/mapbox-directions');
     // Mirrors the real client (mapbox-directions.ts), which formats the input
