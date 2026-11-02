@@ -27,6 +27,7 @@ const DEFAULT_VEHICLE: TripCostVehicle = {
   model: 'VF 8',
   usableBatteryKwh: 82,
   officialRangeKm: 471,
+  rangeStandard: 'NEDC',
   efficiencyWhPerKm: null,
 };
 
@@ -34,7 +35,11 @@ export interface TripCostVehicle {
   readonly brand: string;
   readonly model: string;
   readonly usableBatteryKwh: number | null;
+  /** Gross battery (kWh). Used only when usableBatteryKwh is unknown (custom vehicles). */
+  readonly batteryCapacityKwh?: number | null;
   readonly officialRangeKm: number;
+  /** e.g. 'NEDC', 'WLTP'. For NEDC, a stored efficiency is the spec figure, not a measured one. */
+  readonly rangeStandard?: string | null;
   readonly efficiencyWhPerKm: number | null;
 }
 
@@ -62,22 +67,27 @@ interface ComputeTripCostInput {
   readonly today?: Date;
 }
 
+/** Usable battery when known, else gross battery (custom vehicles only have gross). */
+function effectiveBatteryKwh(vehicle: TripCostVehicle): number | null {
+  if (vehicle.usableBatteryKwh && vehicle.usableBatteryKwh > 0) return vehicle.usableBatteryKwh;
+  if (vehicle.batteryCapacityKwh && vehicle.batteryCapacityKwh > 0) return vehicle.batteryCapacityKwh;
+  return null;
+}
+
 function deriveKwhPer100km(vehicle: TripCostVehicle): number {
+  const batteryKwh = effectiveBatteryKwh(vehicle);
+  const derived =
+    batteryKwh != null && vehicle.officialRangeKm > 0
+      ? (batteryKwh / vehicle.officialRangeKm) * 100 * NEDC_REAL_WORLD_MULTIPLIER
+      : null;
+  // The catalog's NEDC efficiency is synthesised from battery÷range (seed
+  // script), so it is not a measured figure: prefer the corrected derivation.
+  const isNedc = vehicle.rangeStandard?.trim().toUpperCase() === 'NEDC';
+  if (isNedc && derived != null) return derived;
   if (vehicle.efficiencyWhPerKm && vehicle.efficiencyWhPerKm > 0) {
     return vehicle.efficiencyWhPerKm / 10; // Wh/km → kWh/100km
   }
-  if (
-    vehicle.usableBatteryKwh &&
-    vehicle.usableBatteryKwh > 0 &&
-    vehicle.officialRangeKm > 0
-  ) {
-    return (
-      (vehicle.usableBatteryKwh / vehicle.officialRangeKm) *
-      100 *
-      NEDC_REAL_WORLD_MULTIPLIER
-    );
-  }
-  return DEFAULT_KWH_PER_100KM;
+  return derived ?? DEFAULT_KWH_PER_100KM;
 }
 
 /**
@@ -96,7 +106,7 @@ function isVinFastFreeCharging(
   today: Date,
   freeUntil: string,
 ): boolean {
-  if (vehicle.brand.toLowerCase() !== 'vinfast') return false;
+  if (vehicle.brand.trim().toLowerCase() !== 'vinfast') return false;
   const cutoff = Date.parse(freeUntil);
   if (Number.isNaN(cutoff)) return false;
   return today.getTime() <= cutoff;

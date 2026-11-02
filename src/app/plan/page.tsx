@@ -1056,12 +1056,7 @@ function HomeContent() {
                 />
                 {(tripPlan || isPlanning) && (
                   <div ref={routeResultRef} data-testid="route-result-anchor" className="scroll-mt-3">
-                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
-                      selectedVehicle?.efficiencyWhPerKm ??
-                      (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
-                        ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
-                        : null)
-                    } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} minArrivalPercent={minArrival} />
+                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={selectedVehicle?.efficiencyWhPerKm ?? null} vehicleBrand={activeVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={activeVehicle?.officialRangeKm} vehicleBatteryCapacityKwh={activeVehicle?.batteryCapacityKwh} vehicleRangeStandard={selectedVehicle?.rangeStandard} onSelectAlternativeStation={handleSelectAlternativeStation} onBackToChat={handleBackToChat} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} minArrivalPercent={minArrival} />
                   </div>
                 )}
                 {/* Inline share button for mobile — replaces floating FAB */}
@@ -1252,12 +1247,7 @@ function HomeContent() {
 
                 {(tripPlan || isPlanning) && (
                   <div ref={routeResultRef} data-testid="route-result-anchor" className="scroll-mt-3">
-                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={
-                      selectedVehicle?.efficiencyWhPerKm ??
-                      (selectedVehicle?.batteryCapacityKwh && selectedVehicle?.officialRangeKm
-                        ? (selectedVehicle.batteryCapacityKwh * 1000) / selectedVehicle.officialRangeKm
-                        : null)
-                    } vehicleBrand={selectedVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={selectedVehicle?.officialRangeKm} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} minArrivalPercent={minArrival} />
+                    <TripSummary tripPlan={tripPlan} isLoading={isPlanning} vehicleEfficiencyWhPerKm={selectedVehicle?.efficiencyWhPerKm ?? null} vehicleBrand={activeVehicle?.brand} vehicleUsableBatteryKwh={selectedVehicle?.usableBatteryKwh} vehicleOfficialRangeKm={activeVehicle?.officialRangeKm} vehicleBatteryCapacityKwh={activeVehicle?.batteryCapacityKwh} vehicleRangeStandard={selectedVehicle?.rangeStandard} onSelectAlternativeStation={handleSelectAlternativeStation} onSelectDepartureTime={setDepartAt} precautionaryStopInteractions={precautionaryStopInteractions} minArrivalPercent={minArrival} />
                   </div>
                 )}
               </div>

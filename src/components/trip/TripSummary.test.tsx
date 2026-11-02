@@ -325,6 +325,51 @@ describe('TripSummary — trip cost section', () => {
     expect(screen.queryByTestId('trip-cost-section')).not.toBeInTheDocument();
   });
 
+  it('renders cost from battery and range when efficiency is missing (custom vehicles)', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan()}
+        isLoading={false}
+        vehicleEfficiencyWhPerKm={null}
+        vehicleBrand="Tesla"
+        vehicleBatteryCapacityKwh={60}
+        vehicleOfficialRangeKm={400}
+      />,
+    );
+    const section = screen.getByTestId('trip-cost-section');
+    expect(section).toHaveTextContent(/Electric at home: ~[\d.]+ ₫/);
+  });
+
+  it('shows "Free at V-GREEN" for a custom VinFast vehicle with only battery and range', () => {
+    render(
+      <TripSummary
+        tripPlan={makeTripPlan()}
+        isLoading={false}
+        vehicleBrand="VinFast"
+        vehicleBatteryCapacityKwh={87.7}
+        vehicleOfficialRangeKm={471}
+      />,
+    );
+    expect(screen.getByTestId('trip-cost-section')).toHaveTextContent('Electric: Free at V-GREEN (until 2029)');
+  });
+
+  it('hides cost section when efficiency and battery are missing, or range is zero', () => {
+    const { rerender } = render(
+      <TripSummary tripPlan={makeTripPlan()} isLoading={false} vehicleOfficialRangeKm={400} />,
+    );
+    expect(screen.queryByTestId('trip-cost-section')).not.toBeInTheDocument();
+
+    rerender(
+      <TripSummary
+        tripPlan={makeTripPlan()}
+        isLoading={false}
+        vehicleBatteryCapacityKwh={60}
+        vehicleOfficialRangeKm={0}
+      />,
+    );
+    expect(screen.queryByTestId('trip-cost-section')).not.toBeInTheDocument();
+  });
+
   it('renders cost for very long trips with grouped formatting (dot thousands)', () => {
     render(
       <TripSummary
