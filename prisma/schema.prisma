@@ -186,8 +186,9 @@ model StationPopularity {
 }
 
 // Cached Cloudflare-protected cookies for vinfastauto.com /get-locators API.
-// Refreshed weekly by a Playwright job on GitHub Actions; consumed by the
-// hourly Vercel polling endpoint so the hot path stays Playwright-free.
+// Refreshed and read by the poll-station-status GitHub Actions job every
+// 2 hours — it mints its own cookies, persists them here, then reads this
+// same row back.
 model VinfastApiCookies {
   id          Int      @id @default(autoincrement())
   cookieJson  String // serialized cookie array from Playwright
