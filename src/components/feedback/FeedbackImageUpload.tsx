@@ -8,7 +8,7 @@ interface FeedbackImageUploadProps {
   readonly onChange: (url: string | null) => void;
 }
 
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic';
+const ACCEPT = 'image/jpeg,image/png,image/webp';
 
 export default function FeedbackImageUpload({ value, onChange }: FeedbackImageUploadProps) {
   const { t } = useLocale();

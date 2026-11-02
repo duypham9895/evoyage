@@ -377,7 +377,7 @@
   "feedback_upload_uploading": "Uploading…",
   "feedback_upload_remove": "Remove",
   "feedback_upload_preview_alt": "Attached photo preview",
-  "feedback_upload_hint": "JPEG, PNG, WEBP, or HEIC. Up to 5 MB.",
+  "feedback_upload_hint": "JPEG, PNG, or WEBP. Up to 5 MB.",
   "feedback_upload_too_large": "Photo is too large (5 MB max).",
   "feedback_upload_invalid_type": "That file isn't a supported image format.",
   "feedback_upload_rate_limited": "Too many uploads. Please wait before trying again.",
@@ -559,7 +559,7 @@
   "privacy_processor_supabase_body": "Feedback, station status reports, share links and cached routes are stored in eVoyage's Supabase database in Singapore. Feedback and status reports also keep a keyed (HMAC) hash of your IP address, not the IP itself. The hash cannot be turned back into the IP only while eVoyage's secret hashing key is configured; without that key it falls back to a plain hash that can be. Anyone with a share link can see the places on that trip.",
 
   "privacy_processor_vercel_name": "Vercel",
-  "privacy_processor_vercel_body": "Everything you send to the app — including your location, trip addresses, feedback and voice recordings — is processed on Vercel's servers. The region is not set in our code yet. Photos you attach to feedback are stored on Vercel too: anyone with the photo's link can view it, and it may still carry your camera's location data, so remove that before uploading.",
+  "privacy_processor_vercel_body": "Everything you send to the app — including your location, trip addresses, feedback and voice recordings — is processed on Vercel's servers. The region is not set in our code yet. Photos you attach to feedback are stored on Vercel too: anyone with the photo's link can view it. We remove the photo's hidden details, including your camera's location data, before storing it.",
 
   "privacy_processor_resend_name": "Resend",
   "privacy_processor_resend_body": "Every piece of feedback is emailed to Duy through Resend, including your contact details and the address of the page you were on. Resend's region is not set in our code.",
