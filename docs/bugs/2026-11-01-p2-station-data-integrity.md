@@ -2,6 +2,14 @@
 
 Audit date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Branch: `bug/p2-station-data-integrity`
 
+> **Status 2026-11-02:**
+> - **Fixed, Finding 1 (overwrite part):** the upsert no longer assigns `maxPowerKw`, `portCount`, `chargerTypes` or `connectorTypes` on conflict, so enriched specs survive the daily crawl. Test `does not overwrite existing maxPowerKw / portCount / chargerTypes / connectorTypes…` flipped to `it`. Visible effect is close to zero until `enrich-vinfast-detail.ts` runs: prod already holds 150/4 on nearly every row.
+> - **Fixed, Finding 2 (new writes):** the crawl skips rows on the known placeholder (`10.773106, 106.694794`) and rows whose latitude is more than 3° from the median of their `province_id` (provinces with at least 5 rows), via `src/lib/station/placeholder-coordinates.ts`. The summary logs `Skipped (placeholder coordinates): N`. Test `does not upsert out-of-region stations stacked on the feed placeholder coordinate` flipped to `it`. The ~108 rows already in prod are not touched; they stop getting a fresh `scrapedAt`, and the station count in station-stats.json/README drops by about that many on the first run.
+> - **Still open, Finding 1 (stored value):** new rows still get 150 kW / 4 ports because the columns are NOT NULL. Needs the nullable-column migration plus a UI "power unknown" state, which is Duy's product decision (Open question 1). Test `does not store a fabricated 150 kW / 4-port spec…` stays `it.fails`.
+> - **Still open, Finding 3:** retiring stations that left the feed is a prod write (~726 rows on the first run) and needs Duy's choice of K. Test `issues a retirement write…` stays `it.fails`. Cleaning up the existing placeholder rows waits on the same decision.
+> - **Merge gate:** the 01:00 UTC crawl applies this to prod the next morning, so merging needs Duy's explicit go.
+> - Defaults taken (reversible, owner may override): drop the four spec columns from `DO UPDATE SET` instead of a sentinel `CASE` guard; skip placeholder rows instead of flagging them; placeholder detection = known constant OR latitude more than 3° from the province median, with a minimum of 5 rows per province (the "coordinate shared by more than N rows" rule was not used, because real sites such as malls share coordinates).
+
 ## Summary
 
 The daily VinFast crawl (`scripts/crawl-vinfast-stations.ts`) stores bad station data. Every VinFast station is listed as 150 kW with 4 ports. About 108 out-of-region stations, mostly Hà Nội (province_id 2483) plus a few other provinces, sit on one placeholder point in HCM District 1. Stations that VinFast removed from its feed are never retired. As a result, drivers see wrong speed filters and charge times, get "0.2 km away" results that are really hundreds of km away, and a few dead or misplaced stations can be picked as route stops.
