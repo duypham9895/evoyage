@@ -25,7 +25,7 @@ import { estimateDetourTimeSec, haversineDistance, type StationWithRouteInfo } f
 import { chargeTargetForDecisionPoint } from '@/lib/routing/top-up-target';
 import { safeJsonArray } from '@/lib/safe-json';
 import { VIETNAM_MODELS } from '@/lib/vietnam-models';
-import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, TripPlan, RankedStation } from '@/types';
+import type { ChargingStationData, ChargingStop, ChargingStopWithAlternatives, NoStationWarning, TripPlan, RankedStation } from '@/types';
 import { CHARGE_TARGET_PERCENT } from '@/types';
 
 const routeRequestSchema = z.object({
@@ -341,6 +341,19 @@ export async function POST(request: NextRequest) {
         { status: 502 },
       );
     }
+
+    // The OSRM client already retried on Mapbox when its route ran through
+    // Laos/Cambodia. If the route still leaves Vietnam (no token, Mapbox
+    // failed or also crossed), plan anyway but say so up front.
+    const foreignSegment = findForeignSegment(routePoints);
+    const borderWarning: NoStationWarning | null = foreignSegment
+      ? {
+          type: 'ROUTE_LEAVES_VIETNAM',
+          distanceFromStartKm: Math.round(foreignSegment.firstExitKm),
+          messageVi: 'Tuyến đường này đi qua lãnh thổ Lào/Campuchia. Hãy kiểm tra lại điểm đi, điểm đến hoặc thêm một điểm dừng trong Việt Nam.',
+          messageEn: 'This route passes through Laos/Cambodia. Check your start and end points, or add a stop inside Vietnam.',
+        }
+      : null;
 
     // Use reduce instead of Math.min/max(...array) to avoid stack overflow
     // on large polylines (V8 limits spread to ~65K arguments)
@@ -714,7 +727,7 @@ export async function POST(request: NextRequest) {
       totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
       totalDurationMin: adjustedDurationMin,
       chargingStops: enrichedChargingStops,
-      warnings: plan.warnings,
+      warnings: borderWarning ? [borderWarning, ...plan.warnings] : plan.warnings,
       batterySegments: plan.batterySegments,
       arrivalBatteryPercent: plan.arrivalBatteryPercent,
       totalChargingTimeMin,

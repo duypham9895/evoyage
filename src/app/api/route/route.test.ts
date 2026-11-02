@@ -533,4 +533,34 @@ describe('POST /api/route route cache must not serve cross-border routes', () =>
 
     expect(setCachedRoute).toHaveBeenCalledWith(10, 106, 10, 108, 'osrm', expect.anything());
   });
+
+  it('plans with a ROUTE_LEAVES_VIETNAM warning first when no in-country route was found', async () => {
+    const { fetchDirectionsFromCoords } = await import('@/lib/routing/osrm');
+    vi.mocked(fetchDirectionsFromCoords).mockResolvedValueOnce({
+      polyline: encodePolyline(CROSS_BORDER_ROUTE, 5),
+      distanceMeters: 1_493_712,
+      durationSeconds: 80_000,
+      startAddress: 'A',
+      endAddress: 'B',
+      startCoord: { lat: 10.7726, lng: 106.698 },
+      endCoord: { lat: 21.0285, lng: 105.8542 },
+      provider: 'osrm',
+    });
+
+    const plan = await postRoute({ ...BODY, startLat: 10.7726, startLng: 106.698, endLat: 21.0285, endLng: 105.8542 });
+
+    expect(plan.error).toBeUndefined();
+    expect(plan.warnings[0]).toMatchObject({ type: 'ROUTE_LEAVES_VIETNAM' });
+    // First foreign point is Kratie (Cambodia), ~250 km from HCM.
+    expect(plan.warnings[0].distanceFromStartKm).toBeGreaterThan(200);
+    expect(plan.warnings[0].distanceFromStartKm).toBeLessThan(300);
+    expect(plan.warnings[0].messageVi).toMatch(/Lào|Campuchia/);
+    expect(plan.warnings[0].messageEn).toMatch(/Laos|Cambodia/);
+  });
+
+  it('adds no ROUTE_LEAVES_VIETNAM warning for an in-country route', async () => {
+    const plan = await postRoute({ ...BODY, startLat: 10, startLng: 106, endLat: 10, endLng: 108 });
+
+    expect(plan.warnings.some((w: { type: string }) => w.type === 'ROUTE_LEAVES_VIETNAM')).toBe(false);
+  });
 });
