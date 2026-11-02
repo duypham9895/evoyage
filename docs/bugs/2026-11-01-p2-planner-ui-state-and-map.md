@@ -2,6 +2,8 @@
 
 Base commit for every `file:line` below: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main).
 
+> **Status 2026-11-02:** Fixed on this branch: **F5** (the notebook stores `vehicleName` at save time; the label is read from the saved trip, custom trips use `trip.customVehicle`, older catalogue entries are looked up via `/api/vehicles?id=` and show "vehicle missing" only on a 404, blank while unresolved) and **F6** (`MapboxMap` takes `nearbyStations` and `userLocation`, draws them and flies to the user). Still open: **F1** not fixed on purpose. Fixing the `depart_at` format alone turns on the F1b waypoint mis-pricing (see the gotcha under F1), and the skip-versus-pass choice for waypoint trips is an owner decision (open question 1). **F2** (no unit test; layout fix), **F3** (localStorage vs cookie) and **F4** (Re-plan mid-calculation behaviour) wait on owner decisions; their tests stay `it.fails`.
+
 ## Summary
 
 Six medium defects in /plan. Traffic-aware departure never works. On mobile, the start-point suggestion list is clipped. The language choice is lost on every navigation and reload. The trip notebook saves a trip under the wrong entry and shows wrong vehicle labels. The locate button on the default Mapbox map draws nothing. Trip planning itself still returns correct routes.

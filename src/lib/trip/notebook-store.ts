@@ -42,6 +42,8 @@ export interface SavedTripInput {
   readonly waypoints: readonly SavedTripWaypoint[];
   readonly isLoopTrip: boolean;
   readonly vehicleId: string | null;
+  /** Display name of the catalogue vehicle at save time. Absent on entries saved before 2026-11-02. */
+  readonly vehicleName?: string | null;
   readonly customVehicle: CustomVehicleInput | null;
   readonly currentBattery: number;
   readonly minArrival: number;

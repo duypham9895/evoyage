@@ -222,8 +222,8 @@ describe('plan page — notebook re-plan attribution', () => {
 });
 
 describe('plan page — notebook vehicle label', () => {
-  // BUG(p2-planner-ui-state-and-map): resolveVehicleName only knows the currently selected vehicle, so catalogue trips show 'Xe không còn trong eVoyage' on a fresh visit. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
-  it.fails('does not label a catalogue-vehicle trip as missing when no vehicle is selected on a fresh visit', async () => {
+  // BUG(p2-planner-ui-state-and-map): resolveVehicleName only knows the currently selected vehicle, so catalogue trips show 'Xe không còn trong eVoyage' on a fresh visit. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
+  it('does not label a catalogue-vehicle trip as missing when no vehicle is selected on a fresh visit', async () => {
     localStorage.setItem('ev-desktop-tab', 'notebook');
     window.history.replaceState(null, '', '/plan');
     seedNotebook([savedTrip({ vehicleId: 'vinfast-vf-8', customVehicle: null })]);
@@ -242,8 +242,8 @@ describe('plan page — notebook vehicle label', () => {
     );
   }, 20000);
 
-  // BUG(p2-planner-ui-state-and-map): custom-vehicle trips are labelled with the CURRENT custom vehicle, not trip.customVehicle. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
-  it.fails('labels a custom-vehicle trip with the vehicle saved on the trip, not the current custom vehicle', async () => {
+  // BUG(p2-planner-ui-state-and-map): custom-vehicle trips are labelled with the CURRENT custom vehicle, not trip.customVehicle. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
+  it('labels a custom-vehicle trip with the vehicle saved on the trip, not the current custom vehicle', async () => {
     localStorage.setItem('ev-desktop-tab', 'notebook');
     // Current custom vehicle (restored from the URL) is a VinFast VF 8 ...
     window.history.replaceState(
@@ -265,9 +265,25 @@ describe('plan page — notebook vehicle label', () => {
   }, 20000);
 });
 
+describe('plan page — notebook vehicle label (stored name)', () => {
+  it('labels a catalogue-vehicle trip with the vehicle name saved on the trip', async () => {
+    localStorage.setItem('ev-desktop-tab', 'notebook');
+    window.history.replaceState(null, '', '/plan');
+    seedNotebook([savedTrip({ vehicleId: 'vinfast-vf-9', vehicleName: 'VinFast VF 9', customVehicle: null })]);
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse({ vehicles: [] })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await renderPlanPage();
+    await screen.findByRole('button', { name: 'Mở lại' });
+
+    expect(screen.getByText('VinFast VF 9')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/vehicles?id='));
+  }, 20000);
+});
+
 describe('plan page — locate button on the Mapbox map', () => {
-  // BUG(p2-planner-ui-state-and-map): nearbyStations / userLocation are only passed to the Leaflet map; MapboxMap (forced default in prod) never receives them. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
-  it.fails('passes nearby stations from the locate button to the Mapbox map', async () => {
+  // BUG(p2-planner-ui-state-and-map): nearbyStations / userLocation are only passed to the Leaflet map; MapboxMap (forced default in prod) never receives them. See docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md
+  it('passes nearby stations from the locate button to the Mapbox map', async () => {
     vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
     localStorage.setItem('ev-desktop-tab', 'planTrip');
     window.history.replaceState(null, '', '/plan');

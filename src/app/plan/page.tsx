@@ -645,6 +645,7 @@ function HomeContent() {
               .map((wp) => ({ lat: wp.coords!.lat, lng: wp.coords!.lng, name: wp.name })),
             isLoopTrip,
             vehicleId: selectedVehicle?.id ?? null,
+            vehicleName: selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : null,
             customVehicle,
             currentBattery,
             minArrival,
@@ -713,6 +714,42 @@ function HomeContent() {
       setAutoPlanRequestId((id) => id + 1);
     },
     [notebook],
+  );
+
+  // Notebook vehicle label: read it from the saved trip, not from the current
+  // selection. Entries saved before vehicleName was stored are looked up by id;
+  // "vehicle missing" shows only after /api/vehicles confirms a 404.
+  const [lookedUpVehicleNames, setLookedUpVehicleNames] = useState<Readonly<Record<string, string | null>>>({});
+  const requestedVehicleIdsRef = useRef(new Set<string>());
+  const isNotebookOpen = activeTab === 'notebook' || desktopSidebarTab === 'notebook';
+  useEffect(() => {
+    if (!isNotebookOpen) return;
+    notebook.list().forEach(({ vehicleId: id, vehicleName }) => {
+      if (!id || vehicleName || requestedVehicleIdsRef.current.has(id)) return;
+      requestedVehicleIdsRef.current.add(id);
+      fetch(`/api/vehicles?id=${encodeURIComponent(id)}`)
+        .then(async (response) => {
+          if (response.status === 404) return null;
+          const data = response.ok ? await response.json() : null;
+          if (!data?.brand || !data?.model) throw new Error('unresolved');
+          return `${data.brand} ${data.model}`;
+        })
+        .then((name) => setLookedUpVehicleNames((prev) => ({ ...prev, [id]: name })))
+        .catch(() => { /* unknown, not missing: leave the label blank */ });
+    });
+  }, [isNotebookOpen, notebook]);
+
+  const resolveNotebookVehicleName = useCallback(
+    (trip: SavedTrip): string | null => {
+      if (!trip.vehicleId) {
+        return trip.customVehicle ? `${trip.customVehicle.brand} ${trip.customVehicle.model}` : null;
+      }
+      if (trip.vehicleName) return trip.vehicleName;
+      if (selectedVehicle?.id === trip.vehicleId) return `${selectedVehicle.brand} ${selectedVehicle.model}`;
+      if (trip.vehicleId in lookedUpVehicleNames) return lookedUpVehicleNames[trip.vehicleId];
+      return '';
+    },
+    [selectedVehicle, lookedUpVehicleNames],
   );
 
   // Cancel an in-flight calculation — reverts to previous tripPlan (if any).
@@ -927,6 +964,8 @@ function HomeContent() {
           tripPlan={tripPlan}
           waypoints={waypointMarkers}
           precautionaryStopInteractions={precautionaryStopInteractions}
+          nearbyStations={nearbyStations}
+          userLocation={userLocationForMap}
         />
       ) : (
         <LeafletMap
@@ -1066,11 +1105,7 @@ function HomeContent() {
             {activeTab === 'notebook' && (
               <TripNotebook
                 store={notebook}
-                resolveVehicleName={(vehicleId) => {
-                  if (!vehicleId) return customVehicle ? `${customVehicle.brand} ${customVehicle.model}` : null;
-                  if (selectedVehicle?.id === vehicleId) return `${selectedVehicle.brand} ${selectedVehicle.model}`;
-                  return null;
-                }}
+                resolveVehicleName={resolveNotebookVehicleName}
                 onReplan={(trip) => {
                   void handleReplanFromNotebook(trip);
                   setActiveTab('route');
@@ -1136,11 +1171,7 @@ function HomeContent() {
               <div className="animate-fadeIn" role="tabpanel" id="desktop-tabpanel-notebook" aria-labelledby="desktop-tab-notebook">
                 <TripNotebook
                   store={notebook}
-                  resolveVehicleName={(vehicleId) => {
-                    if (!vehicleId) return customVehicle ? `${customVehicle.brand} ${customVehicle.model}` : null;
-                    if (selectedVehicle?.id === vehicleId) return `${selectedVehicle.brand} ${selectedVehicle.model}`;
-                    return null;
-                  }}
+                  resolveVehicleName={resolveNotebookVehicleName}
                   onReplan={(trip) => {
                     void handleReplanFromNotebook(trip);
                     handleDesktopTabChange('planTrip');
