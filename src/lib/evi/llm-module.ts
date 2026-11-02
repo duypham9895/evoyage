@@ -44,6 +44,10 @@ function isInfrastructureError(err: unknown): boolean {
   if (err.name === 'AbortError' || err.name === 'APIUserAbortError') return true;
   const status = (err as { status?: number }).status;
   if (typeof status === 'number' && (status === 429 || status >= 500)) return true;
+  // Provider-level auth / model errors. Each provider has its own key
+  // (OPENAI_API_KEY vs MINIMAX_API_KEY) and model id, so a 401/403/404 on one
+  // says nothing about the next. 400 stays non-fallback: a request-shape bug.
+  if (status === 401 || status === 403 || status === 404) return true;
   // Network / TCP errors. The OpenAI SDK wraps these with no `.status`, so
   // pattern-match on the message. These are the same patterns the legacy
   // callJsonLLM treated as fallback-eligible (regression caught after PR 4/4).
@@ -52,7 +56,7 @@ function isInfrastructureError(err: unknown): boolean {
   }
   if (/Request was aborted/i.test(err.message)) return true;
   // Empty / quirk-only content from primary — try the next provider.
-  if (/returned empty response|returned only thinking/i.test(err.message)) return true;
+  if (/returned empty response|returned only thinking|returned invalid JSON/i.test(err.message)) return true;
   // Missing API key on a provider — try the other one rather than crashing.
   if (/is not set/i.test(err.message)) return true;
   return false;
@@ -101,7 +105,13 @@ async function callProvider<T>(provider: LLMProvider, input: CallLLMInput<T>): P
     throw new Error(`${provider.name} returned only thinking tags / fences`);
   }
 
-  const parsed = input.schema.safeParse(JSON.parse(cleaned));
+  let json: unknown;
+  try {
+    json = JSON.parse(cleaned);
+  } catch {
+    throw new Error(`${provider.name} returned invalid JSON`);
+  }
+  const parsed = input.schema.safeParse(json);
   if (!parsed.success) {
     console.error(`[llm] provider=${provider.name} schema_error=${parsed.error.message} latency_ms=${latencyMs}`);
     throw new LLMSchemaError(parsed.error.message, rawContent);
@@ -136,7 +146,9 @@ export async function callLLM<T>(input: CallLLMInput<T>): Promise<T> {
     try {
       return await callProvider(provider, input);
     } catch (e) {
-      if (!isInfrastructureError(e)) throw e;
+      // Once a fallback has started, any non-schema failure exhausts the chain
+      // and surfaces as LLMUnavailableError (routes map it to 503).
+      if (!isInfrastructureError(e) && (lastError === undefined || e instanceof LLMSchemaError)) throw e;
       lastError = e;
       const next = PROVIDER_CHAIN[i + 1];
       if (next) {
