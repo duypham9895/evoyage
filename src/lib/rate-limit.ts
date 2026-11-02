@@ -8,7 +8,9 @@ import { Redis } from '@upstash/redis';
 
 function createRedisRatelimiter(maxRequests: number, windowSec: number): Ratelimit {
   return new Ratelimit({
-    redis: Redis.fromEnv(),
+    // No client retries: against an unreachable host the default (5 retries,
+    // exponential backoff) would hold each request ~4.3 s before the fallback.
+    redis: Redis.fromEnv({ retry: { retries: 0 } }),
     limiter: Ratelimit.slidingWindow(maxRequests, `${windowSec} s`),
     analytics: false,
     prefix: 'evoyage:ratelimit',
@@ -103,6 +105,10 @@ export interface RateLimitResult {
   readonly retryAfterSec: number;
 }
 
+// Upper bound on one Redis round trip. A hung (not refused) connection would
+// otherwise hold every rate-limited request until fetch gives up.
+const REDIS_LIMIT_TIMEOUT_MS = 1_000;
+
 export async function checkRateLimit(
   identifier: string,
   maxRequests: number,
@@ -118,8 +124,17 @@ export async function checkRateLimit(
   // is a guard, not the feature — a guard that is unreachable must degrade, not
   // take the endpoint down with it.
   if (limiter) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const result = await limiter.limit(identifier);
+      const result = await Promise.race([
+        limiter.limit(identifier),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`Redis rate limit timed out after ${REDIS_LIMIT_TIMEOUT_MS} ms`)),
+            REDIS_LIMIT_TIMEOUT_MS,
+          );
+        }),
+      ]);
       return {
         allowed: result.success,
         remaining: result.remaining,
@@ -129,6 +144,8 @@ export async function checkRateLimit(
       // Fall through to the in-memory limiter. Per-instance rather than
       // distributed, so protection is weaker but the endpoint stays up.
       warnRedisUnavailableOnce(err);
+    } finally {
+      clearTimeout(timer);
     }
   }
 
