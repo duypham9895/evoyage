@@ -73,8 +73,8 @@ describe('ShareButton — copy link fallback', () => {
     expect(writeText).toHaveBeenCalledWith(window.location.href);
   });
 
-  // BUG(p2-sharing-flow): when the fallback clipboard write also fails, the UI still says "The full URL has been copied instead". Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p2-sharing-flow.md
-  it.fails('does not claim the full URL was copied when the fallback clipboard write also fails', async () => {
+  // BUG(p2-sharing-flow): when the fallback clipboard write also fails, the UI still says "The full URL has been copied instead". See docs/bugs/2026-11-01-p2-sharing-flow.md
+  it('does not claim the full URL was copied when the fallback clipboard write also fails', async () => {
     writeText.mockRejectedValue(new DOMException('Document is not focused', 'NotAllowedError'));
 
     await openModalAndCopy();
@@ -86,5 +86,15 @@ describe('ShareButton — copy link fallback', () => {
     );
 
     expect(screen.queryByText(/has been copied/i)).not.toBeInTheDocument();
+  });
+
+  it('says the copy failed and shows the full URL for manual copy when the fallback clipboard write also fails', async () => {
+    writeText.mockRejectedValue(new DOMException('Document is not focused', 'NotAllowedError'));
+
+    await openModalAndCopy();
+
+    expect(
+      await screen.findByText(`${messages.share_copy_failed} ${window.location.href}`),
+    ).toBeInTheDocument();
   });
 });

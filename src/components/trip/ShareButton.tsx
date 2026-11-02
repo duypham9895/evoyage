@@ -176,7 +176,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
         await navigator.clipboard.writeText(getFullUrl());
         setErrorMessage(t('share_link_error'));
       } catch {
-        setErrorMessage(t('share_link_error'));
+        setErrorMessage(`${t('share_copy_failed')} ${getFullUrl()}`);
       }
       setLinkState('error');
     }
@@ -222,7 +222,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
         await navigator.clipboard.writeText(getFullUrl());
         setErrorMessage(t('share_link_error'));
       } catch {
-        setErrorMessage(t('share_link_error'));
+        setErrorMessage(`${t('share_copy_failed')} ${getFullUrl()}`);
       }
       setLinkState('error');
     }
@@ -512,7 +512,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
 
                 {/* Error message */}
                 {linkState === 'error' && errorMessage && (
-                  <div className="p-2.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-xs">
+                  <div className="p-2.5 bg-[var(--color-danger)]/10 text-[var(--color-danger)] rounded-lg text-xs break-words">
                     {errorMessage}
                   </div>
                 )}

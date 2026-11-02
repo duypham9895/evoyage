@@ -204,6 +204,7 @@
   "share_creating_link": "Creating link...",
   "share_link_copied": "Link copied!",
   "share_link_error": "Couldn't create a short link. The full URL has been copied instead.",
+  "share_copy_failed": "Couldn't copy the link. Select and copy it here:",
   "share_rate_limited": "You've created too many links. Please wait a moment.",
   "share_or_image": "or share as image",
   "share_qr_code": "QR code",

@@ -204,6 +204,7 @@
   "share_creating_link": "Đang tạo liên kết...",
   "share_link_copied": "Đã sao chép!",
   "share_link_error": "Không tạo được liên kết ngắn. Đã sao chép URL đầy đủ.",
+  "share_copy_failed": "Không sao chép được liên kết. Hãy chọn và sao chép tại đây:",
   "share_rate_limited": "Bạn đã tạo quá nhiều liên kết. Đợi một chút nhé.",
   "share_or_image": "hoặc chia sẻ bằng ảnh",
   "share_qr_code": "Mã QR",

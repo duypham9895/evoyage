@@ -2,6 +2,8 @@
 
 Date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Live: https://evoyage.duypham.me
 
+> **Status 2026-11-02:** Fixed on this branch: related low-severity item 1. When the fallback clipboard write also fails, Copy link and Share link now show a new `share_copy_failed` message (en + vi) followed by the full URL to copy by hand, instead of claiming it was copied. Still open: Finding 1 (OG preview; note #125 removed `@vercel/og`) and Finding 2 (auto-plan on open) await Duy's product decision, their tests stay `it.fails`; Finding 3 (FAB covers the X) needs the portal-vs-hide decision; Finding 4 is unreproduced on a real device; related items 2 and 3 are unchanged.
+
 ## Summary
 
 Sharing a planned trip half-works. The short link resolves, but the person who opens it sees a filled form with no route until they press Plan. In Zalo, Messenger or Slack the link shows no preview image or trip title. On a phone, tapping the share modal's X opens the feedback form. A fourth issue (Copy link failing on iOS Safari's first tap) is plausible but unverified.
