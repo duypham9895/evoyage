@@ -29,6 +29,7 @@ export interface NearbyStationMarker extends ChargingStationData {
 }
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { FALLBACK_TILE_ATTRIBUTION, FALLBACK_TILE_CLASS, FALLBACK_TILE_URL } from '@/lib/map/fallback-tiles';
 
 interface WaypointMarkerData {
   readonly lat: number;
@@ -44,9 +45,6 @@ interface MapProps {
   readonly onSwitchToEVi?: () => void;
 }
 
-// Dark tile layer (CartoDB Dark Matter)
-const DARK_TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>';
 
 function createCircleIcon(color: string, label: string): L.DivIcon {
   return L.divIcon({
@@ -97,8 +95,9 @@ export default function Map({ tripPlan, waypoints, nearbyStations, userLocation,
       zoomControl: true,
     });
 
-    L.tileLayer(DARK_TILE_URL, {
-      attribution: TILE_ATTRIBUTION,
+    L.tileLayer(FALLBACK_TILE_URL, {
+      attribution: FALLBACK_TILE_ATTRIBUTION,
+      className: FALLBACK_TILE_CLASS,
       maxZoom: 19,
     }).addTo(map);
 
