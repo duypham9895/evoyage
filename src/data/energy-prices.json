@@ -1,8 +1,8 @@
 {
-  "lastSyncedAt": "2026-11-01T10:14:09.011Z",
+  "lastSyncedAt": "2026-11-02T10:37:42.651Z",
   "petrolimex": {
     "source": "https://www.petrolimex.com.vn/index.html",
-    "effectiveAt": "2026-10-31T16:54:47.264Z",
+    "effectiveAt": "2026-10-31T17:00:00.000Z",
     "products": {
       "e10ron95iii": {
         "label": "Xăng E10 RON 95-III",
@@ -22,7 +22,7 @@
       },
       "kerosene": {
         "label": "Dầu hỏa 2-K",
-        "vndPerLiter": 30650
+        "vndPerLiter": 29590
       },
       "ron95iii": {
         "label": "Xăng E10 RON 95-III",
