@@ -1,5 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { validateParams } from './short-url';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+
+vi.mock('@/lib/prisma', () => ({
+  prisma: { shortUrl: { findUnique: vi.fn() } },
+}));
+
+import { prisma } from '@/lib/prisma';
+import { validateParams, resolveShortUrl } from './short-url';
+
+const findUnique = prisma.shortUrl.findUnique as unknown as ReturnType<typeof vi.fn>;
 
 describe('short-url', () => {
   describe('validateParams', () => {
@@ -99,6 +107,32 @@ describe('short-url', () => {
           expect(result.params).toBe(original);
         }
       });
+    });
+  });
+
+  describe('resolveShortUrl', () => {
+    afterEach(() => {
+      findUnique.mockReset();
+    });
+
+    it('returns not-found when no row exists for the code', async () => {
+      findUnique.mockResolvedValue(null);
+      await expect(resolveShortUrl('AbC1234')).resolves.toEqual({ status: 'not-found' });
+    });
+
+    it('returns expired (distinct from not-found) when expiresAt has passed', async () => {
+      findUnique.mockResolvedValue({ params: 'start=A', expiresAt: new Date(Date.now() - 1000) });
+      await expect(resolveShortUrl('AbC1234')).resolves.toEqual({ status: 'expired' });
+    });
+
+    it('returns ok with params when expiresAt is in the future', async () => {
+      findUnique.mockResolvedValue({ params: 'start=A', expiresAt: new Date(Date.now() + 60_000) });
+      await expect(resolveShortUrl('AbC1234')).resolves.toEqual({ status: 'ok', params: 'start=A' });
+    });
+
+    it('returns ok for legacy rows with expiresAt = null (never expire on read)', async () => {
+      findUnique.mockResolvedValue({ params: 'start=A', expiresAt: null });
+      await expect(resolveShortUrl('AbC1234')).resolves.toEqual({ status: 'ok', params: 'start=A' });
     });
   });
 });

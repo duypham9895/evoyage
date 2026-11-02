@@ -89,24 +89,30 @@ export async function createShortUrl(params: string, baseUrl: string): Promise<C
   throw new Error('Failed to create short URL after maximum retries');
 }
 
+export type ResolveShortUrlResult =
+  | { readonly status: 'ok'; readonly params: string }
+  | { readonly status: 'not-found' }
+  | { readonly status: 'expired' };
+
 /**
  * Resolve a short code to its stored params string.
- * Returns null if not found or expired.
+ * Distinguishes a missing code from an expired one so the recipient is told
+ * the right thing.
  */
-export async function resolveShortUrl(code: string): Promise<string | null> {
+export async function resolveShortUrl(code: string): Promise<ResolveShortUrlResult> {
   const record = await prisma.shortUrl.findUnique({
     where: { code },
     select: { params: true, expiresAt: true },
   });
 
-  if (!record) return null;
+  if (!record) return { status: 'not-found' };
 
   // Check expiration if set
   if (record.expiresAt && record.expiresAt < new Date()) {
-    return null;
+    return { status: 'expired' };
   }
 
-  return record.params;
+  return { status: 'ok', params: record.params };
 }
 
 /**

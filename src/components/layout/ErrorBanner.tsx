@@ -16,12 +16,29 @@ const getSnapshot = (): string | null => {
 
 const getServerSnapshot = (): string | null => null;
 
+// Each /s/[code] failure gets its own copy; unknown codes read as not-found.
+const ERROR_MESSAGE_KEYS = {
+  'link-not-found': 'share_link_not_found',
+  'link-expired': 'share_expired',
+  'link-unavailable': 'share_link_unavailable',
+} as const;
+
+const messageKeyFor = (code: string) =>
+  Object.hasOwn(ERROR_MESSAGE_KEYS, code)
+    ? ERROR_MESSAGE_KEYS[code as keyof typeof ERROR_MESSAGE_KEYS]
+    : 'share_link_not_found';
+
 export default function ErrorBanner() {
   const { t } = useLocale();
   const urlError = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [dismissed, setDismissed] = useState(false);
+  // Latch the code: the plan page's URL sync rewrites the query ~300 ms after
+  // mount and drops `error`, which would otherwise hide the banner on the next render.
+  const [latchedError, setLatchedError] = useState<string | null>(null);
+  if (urlError && urlError !== latchedError) setLatchedError(urlError);
+  const error = urlError ?? latchedError;
 
-  if (!urlError || dismissed) return null;
+  if (!error || dismissed) return null;
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -37,7 +54,7 @@ export default function ErrorBanner() {
       role="alert"
       className="bg-[var(--color-warn)]/10 border-l-4 border-[var(--color-warn)] px-4 py-3 flex items-start gap-3"
     >
-      <p className="flex-1 text-sm text-[var(--color-foreground)]">{t('share_expired')}</p>
+      <p className="flex-1 text-sm text-[var(--color-foreground)]">{t(messageKeyFor(error))}</p>
       <button
         type="button"
         onClick={handleDismiss}
