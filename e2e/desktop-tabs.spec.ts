@@ -11,10 +11,10 @@ test.describe('F5: Tab Navigation', () => {
     const tabs = page.locator('[role="tab"]');
 
     if (isMobile) {
-      // Mobile: 5 tabs (Route, Vehicle, Battery, Stations, Saved) — eVi is opened via FAB
+      // Mobile: 5 tabs (Trip, Vehicle, Battery, Stations, Saved) — eVi is opened via FAB
       await expect(tabs).toHaveCount(5, { timeout: 5_000 });
       const tabLabels = await tabs.allTextContents();
-      expect(tabLabels.some((t) => /route|tuyến/i.test(t))).toBeTruthy();
+      expect(tabLabels.some((t) => /trip|chuyến đi/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /vehicle|xe/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /battery|pin/i.test(t))).toBeTruthy();
       expect(tabLabels.some((t) => /station|trạm/i.test(t))).toBeTruthy();
@@ -34,8 +34,8 @@ test.describe('F5: Tab Navigation', () => {
     const tabs = page.locator('[role="tab"]');
 
     if (isMobile) {
-      // Mobile: click Route tab, then Stations tab
-      const routeTab = tabs.filter({ hasText: /route|tuyến/i }).first();
+      // Mobile: click Trip tab, then Stations tab
+      const routeTab = tabs.filter({ hasText: /trip|chuyến đi/i }).first();
       await routeTab.click();
       await expect(routeTab).toHaveAttribute('aria-selected', 'true');
 

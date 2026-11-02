@@ -222,13 +222,13 @@ export async function completeTripPlan(page: Page, isMobile: boolean): Promise<v
  * Switch to a specific tab in the desktop sidebar or mobile tab bar.
  *
  * Desktop tabs: eVi (sidebar), Trip / Chuyến đi (was "Plan Trip" / "Lên lộ trình"), Stations / Trạm sạc
- * Mobile tabs:  Route, Vehicle, Battery, Stations (eVi is opened via FAB, not a tab)
+ * Mobile tabs:  Trip, Vehicle, Battery, Stations (eVi is opened via FAB, not a tab)
  */
 type TabName = 'Plan Trip' | 'Route' | 'Vehicle' | 'Battery' | 'Stations' | 'Saved';
 
 const TAB_NAMES: Record<TabName, string[]> = {
   'Plan Trip': ['Trip', 'Chuyến đi', 'Plan Trip', 'Lên lộ trình'],
-  'Route': ['Route', 'Tuyến đường'],
+  'Route': ['Trip', 'Chuyến đi'],
   'Vehicle': ['Vehicle', 'Xe'],
   'Battery': ['Battery', 'Pin'],
   'Stations': ['Stations', 'Trạm sạc'],

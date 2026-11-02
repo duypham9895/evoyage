@@ -38,7 +38,12 @@ describe('MobileTabBar', () => {
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(5);
     const labels = tabs.map(t => t.textContent?.trim());
-    expect(labels).toEqual(['Tuyến đường', 'Xe', 'Pin', 'Trạm sạc', 'Đã lưu']);
+    expect(labels).toEqual(['Chuyến đi', 'Xe', 'Pin', 'Trạm sạc', 'Đã lưu']);
+  });
+
+  it('names the trip tab the same as the desktop trip tab in both locales', () => {
+    expect(vi_dict.tab_route).toBe(vi_dict.desktop_tab_plan);
+    expect(en_dict.tab_route).toBe(en_dict.desktop_tab_plan);
   });
 
   it('does not render an eVi tab', () => {
@@ -107,7 +112,7 @@ describe('MobileTabBar', () => {
         hasRoute={true}
       />,
     );
-    const routeTab = screen.getByRole('tab', { name: /Tuyến đường/ });
+    const routeTab = screen.getByRole('tab', { name: /Chuyến đi/ });
     expect(routeTab.querySelector('span.rounded-full')).toBeInTheDocument();
     const vehicleTab = container.querySelector('[aria-selected="true"]');
     expect(vehicleTab?.querySelector('span.rounded-full')).toBeNull();

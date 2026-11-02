@@ -102,7 +102,7 @@ test.describe('F2: eVi AI Chat — Natural Language Trip', () => {
     await eviPlanButton.click();
 
     await expect(eviDialog).toBeHidden();
-    await expect(page.getByRole('tab', { name: /Route|Tuyến đường/i })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /Trip|Chuyến đi/i })).toHaveAttribute('aria-selected', 'true');
 
     const resultAnchor = page.getByTestId('route-result-anchor');
     const progressText = resultAnchor.getByText(/Calculating route|Đang tính/i);
