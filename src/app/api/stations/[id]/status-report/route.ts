@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 import { normalizeStationStatus } from '@/lib/stations/station-status-validation';
+import { hashIp } from '@/lib/security/hash-ip';
 
 /**
  * 1-tap crowdsourced station status report.
@@ -37,11 +37,6 @@ const statusReportLimiter = hasRedis
       prefix: 'evoyage:ratelimit',
     })
   : null;
-
-/** SHA-256 of the client IP — never store raw IPs. */
-function hashIp(ip: string): string {
-  return createHash('sha256').update(ip).digest('hex');
-}
 
 export async function POST(
   request: NextRequest,
