@@ -2,6 +2,11 @@
 
 All file:line references are at commit `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main).
 
+> **Status 2026-11-02:** Fixed on branch `bug/p2-feedback-form-failures` (code only).
+> - Finding 1: coordinates accept a decimal comma (`10,7626` → `10.7626`); anything else unparseable (including a pasted `lat, lng` pair) or out of range shows an inline error under the field (new keys `feedback_lat_invalid` / `feedback_lng_invalid`) and nothing is sent. A 400 detail for a field the form does not render now shows `feedback_invalid_input` in the submit-error box; `description` / `email` behave as before.
+> - Finding 2: the preview is rendered from `URL.createObjectURL(file)` (already allowed by `img-src blob:`), revoked on remove/replace/unmount. The CSP is unchanged: allowlisting `*.public.blob.vercel-storage.com` would admit images from every Vercel Blob store, not just ours. The `src/proxy.test.ts` test (the file was renamed from `middleware.test.ts` in #126) was rewritten to pin `blob:` in img-src, and `FeedbackImageUpload.test.tsx` asserts a `blob:` preview src.
+> - Still open: splitting a pasted pair across both fields (the user now gets an error instead), client-side clamping of `pageUrl` / `routeParams` (optional), and the rate limit running before validation (intended abuse guard, owner decision). Open questions 1 and 3 were not checked.
+
 ## Summary
 
 Two defects in the feedback modal. (1) When the API rejects a field the form does not display (most realistically the MISSING_STATION coordinates typed with a decimal comma or pasted as a pair), the user presses Send and nothing happens: no error, no success, and each retry burns one of the 5/hour per-IP submissions. (2) After a successful photo upload, the thumbnail is blocked by the site's Content-Security-Policy and shows as a broken image, so the upload looks failed even though it worked.

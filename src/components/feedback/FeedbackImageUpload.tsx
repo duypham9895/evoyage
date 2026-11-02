@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocale } from '@/lib/locale';
 
 interface FeedbackImageUploadProps {
@@ -15,6 +15,15 @@ export default function FeedbackImageUpload({ value, onChange }: FeedbackImageUp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Preview from a local object URL: the CSP img-src allows blob: but not the
+  // Vercel Blob host the upload returns.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const upload = useCallback(
     async (file: File) => {
@@ -41,6 +50,7 @@ export default function FeedbackImageUpload({ value, onChange }: FeedbackImageUp
         }
         const data = await res.json();
         if (typeof data.url === 'string') {
+          setPreviewUrl(URL.createObjectURL(file));
           onChange(data.url);
         }
       } catch {
@@ -64,6 +74,7 @@ export default function FeedbackImageUpload({ value, onChange }: FeedbackImageUp
 
   const remove = useCallback(() => {
     onChange(null);
+    setPreviewUrl(null);
     setError(null);
   }, [onChange]);
 
@@ -75,10 +86,10 @@ export default function FeedbackImageUpload({ value, onChange }: FeedbackImageUp
 
       {value ? (
         <div className="flex items-start gap-3">
-          {/* Thumbnail — eslint-disable: external Blob URL, not a static asset */}
+          {/* Thumbnail — eslint-disable: local object URL, not a static asset */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={value}
+            src={previewUrl ?? value}
             alt={t('feedback_upload_preview_alt')}
             className="w-24 h-24 object-cover rounded-md border border-[var(--color-border)]"
           />

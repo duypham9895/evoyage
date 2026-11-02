@@ -6,6 +6,19 @@ import StarRating from './StarRating';
 import FeedbackImageUpload from './FeedbackImageUpload';
 import type { FeedbackCategory } from '@/lib/feedback/constants';
 
+/**
+ * Parse a free-text coordinate. Accepts a decimal comma ("10,7626"); returns
+ * NaN for anything else Number() would not read as a single number, including
+ * a pasted "lat, lng" pair. Never parseFloat: it truncates "10,7626" to 10.
+ */
+function parseCoordinate(raw: string): number {
+  const trimmed = raw.trim();
+  return /^-?\d+(?:[.,]\d+)?$/.test(trimmed) ? Number(trimmed.replace(',', '.')) : NaN;
+}
+
+/** Fields whose server-side 400 errors the form renders inline. */
+const INLINE_ERROR_FIELDS: ReadonlySet<string> = new Set(['description', 'email']);
+
 /** Categories where attaching a photo materially helps triage. */
 const UPLOAD_CATEGORIES: ReadonlySet<FeedbackCategory> = new Set([
   'REPORT_ISSUE',
@@ -142,9 +155,20 @@ export default function FeedbackModal({
       errors.email = t('feedback_email_invalid');
     }
 
+    if (category === 'MISSING_STATION') {
+      const lat = parseCoordinate(proposedLatitude);
+      const lng = parseCoordinate(proposedLongitude);
+      if (proposedLatitude.trim() && !(Math.abs(lat) <= 90)) {
+        errors.proposedLatitude = t('feedback_lat_invalid');
+      }
+      if (proposedLongitude.trim() && !(Math.abs(lng) <= 180)) {
+        errors.proposedLongitude = t('feedback_lng_invalid');
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [description, email, category, t]);
+  }, [description, email, category, proposedLatitude, proposedLongitude, t]);
 
   const handleSubmit = useCallback(async () => {
     if (!category || !validate()) return;
@@ -175,11 +199,11 @@ export default function FeedbackModal({
           rating,
           proposedLatitude:
             category === 'MISSING_STATION' && proposedLatitude.trim()
-              ? Number(proposedLatitude)
+              ? parseCoordinate(proposedLatitude)
               : undefined,
           proposedLongitude:
             category === 'MISSING_STATION' && proposedLongitude.trim()
-              ? Number(proposedLongitude)
+              ? parseCoordinate(proposedLongitude)
               : undefined,
           proposedProvider:
             category === 'MISSING_STATION' && proposedProvider.trim()
@@ -206,7 +230,12 @@ export default function FeedbackModal({
           const errors: Record<string, string> = {};
           for (const issue of data.details) {
             const field = issue.path?.[0];
-            if (field) errors[String(field)] = issue.message;
+            if (field && INLINE_ERROR_FIELDS.has(String(field))) {
+              errors[String(field)] = issue.message;
+            } else {
+              // The form has nowhere to show this field's error; say so instead of failing silently.
+              errors.submit = t('feedback_invalid_input');
+            }
           }
           setValidationErrors(errors);
         } else {
@@ -466,6 +495,11 @@ export default function FeedbackModal({
                         maxLength={20}
                         className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                       />
+                      {validationErrors.proposedLatitude ? (
+                        <span className="block mt-1 text-xs text-[var(--color-danger)]">
+                          {validationErrors.proposedLatitude}
+                        </span>
+                      ) : null}
                     </div>
                     <div>
                       <label htmlFor="fb-lng" className="block text-sm font-medium text-[var(--color-foreground)] mb-1.5">
@@ -481,6 +515,11 @@ export default function FeedbackModal({
                         maxLength={20}
                         className="w-full px-4 py-3 bg-[var(--color-background)] border border-[var(--color-surface-hover)] rounded-lg text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                       />
+                      {validationErrors.proposedLongitude ? (
+                        <span className="block mt-1 text-xs text-[var(--color-danger)]">
+                          {validationErrors.proposedLongitude}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <p className="text-xs text-[var(--color-muted)]">
