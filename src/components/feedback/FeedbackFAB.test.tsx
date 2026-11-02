@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import FeedbackFAB from './FeedbackFAB';
 
 // Mock dependencies
@@ -114,6 +114,20 @@ describe('FeedbackFAB', () => {
     render(<FeedbackFAB />);
     const button = screen.getByRole('button', { name: /feedback/i });
     expect(button.className).toContain('touch-none');
+  });
+
+  // P05-fab-cover: hidden while the mobile sheet is at full snap
+  it('does not render the button when hidden', () => {
+    render(<FeedbackFAB hidden />);
+    expect(screen.queryByRole('button', { name: /feedback/i })).toBeNull();
+  });
+
+  it('still opens the modal from the evoyage:open-feedback event while hidden', () => {
+    render(<FeedbackFAB hidden />);
+    act(() => {
+      window.dispatchEvent(new Event('evoyage:open-feedback'));
+    });
+    expect(screen.getByTestId('feedback-modal')).toBeDefined();
   });
 
   // T29: dragging FAB to a Y that would cover MapLocateButton snaps it above

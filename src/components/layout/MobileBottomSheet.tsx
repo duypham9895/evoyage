@@ -23,6 +23,8 @@ interface MobileBottomSheetProps {
   readonly snapTo?: { point: SnapPoint; trigger: number };
   readonly onSwipeLeft?: () => void;
   readonly onSwipeRight?: () => void;
+  /** Called with the settled snap point whenever it changes (drag or snapTo). */
+  readonly onSnapChange?: (point: SnapPoint) => void;
 }
 
 export default function MobileBottomSheet({
@@ -31,6 +33,7 @@ export default function MobileBottomSheet({
   snapTo,
   onSwipeLeft,
   onSwipeRight,
+  onSnapChange,
 }: MobileBottomSheetProps) {
   const [snap, setSnap] = useState<SnapPoint>(initialSnap);
   const [isDragging, setIsDragging] = useState(false);
@@ -47,6 +50,10 @@ export default function MobileBottomSheet({
     setLastSnapTrigger(snapTo.trigger);
     setSnap(snapTo.point);
   }
+
+  useEffect(() => {
+    onSnapChange?.(snap);
+  }, [snap, onSnapChange]);
 
   const getHeightPx = useCallback((point: SnapPoint): number => {
     if (typeof window === 'undefined') return 400;
