@@ -2,7 +2,20 @@
 
 Date: 2026-11-01 · Code reference: `64db6f92e0792aa4643b2ba76958ff0843b80567` (origin/main) · Branch: `bug/p1-overpass-amenities-and-warm-pois`
 
-> **Status 2026-11-02:** Fixed on this branch: a fetch `TimeoutError` is now classified as `timeout` (Finding 1, part); the warmer now writes the route's v2 envelope via a shared `src/lib/station/station-pois.ts` (walk/drive decoration, Stage 1/2 fetch, `envelope`/`readCachedRows`), and its failure log includes the HTTP status and message (Finding 2, parts). Still open, tests left as `it.fails`: the Stage 1 negative-cache row and its TTL (owner decision on TTL and on telling "unavailable" from "nothing nearby"), and retry/backoff or mirror fallback for 502s (owner decision on mirror and usage policy). Also not done: the lower interactive timeout, the warmer run deadline and non-zero exit, and the workflow `timeout-minutes`/`TOP_N` review.
+> **Status 2026-11-02:**
+> - **Fixed on this branch (wave 1):** a fetch `TimeoutError` is classified as `timeout`; the warmer writes the route's v2 envelope via the shared `src/lib/station/station-pois.ts`; the warmer's failure log includes the HTTP status and message.
+> - **Fixed on this branch (wave 2):**
+>   - `queryNearbyPois` takes `timeoutMs` and `retries`. The amenities route uses 8 s per call with no retry (worst case about 16 s across both stages, down from 60 s+). The warmer keeps 30 s and retries once after 5 s on 429/502/503/504. Timeouts are not retried. The 502 test is now `it`.
+>   - Negative cache: when Stage 1 fails and there are no usable stale rows, the route writes `{ schemaVersion: 2, rows: [], failure: <kind> }` with a 1 h TTL. A failed write is logged and still returns 200. A Stage 2 failure is cached the same way (1 h, `failure`) by both the route and the warmer, instead of 30 days of "nothing nearby". A cache hit on a failure row returns `error`. `POIS_SCHEMA_VERSION` is not bumped. The negative-cache test is now `it`.
+>   - UI: `StationAmenities` shows a new "unavailable" state (`amenities_unavailable`, en and vi) when the API returns no POIs with an `error`, on a non-OK response, or on a network failure. "Nothing nearby" now only appears for a successful empty result.
+>   - The warmer has a 12-minute run budget. When it runs out, it stops and prints the summary with a "not reached" count instead of being cancelled at 15 min.
+> - **Still open:**
+>   - Mirror failover: needs a usage-policy check and adds a third-party dependency (owner decision).
+>   - Raising the workflow's `timeout-minutes` or changing `TOP_N`: infra/billing (owner decision). Confirming the fix in CI needs a warmer run, which writes prod data and needs the owner's go.
+>   - Warmer non-zero exit when most stations fail, and "on failure, do not overwrite a valid existing row" in the warmer: not in this wave's scope. The warmer still writes nothing on a Stage 1 failure, so it does not overwrite good rows in that case.
+>   - Extending a stale row's `expiresAt` when Stage 1 fails: not done. Stale non-empty rows are still served without a write, so a station with only stale rows still hits Overpass on each view during an outage (now capped at 8 s).
+>   - `export const maxDuration` on the route: deferred, not needed with the 8 s timeout.
+> - Defaults taken (reversible, owner may override): interactive timeout 8 s per Overpass call with 0 retries; warmer 30 s with 1 retry after a fixed 5 s on 429/502/503/504 (`retries` defaults to 1 in the client, and the route opts out); failure TTL 1 h with a `failure` marker and no schema bump; a stale row counts as usable only if it is non-empty and not itself a failure row, so expired failure, empty and unreadable rows are replaced by a fresh failure row; a Stage 2 failure in the warmer counts as `failed`; warmer run budget 12 min; copy `amenities_unavailable` = "Couldn't load nearby places right now. Try again in a little while." / "Chưa tải được địa điểm lân cận lúc này. Thử lại sau ít phút nhé." (needs Duy's OK before merge); a non-Overpass error now reports `overpass_unknown` as `staleReason` (was `unknown`).
 
 ## Summary
 
