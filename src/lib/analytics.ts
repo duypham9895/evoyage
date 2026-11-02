@@ -1,20 +1,36 @@
 /**
  * PostHog analytics — typed event helpers with strict gating.
  *
- * Gating rules:
+ * What this code enforces:
  *   1. Analytics ONLY initialize when `NEXT_PUBLIC_POSTHOG_KEY` is set AND
  *      `NODE_ENV === 'production'`. Tests and dev never fire events by default.
  *   2. If init never runs, every event helper becomes a no-op.
  *   3. Event helpers swallow errors so a broken analytics pipeline never
  *      crashes the app.
+ *   4. No identifier is stored in the browser — `cookieless_mode:'always'`
+ *      plus `persistence:'memory'` (see `buildPostHogConfig`).
+ *   5. Every event is passed through `sanitizeCaptureResult` (installed as
+ *      `before_send`), which drops any event/property not on its allowlists
+ *      and reduces every URL to an origin + `KNOWN_ROUTES` template — see
+ *      `analytics-sanitize.ts` for exactly what is kept.
  *
- * PII rules:
- *   - Never send email, name, IP, or precise coordinates.
- *   - Only IDs (opaque), categories (enum-like strings), and aggregate numbers.
+ * What this code depends on outside itself (not enforced here):
+ *   - The browser still sends the request's IP address and user agent to
+ *     PostHog (US region, `us.i.posthog.com`) on every call — that is how
+ *     HTTP works, and this code cannot prevent it.
+ *   - PostHog's servers use those two values to compute a pseudonymous ID
+ *     that links a visitor's events together for a period PostHog documents
+ *     as rotating (this has not been independently re-verified against
+ *     PostHog's live docs from this repo — see the PostHog analytics privacy
+ *     plan, revision 6, review finding N-3).
+ *   - Cookieless mode must also be turned on in the PostHog project
+ *     settings, or PostHog silently drops every event.
  */
 
 import posthog from 'posthog-js';
+import type { PostHogConfig } from 'posthog-js';
 import type { PrecautionaryReason } from '@/types';
+import { sanitizeCaptureResult, providerSlug } from './analytics-sanitize';
 
 let initialized = false;
 
@@ -24,31 +40,60 @@ export function isAnalyticsEnabled(): boolean {
 }
 
 /**
+ * Builds the posthog-js init config. `overrides` is test-only — production
+ * code always calls `initAnalytics()` with no argument, which calls this with
+ * no argument too. Overrides are merged last, so a test can swap any default
+ * (e.g. `request_batching:false` to observe network calls synchronously).
+ */
+export function buildPostHogConfig(overrides: Partial<PostHogConfig> = {}): Partial<PostHogConfig> {
+  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+
+  return {
+    api_host: host,
+    // Privacy-first defaults
+    capture_pageview: false, // we send pageviews manually via trackPageView
+    capture_pageleave: false,
+    autocapture: false, // we instrument explicit events only
+    disable_session_recording: true,
+    // Cookieless: no cookie and no localStorage identifier. PostHog's servers
+    // compute a pseudonymous ID from the request's IP + user agent instead
+    // (requires cookieless tracking enabled in the PostHog project settings).
+    cookieless_mode: 'always',
+    persistence: 'memory',
+    // Events only: no remote surveys/toolbar/replay scripts pulled from PostHog's CDN
+    disable_external_dependency_loading: true,
+    // No feature-flag/remote-config request on init — we don't use flags.
+    advanced_disable_flags: true,
+    // Anonymous users never get a person profile (no identify/alias calls exist).
+    person_profiles: 'never',
+    // Neither is ever sent — every event is pre-sanitized anyway, but this
+    // also skips posthog-js's own UTM/referrer capture work.
+    save_campaign_params: false,
+    save_referrer: false,
+    // Deny-by-default gate: drops any event/property not explicitly allowlisted.
+    before_send: sanitizeCaptureResult as unknown as PostHogConfig['before_send'],
+    ...overrides,
+  };
+}
+
+/**
  * Initialize PostHog. Safe to call multiple times — idempotent.
  * No-op when:
  *   - `NEXT_PUBLIC_POSTHOG_KEY` is missing
  *   - `NODE_ENV` is not 'production'
  *   - already initialized
+ *
+ * `overrides` is test-only (see `buildPostHogConfig`).
  */
-export function initAnalytics(): void {
+export function initAnalytics(overrides: Partial<PostHogConfig> = {}): void {
   if (initialized) return;
   if (process.env.NODE_ENV !== 'production') return;
 
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!key) return;
 
-  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com';
-
   try {
-    posthog.init(key, {
-      api_host: host,
-      // Privacy-first defaults
-      capture_pageview: false, // we send pageviews manually via trackPageView
-      capture_pageleave: false,
-      autocapture: false, // we instrument explicit events only
-      disable_session_recording: true,
-      persistence: 'localStorage+cookie',
-    });
+    posthog.init(key, buildPostHogConfig(overrides));
     initialized = true;
   } catch {
     // Never let analytics init crash the app
@@ -68,34 +113,47 @@ function safeCapture(event: string, properties: Record<string, unknown>): void {
 
 // ── Event helpers ─────────────────────────────────────────────────────────
 
+/**
+ * The visitor's OS colour-scheme preference. Decides whether a light theme is
+ * worth building (design decision D6, 2026-11-02). Category only, no PII.
+ */
+export function trackColorScheme(): void {
+  if (!initialized) return;
+  try {
+    if (typeof window.matchMedia !== 'function') return;
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : window.matchMedia('(prefers-color-scheme: light)').matches
+        ? 'light'
+        : 'no-preference';
+    safeCapture('color_scheme_detected', { scheme });
+  } catch {
+    // Analytics must never break the app
+  }
+}
+
 /** Page navigation. */
 export function trackPageView(path: string): void {
   safeCapture('$pageview', { path });
 }
 
-/**
- * User completed a trip plan request.
- * Cities are user-typed labels (already non-PII at the precision we capture);
- * distanceKm is aggregate.
- */
-export function trackTripPlanned(
-  startCity: string,
-  endCity: string,
-  distanceKm: number,
-): void {
-  safeCapture('trip_planned', {
-    start_city: startCity,
-    end_city: endCity,
-    distance_km: distanceKm,
-  });
+/** Buckets a trip's total distance so no near-exact (and so re-identifiable) km value is ever sent. */
+export function distanceBucket(distanceKm: number): string {
+  if (!Number.isFinite(distanceKm) || distanceKm < 100) return 'lt100';
+  if (distanceKm < 300) return '100to299';
+  if (distanceKm < 600) return '300to599';
+  if (distanceKm < 1000) return '600to999';
+  return '1000plus';
 }
 
-/** User tapped a charging station card or marker. */
-export function trackStationTapped(stationId: string, provider: string): void {
-  safeCapture('station_tapped', {
-    station_id: stationId,
-    provider,
-  });
+/** User completed a trip plan request. Only a coarse distance bucket is sent — no city text, no coordinates. */
+export function trackTripPlanned(distanceKm: number): void {
+  safeCapture('trip_planned', { distance_bucket: distanceBucket(distanceKm) });
+}
+
+/** User tapped a charging station card or marker. Only a provider slug is sent — no station id. */
+export function trackStationTapped(provider: string): void {
+  safeCapture('station_tapped', { provider: providerSlug(provider) });
 }
 
 /** User opened the feedback modal/FAB. */
@@ -151,14 +209,9 @@ export function trackWhatIfPicked(optionKey: string): void {
   safeCapture('whatif_picked', { option: optionKey });
 }
 
-/** Phase 4 — User expanded a stop and the amenities panel mounted. */
-export function trackAmenitiesViewed(
-  stationId: string,
-  fromCache: boolean,
-  poiCount: number,
-): void {
+/** Phase 4 — User expanded a stop and the amenities panel mounted. No station id is sent. */
+export function trackAmenitiesViewed(fromCache: boolean, poiCount: number): void {
   safeCapture('amenities_viewed', {
-    station_id: stationId,
     from_cache: fromCache,
     poi_count: poiCount,
   });
@@ -219,8 +272,6 @@ export function trackBackupAlternativesDistribution(
 }
 
 export interface PrecautionaryStopEventPayload {
-  readonly tripId: string;
-  readonly stationId: string;
   readonly reasonPrimary: PrecautionaryReason;
   readonly reasonSecondary: readonly PrecautionaryReason[];
   readonly pressureScore: number;

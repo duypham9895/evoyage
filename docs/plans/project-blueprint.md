@@ -1205,11 +1205,36 @@ if (request.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`
 #### 4. Data Protection
 
 **Assessment:**
-- **No PII collected**: No user accounts, no login, no email, no tracking (per D3, W1)
-- **localStorage data**: Custom car specs only. Not sensitive. However, if tampered (e.g., setting `officialRangeKm` to 99999), it only affects the user's own calculation — no server-side impact.
+- **Personal data is processed.** There are no end-user accounts (only an admin login for /admin), but the app does handle personal data in the places listed below.
+
+| Data | Purpose | Stored or sent to | Location | Retention |
+|---|---|---|---|---|
+| Feedback: email, name, phone, description, proposed station coordinates and operator, `pageUrl` = full `window.location.href` (trip start/end coordinates and typed addresses), `routeParams`, userAgent, viewport, `ipHash`, imageUrl | Answer feedback | Supabase Postgres | Singapore (`ap-southeast-1`, per `.env.example` and `docs/RECOVERY.md`; confirm in the Supabase dashboard) | Not defined. Never pruned. |
+| Feedback email: category, description, email, name, phone, station id and name, steps, use case, correct info, rating, pageUrl, userAgent, viewport. Not included: ipHash, routeParams, proposed coordinates, proposedProvider, imageUrl | Notify Duy | Resend, then the `FEEDBACK_EMAIL_TO` inbox | Outside Vietnam; region not set in code | Not defined |
+| Feedback images: public to anyone with the URL, and EXIF (possibly GPS) is not stripped | Feedback evidence | Vercel Blob | Outside Vietnam; region not set in code | Not defined |
+| `StationStatusReport`: ipHash, userAgent | Station status | Supabase | Singapore | 180 days |
+| `ShortUrl.params`: start/end coordinates, typed addresses. Anyone with the short link can see the trip. | Share links | Supabase | Singapore | 1 year, then deleted after 30 more days. Legacy `expiresAt=NULL` rows: no limit. |
+| `RouteCache`: start/end coordinates rounded to 4 dp (~11 m) | Route cache | Supabase | Singapore | 30 days (read TTL 24 h) |
+| `ipHash` is unsalted SHA-256, so every IPv4 address can be recovered | — | — | — | — |
+| Raw IP as the rate-limit key | Abuse protection | Upstash Redis | Outside Vietnam; region not set in code | One limit window (60 s–1 h) |
+| Everything sent to the app is processed on Vercel's servers: IP, user agent, GPS for nearby stations, trip start/end coordinates, eVi text and location, feedback, and voice audio | Hosting and API processing | Vercel | Function region not set in code (`vercel.json` has no `regions`) | Set by Vercel |
+| GPS from "use my location" and typed place searches, sent from the browser (OSMF sees the user's IP) | Place search | OpenStreetMap Nominatim (OSMF) | Outside Vietnam | Not under our control |
+| eVi location, two paths. (a) `useEVi` queries geolocation permission on mount; if granted it reads GPS silently, otherwise the browser prompts. It then sends the coordinates from the browser straight to `nominatim.openstreetmap.org/reverse`, so OSMF receives GPS + the user's IP. eVi mounts whenever the viewport is under 1024px (phones, tablets and narrow browser windows — see `useIsMobile`), because `EViMobileSheet` keeps `<EVi>` mounted and only hides it with CSS, even if the user never opens eVi. On desktop it mounts when the eVi tab is shown. (b) The coordinates are also sent to our server, which may reverse-geocode them again through Nominatim when there is no start text. | Find the user's start address | OSMF (via the browser and our server) | Outside Vietnam | Not under our control |
+| eVi model input: chat text, history, typed place names. No GPS coordinates, but the start text carried between turns can be an address reverse-geocoded from GPS | Trip parsing | OpenAI (main), MiniMax `api.minimax.io` (fallback) | Outside Vietnam. OpenAI: region not set. MiniMax: jurisdiction to confirm. | Set by each provider |
+| Every planned trip: start/end address plus stop names and addresses, sent automatically when the trip summary renders | Route narrative | OpenAI or MiniMax | As above | Set by each provider |
+| eVi suggestions: the last 10 messages and trip context | Suggested replies | OpenAI or MiniMax | As above | Set by each provider |
+| Voice audio. The browser's Web Speech engine is tried first (Google in Chrome, Apple in Safari); Groq Whisper is the fallback (`useSpeechInput.ts`) | Transcription | Browser speech service, then Groq Whisper | Outside Vietnam | Set by each provider |
+| Route start/end points and waypoints, sent from our server to the OSRM routing engine (`router.project-osrm.org`, operator/region to confirm). Typed start/end addresses are also geocoded on the server via Nominatim. **Share card:** start/end coordinates and the route line go to the Mapbox Static Images API. Station areas go to Overpass. | Routing, share image | Mapbox (server), OSRM, Nominatim, Overpass | Outside Vietnam | Set by each provider |
+| Mapbox telemetry: `mapbox-gl` posts to `events.mapbox.com/events/v2` with an `anonId` kept in localStorage (`mapbox.eventData`). Not turned off; the CSP allows it. | Mapbox usage metrics | Mapbox | Outside Vietnam | Set by Mapbox |
+| Map tiles (browser IP) | Map display | Mapbox; OSM tile fallback | Outside Vietnam | Set by each provider |
+| Station photos loaded by the browser (browser IP) | Station detail | VinFast CDN (`*.vinfastauto.com`) | Region to confirm | Set by VinFast |
+| Google Maps hand-off: start, end and stop coordinates, only when the user taps it | Navigation | Google | Outside Vietnam | Set by Google |
+| Analytics: the browser sends IP + user agent with every request. PostHog's servers compute a pseudonymous ID from those two values that PostHog documents as rotating (not independently re-verified from this repo). The code stores no identifier in the browser and sends only events sanitized by `sanitizeCaptureResult`. | Usage measurement | PostHog | US region (`us.i.posthog.com`) | PostHog plan default; none configured in code |
+
+- **localStorage data**: recent trips (with addresses), the trip notebook, the feedback email, cached route narratives, custom vehicle and preferences, plus Mapbox's own telemetry id — see the table above. Tampering with custom vehicle specs (e.g. `officialRangeKm` 99999) only affects the user's own calculation — no server-side impact.
 - **Station data**: Publicly available (from Open Charge Map). Not confidential.
 
-**Conclusion:** v1 has minimal data protection concerns. No GDPR obligations (no EU personal data). Vietnam's Decree 13/2023/NĐ-CP on personal data protection does NOT apply since we collect zero personal data.
+**Conclusion:** Because the app processes personal data, including transfers to processors outside Vietnam (PostHog's US region, Supabase in Singapore, and the other providers in the table, several with regions not set in code), the obligations under Vietnam's Decree 13/2023/NĐ-CP should be confirmed by a lawyer. This section describes what the code does; it is not a legal assessment.
 
 #### 5. Client-Side Security
 

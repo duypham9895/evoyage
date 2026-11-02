@@ -2,13 +2,16 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { initAnalytics, trackPageView } from '@/lib/analytics';
+import { initAnalytics, trackColorScheme, trackPageView } from '@/lib/analytics';
 
 /**
  * Mounts once at the root layout to bootstrap PostHog analytics.
  * Renders nothing — UI-free per DESIGN.md ("less icons, more humanity":
- * no consent banners or analytics affordances added here; PostHog handles
- * its own consent surface if a key is configured).
+ * no consent banners or analytics affordances added here). No banner is
+ * added here; see `/privacy` for what the app discloses instead. The browser
+ * still sends its IP and user agent to PostHog on every request — that is
+ * not something this component (or `initAnalytics`) can prevent (see the
+ * header comment in `analytics.ts` for what is and isn't enforced by code).
  *
  * Init is gated inside `initAnalytics`: no-op when the public key is
  * missing or NODE_ENV !== 'production'. Pageview tracking is gated the
@@ -25,6 +28,7 @@ export default function AnalyticsProvider() {
 
   useEffect(() => {
     initAnalytics();
+    trackColorScheme();
   }, []);
 
   useEffect(() => {

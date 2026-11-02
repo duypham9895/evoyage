@@ -33,7 +33,7 @@ function interpolate(template: string, params?: InterpolationParams): string {
   });
 }
 
-function useT() {
+export function useT() {
   const { locale } = useLandingLocale();
   const dict = dictionaries[locale] as Record<string, string>;
   return (key: string, params?: InterpolationParams) => interpolate(dict[key] ?? key, params);
@@ -415,6 +415,9 @@ function LandingContent() {
                   className="text-[var(--color-foreground)] text-sm hover:text-[var(--color-accent)] transition-colors py-3 inline-block"
                 >
                   {t('landing_footer_github')}
+                </a>
+                <a href="/privacy" className="text-[var(--color-foreground)] text-sm hover:text-[var(--color-accent)] transition-colors py-3 inline-block">
+                  {t('landing_footer_privacy')}
                 </a>
               </div>
             </div>

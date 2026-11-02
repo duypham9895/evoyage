@@ -131,15 +131,33 @@ describe('precautionary stop display projection', () => {
     };
 
     expect(getPrecautionaryStopEventPayload(makeTripPlan([stop]), stop)).toEqual({
-      tripId: 'trip-1',
-      stationId: 'station-a',
       reasonPrimary: 'holiday',
       reasonSecondary: ['sparse'],
       pressureScore: 4,
-      legDistanceKm: 126.5,
+      legDistanceKm: 127, // rounded to an integer — no tripId/stationId
       legSparsityCount: 2,
       safetyFactor: 0.8,
       vehicleBatteryKwh: 82,
     });
+  });
+
+  it('drops tripId/stationId even when the stop has no id (the lat/lng fallback case)', () => {
+    const stop = {
+      ...makeStop('', 100, true), // empty id -> getStopIdentity falls back to "lat,lng"
+      precautionaryTelemetry: {
+        reasonPrimary: 'sparse' as const,
+        reasonSecondary: [],
+        pressureScore: 2,
+        legDistanceKm: 50.4,
+        legSparsityCount: 1,
+        safetyFactor: 0.5,
+        vehicleBatteryKwh: 60,
+      },
+    };
+
+    const payload = getPrecautionaryStopEventPayload(makeTripPlan([stop]), stop);
+    expect(payload).not.toHaveProperty('tripId');
+    expect(payload).not.toHaveProperty('stationId');
+    expect(payload.legDistanceKm).toBe(50); // Math.round(50.4) === 50
   });
 });

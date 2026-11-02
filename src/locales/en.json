@@ -312,6 +312,7 @@
 
   "landing_footer_start": "Get started",
   "landing_footer_github": "GitHub",
+  "landing_footer_privacy": "Privacy",
   "landing_footer_tagline": "Drive far, drive green — no range anxiety",
   "landing_footer_built": "Built with",
   "landing_footer_copyright": "eVoyage. Open source.",
@@ -537,5 +538,68 @@
   "route_provider_fallback": "Route calculated using Mapbox (OSM service was unavailable). Distance/duration may differ slightly.",
 
   "meta_title_default": "eVoyage — Plan your EV road trip across Vietnam",
-  "meta_title_plan": "Plan your EV trip · eVoyage"
+  "meta_title_plan": "Plan your EV trip · eVoyage",
+
+  "privacy_draft_banner": "Draft, pending legal review.",
+  "privacy_heading": "Privacy Policy",
+  "privacy_abroad": "Most of these services are run outside Vietnam, so using eVoyage transfers your data abroad. Where we know the region, we name it; where we don't yet, we say so.",
+
+  "privacy_section_collect_heading": "What we collect",
+  "privacy_section_collect_body": "It depends on what you use: your trip's start and end, your GPS location if you allow it, what you type or say to eVi, feedback you send (including photos and contact details), station status reports, and usage events. eVoyage has no user accounts.",
+
+  "privacy_section_why_heading": "Why",
+  "privacy_section_why_body": "To plan your route and charging stops, to let Duy answer your feedback, to stop abuse, and to see which parts of eVoyage people actually use.",
+
+  "privacy_section_processors_heading": "Who receives it, and where",
+
+  "privacy_processor_posthog_name": "PostHog",
+  "privacy_processor_posthog_body": "We record usage events that contain no identifier set by us. Your browser sends them to PostHog in the United States together with your IP address and browser information. PostHog's servers turn those two into a pseudonymous ID, which PostHog's documentation describes as changing daily. That ID links your events within the same day.",
+
+  "privacy_processor_supabase_name": "Supabase",
+  "privacy_processor_supabase_body": "Feedback, station status reports, share links and cached routes are stored in eVoyage's Supabase database in Singapore. Feedback and status reports also keep a hashed form of your IP address, and that hash can be turned back into the IP. Anyone with a share link can see the places on that trip.",
+
+  "privacy_processor_vercel_name": "Vercel",
+  "privacy_processor_vercel_body": "Everything you send to the app — including your location, trip addresses, feedback and voice recordings — is processed on Vercel's servers. The region is not set in our code yet. Photos you attach to feedback are stored on Vercel too: anyone with the photo's link can view it, and it may still carry your camera's location data, so remove that before uploading.",
+
+  "privacy_processor_resend_name": "Resend",
+  "privacy_processor_resend_body": "Every piece of feedback is emailed to Duy through Resend, including your contact details and the address of the page you were on. Resend's region is not set in our code.",
+
+  "privacy_processor_openai_name": "OpenAI",
+  "privacy_processor_openai_body": "When you plan a trip, its start and end addresses and its charging stops are sent to an AI provider (OpenAI, or MiniMax as a backup) to write the route summary — even if you never open eVi. If you use eVi, the model also gets your messages and the place names you type. Your GPS coordinates are never sent to the model, but an address looked up from them can be. OpenAI's region is not set in our code.",
+
+  "privacy_processor_minimax_name": "MiniMax",
+  "privacy_processor_minimax_body": "MiniMax is the backup AI provider, used only when OpenAI doesn't respond, for the same route summaries and eVi messages. Where MiniMax processes data has not been confirmed yet.",
+
+  "privacy_processor_groq_name": "Groq",
+  "privacy_processor_groq_body": "If you speak instead of typing, your browser's own speech service tries first, and may send the audio to Google (in Chrome) or Apple (in Safari). If that doesn't work, the recording goes to Groq's Whisper service to be turned into text. Groq's region is not set in our code.",
+
+  "privacy_processor_mapbox_name": "Mapbox",
+  "privacy_processor_mapbox_body": "Mapbox draws the map you see. Our server also uses Mapbox to work out routes and to make the share-trip image, which shows your trip's start, end and route. Mapbox's map script also sends usage data to Mapbox with a random ID stored in your browser; we have not turned this off. Mapbox's region is not set in our code.",
+
+  "privacy_processor_openstreetmap_name": "OpenStreetMap Foundation (OSMF)",
+  "privacy_processor_openstreetmap_body": "When you search for a place, or eVi looks up your address, your browser sends it to OpenStreetMap's Nominatim service, which also sees your IP address. On phones, tablets and narrow browser windows, eVi reads your location as soon as the trip planner opens, before you ever open eVi. If you allow it (or already have), your GPS position goes straight from your browser to Nominatim, and our server may send it there again. The start and end addresses you type are also looked up by our server through Nominatim. If Mapbox maps fail to load, map images come from OpenStreetMap's tile server.",
+
+  "privacy_processor_osrm_name": "OSRM (router.project-osrm.org)",
+  "privacy_processor_osrm_body": "Our server sends your trip's start, end and waypoint coordinates to the OSRM routing service to work out the route. Who runs this server, and where, is still to be confirmed.",
+
+  "privacy_processor_upstash_name": "Upstash",
+  "privacy_processor_upstash_body": "To stop abuse, your IP address is used as a rate-limit key in Upstash Redis for a short window (one minute to one hour). Upstash's region is not set in our code.",
+
+  "privacy_processor_google_name": "Google",
+  "privacy_processor_google_body": "If you tap \"{{googleMapsLabel}}\", your trip's start, end and stop coordinates are sent to Google at that moment, and not before.",
+
+  "privacy_processor_vinfast_name": "VinFast",
+  "privacy_processor_vinfast_body": "Station photos load straight from VinFast's servers, which see your IP address like any site you load images from. Their region is still to be confirmed.",
+
+  "privacy_section_device_heading": "What stays on your device",
+  "privacy_section_device_body": "Some things stay only in your browser until you clear them: your recent trips (with addresses), your trip notebook, the email you used for feedback, saved route summaries, your custom vehicle, your map and tab preferences, and Mapbox's usage ID.",
+
+  "privacy_section_retention_heading": "How long it is kept",
+  "privacy_section_retention_body": "Station status reports are kept for 180 days, and cached routes for 30 days. Share links expire one year after they are made and are deleted 30 days later; older links made without an expiry date have no limit. How long feedback, uploaded photos and feedback emails are kept is not defined yet.",
+
+  "privacy_section_contact_heading": "Contact Duy",
+  "privacy_contact_body": "To ask about your data or make a privacy request, open the trip planner and tap the round \"{{feedbackTitle}}\" button on the right side of the screen. You can drag it, and on phones it hides while the bottom panel is fully open. Choose \"{{feedbackCategory}}\" and leave your email so Duy can reply. Note that the form also saves the address of the page you are on.",
+  "privacy_contact_github": "For questions that don't involve your personal data, you can also open a GitHub issue. GitHub issues are public.",
+
+  "privacy_last_updated": "Last updated: 2026-11-02"
 }

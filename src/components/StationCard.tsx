@@ -39,9 +39,9 @@ export default function StationCard({ station }: StationCardProps) {
       latitude: station.latitude,
       longitude: station.longitude,
     });
-    // Analytics: opaque ID + provider category only — no coords, no name.
+    // Analytics: a provider slug only — no station id, no coords, no name.
     try {
-      trackStationTapped(stationId, station.provider);
+      trackStationTapped(station.provider);
     } catch { /* analytics never breaks the flow */ }
   }, [station.latitude, station.longitude, station.provider]);
 
