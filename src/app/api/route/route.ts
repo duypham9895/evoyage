@@ -18,6 +18,7 @@ import { RELIABILITY_THRESHOLD } from '@/lib/routing/reliability-score';
 import { trackReliabilityCalibration } from '@/lib/analytics';
 import { cumulativeDistances, decodePolyline, encodePolyline } from '@/lib/geo/polyline';
 import { getCachedRoute, setCachedRoute } from '@/lib/routing/route-cache';
+import { findForeignSegment } from '@/lib/geo/neighbour-country';
 import { fetchMatrixDurations } from '@/lib/routing/matrix-api';
 import { getEffectivePowerKw, scoreStation, rankStations } from '@/lib/routing/station-ranker';
 import { estimateDetourTimeSec, haversineDistance, type StationWithRouteInfo } from '@/lib/routing/station-finder';
@@ -228,7 +229,9 @@ export async function POST(request: NextRequest) {
       }
       if (routeCoordsAvailable) {
         const cached = await getCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm');
-        if (cached) {
+        // Rows cached before the border guard may run through Laos/Cambodia;
+        // treat them as a miss so the guarded OSRM client re-routes.
+        if (cached && !findForeignSegment(decodePolyline(cached.polyline))) {
           return {
             polyline: cached.polyline,
             distanceMeters: cached.distanceMeters,
@@ -246,11 +249,14 @@ export async function POST(request: NextRequest) {
           start,
           end,
         );
-        await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
-          polyline: fetched.polyline,
-          distanceMeters: fetched.distanceMeters,
-          durationSeconds: fetched.durationSeconds,
-        });
+        // Never cache a route that still leaves Vietnam (it gets flagged below).
+        if (!findForeignSegment(decodePolyline(fetched.polyline))) {
+          await setCachedRoute(startLat!, startLng!, endLat!, endLng!, 'osrm', {
+            polyline: fetched.polyline,
+            distanceMeters: fetched.distanceMeters,
+            durationSeconds: fetched.durationSeconds,
+          });
+        }
         return fetched;
       }
       return fetchDirections(start, end);

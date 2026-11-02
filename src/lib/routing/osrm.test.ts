@@ -324,7 +324,7 @@ describe('fetchDirectionsFromCoords — route must stay inside Vietnam', () => {
   }
 
   // BUG(p1-osrm-routes-through-cambodia-laos): OSRM's cross-border HCM->Ha Noi route is returned unchecked. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-osrm-routes-through-cambodia-laos.md
-  it.fails('never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos', async () => {
+  it('never resolves HCM -> Ha Noi with a polyline through Cambodia/Laos', async () => {
     mockRouting(2, CROSS_BORDER_ROUTE);
 
     await expectStaysInVietnamOrRefuses(
@@ -338,14 +338,14 @@ describe('fetchDirectionsFromCoords — route must stay inside Vietnam', () => {
   });
 
   // BUG(p1-osrm-routes-through-cambodia-laos): same guard must cover the geocoded path (route.ts:256). Fixer: change it.fails -> it once fixed.
-  it.fails('fetchDirections (geocoded) never resolves HCM -> Ha Noi through Cambodia/Laos', async () => {
+  it('fetchDirections (geocoded) never resolves HCM -> Ha Noi through Cambodia/Laos', async () => {
     mockRouting(2, CROSS_BORDER_ROUTE);
 
     await expectStaysInVietnamOrRefuses(fetchDirections('TP.HCM', 'Hà Nội'));
   });
 
   // BUG(p1-osrm-routes-through-cambodia-laos): same guard must cover the user-waypoint path (route.ts:227). Fixer: change it.fails -> it once fixed.
-  it.fails('fetchDirectionsWithWaypoints never resolves through Cambodia/Laos for an in-VN Highlands waypoint', async () => {
+  it('fetchDirectionsWithWaypoints never resolves through Cambodia/Laos for an in-VN Highlands waypoint', async () => {
     // Waypoint: Buon Ma Thuot (Vietnam, Central Highlands, next to the Laos
     // corridor). Synthetic OSRM shape: HCM -> Buon Ma Thuot, then the real
     // Laos points from the 2-point answer, then Ha Noi.
@@ -360,5 +360,59 @@ describe('fetchDirectionsFromCoords — route must stay inside Vietnam', () => {
     await expectStaysInVietnamOrRefuses(
       fetchDirectionsWithWaypoints('TP.HCM', 'Hà Nội', [BUON_MA_THUOT]),
     );
+  });
+
+  it('reports provider mapbox when the border retry replaces the OSRM route', async () => {
+    mockRouting(2, CROSS_BORDER_ROUTE);
+
+    const result = await fetchDirectionsFromCoords(
+      { lat: 10.7726, lng: 106.698 }, { lat: 21.0285, lng: 105.8542 }, 'A', 'B',
+    );
+
+    expect(result.provider).toBe('mapbox');
+    expect(result.distanceMeters).toBe(1_637_900);
+  });
+
+  it('does not call Mapbox when the OSRM route stays inside Vietnam', async () => {
+    mockRouting(2, VIETNAM_ROUTE);
+
+    const result = await fetchDirectionsFromCoords(
+      { lat: 10.7726, lng: 106.698 }, { lat: 21.0285, lng: 105.8542 }, 'A', 'B',
+    );
+
+    expect(result.provider).toBe('osrm');
+    const calls = mockFetch.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes('api.mapbox.com'))).toBe(false);
+  });
+
+  it('keeps the OSRM route (for the API to flag) when there is no Mapbox token', async () => {
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    mockRouting(2, CROSS_BORDER_ROUTE);
+
+    const result = await fetchDirectionsFromCoords(
+      { lat: 10.7726, lng: 106.698 }, { lat: 21.0285, lng: 105.8542 }, 'A', 'B',
+    );
+
+    expect(result.provider).toBe('osrm');
+    expect(result.distanceMeters).toBe(1_493_712);
+    const calls = mockFetch.mock.calls.map((c) => c[0] as string);
+    expect(calls.some((u) => u.includes('api.mapbox.com'))).toBe(false);
+  });
+
+  it('keeps the OSRM route when the Mapbox retry fails', async () => {
+    mockRouting(2, CROSS_BORDER_ROUTE);
+    const routed = mockFetch.getMockImplementation()!;
+    mockFetch.mockImplementation((url: string) =>
+      url.includes('api.mapbox.com')
+        ? Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) })
+        : routed(url),
+    );
+
+    const result = await fetchDirectionsFromCoords(
+      { lat: 10.7726, lng: 106.698 }, { lat: 21.0285, lng: 105.8542 }, 'A', 'B',
+    );
+
+    expect(result.provider).toBe('osrm');
+    expect(result.distanceMeters).toBe(1_493_712);
   });
 });

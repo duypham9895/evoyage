@@ -473,7 +473,7 @@ describe('POST /api/route route cache must not serve cross-border routes', () =>
   ];
 
   // BUG(p1-osrm-routes-through-cambodia-laos): route.ts:230 serves cached `osrm:` rows for 24 h without the guard, so a fix in osrm.ts alone still plans on cached cross-border routes. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-osrm-routes-through-cambodia-laos.md
-  it.fails('does not plan on a cached OSRM polyline through Cambodia/Laos', async () => {
+  it('does not plan on a cached OSRM polyline through Cambodia/Laos', async () => {
     expect.hasAssertions();
     const { getCachedRoute } = await import('@/lib/routing/route-cache');
     vi.mocked(getCachedRoute).mockResolvedValueOnce({
@@ -504,5 +504,33 @@ describe('POST /api/route route cache must not serve cross-border routes', () =>
       (p) => p.lat >= 12 && p.lat <= 17.5 && p.lng < 106,
     );
     expect(foreign).toEqual([]);
+  });
+
+  it('does not cache a freshly fetched OSRM route that still runs through Cambodia/Laos', async () => {
+    const { setCachedRoute } = await import('@/lib/routing/route-cache');
+    const { fetchDirectionsFromCoords } = await import('@/lib/routing/osrm');
+    vi.mocked(fetchDirectionsFromCoords).mockResolvedValueOnce({
+      polyline: encodePolyline(CROSS_BORDER_ROUTE, 5),
+      distanceMeters: 1_493_712,
+      durationSeconds: 80_000,
+      startAddress: 'A',
+      endAddress: 'B',
+      startCoord: { lat: 10.7726, lng: 106.698 },
+      endCoord: { lat: 21.0285, lng: 105.8542 },
+      provider: 'osrm',
+    });
+
+    await postRoute({ ...BODY, startLat: 10.7726, startLng: 106.698, endLat: 21.0285, endLng: 105.8542 });
+
+    expect(fetchDirectionsFromCoords).toHaveBeenCalled();
+    expect(setCachedRoute).not.toHaveBeenCalled();
+  });
+
+  it('still caches an in-country OSRM route', async () => {
+    const { setCachedRoute } = await import('@/lib/routing/route-cache');
+
+    await postRoute({ ...BODY, startLat: 10, startLng: 106, endLat: 10, endLng: 108 });
+
+    expect(setCachedRoute).toHaveBeenCalledWith(10, 106, 10, 108, 'osrm', expect.anything());
   });
 });
