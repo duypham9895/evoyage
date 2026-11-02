@@ -248,6 +248,9 @@ export function LandingWrapper({ children }: { readonly children: ReactNode }) {
   // Same persisted locale as /plan's LocaleProvider, applied after mount.
   useEffect(() => {
     const stored = readStoredLocale();
+    // The server always renders 'vi'; the stored choice can only be read after
+    // hydration, so this one post-mount sync is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored) setLocale(stored);
   }, []);
 
