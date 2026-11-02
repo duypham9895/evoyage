@@ -152,7 +152,7 @@ test.describe('F1: Trip Planning — Happy Path', () => {
     await expect(planButton).toBeEnabled({ timeout: 5_000 });
     await planButton.click();
 
-    await expect(page.getByRole('tab', { name: /Route|Tuyến đường/i })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /Trip|Chuyến đi/i })).toHaveAttribute('aria-selected', 'true');
 
     const resultAnchor = page.getByTestId('route-result-anchor');
     const progressText = resultAnchor.getByText(/Calculating route|Đang tính/i);

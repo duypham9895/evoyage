@@ -26,7 +26,7 @@ test.describe('F8: Bilingual — Vietnamese <-> English', () => {
 
     // Step 6: Verify /plan UI is in Vietnamese
     // Match tab names that exist on both desktop and mobile
-    const viPlanText = page.locator('text=/eVi|Trạm sạc|Tuyến đường|Lên lộ trình/').first();
+    const viPlanText = page.locator('text=/eVi|Trạm sạc|Chuyến đi|Lên lộ trình/').first();
     await expect(viPlanText).toBeVisible({ timeout: 5_000 });
 
     // Step 7: Toggle back to English — /plan page uses Header component with aria-label
