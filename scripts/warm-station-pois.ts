@@ -15,12 +15,11 @@
  */
 import { createPrismaClient } from '../src/lib/prisma';
 import { OverpassError } from '../src/lib/station/overpass-client';
-import { envelope, fetchAmenityRows } from '../src/lib/station/station-pois';
+import { cacheExpiresAt, envelope, fetchAmenityRows } from '../src/lib/station/station-pois';
 
 const prisma = createPrismaClient();
 
 const TOP_N = 50;
-const CACHE_TTL_DAYS = 30;
 const REQUEST_PAUSE_MS = 3000; // be polite to Overpass: ~20 req/min
 
 async function main(): Promise<void> {
@@ -42,16 +41,19 @@ async function main(): Promise<void> {
   for (const [i, st] of stations.entries()) {
     const label = `[${i + 1}/${stations.length}] ${st.name}`;
     try {
-      const rows = await fetchAmenityRows(st.latitude, st.longitude);
+      const { rows, failure } = await fetchAmenityRows(st.latitude, st.longitude);
 
-      const expiresAt = new Date(Date.now() + CACHE_TTL_DAYS * 24 * 60 * 60 * 1000);
+      const expiresAt = cacheExpiresAt(failure);
       await prisma.stationPois.upsert({
         where: { stationId: st.id },
-        create: { stationId: st.id, poisJson: envelope(rows), expiresAt },
-        update: { poisJson: envelope(rows), fetchedAt: new Date(), expiresAt },
+        create: { stationId: st.id, poisJson: envelope(rows, failure), expiresAt },
+        update: { poisJson: envelope(rows, failure), fetchedAt: new Date(), expiresAt },
       });
 
-      if (rows.length === 0) {
+      if (failure) {
+        console.warn(`${label}: 0 POIs (drive band FAILED: ${failure}; cached 1h)`);
+        failed++;
+      } else if (rows.length === 0) {
         console.log(`${label}: 0 POIs (cached empty)`);
         skipped++;
       } else {

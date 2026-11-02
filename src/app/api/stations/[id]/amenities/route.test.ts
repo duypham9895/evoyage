@@ -220,7 +220,7 @@ describe('GET /api/stations/[id]/amenities — tiered radius', () => {
   });
 
   // BUG(p1-overpass-amenities-and-warm-pois): a Stage 1 Overpass failure with no prior cache writes nothing, so every view of that station re-hits Overpass and waits again. Fixer: change it.fails -> it once fixed. See docs/bugs/2026-11-01-p1-overpass-amenities-and-warm-pois.md
-  it.fails('on Stage 1 Overpass failure with no cache, writes a short-TTL negative cache row', async () => {
+  it('on Stage 1 Overpass failure with no cache, writes a short-TTL negative cache row', async () => {
     mockQueryOverpass.mockRejectedValueOnce(
       new OverpassError('network_error', 'Overpass returned 502', 502),
     );
@@ -236,5 +236,135 @@ describe('GET /api/stations/[id]/amenities — tiered radius', () => {
     // Short negative TTL: must expire in the future, but well before the 30-day success TTL.
     expect(ttlMs).toBeGreaterThan(0);
     expect(ttlMs).toBeLessThanOrEqual(24 * 60 * 60 * 1000);
+  });
+  it('caps each interactive Overpass call at 8s with no retry (keeps the user wait small)', async () => {
+    mockQueryOverpass.mockResolvedValueOnce([]); // Stage 1 empty → Stage 2 runs too
+    mockQueryOverpass.mockResolvedValueOnce([]);
+
+    await GET(buildRequest(), PARAMS);
+
+    expect(mockQueryOverpass).toHaveBeenCalledTimes(2);
+    for (const [opts] of mockQueryOverpass.mock.calls) {
+      expect(opts).toMatchObject({ timeoutMs: 8_000, retries: 0 });
+    }
+  });
+
+  it('marks the Stage 1 negative cache row as a failure (so it is not read as "nothing nearby")', async () => {
+    mockQueryOverpass.mockRejectedValueOnce(new OverpassError('timeout', 'too slow'));
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.error).toBe('timeout');
+    const created = mockUpsertCache.mock.calls[0][0].create as { poisJson: string; expiresAt: Date };
+    const parsed = JSON.parse(created.poisJson);
+    expect(parsed).toMatchObject({ schemaVersion: 2, rows: [], failure: 'timeout' });
+    expect(created.expiresAt.getTime() - Date.now()).toBeLessThanOrEqual(60 * 60 * 1000);
+  });
+
+  it('serves an unexpired failure row with its error and does not call Overpass', async () => {
+    mockFindCache.mockResolvedValueOnce({
+      stationId: STATION_ID,
+      poisJson: JSON.stringify({ schemaVersion: 2, rows: [], failure: 'network_error' }),
+      fetchedAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+    } as never);
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(mockQueryOverpass).not.toHaveBeenCalled();
+    expect(body.pois).toEqual([]);
+    expect(body.fromCache).toBe(true);
+    expect(body.error).toBe('network_error');
+  });
+
+  it('serves a successful empty cache row without an error (real "nothing nearby")', async () => {
+    mockFindCache.mockResolvedValueOnce({
+      stationId: STATION_ID,
+      poisJson: JSON.stringify({ schemaVersion: 2, rows: [] }),
+      fetchedAt: new Date(),
+      expiresAt: new Date(Date.now() + 1_000_000),
+    } as never);
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.pois).toEqual([]);
+    expect(body.error).toBeUndefined();
+  });
+
+  it('on Stage 1 failure with an expired failure row, writes a fresh negative row (outage keeps being cached)', async () => {
+    mockFindCache.mockResolvedValueOnce({
+      stationId: STATION_ID,
+      poisJson: JSON.stringify({ schemaVersion: 2, rows: [], failure: 'network_error' }),
+      fetchedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() - 60 * 60 * 1000),
+    } as never);
+    mockQueryOverpass.mockRejectedValueOnce(new OverpassError('network_error', '502', 502));
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.error).toBe('network_error');
+    expect(mockUpsertCache).toHaveBeenCalledTimes(1);
+    const updated = mockUpsertCache.mock.calls[0][0].update as { expiresAt: Date };
+    expect(updated.expiresAt.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('on Stage 1 failure with stale non-empty rows, serves them and does not overwrite the row', async () => {
+    mockFindCache.mockResolvedValueOnce({
+      stationId: STATION_ID,
+      poisJson: JSON.stringify({ schemaVersion: 2, rows: [{ id: 5, name: 'Stale', tier: 'walk' }] }),
+      fetchedAt: new Date('2026-05-01'),
+      expiresAt: new Date(Date.now() - 1_000),
+    } as never);
+    mockQueryOverpass.mockRejectedValueOnce(new OverpassError('timeout', 'too slow'));
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.pois[0].name).toBe('Stale');
+    expect(body.staleReason).toBe('timeout');
+    expect(mockUpsertCache).not.toHaveBeenCalled();
+  });
+
+  it('on Stage 1 failure, a failed negative-cache write still returns 200 with the error', async () => {
+    mockQueryOverpass.mockRejectedValueOnce(new OverpassError('timeout', 'too slow'));
+    mockUpsertCache.mockRejectedValueOnce(new Error('db down'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.error).toBe('timeout');
+    vi.restoreAllMocks();
+  });
+
+  it('on Stage 2 failure, caches the empty result for 1h as a failure, not 30 days of "nothing nearby"', async () => {
+    mockQueryOverpass.mockResolvedValueOnce([]); // Stage 1 empty
+    mockQueryOverpass.mockRejectedValueOnce(new OverpassError('timeout', 'too slow'));
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.error).toBe('timeout');
+    const created = mockUpsertCache.mock.calls[0][0].create as { poisJson: string; expiresAt: Date };
+    expect(JSON.parse(created.poisJson).failure).toBe('timeout');
+    expect(created.expiresAt.getTime() - Date.now()).toBeLessThanOrEqual(60 * 60 * 1000);
+  });
+
+  it('a successful empty result is still cached for 30 days with no failure marker', async () => {
+    mockQueryOverpass.mockResolvedValueOnce([]);
+    mockQueryOverpass.mockResolvedValueOnce([]);
+
+    const res = await GET(buildRequest(), PARAMS);
+    const body = await res.json();
+
+    expect(body.error).toBeUndefined();
+    const created = mockUpsertCache.mock.calls[0][0].create as { poisJson: string; expiresAt: Date };
+    expect(JSON.parse(created.poisJson).failure).toBeUndefined();
+    expect(created.expiresAt.getTime() - Date.now()).toBeGreaterThan(29 * 24 * 60 * 60 * 1000);
   });
 });

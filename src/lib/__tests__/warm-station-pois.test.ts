@@ -79,4 +79,15 @@ describe('scripts/warm-station-pois.ts', () => {
     const logged = warn.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(logged).toContain('502');
   });
+  it('caches a Stage 2 failure for 1h with a failure marker, not 30 days of "nothing nearby"', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    mockQuery.mockResolvedValueOnce([]); // Stage 1 empty
+    mockQuery.mockRejectedValueOnce(new OverpassError('timeout', 'too slow'));
+
+    await runWarmer();
+
+    const created = upsert.mock.calls[0][0].create as { poisJson: string; expiresAt: Date };
+    expect(JSON.parse(created.poisJson).failure).toBe('timeout');
+    expect(created.expiresAt.getTime() - Date.now()).toBeLessThanOrEqual(60 * 60 * 1000);
+  });
 });

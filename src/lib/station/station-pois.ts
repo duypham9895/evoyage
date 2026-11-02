@@ -9,7 +9,12 @@
  *
  * See docs/specs/2026-05-04-amenities-tiered-radius.md.
  */
-import { queryNearbyPois, type OsmPoi } from './overpass-client';
+import {
+  OverpassError,
+  queryNearbyPois,
+  type OsmPoi,
+  type OverpassRequestOptions,
+} from './overpass-client';
 import { categorizePoi, type AmenityCategory } from './categorize-poi';
 import { haversineMeters, walkingTimeMinutes, drivingTimeMinutes } from './walking-distance';
 import { dedupePois } from './dedupe-pois';
@@ -18,6 +23,10 @@ const WALK_RADIUS_METERS = 500;
 const WALK_MAX_ROUND_TRIP_MIN = 7;
 const DRIVE_RADIUS_METERS = 1500;
 export const POIS_SCHEMA_VERSION = 2;
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// An Overpass failure is cached briefly so an outage doesn't make every view
+// wait on Overpass again, without hiding amenities for 30 days.
+const FAILURE_CACHE_TTL_MS = 60 * 60 * 1000;
 
 type Tier = 'walk' | 'drive';
 
@@ -37,6 +46,27 @@ export interface AmenityRow {
 interface CachedEnvelope {
   readonly schemaVersion: number;
   readonly rows: readonly AmenityRow[];
+  /** Set when the rows are empty because Overpass failed (not "nothing nearby"). */
+  readonly failure?: string;
+}
+
+export interface CachedPois {
+  readonly rows: readonly AmenityRow[];
+  readonly failure?: string;
+}
+
+export interface AmenityFetchResult {
+  readonly rows: AmenityRow[];
+  /** Stage 2 failed after an empty Stage 1: rows are empty for an unknown reason. */
+  readonly failure?: string;
+}
+
+export function failureKind(err: unknown): string {
+  return err instanceof OverpassError ? err.kind : 'overpass_unknown';
+}
+
+export function cacheExpiresAt(failure?: string): Date {
+  return new Date(Date.now() + (failure ? FAILURE_CACHE_TTL_MS : CACHE_TTL_MS));
 }
 
 function decorateWalk(stationLat: number, stationLng: number) {
@@ -86,7 +116,7 @@ function decorateDrive(stationLat: number, stationLng: number) {
   };
 }
 
-export function readCachedRows(json: string): readonly AmenityRow[] | null {
+export function readCachedPois(json: string): CachedPois | null {
   try {
     const parsed = JSON.parse(json) as CachedEnvelope | readonly AmenityRow[];
     // Older v1 cache rows were a bare array (no envelope) → schema-mismatch
@@ -94,39 +124,47 @@ export function readCachedRows(json: string): readonly AmenityRow[] | null {
     if (Array.isArray(parsed)) return null;
     const env = parsed as CachedEnvelope;
     if (env.schemaVersion !== POIS_SCHEMA_VERSION) return null;
-    return env.rows;
+    return env.failure ? { rows: env.rows, failure: env.failure } : { rows: env.rows };
   } catch {
     return null;
   }
 }
 
-export function envelope(rows: readonly AmenityRow[]): string {
-  const payload: CachedEnvelope = { schemaVersion: POIS_SCHEMA_VERSION, rows };
+export function envelope(rows: readonly AmenityRow[], failure?: string): string {
+  const payload: CachedEnvelope = failure
+    ? { schemaVersion: POIS_SCHEMA_VERSION, rows, failure }
+    : { schemaVersion: POIS_SCHEMA_VERSION, rows };
   return JSON.stringify(payload);
 }
 
 /**
  * Stage 1 (walk band) always; Stage 2 (drive band) only when Stage 1 is empty.
  * A Stage 1 failure throws (caller decides the fallback); a Stage 2 failure
- * yields the empty Stage 1 result so it can be cached.
+ * yields the empty Stage 1 result plus its failure kind so it can be cached
+ * briefly as a failure.
  */
-export async function fetchAmenityRows(lat: number, lng: number): Promise<AmenityRow[]> {
-  const walkOsm = await queryNearbyPois({ lat, lng, radiusMeters: WALK_RADIUS_METERS });
+export async function fetchAmenityRows(
+  lat: number,
+  lng: number,
+  overpass: OverpassRequestOptions = {},
+): Promise<AmenityFetchResult> {
+  const walkOsm = await queryNearbyPois({ ...overpass, lat, lng, radiusMeters: WALK_RADIUS_METERS });
   const walkRows = dedupePois(walkOsm)
     .map(decorateWalk(lat, lng))
     .filter((r): r is AmenityRow => r !== null)
     .sort((a, b) => a.walkingMinutes - b.walkingMinutes);
-  if (walkRows.length > 0) return walkRows;
+  if (walkRows.length > 0) return { rows: walkRows };
 
   try {
-    const driveOsm = await queryNearbyPois({ lat, lng, radiusMeters: DRIVE_RADIUS_METERS });
-    return dedupePois(driveOsm)
+    const driveOsm = await queryNearbyPois({ ...overpass, lat, lng, radiusMeters: DRIVE_RADIUS_METERS });
+    const rows = dedupePois(driveOsm)
       .map(decorateDrive(lat, lng))
       .filter((r): r is AmenityRow => r !== null)
       .sort((a, b) => (a.drivingMinutes ?? 0) - (b.drivingMinutes ?? 0));
-  } catch {
+    return { rows };
+  } catch (err) {
     // Stage 1 already returned []; persist the empty result so we don't
-    // hammer Overpass on every load. The 30-day TTL will retry naturally.
-    return [];
+    // hammer Overpass on every load, marked as a failure (short TTL).
+    return { rows: [], failure: failureKind(err) };
   }
 }

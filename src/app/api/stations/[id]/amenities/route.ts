@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit, getClientIp, stationsLimiter } from '@/lib/rate-limit';
-import { OverpassError } from '@/lib/station/overpass-client';
 import {
+  cacheExpiresAt,
   envelope,
+  failureKind,
   fetchAmenityRows,
-  readCachedRows,
-  type AmenityRow,
+  readCachedPois,
+  type AmenityFetchResult,
 } from '@/lib/station/station-pois';
 
 /**
@@ -18,13 +19,16 @@ import {
  *   walk  — within 500m, round-trip walk ≤ 7 min
  *   drive — within 1500m (only queried if walk tier is empty)
  *
- * Cached in Postgres for 30 days. Tuning changes invalidate cache via the
- * POIS_SCHEMA_VERSION envelope (mismatch ⇒ refetch); no DB migration needed.
+ * Cached in Postgres for 30 days; an Overpass failure is cached for 1 hour
+ * with a `failure` marker so the UI can say "unavailable", not "nothing
+ * nearby". Tuning changes invalidate cache via the POIS_SCHEMA_VERSION
+ * envelope (mismatch ⇒ refetch); no DB migration needed.
  *
  * See docs/specs/2026-05-04-amenities-tiered-radius.md.
  */
 
-const CACHE_TTL_DAYS = 30;
+// Interactive budget: one try per stage, 8s each (the warmer keeps 30s + retry).
+const OVERPASS_OPTIONS = { timeoutMs: 8_000, retries: 0 } as const;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: stationId } = await params;
@@ -49,58 +53,77 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // Cache hit (with schema-version match) → short-circuit
   const cached = await prisma.stationPois.findUnique({ where: { stationId } });
   if (cached && cached.expiresAt > new Date()) {
-    const rows = readCachedRows(cached.poisJson);
-    if (rows) {
+    const hit = readCachedPois(cached.poisJson);
+    if (hit) {
       return NextResponse.json({
-        pois: rows,
+        pois: hit.rows,
         cachedAt: cached.fetchedAt.toISOString(),
         fromCache: true,
+        ...(hit.failure ? { error: hit.failure } : {}),
       });
     }
     // Schema mismatch → fall through to refetch (and overwrite the row).
   }
 
   // Stage 1 walk band, Stage 2 drive band (see station-pois.ts).
-  let allRows: AmenityRow[];
+  let result: AmenityFetchResult;
   try {
-    allRows = await fetchAmenityRows(station.latitude, station.longitude);
+    result = await fetchAmenityRows(station.latitude, station.longitude, OVERPASS_OPTIONS);
   } catch (err) {
-    return overpassFallback(cached, err);
+    return overpassFallback(stationId, cached, err);
   }
 
-  const expiresAt = new Date(Date.now() + CACHE_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const { rows: allRows, failure } = result;
+  const expiresAt = cacheExpiresAt(failure);
   await prisma.stationPois.upsert({
     where: { stationId },
-    create: { stationId, poisJson: envelope(allRows), expiresAt },
-    update: { poisJson: envelope(allRows), fetchedAt: new Date(), expiresAt },
+    create: { stationId, poisJson: envelope(allRows, failure), expiresAt },
+    update: { poisJson: envelope(allRows, failure), fetchedAt: new Date(), expiresAt },
   });
 
   return NextResponse.json({
     pois: allRows,
     cachedAt: new Date().toISOString(),
     fromCache: false,
+    ...(failure ? { error: failure } : {}),
   });
 }
 
-function overpassFallback(
+async function overpassFallback(
+  stationId: string,
   cached: { poisJson: string; fetchedAt: Date } | null,
   err: unknown,
-): NextResponse {
-  // Stage 1 failure: surface stale cache if any so the user still sees
-  // *something*; otherwise return empty for the UI to render the empty state.
-  if (cached) {
-    const rows = readCachedRows(cached.poisJson) ?? [];
+): Promise<NextResponse> {
+  const kind = failureKind(err);
+  // Stage 1 failure: surface stale rows if any so the user still sees
+  // *something*, and keep that row for the next successful fetch to replace.
+  const stale = cached ? readCachedPois(cached.poisJson) : null;
+  if (cached && stale && !stale.failure && stale.rows.length > 0) {
     return NextResponse.json({
-      pois: rows,
+      pois: stale.rows,
       cachedAt: cached.fetchedAt.toISOString(),
       fromCache: true,
-      staleReason: err instanceof OverpassError ? err.kind : 'unknown',
+      staleReason: kind,
     });
+  }
+
+  // Nothing worth serving: cache the failure briefly so the next views don't
+  // each wait on Overpass again. A DB error here must not turn into a 500.
+  const poisJson = envelope([], kind);
+  const expiresAt = cacheExpiresAt(kind);
+  try {
+    await prisma.stationPois.upsert({
+      where: { stationId },
+      create: { stationId, poisJson, expiresAt },
+      update: { poisJson, fetchedAt: new Date(), expiresAt },
+    });
+  } catch (dbErr) {
+    console.error('[amenities] failed to cache Overpass failure', dbErr);
   }
   return NextResponse.json({
     pois: [],
     cachedAt: null,
     fromCache: false,
-    error: err instanceof OverpassError ? err.kind : 'overpass_unknown',
+    error: kind,
   });
 }
