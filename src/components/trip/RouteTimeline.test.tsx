@@ -162,4 +162,18 @@ describe('RouteTimeline', () => {
     expect(screen.getByText('30→80%')).toHaveClass('text-[var(--color-warn)]');
     expect(screen.getByText('40→80%')).toHaveClass('text-[var(--color-safe)]');
   });
+
+  it('colours the end milestone arrival by the same rule as the arrival hero, so a risky arrival is not shown green', () => {
+    render(
+      <RouteTimeline
+        {...BASE_PROPS}
+        minArrivalPercent={25}
+        arrivalBatteryPercent={20}
+        stops={[]}
+      />,
+    );
+    expect(screen.getByText('20%')).toHaveClass('text-[var(--color-danger)]');
+    // Start milestone is departure charge, not risk — stays accent.
+    expect(screen.getByText('55%')).toHaveClass('text-[var(--color-accent)]');
+  });
 });
