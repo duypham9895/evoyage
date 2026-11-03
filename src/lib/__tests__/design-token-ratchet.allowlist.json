@@ -1,0 +1,9 @@
+{
+  "components/map/MapboxMap.tsx": "Mapbox GL style/paint config and vendor popup HTML — Mapbox GL JS paint properties and .mapboxgl-popup chrome cannot read CSS custom properties (design-system-research-2026-11-01.md §4.2, 'Out of reach of CSS variables').",
+  "components/map/Map.tsx": "Leaflet/Carto basemap: polyline paint options and divIcon marker colours are passed as plain JS values, which cannot read CSS custom properties the way a stylesheet can (same research doc, §4.2).",
+  "lib/feedback/email.ts": "Transactional notification email HTML — email clients strip <style>/CSS custom properties, so colours must be inlined as literal hex values.",
+  "components/trip/ShareButton.tsx": "Share-card DOM captured to a static PNG via html-to-image in a fixed GitHub-dark palette, independent of the app theme by design (research doc §6, 'Off-brand palette').",
+  "app/api/share-card/route.tsx": "Server-rendered share-card HTML/SVG for the same share image as ShareButton.tsx, same fixed GitHub-dark palette, rendered outside the app's CSS context.",
+  "components/landing/VietnamMap.tsx": "Landing-page decorative Vietnam map SVG art — uses its own marketing palette (DESIGN.md landing-page gradient tokens), not the app token set.",
+  "components/landing/vietnam-map-helpers.tsx": "Colour helpers for the landing VietnamMap SVG art — same exception as VietnamMap.tsx."
+}
