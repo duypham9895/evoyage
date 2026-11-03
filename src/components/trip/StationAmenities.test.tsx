@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import StationAmenities from './StationAmenities';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 const translations: Record<string, string> = {
   amenities_heading: 'Around here',
@@ -311,5 +312,25 @@ describe('StationAmenities', () => {
     // Each row uses its tier-appropriate label
     expect(screen.getByText('2 min walk')).toBeInTheDocument();
     expect(screen.getByText('2 min drive')).toBeInTheDocument();
+  });
+
+  // BUG(D5-stations): heading, section labels and walking times used --color-muted, 3.30:1 on the
+  // surface card. Fixed: text-secondary (DESIGN.md Decisions Log, D5).
+  it('renders amenity information text with at least 4.5:1 contrast on the surface card (WCAG 1.4.3)', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(SAMPLE_OK), { status: 200 }));
+    render(<StationAmenities stationId={STATION_ID} stationLat={STATION_LAT} stationLng={STATION_LNG} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('3 min walk')).toBeInTheDocument();
+    });
+
+    const surface = tokenHex('surface');
+    for (const el of [
+      screen.getByText('Around here'),
+      screen.getByText('Within walking distance'),
+      screen.getByText('3 min walk'),
+    ]) {
+      expect(contrastRatio(tokenHex(textColorToken(el.className)), surface)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
   });
 });

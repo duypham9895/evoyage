@@ -528,7 +528,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
                       alt={t('share_qr_code')}
                       className="w-32 h-32 rounded-lg"
                     />
-                    <span className="text-xs text-[var(--color-muted)]">{t('share_qr_code')}</span>
+                    <span className="text-xs text-[var(--color-text-secondary)]">{t('share_qr_code')}</span>
                   </div>
                 )}
               </div>
@@ -536,7 +536,7 @@ export default function ShareButton({ tripPlan }: ShareButtonProps) {
               {/* ===== Divider ===== */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-[var(--color-surface-hover)]" />
-                <span className="text-xs text-[var(--color-muted)]">{t('share_or_image')}</span>
+                <span className="text-xs text-[var(--color-text-secondary)]">{t('share_or_image')}</span>
                 <div className="flex-1 h-px bg-[var(--color-surface-hover)]" />
               </div>
 
