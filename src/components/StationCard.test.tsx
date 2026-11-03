@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import StationCard from './StationCard';
 import type { NearbyStationInfo } from '@/lib/evi/types';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 const trackStationTappedMock = vi.fn();
 const emitStationHighlightMock = vi.fn();
@@ -65,5 +66,17 @@ describe('<StationCard />', () => {
       latitude: 10.5,
       longitude: 106.5,
     });
+  });
+
+  // BUG(D5-stations): the details row (power, charge time) and the Unavailable/Inactive status
+  // used --color-muted, 3.65:1 on the background card. Fixed: text-secondary (DESIGN.md Decisions Log, D5).
+  it('renders the details row and an unavailable status with at least 4.5:1 contrast (WCAG 1.4.3)', () => {
+    render(<StationCard station={makeStation({ chargingStatus: 'UNAVAILABLE' })} />);
+    const bg = tokenHex('background');
+    const detailsRow = screen.getByText('60 kW').parentElement as HTMLElement;
+    const status = detailsRow.children[1] as HTMLElement;
+    for (const el of [detailsRow, status]) {
+      expect(contrastRatio(tokenHex(textColorToken(el.className)), bg)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
   });
 });

@@ -16,10 +16,10 @@ const STATUS_COLORS: Record<string, string> = {
   active: 'text-[var(--color-safe)]',
   BUSY: 'text-[var(--color-warn)]',
   busy: 'text-[var(--color-warn)]',
-  UNAVAILABLE: 'text-[var(--color-muted)]',
-  unavailable: 'text-[var(--color-muted)]',
-  INACTIVE: 'text-[var(--color-muted)]',
-  inactive: 'text-[var(--color-muted)]',
+  UNAVAILABLE: 'text-[var(--color-text-secondary)]',
+  unavailable: 'text-[var(--color-text-secondary)]',
+  INACTIVE: 'text-[var(--color-text-secondary)]',
+  inactive: 'text-[var(--color-text-secondary)]',
 };
 
 // ── Component ──
@@ -46,8 +46,8 @@ export default function StationCard({ station }: StationCardProps) {
   }, [station.latitude, station.longitude, station.provider]);
 
   const statusColor = station.chargingStatus
-    ? (STATUS_COLORS[station.chargingStatus] ?? 'text-[var(--color-muted)]')
-    : 'text-[var(--color-muted)]';
+    ? (STATUS_COLORS[station.chargingStatus] ?? 'text-[var(--color-text-secondary)]')
+    : 'text-[var(--color-text-secondary)]';
 
   const statusKey = getStationStatusKey(station.chargingStatus);
 
@@ -66,7 +66,7 @@ export default function StationCard({ station }: StationCardProps) {
       </div>
 
       {/* Details row */}
-      <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
+      <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
         <span>{station.maxPowerKw} kW</span>
         <span className={statusColor}>{statusLabel}</span>
         {station.estimatedChargeTimeMin != null && (

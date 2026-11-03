@@ -70,7 +70,7 @@ function getStatusColor(statusKey: string): string {
     case 'nearby_active': return 'text-green-500';
     case 'nearby_busy': return 'text-amber-500';
     case 'nearby_inactive': return 'text-red-400';
-    default: return 'text-[var(--color-muted)]';
+    default: return 'text-[var(--color-text-secondary)]';
   }
 }
 
@@ -112,7 +112,7 @@ function RadiusSelector({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-xs text-[var(--color-muted)]">{t('nearby_radius' as Parameters<typeof t>[0])}</p>
+      <p className="text-xs text-[var(--color-text-secondary)]">{t('nearby_radius' as Parameters<typeof t>[0])}</p>
       <div className="flex gap-1.5">
         {RADIUS_OPTIONS.map((r) => (
           <button
@@ -121,7 +121,7 @@ function RadiusSelector({
             className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
               radius === r
                 ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-                : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
+                : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)]'
             }`}
           >
             {r} km
@@ -161,7 +161,7 @@ function FilterPanel({
     <div className="space-y-2">
       <button
         onClick={() => { hapticLight(); setIsOpen((prev) => !prev); }}
-        className="flex items-center gap-2 text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+        className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors"
       >
         <span>{t('nearby_filters' as Parameters<typeof t>[0])}</span>
         {activeFilterCount > 0 && (
@@ -177,7 +177,7 @@ function FilterPanel({
           {/* Connector types */}
           {connectorTypes.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-[var(--color-muted)]">
+              <p className="text-xs text-[var(--color-text-secondary)]">
                 {t('nearby_connector_type' as Parameters<typeof t>[0])}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -188,7 +188,7 @@ function FilterPanel({
                     className={`px-2.5 py-1.5 rounded-full text-xs transition-all ${
                       selectedConnectors.has(ct)
                         ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
-                        : 'bg-[var(--color-background)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-[var(--color-muted)]/20'
+                        : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] border border-[var(--color-muted)]/20'
                     }`}
                   >
                     {ct}
@@ -200,7 +200,7 @@ function FilterPanel({
 
           {/* Min charging speed */}
           <div className="space-y-1.5">
-            <p className="text-xs text-[var(--color-muted)]">kW</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">kW</p>
             <div className="flex flex-wrap gap-1.5">
               {SPEED_OPTIONS.map((opt) => (
                 <button
@@ -209,7 +209,7 @@ function FilterPanel({
                   className={`px-2.5 py-1.5 rounded-full text-xs transition-all ${
                     minSpeed === opt.value
                       ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
-                      : 'bg-[var(--color-background)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-[var(--color-muted)]/20'
+                      : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] border border-[var(--color-muted)]/20'
                   }`}
                 >
                   {opt.labelKey ? t(opt.labelKey as Parameters<typeof t>[0]) : opt.label}
@@ -221,7 +221,7 @@ function FilterPanel({
           {/* Providers */}
           {providers.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-[var(--color-muted)]">
+              <p className="text-xs text-[var(--color-text-secondary)]">
                 {t('nearby_provider' as Parameters<typeof t>[0])}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -232,7 +232,7 @@ function FilterPanel({
                     className={`px-2.5 py-1.5 rounded-full text-xs transition-all ${
                       selectedProviders.has(p)
                         ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
-                        : 'bg-[var(--color-background)] text-[var(--color-muted)] hover:text-[var(--color-foreground)] border border-[var(--color-muted)]/20'
+                        : 'bg-[var(--color-background)] text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] border border-[var(--color-muted)]/20'
                     }`}
                   >
                     {p}
@@ -266,7 +266,7 @@ function StationCard({
           <h3 className="text-sm font-semibold text-[var(--color-foreground)] leading-tight">
             {formatStationName(station.name)}
           </h3>
-          <p className="text-xs text-[var(--color-muted)] mt-0.5" title={station.address}>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-0.5" title={station.address}>
             {truncateAddress(station.address)}
           </p>
         </div>
@@ -276,7 +276,7 @@ function StationCard({
       </div>
 
       {/* Details row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-muted)]">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-text-secondary)]">
         <span>{station.provider}</span>
         <span>{station.maxPowerKw} kW</span>
         <span>{t('nearby_ports' as Parameters<typeof t>[0], { count: station.portCount })}</span>
@@ -291,7 +291,7 @@ function StationCard({
           {station.connectorTypes.map((ct) => (
             <span
               key={ct}
-              className="px-2 py-0.5 rounded-full text-[10px] bg-[var(--color-background)] text-[var(--color-muted)] border border-[var(--color-muted)]/15"
+              className="px-2 py-0.5 rounded-full text-[10px] bg-[var(--color-background)] text-[var(--color-text-secondary)] border border-[var(--color-muted)]/15"
             >
               {ct}
             </span>
@@ -488,13 +488,13 @@ export default function NearbyStations({ onNavigateToStation, initialLocation, o
               <div className="p-3 rounded-lg bg-[var(--color-danger)]/10 text-[var(--color-danger)] text-sm">
                 {geoErrorMessage}
               </div>
-              <p className="text-xs text-[var(--color-muted)] text-center">
+              <p className="text-xs text-[var(--color-text-secondary)] text-center">
                 {t('nearby_gps_denied_redirect' as Parameters<typeof t>[0])}
               </p>
             </div>
           )}
 
-          <p className="text-xs text-[var(--color-muted)] text-center">
+          <p className="text-xs text-[var(--color-text-secondary)] text-center">
             {t('nearby_empty_or_search' as Parameters<typeof t>[0])}
           </p>
 
@@ -511,7 +511,7 @@ export default function NearbyStations({ onNavigateToStation, initialLocation, o
       {/* Loading state */}
       {isLoading && (
         <div className="flex items-center justify-center py-8">
-          <div className="flex items-center gap-2 text-sm text-[var(--color-muted)]">
+          <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
             <span className="w-4 h-4 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin" />
             {t('nearby_searching' as Parameters<typeof t>[0])}
           </div>
@@ -562,7 +562,7 @@ export default function NearbyStations({ onNavigateToStation, initialLocation, o
 
           {/* Results count */}
           {!fetchError && (
-            <p className="text-xs text-[var(--color-muted)]">
+            <p className="text-xs text-[var(--color-text-secondary)]">
               {filteredStations.length === 0
                 ? t('nearby_no_results' as Parameters<typeof t>[0], { radius: String(radius) })
                 : t('nearby_results_count' as Parameters<typeof t>[0], { count: String(filteredStations.length) })}

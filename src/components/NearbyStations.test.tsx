@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import NearbyStations from './NearbyStations';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 // ── Mocks ──
 
@@ -604,5 +605,33 @@ describe('NearbyStations', () => {
       await renderWithStatus('ACTIVE');
       expect(screen.getByText('Active')).toBeInTheDocument();
     });
+  });
+
+  // BUG(D5-stations): station information text (address, power, ports, radius label, result count)
+  // used --color-muted, 3.30:1 on the surface card. Fixed: text-secondary (DESIGN.md Decisions Log, D5).
+  it('renders station information text with at least 4.5:1 contrast on the surface card (WCAG 1.4.3)', async () => {
+    mockGeoState = { latitude: 10.800, longitude: 106.700, accuracy: 50, loading: false, error: null };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ stations: MOCK_STATIONS }),
+    });
+
+    render(<NearbyStations />);
+
+    await waitFor(() => {
+      expect(screen.getByText('150 kW')).toBeInTheDocument();
+    });
+
+    const surface = tokenHex('surface');
+    const infoElements = [
+      screen.getByText('150 kW').parentElement as HTMLElement, // details row: provider, power, ports
+      screen.getByText('Thủ Đức, TP.HCM'), // truncated address
+      screen.getByText('Search radius'),
+      screen.getByText(/stations found/),
+    ];
+    for (const el of infoElements) {
+      const fg = tokenHex(textColorToken(el.className));
+      expect(contrastRatio(fg, surface)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
   });
 });

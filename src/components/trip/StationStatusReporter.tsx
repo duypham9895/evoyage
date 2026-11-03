@@ -84,7 +84,7 @@ export default function StationStatusReporter({
 
   return (
     <div className="space-y-1.5" data-testid="station-status-reporter">
-      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)] font-semibold">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-secondary)] font-semibold">
         {t('station_report_section_title')}
       </p>
 
@@ -129,7 +129,7 @@ export default function StationStatusReporter({
       )}
 
       {minutesAgo !== null && (
-        <p className="text-[10px] text-[var(--color-muted)]">
+        <p className="text-[10px] text-[var(--color-text-secondary)]">
           {minutesAgo === 0
             ? t('station_report_last_verified_just_now')
             : t('station_report_last_verified', { minutes: String(minutesAgo) })}

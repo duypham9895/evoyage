@@ -114,7 +114,7 @@ export default function StationAmenities({
 
   if (state.kind === 'loading') {
     return (
-      <div className="text-xs text-[var(--color-muted)] pt-2">
+      <div className="text-xs text-[var(--color-text-secondary)] pt-2">
         {t('amenities_loading' as Parameters<typeof t>[0])}
       </div>
     );
@@ -125,7 +125,7 @@ export default function StationAmenities({
       state.kind === 'empty' ? 'amenities_empty' : 'amenities_unavailable'
     ) as Parameters<typeof t>[0];
     return (
-      <div className="text-xs text-[var(--color-muted)] pt-2 space-y-1">
+      <div className="text-xs text-[var(--color-text-secondary)] pt-2 space-y-1">
         <div>{t(messageKey)}</div>
         <a
           href={googleMapsAreaUrl(stationLat, stationLng)}
@@ -170,7 +170,7 @@ export default function StationAmenities({
         >
           <span className={`w-2 h-2 rounded-full ${dotCls} shrink-0`} aria-hidden="true" />
           <span className="flex-1 truncate text-[var(--color-foreground)]">{displayName}</span>
-          <span className="text-[var(--color-muted)] font-[family-name:var(--font-mono)] text-[10px] shrink-0">
+          <span className="text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)] text-[10px] shrink-0">
             {t(timeKey, { minutes: String(minutes) })}
           </span>
         </a>
@@ -184,20 +184,20 @@ export default function StationAmenities({
   return (
     <div className="pt-2 space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">
+        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
           {t('amenities_heading' as Parameters<typeof t>[0])}
         </h4>
         <button
           type="button"
           onClick={handleReportMissing}
-          className="text-[10px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+          className="text-[10px] text-[var(--color-text-secondary)] hover:text-[var(--color-accent)]"
         >
           {t('amenities_report_missing' as Parameters<typeof t>[0])}
         </button>
       </div>
       {walkPois.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[10px] font-medium text-[var(--color-muted)]">
+          <div className="text-[10px] font-medium text-[var(--color-text-secondary)]">
             {t('amenities_section_walk' as Parameters<typeof t>[0])}
           </div>
           <ol role="list" className="space-y-1">
@@ -207,7 +207,7 @@ export default function StationAmenities({
       )}
       {drivePois.length > 0 && (
         <div className="space-y-1">
-          <div className="text-[10px] font-medium text-[var(--color-muted)]">
+          <div className="text-[10px] font-medium text-[var(--color-text-secondary)]">
             {t('amenities_section_drive' as Parameters<typeof t>[0])}
           </div>
           <ol role="list" className="space-y-1">

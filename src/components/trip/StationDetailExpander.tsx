@@ -65,7 +65,7 @@ function BasicConnectorInfo({ detail }: { detail: VinFastStationDetail }) {
 
   return (
     <div className="space-y-1 animate-fadeIn">
-      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)] font-semibold">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-secondary)] font-semibold">
         {t('station_section_connectors')}
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -80,7 +80,7 @@ function BasicConnectorInfo({ detail }: { detail: VinFastStationDetail }) {
           </span>
         )}
         {detail.portCount > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-muted)]">
+          <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-surface)] text-[var(--color-text-secondary)]">
             {detail.portCount} {t('station_ports', { count: String(detail.portCount) }).replace(/^\d+\s*/, '')}
           </span>
         )}
@@ -95,7 +95,7 @@ function ConnectorSection({ evses }: { evses: VinFastStationDetail['evses'] }) {
 
   return (
     <div className="space-y-1 animate-fadeIn">
-      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)] font-semibold">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-secondary)] font-semibold">
         {t('station_section_connectors')}
       </p>
       {evses.map((evse, i) => (
@@ -132,7 +132,7 @@ function HardwareSection({
   if (!hardwareStations || hardwareStations.length === 0) return null;
 
   return (
-    <div className="text-[var(--color-muted)] animate-fadeIn">
+    <div className="text-[var(--color-text-secondary)] animate-fadeIn">
       {hardwareStations.map((hw, i) => (
         <div key={i}>
           {t('station_hardware', { vendor: hw.vendor, model: hw.modelCode })}
@@ -148,7 +148,7 @@ function ImagesSection({ images }: { images: VinFastStationDetail['images'] }) {
 
   return (
     <div className="space-y-1 animate-fadeIn" style={{ animationDelay: '100ms' }}>
-      <p className="text-[10px] uppercase tracking-wide text-[var(--color-muted)] font-semibold">
+      <p className="text-[10px] uppercase tracking-wide text-[var(--color-text-secondary)] font-semibold">
         {t('station_section_images')}
       </p>
       <div className="flex gap-2 overflow-x-auto">
@@ -174,7 +174,7 @@ function LastUpdatedRow({ fetchedAt }: { fetchedAt: string }) {
   })();
 
   return (
-    <div className="text-[10px] text-[var(--color-muted)] animate-fadeIn">
+    <div className="text-[10px] text-[var(--color-text-secondary)] animate-fadeIn">
       {t('station_last_updated', { time: formatted })}
     </div>
   );
