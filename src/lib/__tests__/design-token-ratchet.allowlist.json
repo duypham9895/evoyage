@@ -4,5 +4,6 @@
   "lib/feedback/email.ts": "Transactional notification email HTML — email clients strip <style>/CSS custom properties, so colours must be inlined as literal hex values.",
   "components/trip/ShareButton.tsx": "Share-card DOM captured to a static PNG via html-to-image in a fixed GitHub-dark palette, independent of the app theme by design (research doc §6, 'Off-brand palette').",
   "components/landing/VietnamMap.tsx": "Landing-page decorative Vietnam map SVG art — uses its own marketing palette (DESIGN.md landing-page gradient tokens), not the app token set.",
-  "components/landing/vietnam-map-helpers.tsx": "Colour helpers for the landing VietnamMap SVG art — same exception as VietnamMap.tsx."
+  "components/landing/vietnam-map-helpers.tsx": "Colour helpers for the landing VietnamMap SVG art — same exception as VietnamMap.tsx.",
+  "lib/design-tokens/tokens.ts": "Canonical TypeScript mirror of globals.css's role tokens (D8-A), for surfaces that cannot read CSS custom properties (Mapbox WebGL paint, email HTML) — tokens.test.ts keeps every value in sync with globals.css, so this is the one legitimate place these literals live outside a stylesheet."
 }

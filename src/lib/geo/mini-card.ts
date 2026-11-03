@@ -1,4 +1,4 @@
-import { escapeHtml, PROVIDER_COLORS } from './map-utils';
+import { escapeHtml, PROVIDER_COLORS, getStationColorKey } from './map-utils';
 import { formatStationName } from '@/lib/stations/format-station-name';
 
 // ── Types ──
@@ -46,19 +46,26 @@ export const DEFAULT_LABELS: MiniCardLabels = {
 };
 
 // ── Status Display Mapping ──
+// Status colours come from the shared role tokens (D8-A), via map-utils.ts's
+// getStationColorKey, so the badge colour matches the smart-marker ring exactly.
 
 interface StatusDisplay {
   readonly label: string;
-  readonly color: string;
+  readonly fg: string;
+  readonly bg: string;
 }
 
 function getStatusDisplay(status: string | null, labels: MiniCardLabels): StatusDisplay {
-  if (!status) return { label: labels.statusUnknown, color: '#888888' };
-  const upper = status.toUpperCase();
-  if (upper === 'ACTIVE') return { label: labels.available, color: '#34C759' };
-  if (upper === 'BUSY') return { label: labels.busy, color: '#FFAB40' };
-  if (upper === 'UNAVAILABLE' || upper === 'INACTIVE') return { label: labels.offline, color: '#666666' };
-  return { label: labels.statusUnknown, color: '#888888' };
+  const key = getStationColorKey(status);
+  const label = key === 'available' ? labels.available
+    : key === 'busy' ? labels.busy
+    : key === 'unavailable' ? labels.offline
+    : labels.statusUnknown;
+  return {
+    label,
+    fg: `var(--color-status-${key}-fg)`,
+    bg: `var(--color-status-${key}-bg)`,
+  };
 }
 
 // ── Render Mini-Card HTML ──
@@ -70,7 +77,7 @@ export function renderMiniCardHtml(data: MiniCardData, labels: MiniCardLabels = 
   const providerColor = PROVIDER_COLORS[data.provider] ?? '#888888';
   const status = getStatusDisplay(data.chargingStatus, labels);
 
-  const statusBadge = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:${status.color}22;color:${status.color}">${escapeHtml(status.label)}</span>`;
+  const statusBadge = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:${status.bg};color:${status.fg}">${escapeHtml(status.label)}</span>`;
 
   const disclaimer = data.chargingStatus
     ? `<div style="font-size:9px;color:#667;margin-top:4px">${escapeHtml(labels.disclaimer)}</div>`

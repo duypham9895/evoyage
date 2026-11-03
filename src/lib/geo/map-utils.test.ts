@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildStopPopupHtml } from './map-utils';
+import { buildStopPopupHtml, getStationColorKey } from './map-utils';
 import type { ChargingStationData, ChargingStop } from '@/types';
 
 const station: ChargingStationData = {
@@ -50,5 +50,30 @@ describe('buildStopPopupHtml', () => {
     expect(html).not.toContain('⚡');
     expect(html).toContain('150kW');
     expect(html).toContain('CCS2');
+  });
+});
+
+describe('getStationColorKey', () => {
+  it('maps ACTIVE/active to available', () => {
+    expect(getStationColorKey('ACTIVE')).toBe('available');
+    expect(getStationColorKey('active')).toBe('available');
+  });
+
+  it('maps BUSY/busy to busy', () => {
+    expect(getStationColorKey('BUSY')).toBe('busy');
+    expect(getStationColorKey('busy')).toBe('busy');
+  });
+
+  it('maps UNAVAILABLE/INACTIVE (either case) to unavailable', () => {
+    expect(getStationColorKey('UNAVAILABLE')).toBe('unavailable');
+    expect(getStationColorKey('unavailable')).toBe('unavailable');
+    expect(getStationColorKey('INACTIVE')).toBe('unavailable');
+    expect(getStationColorKey('inactive')).toBe('unavailable');
+  });
+
+  it('maps null, empty string, and unrecognized values to unknown', () => {
+    expect(getStationColorKey(null)).toBe('unknown');
+    expect(getStationColorKey('')).toBe('unknown');
+    expect(getStationColorKey('some-random-value')).toBe('unknown');
   });
 });

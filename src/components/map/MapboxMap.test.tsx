@@ -266,6 +266,16 @@ describe('MapboxMap precautionary stops', () => {
     expect(screen.getByText('Stations ahead get busy on holidays — a top-up now buys peace of mind.')).toBeInTheDocument();
   });
 
+  it('uses the on-accent role token for text on the accent-coloured Navigate link (D8-A)', () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');
+    render(<MapboxMap tripPlan={makeTripPlan()} />);
+
+    fireEvent.click(screen.getByLabelText('Charging stops 1: Required Stop'));
+
+    const navigateLink = screen.getByRole('link', { name: 'Navigate' });
+    expect(navigateLink.style.color).toBe('var(--color-on-accent)');
+  });
+
   it('shares map dismissals with the timeline card state', () => {
     vi.useFakeTimers();
     vi.stubEnv('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN', 'pk.test-token');

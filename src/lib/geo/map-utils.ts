@@ -1,6 +1,7 @@
 import type { ChargingStop, ChargingStopWithAlternatives } from '@/types';
 import { getStopStation } from '@/types';
 import { formatStationName } from '@/lib/stations/format-station-name';
+import type { StationStatusKey } from '@/lib/design-tokens/tokens';
 
 export const VIETNAM_CENTER = { lat: 14.0583, lng: 108.2772 };
 export const VIETNAM_ZOOM = 6;
@@ -13,6 +14,23 @@ export const PROVIDER_COLORS: Record<string, string> = {
   'CHARGE+': '#FF2D55',
 };
 export const DEFAULT_MARKER_COLOR = '#6B6B78';
+
+/**
+ * Normalizes a station's raw `chargingStatus` into one of the four canonical
+ * status keys used to look up the shared status role tokens (D8-A —
+ * design-system-research-2026-11-01.md §D8). Both the Leaflet smart marker
+ * (smart-marker.ts) and the station mini-card (mini-card.ts) resolve through
+ * this one function, so "available" is the same colour on the map and in the
+ * list.
+ */
+export function getStationColorKey(status: string | null): StationStatusKey {
+  if (!status) return 'unknown';
+  const upper = status.toUpperCase();
+  if (upper === 'ACTIVE') return 'available';
+  if (upper === 'BUSY') return 'busy';
+  if (upper === 'UNAVAILABLE' || upper === 'INACTIVE') return 'unavailable';
+  return 'unknown';
+}
 
 /** Escape HTML special characters to prevent XSS in map popups. */
 export function escapeHtml(str: string): string {
