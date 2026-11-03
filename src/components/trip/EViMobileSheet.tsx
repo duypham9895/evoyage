@@ -49,7 +49,7 @@ export default function EViMobileSheet({
           type="button"
           onClick={() => { hapticLight(); onClose(); }}
           aria-label={t('evi_sheet_close')}
-          className="px-3 py-1.5 rounded-md text-sm text-[var(--color-muted)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] transition-colors"
+          className="px-3 py-1.5 rounded-md text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] transition-colors"
         >
           {t('evi_sheet_close')}
         </button>

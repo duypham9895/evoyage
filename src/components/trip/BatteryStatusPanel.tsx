@@ -115,14 +115,14 @@ export default function BatteryStatusPanel({
 
   return (
     <div className={`space-y-4 p-3 rounded-lg bg-[var(--color-background)] border ${warningBorderColor} transition-colors`}>
-      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
+      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-text-secondary)] uppercase tracking-wider">
         {t('current_battery_title')}
       </h2>
 
       {/* Current battery slider */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs text-[var(--color-muted)]">
+          <label className="text-xs text-[var(--color-text-secondary)]">
             {t('current_battery_label')}
           </label>
           <span className="text-lg font-bold font-[family-name:var(--font-mono)] text-[var(--color-accent)]">
@@ -165,7 +165,7 @@ export default function BatteryStatusPanel({
               className={`flex-1 py-2 text-xs rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                 currentBattery === val
                   ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-                  : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
+                  : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
               }`}
             >
               {val}%
@@ -177,10 +177,10 @@ export default function BatteryStatusPanel({
       {/* Min arrival slider */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs text-[var(--color-muted)]">
+          <label className="text-xs text-[var(--color-text-secondary)]">
             {t('min_arrival_battery')}
           </label>
-          <span className="text-sm font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+          <span className="text-sm font-[family-name:var(--font-mono)] text-[var(--color-text-secondary)]">
             {minArrival}%
           </span>
         </div>
@@ -201,13 +201,13 @@ export default function BatteryStatusPanel({
       {/* Live range readout */}
       {rangeResult && vehicleName && (
         <div className="p-3 bg-[var(--color-surface)] rounded-lg">
-          <div className="text-xs text-[var(--color-muted)] mb-1">
+          <div className="text-xs text-[var(--color-text-secondary)] mb-1">
             {t('usable_range')}
           </div>
           <div className="text-2xl font-bold font-[family-name:var(--font-mono)] text-[var(--color-accent)]">
             ~{Math.round(rangeResult.usableRangeKm)} km
           </div>
-          <div className="text-xs text-[var(--color-muted)] mt-1">
+          <div className="text-xs text-[var(--color-text-secondary)] mt-1">
             {t('vehicle_at_battery', { vehicle: vehicleName, percent: currentBattery })}
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function BatteryStatusPanel({
 
       {/* Driving style presets */}
       <div>
-        <label className="text-xs text-[var(--color-muted)] mb-2 block">{t('driving_style' as Parameters<typeof t>[0])}</label>
+        <label className="text-xs text-[var(--color-text-secondary)] mb-2 block">{t('driving_style' as Parameters<typeof t>[0])}</label>
         <div className="flex gap-1.5">
           {([
             { label: 'driving_style_eco', value: 0.70 },
@@ -231,7 +231,7 @@ export default function BatteryStatusPanel({
                 className={`flex-1 py-2.5 text-xs rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                   isSelected
                     ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-                    : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
+                    : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
                 }`}
               >
                 {t(lbl as Parameters<typeof t>[0])}
@@ -246,7 +246,7 @@ export default function BatteryStatusPanel({
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
           disabled={disabled}
-          className="text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <span className={`transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>
             ▶
@@ -257,7 +257,7 @@ export default function BatteryStatusPanel({
         {showAdvanced && (
           <div className="mt-3 space-y-3 animate-in slide-in-from-top-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--color-muted)]">
+              <span className="text-xs text-[var(--color-text-secondary)]">
                 {t('trust_range', { percent: Math.round(rangeSafetyFactor * 100) })}
               </span>
               <span className="text-sm font-bold font-[family-name:var(--font-mono)]">
@@ -287,7 +287,7 @@ export default function BatteryStatusPanel({
                   className={`flex-1 py-2 text-xs rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                     rangeSafetyFactor === val
                       ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-                      : 'bg-[var(--color-surface)] text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)]'
+                      : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
                   }`}
                 >
                   {Math.round(val * 100)}%

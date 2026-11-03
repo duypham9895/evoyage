@@ -27,7 +27,7 @@ export default function SampleTripChips({ start, end, onPick, disabled = false }
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-[var(--color-muted)] font-medium">{sectionLabel}</p>
+      <p className="text-xs text-[var(--color-text-secondary)] font-medium">{sectionLabel}</p>
       <div
         className="flex flex-nowrap gap-2 overflow-x-auto -mx-1 px-1 pb-1"
         aria-label={sectionLabel}

@@ -67,7 +67,7 @@ export default function EViNudge({ shouldShow, onOpenEvi, onDismiss }: EViNudgeP
       <p className="font-[family-name:var(--font-heading)] font-semibold text-sm text-[var(--color-accent)]">
         {t('evi_nudge_headline')}
       </p>
-      <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
         {t('evi_nudge_body')}
       </p>
       <div className="mt-2 flex items-center gap-2">
@@ -81,7 +81,7 @@ export default function EViNudge({ shouldShow, onOpenEvi, onDismiss }: EViNudgeP
         <button
           type="button"
           onClick={handleDismiss}
-          className="px-2 py-1.5 rounded-md text-xs text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors"
+          className="px-2 py-1.5 rounded-md text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors"
         >
           {t('evi_nudge_dismiss')}
         </button>

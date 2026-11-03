@@ -55,7 +55,7 @@ export default function AddCustomVehicle({
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-xs text-[var(--color-muted)] mb-1 block">
+            <label className="text-xs text-[var(--color-text-secondary)] mb-1 block">
               {t('brand')}
             </label>
             <input
@@ -70,7 +70,7 @@ export default function AddCustomVehicle({
           </div>
 
           <div>
-            <label className="text-xs text-[var(--color-muted)] mb-1 block">
+            <label className="text-xs text-[var(--color-text-secondary)] mb-1 block">
               {t('model')}
             </label>
             <input
@@ -85,7 +85,7 @@ export default function AddCustomVehicle({
           </div>
 
           <div>
-            <label className="text-xs text-[var(--color-muted)] mb-1 block">
+            <label className="text-xs text-[var(--color-text-secondary)] mb-1 block">
               {t('battery_capacity')}
             </label>
             <input
@@ -101,7 +101,7 @@ export default function AddCustomVehicle({
           </div>
 
           <div>
-            <label className="text-xs text-[var(--color-muted)] mb-1 block">
+            <label className="text-xs text-[var(--color-text-secondary)] mb-1 block">
               {t('official_range')}
             </label>
             <input
@@ -119,7 +119,7 @@ export default function AddCustomVehicle({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm border border-[var(--color-surface-hover)] rounded-lg text-[var(--color-muted)] hover:bg-[var(--color-surface-hover)] transition-colors"
+              className="flex-1 px-4 py-2 text-sm border border-[var(--color-surface-hover)] rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] transition-colors"
             >
               {t('cancel')}
             </button>

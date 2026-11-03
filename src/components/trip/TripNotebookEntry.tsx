@@ -58,10 +58,10 @@ export default function TripNotebookEntry({
         <h3 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-foreground)] truncate">
           {startCity} → {endCity}
         </h3>
-        <span className="text-[10px] text-[var(--color-muted)] shrink-0">{savedLabel}</span>
+        <span className="text-[10px] text-[var(--color-text-secondary)] shrink-0">{savedLabel}</span>
       </div>
 
-      <div className="text-xs text-[var(--color-muted)]">
+      <div className="text-xs text-[var(--color-text-secondary)]">
         {vehicleName ?? i18n.vehicleMissing}
       </div>
 
@@ -76,14 +76,14 @@ export default function TripNotebookEntry({
         <button
           type="button"
           onClick={() => onPin(trip.id, !trip.pinned)}
-          className="text-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)]"
         >
           {trip.pinned ? i18n.unpin : i18n.pin}
         </button>
         <button
           type="button"
           onClick={() => onDelete(trip.id)}
-          className="text-[var(--color-muted)] hover:text-[var(--color-danger)]"
+          className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]"
         >
           {i18n.remove}
         </button>

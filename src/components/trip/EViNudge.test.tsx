@@ -5,6 +5,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import EViNudge from './EViNudge';
 import vi_dict from '@/locales/vi.json';
 import en_dict from '@/locales/en.json';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 // ── Locale mock — `t()` resolves from the actual locale JSON ──
 
@@ -104,5 +105,16 @@ describe('EViNudge', () => {
     }).not.toThrow();
     expect(onOpenEvi).toHaveBeenCalledTimes(1);
     setItemSpy.mockRestore();
+  });
+});
+
+describe('EViNudge — information text contrast (DESIGN.md D5)', () => {
+  it('renders the nudge body with at least 4.5:1 contrast on the surface card', () => {
+    mockLocale = 'vi';
+    sessionStorage.clear();
+    render(<EViNudge shouldShow={true} onOpenEvi={vi.fn()} onDismiss={vi.fn()} />);
+    const body = screen.getByText(vi_dict.evi_nudge_body);
+    const fg = tokenHex(textColorToken(body.className));
+    expect(contrastRatio(fg, tokenHex('surface'))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 });

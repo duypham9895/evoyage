@@ -5,6 +5,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import BatteryStatusPanel from '@/components/trip/BatteryStatusPanel';
 import vi_dict from '@/locales/vi.json';
 import en_dict from '@/locales/en.json';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 const mockLocaleState = { current: 'vi' as 'vi' | 'en' };
 const dicts = { vi: vi_dict, en: en_dict } as const;
@@ -85,5 +86,27 @@ describe('BatteryStatusPanel — input lock (spec: trip-calc-input-lock §3.1)',
     render(<BatteryStatusPanel {...baseProps} />);
     const sliders = screen.getAllByRole('slider');
     sliders.forEach((slider) => expect(slider).not.toBeDisabled());
+  });
+});
+
+describe('BatteryStatusPanel — information text contrast (DESIGN.md D5)', () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('renders battery labels and the min-arrival value with at least 4.5:1 contrast on the panel background', () => {
+    mockLocaleState.current = 'vi';
+    render(<BatteryStatusPanel {...baseProps} />);
+    const infoText = [
+      screen.getByText(vi_dict.current_battery_label),
+      screen.getByText(vi_dict.min_arrival_battery),
+      screen.getByText(vi_dict.driving_style),
+      screen.getByText(`${baseProps.minArrival}%`),
+    ];
+    for (const el of infoText) {
+      const fg = tokenHex(textColorToken(el.className));
+      expect(contrastRatio(fg, tokenHex('background'))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    }
   });
 });

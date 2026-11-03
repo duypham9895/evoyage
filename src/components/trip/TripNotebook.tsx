@@ -70,13 +70,13 @@ export default function TripNotebook({
 
   if (entries.length === 0) {
     return (
-      <div className="p-4 text-sm text-[var(--color-muted)] text-center">{i18n.empty}</div>
+      <div className="p-4 text-sm text-[var(--color-text-secondary)] text-center">{i18n.empty}</div>
     );
   }
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
+      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-text-secondary)] uppercase tracking-wider">
         {i18n.heading}
       </h2>
       <ol role="list" className="space-y-2">
