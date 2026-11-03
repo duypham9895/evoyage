@@ -14,6 +14,9 @@ function createRedisRatelimiter(maxRequests: number, windowSec: number): Ratelim
     limiter: Ratelimit.slidingWindow(maxRequests, `${windowSec} s`),
     analytics: false,
     prefix: 'evoyage:ratelimit',
+    // On expiry the library resolves { success: true, reason: 'timeout' };
+    // checkRateLimit treats that as a Redis failure, not as allowed.
+    timeout: 500,
   });
 }
 
@@ -24,7 +27,13 @@ const localStore = new Map<string, { count: number; resetAt: number }>();
 export function __resetRateLimitForTests(): void {
   localStore.clear();
   redisFailureLogged = false;
+  redisSkipUntil = 0;
 }
+
+// After a Redis failure, skip Redis for this long and use the in-memory
+// limiter, so a dead host is not contacted on every request.
+const REDIS_SKIP_AFTER_FAILURE_MS = 60_000;
+let redisSkipUntil = 0;
 
 // Logged once per process. A dead Redis fails on every request, and one line
 // per request would bury the signal it is meant to raise.
@@ -123,7 +132,7 @@ export async function checkRateLimit(
   // /api/route, /api/stations and /api/vehicles all returned 500. Rate limiting
   // is a guard, not the feature — a guard that is unreachable must degrade, not
   // take the endpoint down with it.
-  if (limiter) {
+  if (limiter && Date.now() >= redisSkipUntil) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const result = await Promise.race([
@@ -135,6 +144,9 @@ export async function checkRateLimit(
           );
         }),
       ]);
+      if (result.reason === 'timeout') {
+        throw new Error('Redis rate limit timed out');
+      }
       return {
         allowed: result.success,
         remaining: result.remaining,
@@ -143,6 +155,7 @@ export async function checkRateLimit(
     } catch (err) {
       // Fall through to the in-memory limiter. Per-instance rather than
       // distributed, so protection is weaker but the endpoint stays up.
+      redisSkipUntil = Date.now() + REDIS_SKIP_AFTER_FAILURE_MS;
       warnRedisUnavailableOnce(err);
     } finally {
       clearTimeout(timer);
