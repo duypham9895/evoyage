@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import type { ChatMessage, EViParseResponse, NearbyStationInfo } from '@/lib/evi/types';
+import { EVI_CONTEXT_MAX_CHARS } from '@/lib/evi/types';
 import { trackEviMessage } from '@/lib/analytics';
 
 // ── State Machine ──
@@ -197,9 +198,9 @@ export function useEVi(locale: 'vi' | 'en' = 'vi', active = true): UseEViReturn 
 
     const tripContext = response.tripParams
       ? {
-          start: response.tripParams.start,
-          end: response.tripParams.end,
-          vehicleName: response.tripParams.vehicleName,
+          start: response.tripParams.start?.slice(0, EVI_CONTEXT_MAX_CHARS) ?? null,
+          end: response.tripParams.end?.slice(0, EVI_CONTEXT_MAX_CHARS) ?? null,
+          vehicleName: response.tripParams.vehicleName?.slice(0, EVI_CONTEXT_MAX_CHARS) ?? null,
           currentBattery: response.tripParams.currentBattery,
           isComplete: response.isComplete,
         }
@@ -265,8 +266,8 @@ export function useEVi(locale: 'vi' | 'en' = 'vi', active = true): UseEViReturn 
     const prevParams = lastResponseRef.current?.tripParams;
     const accumulatedParams = prevParams
       ? {
-          start: prevParams.start,
-          end: prevParams.end,
+          start: prevParams.start?.slice(0, EVI_CONTEXT_MAX_CHARS) ?? null,
+          end: prevParams.end?.slice(0, EVI_CONTEXT_MAX_CHARS) ?? null,
           vehicleBrand: prevParams.vehicleData?.brand ?? null,
           vehicleModel: prevParams.vehicleData
             ? `${prevParams.vehicleData.model}${prevParams.vehicleData.variant ? ` ${prevParams.vehicleData.variant}` : ''}`

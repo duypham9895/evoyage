@@ -30,6 +30,10 @@ export const MinimaxTripExtraction = z.object({
 export type MinimaxTripExtractionResult = z.infer<typeof MinimaxTripExtraction>;
 
 // ── API Request Schema ──
+
+/** Cap for place/vehicle strings the client echoes back as context. Real Nominatim display names stay well under this. */
+export const EVI_CONTEXT_MAX_CHARS = 300;
+
 export const EViParseRequest = z.object({
   message: z.string().min(1).max(500),
   history: z.array(z.object({
@@ -42,11 +46,11 @@ export const EViParseRequest = z.object({
   }).nullable().default(null),
   previousVehicleId: z.string().nullable().default(null),
   accumulatedParams: z.object({
-    start: z.string().nullable().default(null),
-    end: z.string().nullable().default(null),
-    vehicleBrand: z.string().nullable().default(null),
-    vehicleModel: z.string().nullable().default(null),
-    currentBattery: z.number().nullable().default(null),
+    start: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    end: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    vehicleBrand: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    vehicleModel: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    currentBattery: z.number().min(1).max(100).nullable().default(null),
   }).nullable().default(null),
 });
 
