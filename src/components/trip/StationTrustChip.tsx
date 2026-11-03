@@ -58,7 +58,7 @@ export default function StationTrustChip({ lastVerifiedAt }: StationTrustChipPro
     <span
       data-testid="station-trust-chip"
       data-tier="none"
-      className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full text-[var(--color-muted)]"
+      className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full text-[var(--color-text-secondary)]"
     >
       {t('station_trust_none')}
     </span>
