@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import FeedbackModal from './FeedbackModal';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 vi.mock('@/lib/locale', () => ({
   useLocale: () => ({ t: (key: string) => key }),
@@ -152,5 +153,13 @@ describe('FeedbackModal — characterization (react-hooks compiler refactor)', (
     expect(await screen.findByText('feedback_lat_invalid')).toBeInTheDocument();
     expect(screen.getByText('feedback_lng_invalid')).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // BUG(D5-feedback-admin-shell): helper text used --color-muted (#6B6B78), below 4.5:1 on the modal surface. Fixed: text-secondary (DESIGN.md D5).
+  it('renders the category prompt with at least 4.5:1 contrast on the modal surface (WCAG 1.4.3)', () => {
+    render(<FeedbackModal isOpen={true} onClose={() => {}} />);
+    const prompt = screen.getByText('feedback_category_prompt');
+    const fg = tokenHex(textColorToken(prompt.className));
+    expect(contrastRatio(fg, tokenHex('surface'))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 });

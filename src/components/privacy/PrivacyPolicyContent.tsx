@@ -125,7 +125,7 @@ function PrivacyContent() {
           </p>
         </section>
 
-        <p className="text-xs text-[var(--color-muted)]">{t('privacy_last_updated')}</p>
+        <p className="text-xs text-[var(--color-text-secondary)]">{t('privacy_last_updated')}</p>
       </main>
     </div>
   );

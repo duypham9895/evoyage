@@ -122,7 +122,7 @@ export default function FeedbackImageUpload({ value, onChange }: FeedbackImageUp
 
       {error ? <p className="text-xs text-[var(--color-danger)]">{error}</p> : null}
 
-      <p className="text-xs text-[var(--color-muted)]">{t('feedback_upload_hint')}</p>
+      <p className="text-xs text-[var(--color-text-secondary)]">{t('feedback_upload_hint')}</p>
     </div>
   );
 }

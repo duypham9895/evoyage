@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import DesktopTabBar from './DesktopTabBar';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 vi.mock('@/lib/locale', () => ({
   useLocale: () => ({
@@ -88,5 +89,13 @@ describe('DesktopTabBar', () => {
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' });
     expect(onTabChange).toHaveBeenCalledWith('evi');
+  });
+
+  // BUG(D5-feedback-admin-shell): inactive tab label used --color-muted (#6B6B78), below 4.5:1. Fixed: text-secondary (DESIGN.md D5).
+  it('renders inactive tab labels with at least 4.5:1 contrast on the page background (WCAG 1.4.3)', () => {
+    render(<DesktopTabBar activeTab="evi" onTabChange={onTabChange} />);
+    const inactive = screen.getByRole('tab', { name: 'Stations' });
+    const fg = tokenHex(textColorToken(inactive.className));
+    expect(contrastRatio(fg, tokenHex('background'))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 });

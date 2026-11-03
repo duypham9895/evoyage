@@ -329,7 +329,7 @@ export default function FeedbackModal({
           {/* ─── Category Selection ─── */}
           {step === 'category' && (
             <div className="py-4">
-              <p className="text-sm text-[var(--color-muted)] mb-4">
+              <p className="text-sm text-[var(--color-text-secondary)] mb-4">
                 {t('feedback_category_prompt')}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -415,11 +415,11 @@ export default function FeedbackModal({
                       {validationErrors.description}
                     </span>
                   ) : (
-                    <span className="text-xs text-[var(--color-muted)]">
+                    <span className="text-xs text-[var(--color-text-secondary)]">
                       {t('feedback_min_chars')}
                     </span>
                   )}
-                  <span className="text-xs text-[var(--color-muted)]">
+                  <span className="text-xs text-[var(--color-text-secondary)]">
                     {description.length}/2000
                   </span>
                 </div>
@@ -522,7 +522,7 @@ export default function FeedbackModal({
                       ) : null}
                     </div>
                   </div>
-                  <p className="text-xs text-[var(--color-muted)]">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
                     {t('feedback_help_proposed_coords')}
                   </p>
                   <div>
@@ -586,7 +586,7 @@ export default function FeedbackModal({
                     {validationErrors.email}
                   </span>
                 ) : (
-                  <span className="text-xs text-[var(--color-muted)] mt-1 block">
+                  <span className="text-xs text-[var(--color-text-secondary)] mt-1 block">
                     {t('feedback_email_hint')}
                   </span>
                 )}
@@ -663,11 +663,11 @@ export default function FeedbackModal({
               <h3 className="text-lg font-semibold text-[var(--color-accent)] animate-[successPop_300ms_ease-out]">
                 {t('feedback_success_title')}
               </h3>
-              <p className="text-sm text-[var(--color-muted)]">
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 {t('feedback_success_message')}
               </p>
               {email && (
-                <p className="text-sm text-[var(--color-muted)]">
+                <p className="text-sm text-[var(--color-text-secondary)]">
                   {t('feedback_success_reply')}
                 </p>
               )}
@@ -677,7 +677,7 @@ export default function FeedbackModal({
           {/* ─── Error ─── */}
           {step === 'error' && (
             <div className="py-12 text-center space-y-4">
-              <p className="text-sm text-[var(--color-muted)]">
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 {t('feedback_error_message')}
               </p>
               <button

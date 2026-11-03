@@ -82,7 +82,7 @@ export default function StarRating({ value, onChange, size = 32 }: StarRatingPro
         );
       })}
       {value && (
-        <span className="text-sm text-[var(--color-muted)] ml-1">
+        <span className="text-sm text-[var(--color-text-secondary)] ml-1">
           {value}/5
         </span>
       )}

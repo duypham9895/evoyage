@@ -53,7 +53,7 @@ export default async function AdminFeedbackList({
     <div className="space-y-4">
       <header className="flex items-baseline justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold">Feedback inbox</h1>
-        <div className="text-xs text-[var(--color-muted)]">
+        <div className="text-xs text-[var(--color-text-secondary)]">
           Showing {rows.length} of {total} {status === 'ALL' ? '' : `${status} `}rows
         </div>
       </header>
@@ -67,7 +67,7 @@ export default async function AdminFeedbackList({
               'px-3 py-1 rounded-md border ' +
               (s === status
                 ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-text)]'
-                : 'border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-text)]')
+                : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')
             }
           >
             {s}
@@ -76,13 +76,13 @@ export default async function AdminFeedbackList({
       </nav>
 
       {rows.length === 0 ? (
-        <p className="py-12 text-center text-[var(--color-muted)] text-sm">
+        <p className="py-12 text-center text-[var(--color-text-secondary)] text-sm">
           No feedback rows match this filter.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[var(--color-border)]">
           <table className="w-full text-sm">
-            <thead className="bg-[var(--color-surface)] text-left text-xs uppercase tracking-wide text-[var(--color-muted)]">
+            <thead className="bg-[var(--color-surface)] text-left text-xs uppercase tracking-wide text-[var(--color-text-secondary)]">
               <tr>
                 <th className="px-3 py-2 font-medium">When</th>
                 <th className="px-3 py-2 font-medium">Category</th>
@@ -95,13 +95,13 @@ export default async function AdminFeedbackList({
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id} className="border-t border-[var(--color-border)]">
-                  <td className="px-3 py-2 align-top whitespace-nowrap text-[var(--color-muted)] text-xs">
+                  <td className="px-3 py-2 align-top whitespace-nowrap text-[var(--color-text-secondary)] text-xs">
                     {formatDate(row.createdAt)}
                   </td>
                   <td className="px-3 py-2 align-top">
                     {CATEGORY_LABELS_VI[row.category as FeedbackCategory] ?? row.category}
                     {row.stationName ? (
-                      <div className="text-xs text-[var(--color-muted)]">{row.stationName}</div>
+                      <div className="text-xs text-[var(--color-text-secondary)]">{row.stationName}</div>
                     ) : null}
                   </td>
                   <td className="px-3 py-2 align-top max-w-md">
@@ -112,7 +112,7 @@ export default async function AdminFeedbackList({
                       {row.status}
                     </span>
                   </td>
-                  <td className="px-3 py-2 align-top text-xs text-[var(--color-muted)]">
+                  <td className="px-3 py-2 align-top text-xs text-[var(--color-text-secondary)]">
                     {row.email ?? '—'}
                   </td>
                   <td className="px-3 py-2 align-top">
