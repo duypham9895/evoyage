@@ -451,6 +451,16 @@ describe('feedbackRequestSchema', () => {
       expect(result.success).toBe(true);
     });
 
+    it('accepts formElapsedMs within 0..1 day', () => {
+      expect(feedbackRequestSchema.safeParse({ ...validFeedback, formElapsedMs: 0 }).success).toBe(true);
+      expect(feedbackRequestSchema.safeParse({ ...validFeedback, formElapsedMs: 86_400_000 }).success).toBe(true);
+    });
+
+    it('rejects negative or over-one-day formElapsedMs', () => {
+      expect(feedbackRequestSchema.safeParse({ ...validFeedback, formElapsedMs: -1 }).success).toBe(false);
+      expect(feedbackRequestSchema.safeParse({ ...validFeedback, formElapsedMs: 86_400_001 }).success).toBe(false);
+    });
+
     it('rejects non-number formOpenedAt', () => {
       const result = feedbackRequestSchema.safeParse({
         ...validFeedback,

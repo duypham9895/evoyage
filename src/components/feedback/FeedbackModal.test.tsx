@@ -88,6 +88,31 @@ describe('FeedbackModal — characterization (react-hooks compiler refactor)', (
     expect(body.formOpenedAt as number).toBeGreaterThan(0);
     expect(body.formOpenedAt as number).toBeLessThanOrEqual(beforeSubmit + 1);
   });
+  it('submits formElapsedMs measured on the client between form open and submit', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+
+    render(
+      <FeedbackModal
+        isOpen={true}
+        onClose={() => {}}
+        stationContext={{ stationId: 's1', stationName: 'Station One' }}
+      />,
+    );
+
+    fireEvent.change(await screen.findByPlaceholderText('feedback_ph_station'), {
+      target: { value: 'This description is definitely long enough.' },
+    });
+
+    nowSpy.mockReturnValue(1_007_500);
+    fireEvent.click(screen.getByRole('button', { name: 'feedback_submit' }));
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string) as { formElapsedMs: unknown };
+    expect(body.formElapsedMs).toBe(7_500);
+  });
+
   // BUG(p2-feedback-form-failures): a decimal-comma coordinate ('10,7626') is sent as Number() -> NaN -> JSON null, which the API rejects. See docs/bugs/2026-11-01-p2-feedback-form-failures.md
   it('normalises decimal-comma coordinates for MISSING_STATION instead of sending null', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
