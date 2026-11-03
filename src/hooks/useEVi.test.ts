@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useEVi } from './useEVi';
+import { EVI_CONTEXT_MAX_CHARS } from '@/lib/evi/types';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -480,6 +481,43 @@ describe('useEVi', () => {
       // lastResponseRef: the 1st response had no tripParams.vehicleId, so
       // previousVehicleId stays null.
       expect(secondBody.previousVehicleId).toBeNull();
+    });
+
+    it('caps echoed place and vehicle names at EVI_CONTEXT_MAX_CHARS so the server never rejects them', async () => {
+      const longName = 'Đường rất dài, '.repeat(40);
+      const first = makeSuccessResponse({ isComplete: false, followUpType: null });
+      const firstJson = await first.json();
+      mockFetch.mockResolvedValueOnce({
+        ...first,
+        json: () => Promise.resolve({
+          ...firstJson,
+          tripParams: { ...firstJson.tripParams, start: longName, end: longName, vehicleName: longName },
+        }),
+      });
+      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ suggestions: [] }) });
+
+      const { result } = renderHook(() => useEVi());
+
+      await act(async () => {
+        await result.current.sendMessage('Đi chơi xa');
+      });
+
+      mockFetch.mockResolvedValueOnce(makeSuccessResponse({ isComplete: true }));
+
+      await act(async () => {
+        await result.current.sendMessage('VF 8 Plus');
+      });
+
+      const suggestionsCall = mockFetch.mock.calls.find((call) => call[0] === '/api/evi/suggestions');
+      const tripContext = JSON.parse(suggestionsCall![1].body).tripContext;
+      expect(tripContext.start).toHaveLength(EVI_CONTEXT_MAX_CHARS);
+      expect(tripContext.end).toHaveLength(EVI_CONTEXT_MAX_CHARS);
+      expect(tripContext.vehicleName).toHaveLength(EVI_CONTEXT_MAX_CHARS);
+
+      const parseCalls = mockFetch.mock.calls.filter((call) => call[0] === '/api/evi/parse');
+      const accumulated = JSON.parse(parseCalls[1][1].body).accumulatedParams;
+      expect(accumulated.start).toHaveLength(EVI_CONTEXT_MAX_CHARS);
+      expect(accumulated.end).toHaveLength(EVI_CONTEXT_MAX_CHARS);
     });
   });
 

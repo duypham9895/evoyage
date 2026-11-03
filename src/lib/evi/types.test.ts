@@ -1,4 +1,4 @@
-import { MinimaxTripExtraction, EViParseRequest } from './types';
+import { MinimaxTripExtraction, EViParseRequest, EVI_CONTEXT_MAX_CHARS } from './types';
 
 // ── MinimaxTripExtraction ──
 
@@ -228,6 +228,32 @@ describe('EViParseRequest', () => {
     const result = EViParseRequest.safeParse({
       ...validRequest,
       userLocation: { lat: 0, lng: 181 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects accumulatedParams strings longer than EVI_CONTEXT_MAX_CHARS', () => {
+    for (const field of ['start', 'end', 'vehicleBrand', 'vehicleModel']) {
+      const result = EViParseRequest.safeParse({
+        ...validRequest,
+        accumulatedParams: { [field]: 'x'.repeat(EVI_CONTEXT_MAX_CHARS + 1) },
+      });
+      expect(result.success, field).toBe(false);
+    }
+  });
+
+  it('accepts accumulatedParams strings at exactly EVI_CONTEXT_MAX_CHARS', () => {
+    const result = EViParseRequest.safeParse({
+      ...validRequest,
+      accumulatedParams: { end: 'x'.repeat(EVI_CONTEXT_MAX_CHARS), currentBattery: 100 },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([0, 101, 5000, -5])('rejects accumulatedParams.currentBattery %s outside 1..100', (currentBattery) => {
+    const result = EViParseRequest.safeParse({
+      ...validRequest,
+      accumulatedParams: { currentBattery },
     });
     expect(result.success).toBe(false);
   });

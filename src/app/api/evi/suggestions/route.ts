@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkRateLimit, getClientIp, eviLimiter } from '@/lib/rate-limit';
 import { generateSuggestions } from '@/lib/evi/suggestions-client';
+import { EVI_CONTEXT_MAX_CHARS } from '@/lib/evi/types';
 
 export const maxDuration = 10;
 
@@ -13,10 +14,10 @@ const SuggestionsRequest = z.object({
     content: z.string().max(500),
   })).min(1).max(10),
   tripContext: z.object({
-    start: z.string().nullable().default(null),
-    end: z.string().nullable().default(null),
-    vehicleName: z.string().nullable().default(null),
-    currentBattery: z.number().nullable().default(null),
+    start: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    end: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    vehicleName: z.string().max(EVI_CONTEXT_MAX_CHARS).nullable().default(null),
+    currentBattery: z.number().min(1).max(100).nullable().default(null),
     isComplete: z.boolean().default(false),
   }).nullable().default(null),
   locale: z.enum(['vi', 'en']).default('vi'),

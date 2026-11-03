@@ -495,6 +495,27 @@ describe('POST /api/evi/parse', () => {
     expect(data.error).toBe('Invalid request');
   });
 
+  it('returns 400 without calling the LLM when an accumulated context string is oversized', async () => {
+    const res = await POST(createRequest({
+      message: 'Đi Đà Lạt',
+      accumulatedParams: { end: 'x'.repeat(301) },
+    }));
+
+    expect(res.status).toBe(400);
+    expect(mockParseTrip).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 instead of echoing an out-of-range battery through the current-location shortcut', async () => {
+    const res = await POST(createRequest({
+      message: 'từ vị trí hiện tại',
+      userLocation: { lat: 10.8, lng: 106.7 },
+      accumulatedParams: { end: 'Đà Lạt', vehicleBrand: 'VinFast', vehicleModel: 'VF 8 Plus', currentBattery: 5000 },
+    }));
+
+    expect(res.status).toBe(400);
+    expect(mockParseTrip).not.toHaveBeenCalled();
+  });
+
   it('runs vehicle resolution and end-location geocoding in parallel', async () => {
     const calls: string[] = [];
     let unblockFindMany: (val: unknown[]) => void = () => {};
