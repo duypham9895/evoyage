@@ -142,10 +142,10 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **1606 unit/integration tests** across **140 files** (vitest, ~20 seconds)
-- **36 E2E tests** across **12 spec files** (Playwright, on Desktop Chrome)
+- **2191 unit/integration tests** across **193 files** (vitest, ~20 seconds; 9 of them are `it.fails` bug reproductions)
+- **38 E2E tests** across **13 spec files** (Playwright, on Desktop Chrome; the mobile-only autocomplete test skips there)
 - Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar, energy-price parsers (Petrolimex / V-GREEN / EVN), trip-cost calculator, HomeEnergyPrices block, eVi LLM module (provider chain, fallback, telemetry — see ADR-0002), backup pressure score + alternative trim helper (ADR-0006), backup-station telemetry events
-- E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state, CSP smoke, precautionary stops
+- E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state, CSP smoke, precautionary stops, mobile start-point autocomplete
 - These counts should only go UP — never delete tests unless the feature is removed
 
 ### Pre-Commit Checklist
