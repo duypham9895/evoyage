@@ -13,6 +13,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "ratchet:update": "RATCHET_UPDATE=1 npx vitest run src/lib/__tests__/design-token-ratchet.test.ts",
     "test:e2e": "npx playwright test",
     "test:e2e:real": "MOCK_APIS=false npx playwright test",
     "seed": "npx tsx scripts/seed-vietnam-models.ts",

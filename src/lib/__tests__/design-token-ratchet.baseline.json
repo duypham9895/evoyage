@@ -1,0 +1,188 @@
+{
+  "app/admin/feedback/[id]/StatusActions.tsx": {
+    "hex": 0,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 1
+  },
+  "app/admin/feedback/page.tsx": {
+    "hex": 0,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 2
+  },
+  "app/admin/layout.tsx": {
+    "hex": 0,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 2
+  },
+  "components/EVi.tsx": {
+    "hex": 1,
+    "tinyText": 2,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/NearbyStations.tsx": {
+    "hex": 0,
+    "tinyText": 3,
+    "rawPalette": 3,
+    "undefinedVars": 0
+  },
+  "components/StationCard.tsx": {
+    "hex": 1,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/landing/LandingPageContent.tsx": {
+    "hex": 0,
+    "tinyText": 1,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/landing/VietnamMap.tsx": {
+    "hex": 18,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/landing/vietnam-map-helpers.tsx": {
+    "hex": 11,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/map/ElevationChart.tsx": {
+    "hex": 4,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/map/Map.tsx": {
+    "hex": 11,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/map/MapLocateButton.tsx": {
+    "hex": 2,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 2
+  },
+  "components/map/MapboxMap.tsx": {
+    "hex": 41,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/PlaceAutocomplete.tsx": {
+    "hex": 0,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 1
+  },
+  "components/trip/RouteTimeline.tsx": {
+    "hex": 0,
+    "tinyText": 7,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/ShareButton.tsx": {
+    "hex": 24,
+    "tinyText": 0,
+    "rawPalette": 1,
+    "undefinedVars": 0
+  },
+  "components/trip/StationAmenities.tsx": {
+    "hex": 0,
+    "tinyText": 5,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/StationDetailExpander.tsx": {
+    "hex": 0,
+    "tinyText": 11,
+    "rawPalette": 4,
+    "undefinedVars": 0
+  },
+  "components/trip/StationDetailSkeleton.tsx": {
+    "hex": 0,
+    "tinyText": 1,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/StationInfoChips.tsx": {
+    "hex": 0,
+    "tinyText": 3,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/StationStatusReporter.tsx": {
+    "hex": 1,
+    "tinyText": 5,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/StationTrustChip.tsx": {
+    "hex": 0,
+    "tinyText": 3,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/StopPopularity.tsx": {
+    "hex": 0,
+    "tinyText": 1,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/TripNotebookEntry.tsx": {
+    "hex": 0,
+    "tinyText": 1,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/TripSummary.tsx": {
+    "hex": 0,
+    "tinyText": 12,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/WaypointInput.tsx": {
+    "hex": 1,
+    "tinyText": 1,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "components/trip/WhatIfCards.tsx": {
+    "hex": 0,
+    "tinyText": 2,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "lib/feedback/email.ts": {
+    "hex": 40,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "lib/geo/map-utils.ts": {
+    "hex": 16,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "lib/geo/mini-card.ts": {
+    "hex": 19,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
+  "lib/geo/smart-marker.ts": {
+    "hex": 15,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  }
+}
