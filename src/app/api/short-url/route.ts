@@ -30,6 +30,19 @@ const shortUrlHourLimiter = hasRedis
     })
   : null;
 
+const PRODUCTION_ORIGIN = 'https://evoyage.duypham.me';
+
+// Share links must never point at an origin taken blindly from the Host
+// header. Outside production, localhost and this deployment's VERCEL_URL are
+// also accepted; anything else falls back to the production origin.
+function allowedBaseUrl(candidate: string | null): string {
+  if (candidate && process.env.VERCEL_ENV !== 'production') {
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(candidate)) return candidate;
+    if (process.env.VERCEL_URL && candidate === `https://${process.env.VERCEL_URL}`) return candidate;
+  }
+  return PRODUCTION_ORIGIN;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
@@ -68,10 +81,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // Derive base URL from request
+    // Derive base URL from request, accepted only if on the allowlist
     const proto = request.headers.get('x-forwarded-proto') ?? 'https';
-    const host = request.headers.get('host') ?? 'evoyage.duypham.me';
-    const baseUrl = `${proto}://${host}`;
+    const host = request.headers.get('host');
+    const baseUrl = allowedBaseUrl(host ? `${proto}://${host}` : null);
 
     // Create the short URL
     const result = await createShortUrl(validation.params, baseUrl);
