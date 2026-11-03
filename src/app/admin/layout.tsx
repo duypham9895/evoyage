@@ -18,7 +18,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Link href="/admin/feedback" className="font-semibold">
             eVoyage Admin
           </Link>
-          <span className="text-xs text-[var(--color-muted)]">
+          <span className="text-xs text-[var(--color-text-secondary)]">
             Internal — do not share this URL
           </span>
         </nav>

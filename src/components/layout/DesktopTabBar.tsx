@@ -71,7 +71,7 @@ export default function DesktopTabBar({ activeTab, onTabChange }: DesktopTabBarP
             className={`flex-1 py-2.5 min-h-[44px] text-sm font-semibold rounded-t-lg transition-colors ${
               isActive
                 ? 'bg-[var(--color-accent)] text-[var(--color-background)]'
-                : 'bg-transparent text-[var(--color-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
+                : 'bg-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
             }`}
           >
             {t(labelKey as Parameters<typeof t>[0])}

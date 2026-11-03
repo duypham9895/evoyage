@@ -16,7 +16,7 @@ function field(label: string, value: string | number | null | undefined) {
   if (value === null || value === undefined || value === '') return null;
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-[var(--color-muted)]">{label}</dt>
+      <dt className="text-xs uppercase tracking-wide text-[var(--color-text-secondary)]">{label}</dt>
       <dd className="mt-0.5 break-words">{String(value)}</dd>
     </div>
   );
@@ -35,7 +35,7 @@ export default async function AdminFeedbackDetail({
 
   return (
     <div className="space-y-5">
-      <nav className="text-sm text-[var(--color-muted)]">
+      <nav className="text-sm text-[var(--color-text-secondary)]">
         <Link href="/admin/feedback" className="hover:underline">
           ← Back to inbox
         </Link>
@@ -43,7 +43,7 @@ export default async function AdminFeedbackDetail({
 
       <header className="space-y-1">
         <h1 className="text-xl font-semibold">{category}</h1>
-        <div className="text-xs text-[var(--color-muted)]">
+        <div className="text-xs text-[var(--color-text-secondary)]">
           {row.id} · created {formatDate(row.createdAt)} · status {row.status}
           {row.resolvedAt ? ` · resolved ${formatDate(row.resolvedAt)}` : ''}
         </div>
