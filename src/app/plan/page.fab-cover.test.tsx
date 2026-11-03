@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+import PlanPage from './page';
 
 /**
  * Regression net for P05-fab-cover: on mobile, the floating buttons
@@ -51,7 +52,6 @@ function dragSheetBy(deltaY: number): void {
 
 describe('plan page (mobile) — floating buttons vs bottom sheet snap', () => {
   it('shows the feedback and eVi buttons at half, hides them at full, and restores them back at half', async () => {
-    const PlanPage = (await import('./page')).default;
     render(<PlanPage />);
 
     // Half snap (initial): both floating buttons are reachable.

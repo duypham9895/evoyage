@@ -50,6 +50,13 @@ vi.mock('@/components/map/Map', () => ({
   },
 }));
 
+// No Mapbox token in tests, so MapboxMap never renders. Stubbed anyway: the
+// next/dynamic mock above calls every loader at import time, and the real
+// module pulls in mapbox-gl, a multi-second cold load that lands in the first test.
+vi.mock('@/components/map/MapboxMap', () => ({
+  default: () => <div data-testid="mock-mapbox-map" />,
+}));
+
 let capturedLocateButtonProps: Record<string, unknown> = {};
 vi.mock('@/components/map/MapLocateButton', () => ({
   default: (props: Record<string, unknown>) => {
