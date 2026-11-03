@@ -27,6 +27,7 @@
     "*.{ts,tsx}": "eslint --quiet --no-warn-ignored"
   },
   "dependencies": {
+    "@base-ui/react": "1.9.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "@sparticuz/chromium": "^149.0.0",
