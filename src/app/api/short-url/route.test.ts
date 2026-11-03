@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { __resetRateLimitForTests } from '@/lib/rate-limit';
 
@@ -57,6 +57,62 @@ describe('POST /api/short-url', () => {
     const [params, baseUrl] = createShortUrlMock.mock.calls[0]!;
     expect(params).toBe('start=1');
     expect(baseUrl).toBe('https://evoyage.duypham.me');
+  });
+
+  describe('share URL origin allowlist', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    async function baseUrlFor(opts: { host?: string; proto?: string }): Promise<string> {
+      validateParamsMock.mockReturnValue({ valid: true, params: 'start=1' });
+      createShortUrlMock.mockResolvedValue({ code: 'X', url: 'https://evoyage.duypham.me/s/X' });
+      await POST(makeRequest({ params: 'start=1' }, opts));
+      return createShortUrlMock.mock.calls[0]![1] as string;
+    }
+
+    it('falls back to the production origin for an unknown Host header', async () => {
+      vi.stubEnv('VERCEL_ENV', 'production');
+      expect(await baseUrlFor({ proto: 'https', host: 'attacker.example' })).toBe('https://evoyage.duypham.me');
+    });
+
+    it('falls back to the production origin for an unknown Host header outside production', async () => {
+      vi.stubEnv('VERCEL_ENV', 'preview');
+      expect(await baseUrlFor({ proto: 'https', host: 'attacker.example' })).toBe('https://evoyage.duypham.me');
+    });
+
+    it('falls back to the production origin when no Host header is sent', async () => {
+      expect(await baseUrlFor({})).toBe('https://evoyage.duypham.me');
+    });
+
+    it('ignores a downgraded x-forwarded-proto on the production host', async () => {
+      vi.stubEnv('VERCEL_ENV', 'production');
+      expect(await baseUrlFor({ proto: 'http', host: 'evoyage.duypham.me' })).toBe('https://evoyage.duypham.me');
+    });
+
+    it('allows a localhost origin when not in production', async () => {
+      vi.stubEnv('VERCEL_ENV', '');
+      expect(await baseUrlFor({ proto: 'http', host: 'localhost:3000' })).toBe('http://localhost:3000');
+    });
+
+    it('rejects a localhost origin in production', async () => {
+      vi.stubEnv('VERCEL_ENV', 'production');
+      expect(await baseUrlFor({ proto: 'http', host: 'localhost:3000' })).toBe('https://evoyage.duypham.me');
+    });
+
+    it('allows the VERCEL_URL preview origin on a preview deployment', async () => {
+      vi.stubEnv('VERCEL_ENV', 'preview');
+      vi.stubEnv('VERCEL_URL', 'evoyage-git-feat-x.vercel.app');
+      expect(await baseUrlFor({ proto: 'https', host: 'evoyage-git-feat-x.vercel.app' })).toBe(
+        'https://evoyage-git-feat-x.vercel.app',
+      );
+    });
+
+    it('rejects the VERCEL_URL origin in production', async () => {
+      vi.stubEnv('VERCEL_ENV', 'production');
+      vi.stubEnv('VERCEL_URL', 'evoyage-abc123.vercel.app');
+      expect(await baseUrlFor({ proto: 'https', host: 'evoyage-abc123.vercel.app' })).toBe('https://evoyage.duypham.me');
+    });
   });
 
   it('returns 400 on malformed JSON body', async () => {
