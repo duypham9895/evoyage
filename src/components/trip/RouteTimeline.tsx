@@ -11,7 +11,8 @@ import { DEFAULT_MIN_ARRIVAL } from '@/types';
  * - One column per node: start city → each charging stop → end city
  * - Per-node battery state, distance from previous, charge time at stop
  * - 3+ stops (5+ nodes) → horizontal scroll with swipe hint
- * - Color logic: endpoints accent; stop dots by getBatteryLevel(arrival, minArrivalPercent)
+ * - Color logic: start accent (departure charge, not risk); stops and end arrival by
+ *   getBatteryLevel(arrival, minArrivalPercent), matching the arrival hero
  *
  * No icons by project convention (DESIGN.md "Less Icons, More Humanity").
  */
@@ -76,6 +77,8 @@ export default function RouteTimeline({
   // stop-distance-from-prev sums.
   const sumDistancesToStops = stops.reduce((acc, s) => acc + s.distanceFromPrevKm, 0);
   const endSegmentKm = Math.max(0, Math.round(totalDistanceKm - sumDistancesToStops));
+
+  const endLevel = getBatteryLevel(arrivalBatteryPercent, minArrivalPercent);
 
   const containerCls = needsScroll
     ? 'overflow-x-auto snap-x snap-mandatory'
@@ -142,11 +145,11 @@ export default function RouteTimeline({
             className="snap-start shrink-0 min-w-[80px] flex flex-col items-center text-center"
             aria-label={`${endCity}, arrive, ${Math.round(arrivalBatteryPercent)}%`}
           >
-            <span className="w-3 h-3 rounded-full bg-[var(--color-accent)]" aria-hidden="true" />
+            <span className={`w-3 h-3 rounded-full ${STOP_DOT_CLASS[endLevel]}`} aria-hidden="true" />
             <span className="text-xs mt-2 font-semibold text-[var(--color-foreground)] truncate w-full px-1">
               {endCity}
             </span>
-            <span className="text-[11px] mt-1 font-[family-name:var(--font-mono)] text-[var(--color-accent)]">
+            <span className={`text-[11px] mt-1 font-[family-name:var(--font-mono)] ${STOP_TEXT_CLASS[endLevel]}`}>
               {Math.round(arrivalBatteryPercent)}%
             </span>
             <span className="text-[10px] mt-0.5 text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
