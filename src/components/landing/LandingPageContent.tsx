@@ -396,7 +396,7 @@ function LandingContent() {
             {/* Logo & tagline */}
             <div>
               <EVoyageLogo size="md" className="mb-2" />
-              <p className="text-[var(--color-text-secondary)] text-sm font-light">
+              <p className="text-[var(--color-text-secondary)] text-sm font-normal">
                 {t('landing_footer_tagline')}
               </p>
             </div>

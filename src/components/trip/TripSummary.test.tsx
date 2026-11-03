@@ -797,6 +797,12 @@ describe('TripSummary — results hero (will I make it)', () => {
     expect(hero.compareDocumentPosition(cost) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('renders the arrival battery and total time with tabular numerals so digits do not shift on replan', () => {
+    render(<TripSummary tripPlan={makeTripPlan()} isLoading={false} />);
+    expect(screen.getByText('50% battery when you arrive')).toHaveClass('tabular-nums');
+    expect(screen.getByText(/^~\d+h/)).toHaveClass('tabular-nums');
+  });
+
   it('colours the arrival battery by the minimum arrival, not always green', () => {
     const { rerender } = render(
       <TripSummary tripPlan={makeTripPlan({ arrivalBatteryPercent: 18 })} isLoading={false} minArrivalPercent={15} />,

@@ -374,7 +374,7 @@ function TripCostSection({
     <div data-testid="trip-cost-section" className={`rounded-lg border p-3 ${heroBg}`}>
       <div className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
-          <div className={`text-base font-semibold font-[family-name:var(--font-heading)] ${heroText} truncate`}>
+          <div className={`text-base font-semibold font-[family-name:var(--font-heading)] tabular-nums ${heroText} truncate`}>
             {heroLabel}
           </div>
           <div className="text-xs text-[var(--color-muted)] mt-0.5">{subtitleLabel}</div>
@@ -576,10 +576,10 @@ function TripOverviewCard({
         <h3 className="text-base font-semibold font-[family-name:var(--font-heading)] text-[var(--color-foreground)]">
           {startCity} → {endCity}
         </h3>
-        <p className={`text-base font-bold ${BATTERY_TEXT_CLASS[getBatteryLevel(arrivalBattery, minArrivalPercent)]}`}>
+        <p className={`text-base font-bold tabular-nums ${BATTERY_TEXT_CLASS[getBatteryLevel(arrivalBattery, minArrivalPercent)]}`}>
           {t('trip_arrival_battery_hero', { percent: String(arrivalBattery) })}
         </p>
-        <p className="text-sm text-[var(--color-muted)]">
+        <p className="text-sm tabular-nums text-[var(--color-muted)]">
           {eta
             ? hasPickedDeparture
               ? t('trip_duration_with_eta_picked' as Parameters<typeof t>[0], { time: totalTimeStr, eta })
