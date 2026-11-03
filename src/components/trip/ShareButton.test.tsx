@@ -99,6 +99,24 @@ describe('ShareButton — copy link fallback', () => {
   });
 });
 
+describe('ShareButton — share card station names', () => {
+  it('renders the feed direction tag as plain text, not a raw "<chiều đi>" tag', () => {
+    const plan = {
+      ...TRIP_PLAN,
+      chargingStops: [
+        { station: { name: 'Trạm dừng nghỉ Km 45 <chiều đi>', maxPowerKw: 150 }, estimatedChargingTimeMin: 20 },
+        { selected: { station: { name: 'Trạm Km 80 <chiều về>', maxPowerKw: 60 }, estimatedChargeTimeMin: 25 } },
+      ],
+    } as unknown as TripPlan;
+
+    const { container } = render(<ShareButton tripPlan={plan} />);
+
+    expect(container.textContent).not.toMatch(/<chiều/);
+    expect(container.textContent).toContain('Trạm dừng nghỉ Km 45 (chiều đi)');
+    expect(container.textContent).toContain('Trạm Km 80 (chiều về)');
+  });
+});
+
 // Finding 3 (p2-sharing-flow): on mobile ShareButton sits inside MobileBottomSheet (`fixed z-40`), whose
 // stacking context capped the modal below FeedbackFAB (z 800), so the FAB covered the modal's X.
 // jsdom has no layout or stacking, so these pin the two parts of the fix: the modal leaves the sheet's
