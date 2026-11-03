@@ -35,7 +35,7 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - **Data:** VinFast API as the primary source (SSE streaming, daily refresh via GitHub Actions cron), augmented by OpenStreetMap, EVPower, and crowdsourced station promotion per ADR-0001.
 - **Database:** Prisma + Supabase Postgres (region `ap-southeast-1`)
 - **Analytics:** PostHog (gated on `NEXT_PUBLIC_POSTHOG_KEY` — no-op without it)
-- **Testing:** Vitest (1606 tests, 140 files), Playwright for E2E (36 tests, 12 spec files on Desktop Chrome)
+- **Testing:** Vitest (2191 tests, 193 files), Playwright for E2E (38 tests, 13 spec files on Desktop Chrome)
 - **Quality gate:** husky + lint-staged pre-commit hook runs ESLint on staged `.ts/.tsx` files
 - **Design System:** [DESIGN.md](./DESIGN.md) — colors, typography, spacing, component rules
 - **Deployment:** Vercel
@@ -52,7 +52,7 @@ npm install
 # Required: DATABASE_URL, DIRECT_URL (Supabase Postgres)
 # Required: OPENAI_API_KEY (eVi assistant)
 # Optional fallback: MINIMAX_API_KEY
-# Optional: MAPBOX_TOKEN (richer basemap)
+# Optional: MAPBOX_ACCESS_TOKEN (server) + NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN (basemap)
 
 # Push schema and seed reference data
 npm run db:push:local

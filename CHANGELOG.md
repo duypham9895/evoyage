@@ -3,10 +3,12 @@
 All notable changes to eVoyage are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/). Versioning follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — 2026-05-24 → 2026-06-06
+## [Unreleased] — 2026-05-24 → 2026-11-02
 
 Work merged since the v0.9.0 tag (`1f7e9c4..a00e34e`). Two ADRs shipped in this window:
-ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops).
+ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops). The 2026-11-01 → 11-02
+bug-fix wave (PRs #101–#151) is logged below; fixes merged 2026-06-07 → 2026-10-31 are not
+yet logged here.
 
 ### Added
 - **ADR-0010 — OpenAI gpt-5 replaces MiMo Flash as the primary eVi LLM** (commit `387158f`).
@@ -21,6 +23,12 @@ ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops).
   **default off** — the code is on `main` but the feature is dark in production
   (`docs/operations/precautionary-stops-rollout.md`).
 - **Route E logo system** (`b3d366c`) — `src/components/brand/EVoyageLogo.tsx`.
+- **`GET /api/health`** (`091dc38`, #114) — DB and data-freshness probe. `deploy.yml` now
+  smoke-tests `/api/health` and `/api/vehicles` after each production deploy, and
+  `docs/RECOVERY.md` documents the manual rollback (`5e24f3d`).
+- **Scheduled-workflow alerting** (`e873dc4`, #114) — a failed scheduled run comments on
+  (or opens) a "Scheduled workflow failing: <name>" issue.
+- **PostHog cookieless analytics** with a deny-by-default property sanitizer (#146).
 
 ### Removed
 - **`refresh-vinfast-cookies` workflow and script** (#98) — the legacy `/vn_vi/get-locators`
@@ -33,6 +41,17 @@ ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops).
 - **Map provider choice hidden** from the UI (`171773d`).
 - **Dependabot PR churn reduced** — safe updates consolidated into grouped PRs
   (`a193f0d` #31, `538f759` #35).
+- **Serverless functions run in `sin1`**, next to the `ap-southeast-1` database, instead of
+  `iad1` (`vercel.json`, #103).
+- **MiniMax fallback moved from the retired M2.7 to M3.1 Flash** (#145).
+- **Prisma 6.19.3 → 7.10.1** with the `@prisma/adapter-pg` driver adapter (#138).
+- **`src/middleware.ts` renamed to `src/proxy.ts`** (Next 16 convention, #126).
+- **Privacy** — stored IPs hashed with a keyed HMAC (`IP_HASH_SECRET`) instead of plain
+  SHA-256 (#148); EXIF and other metadata stripped from feedback photos (#149); eVi reads
+  location only after the user opens it (#147).
+- **Aggregate crons fail instead of staying green** on 0 upserts or stale station
+  observations (`82826fc`, `e873dc4`, #114).
+- **Redis rate limiter capped at 1 s** with no client retries (#150).
 
 ### Fixed
 - **Vercel KV env-var aliases** — `rate-limit.ts` now recognises `KV_REST_API_URL` /
@@ -46,10 +65,23 @@ ADR-0010 (OpenAI primary) and ADR-0009 (precautionary extra Stops).
 - **Trip planning UX** — overall reliability (`47292d8`), backup station coverage shown
   (`4332ecf`), route results auto-scroll (`d83471a`), route progress revealed from the eVi
   CTA (`e7436dc`).
+- **2026-11-01 audit bug wave** (root-cause notes in `docs/bugs/2026-11-01-*.md`):
+  eVi parse and narrative down because the fallback was skipped (#101); VinFast station
+  detail `INVALID_ID` (#102); blank `/plan` map from a redacted Mapbox token (#106, #122,
+  #123); station amenities timeouts (#104); nearby stations showing dead chargers as Active
+  (#105); trip cost ~11% low (#107); muted-text WCAG contrast and unlabelled place inputs
+  (#108); eVi completing without a destination (#109); shared-link preview and planning
+  (#110); planner traffic departure, locale persistence and Mapbox locate (#111); feedback
+  form swallowing server rejections (#113); route planner stop km / SOC and infeasible trips
+  (#115); OSRM routing through Cambodia and Laos (#116); VinFast crawl fake specs and
+  placeholder coordinates (#117); trip results labelling and layout (#129–#134); CARTO
+  fallback tiles replaced with OSM (#140).
 
 ### Tests
 - Vitest **1304 → 1471** across **133 files**; E2E **36 tests across 12 spec files** on
   Desktop Chrome (`csp-smoke.spec.ts` and `precautionary-stop.spec.ts` are the two new specs).
+- As of `5f23fe2`: Vitest **2191** across **193 files** (9 `it.fails` bug reproductions);
+  E2E **38 tests across 13 spec files** on Desktop Chrome (`autocomplete-mobile.spec.ts` is new).
 - CSP smoke regression suite (`9efb4b7`), +38 tests across short-url / feedback /
   vinfast-client (`318702f`), and e2e flake fixes for the feedback FAB (`75787d5`,
   `373deca`), mobile eVi chat (`2addff9`), and Mapbox trip planning (`ed7df0f`).

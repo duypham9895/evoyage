@@ -19,7 +19,7 @@ git clone https://github.com/duypham9895/evoyage.git
 cd evoyage
 npm install
 cp .env.example .env.local
-# Add your API keys: MINIMAX_API_KEY, MAPBOX_TOKEN (optional)
+# Add your API keys: OPENAI_API_KEY; optional: MINIMAX_API_KEY, MAPBOX_ACCESS_TOKEN, NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
 npm run dev
 ```
 

@@ -36,6 +36,7 @@ eVoyage is a Next.js App Router application for planning EV road trips across Vi
 │  /api/feedback/upload             → Feedback image upload      │
 │  /api/admin/feedback/[id]         → Admin feedback status PATCH│
 │  /api/short-url                   → Trip sharing via short URLs│
+│  /api/health                      → DB + data-freshness probe  │
 │  /api/share-card                  → OG image generation        │
 │  /api/cron/poll-station-status    → Hourly status observations │
 │  /api/cron/aggregate-popularity   → Nightly heatmap rebuild    │
@@ -96,7 +97,6 @@ src/
 │   │   ├── mapbox-directions.ts # Mapbox Directions client
 │   │   ├── matrix-api.ts       # Distance matrix for ranking
 │   │   ├── route-cache.ts      # Route result caching
-│   │   ├── trip-cache.ts       # Trip data caching
 │   │   └── osrm.ts             # OSRM routing fallback
 │   │
 │   ├── vinfast/            # VinFast data layer
