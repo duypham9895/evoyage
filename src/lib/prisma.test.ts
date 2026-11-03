@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -36,12 +37,14 @@ describe('createPrismaClient', () => {
 // behaviour back on — except for local dev/test connections, which never
 // speak TLS.
 describe('resolveSslConfig (D1: match Prisma 6 TLS behaviour, except local dev/test)', () => {
-  it('does not force TLS for localhost', () => {
-    expect(resolveSslConfig('postgresql://u:p@localhost:5432/db')).toBeUndefined();
+  // #139 (LOW): `undefined` let pg fall back to PGSSLMODE; `false` makes
+  // "local connections never use TLS" explicit and immune to the environment.
+  it('disables TLS explicitly for localhost', () => {
+    expect(resolveSslConfig('postgresql://u:p@localhost:5432/db')).toBe(false);
   });
 
-  it('does not force TLS for 127.0.0.1', () => {
-    expect(resolveSslConfig('postgresql://u:p@127.0.0.1:5432/db')).toBeUndefined();
+  it('disables TLS explicitly for 127.0.0.1', () => {
+    expect(resolveSslConfig('postgresql://u:p@127.0.0.1:5432/db')).toBe(false);
   });
 
   it('enables TLS without certificate verification for a remote host, matching Prisma 6', () => {
@@ -65,6 +68,60 @@ describe('createPrismaClient pool size (D8: match Supabase connection_limit=1)',
   it('caps the adapter pool at 1 connection', () => {
     createPrismaClient('postgresql://u:p@db.example.com:5432/none');
     expect(PrismaPg).toHaveBeenCalledWith(expect.objectContaining({ max: 1 }));
+  });
+});
+
+// #139: pg's ConnectionParameters merges parse(connectionString) AFTER the
+// explicit config, so an `sslmode`/`sslcert`/... query param in DATABASE_URL
+// would replace `{ rejectUnauthorized: false }` and break TLS to Supabase.
+// Assert the config pg actually ends up with, not just what we pass in.
+describe('createPrismaClient merged pg ssl config (#139: URL ssl params must not override)', () => {
+  const require = createRequire(import.meta.url);
+  const ConnectionParameters = require('pg/lib/connection-parameters') as new (config: unknown) => {
+    ssl: unknown;
+    host: string;
+    database: string;
+  };
+
+  const mergedConfigFor = (url: string) => {
+    vi.mocked(PrismaPg).mockClear();
+    createPrismaClient(url);
+    return new ConnectionParameters(vi.mocked(PrismaPg).mock.calls[0][0]);
+  };
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it('keeps TLS without certificate verification when the URL has sslmode=require', () => {
+    const params = mergedConfigFor('postgresql://u:p@db.supabase.co:6543/postgres?sslmode=require');
+    expect(params.ssl).toEqual({ rejectUnauthorized: false });
+  });
+
+  it('ignores other ssl query params (sslrootcert, sslcert, sslkey, ssl) instead of reading files or overriding', () => {
+    const params = mergedConfigFor(
+      'postgresql://u:p@db.supabase.co:6543/postgres?ssl=true&sslmode=verify-full&sslrootcert=/nope/ca.pem&sslcert=/nope/c.pem&sslkey=/nope/k.pem',
+    );
+    expect(params.ssl).toEqual({ rejectUnauthorized: false });
+  });
+
+  it('keeps non-ssl query params and the rest of the URL intact', () => {
+    vi.mocked(PrismaPg).mockClear();
+    createPrismaClient('postgresql://u:p@db.supabase.co:6543/postgres?sslmode=require&pgbouncer=true&connection_limit=1');
+    const passed = vi.mocked(PrismaPg).mock.calls[0][0] as { connectionString: string };
+    const url = new URL(passed.connectionString);
+    expect(url.searchParams.get('pgbouncer')).toBe('true');
+    expect(url.searchParams.get('connection_limit')).toBe('1');
+    expect(url.searchParams.has('sslmode')).toBe(false);
+    expect(url.host).toBe('db.supabase.co:6543');
+    expect(url.pathname).toBe('/postgres');
+  });
+
+  it('does not use TLS for localhost even when PGSSLMODE is set', () => {
+    vi.stubEnv('PGSSLMODE', 'require');
+    const params = mergedConfigFor('postgresql://u:p@localhost:5432/db?sslmode=require');
+    expect(params.ssl).toBe(false);
   });
 });
 
