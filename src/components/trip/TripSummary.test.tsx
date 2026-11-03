@@ -4,6 +4,7 @@ import '@testing-library/jest-dom';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import TripSummary from './TripSummary';
 import type { ChargingStationData, RankedStation, TripPlan } from '@/types';
+import { AA_NORMAL_TEXT, contrastRatio, textColorToken, tokenHex } from '@/lib/__tests__/wcag-contrast';
 
 // ── Mocks ──
 
@@ -854,5 +855,21 @@ describe('TripSummary — feed direction tags in accessible names', () => {
     const labels = Array.from(container.querySelectorAll('[aria-label]')).map((el) => el.getAttribute('aria-label') ?? '');
     expect(labels.some((l) => l.includes('Trạm cao tốc (chiều đi)'))).toBe(true);
     expect(labels.filter((l) => l.includes('<chiều'))).toEqual([]);
+  });
+});
+
+// BUG(D5-trip-results): information text in the trip results used --color-muted (#6B6B78),
+// 3.30:1 on the surface card. DESIGN.md D5: muted is for non-information text only.
+describe('TripSummary — information text contrast (WCAG 1.4.3, D5)', () => {
+  it.each([
+    ['section heading', 'Trip summary'],
+    ['disclaimer', 'Disclaimer text'],
+    ['routing-fallback note', /Route calculated using Mapbox/],
+  ])('renders the %s with at least 4.5:1 contrast on the surface card', (_name, text) => {
+    render(<TripSummary tripPlan={makeTripPlan({ routeProvider: 'mapbox' })} isLoading={false} />);
+    const el = screen.getByText(text);
+    const token = textColorToken(el.className);
+    expect(token).toBe('text-secondary');
+    expect(contrastRatio(tokenHex(token), tokenHex('surface'))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 });

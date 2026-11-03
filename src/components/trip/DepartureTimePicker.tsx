@@ -80,7 +80,7 @@ export default function DepartureTimePicker({
         />
       </label>
 
-      <div className="flex items-center justify-between text-xs text-[var(--color-muted)]">
+      <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
         <span>{i18n.helperFuture}</span>
         {value !== null && (
           <button

@@ -41,7 +41,7 @@ export default function StopPopularity({ verdict, station, i18n }: StopPopularit
     return (
       <div
         data-testid="stop-popularity-insufficient"
-        className="text-[11px] text-[var(--color-muted)] italic"
+        className="text-[11px] text-[var(--color-text-secondary)] italic"
       >
         {i18n.insufficient}
       </div>
@@ -60,7 +60,7 @@ export default function StopPopularity({ verdict, station, i18n }: StopPopularit
     <div
       data-testid={isBusy ? 'stop-popularity-busy' : 'stop-popularity-free'}
       className={`text-xs space-y-1 ${
-        isBusy ? 'text-[var(--color-warn)]' : 'text-[var(--color-muted)]'
+        isBusy ? 'text-[var(--color-warn)]' : 'text-[var(--color-text-secondary)]'
       }`}
     >
       <div>

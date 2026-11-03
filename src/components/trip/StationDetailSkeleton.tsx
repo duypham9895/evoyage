@@ -32,7 +32,7 @@ export default function StationDetailSkeleton({
 
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
-        <span className="text-[10px] text-[var(--color-muted)]">{message}</span>
+        <span className="text-[10px] text-[var(--color-text-secondary)]">{message}</span>
       </div>
 
       <div className="space-y-1">

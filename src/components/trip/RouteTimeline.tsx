@@ -125,13 +125,13 @@ export default function RouteTimeline({
               >
                 <span className={`w-3 h-3 rounded-full ${dotCls}`} aria-hidden="true" />
                 <span className="text-xs mt-2 font-semibold text-[var(--color-foreground)] truncate w-full px-1">
-                  <span className="text-[var(--color-muted)] mr-0.5">{i + 1}.</span>
+                  <span className="text-[var(--color-text-secondary)] mr-0.5">{i + 1}.</span>
                   {stop.shortName}
                 </span>
                 <span className={`text-[11px] mt-1 font-[family-name:var(--font-mono)] ${textCls}`}>
                   {Math.round(stop.arrivalPercent)}→{Math.round(stop.departurePercent)}%
                 </span>
-                <span className="text-[10px] mt-0.5 text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+                <span className="text-[10px] mt-0.5 text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)]">
                   <span>{Math.round(stop.distanceFromPrevKm)} km</span>
                   <span className="mx-1">·</span>
                   <span>{Math.round(stop.chargeTimeMin)}m</span>
@@ -152,7 +152,7 @@ export default function RouteTimeline({
             <span className={`text-[11px] mt-1 font-[family-name:var(--font-mono)] ${STOP_TEXT_CLASS[endLevel]}`}>
               {Math.round(arrivalBatteryPercent)}%
             </span>
-            <span className="text-[10px] mt-0.5 text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+            <span className="text-[10px] mt-0.5 text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)]">
               {endSegmentKm} km
             </span>
           </li>
@@ -160,7 +160,7 @@ export default function RouteTimeline({
       </div>
 
       {needsScroll && (
-        <p className="text-[10px] text-[var(--color-muted)] mt-1 text-center">{swipeHint}</p>
+        <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 text-center">{swipeHint}</p>
       )}
     </div>
   );

@@ -86,7 +86,7 @@ export default function WhatIfCards({ options, currentKey, onSelect }: WhatIfCar
                     ? '--h--m'
                     : formatDuration(option.totalDurationMin)}
                 </div>
-                <div className="text-[10px] text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+                <div className="text-[10px] text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)]">
                   {option.arrivalEtaIso === null ? '--:--' : `→ ${formatEta(option.arrivalEtaIso)}`}
                 </div>
                 {option.peakWindowReason && (

@@ -97,7 +97,7 @@ const STATUS_TEXT_COLOR: Record<StatusKey, string> = {
   BUSY: 'text-[var(--color-warn)]',
   UNAVAILABLE: 'text-[var(--color-danger)]',
   OUTOFSERVICE: 'text-[var(--color-danger)]',
-  INACTIVE: 'text-[var(--color-muted)]',
+  INACTIVE: 'text-[var(--color-text-secondary)]',
 };
 
 const STATUS_LOCALE_KEY: Record<StatusKey, string> = {
@@ -194,7 +194,7 @@ function QuickStats({
         </span>
         <span className="text-[var(--color-muted)]">·</span>
         {/* Connector */}
-        <span className="text-[var(--color-muted)]">
+        <span className="text-[var(--color-text-secondary)]">
           {station.connectorTypes[0] ?? 'DC'}
         </span>
         {/* Status dot */}
@@ -257,7 +257,7 @@ function RouteBriefing({
 
   return (
     <div className="p-4 bg-gradient-to-br from-[var(--color-accent)]/5 to-[var(--color-surface)] rounded-lg space-y-2">
-      <h3 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+      <h3 className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
         {t('route_briefing' as Parameters<typeof t>[0])}
       </h3>
 
@@ -377,13 +377,13 @@ function TripCostSection({
           <div className={`text-base font-semibold font-[family-name:var(--font-heading)] tabular-nums ${heroText} truncate`}>
             {heroLabel}
           </div>
-          <div className="text-xs text-[var(--color-muted)] mt-0.5">{subtitleLabel}</div>
+          <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">{subtitleLabel}</div>
         </div>
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
           aria-expanded={isOpen}
-          className="shrink-0 text-[11px] text-[var(--color-muted)] hover:text-[var(--color-foreground)] transition-colors underline-offset-2 hover:underline"
+          className="shrink-0 text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)] transition-colors underline-offset-2 hover:underline"
         >
           {isOpen
             ? t('trip_cost_hide_breakdown' as Parameters<typeof t>[0])
@@ -418,12 +418,12 @@ function TripCostSection({
               })}
             </div>
           )}
-          <div className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+          <div className="text-xs text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)]">
             {t('trip_cost_electric_home_line' as Parameters<typeof t>[0], {
               amount: formatVnd(live.electric.homeChargingVnd),
             })}
           </div>
-          <div className="text-[10px] text-[var(--color-muted)] leading-relaxed pt-1">
+          <div className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed pt-1">
             {t('trip_cost_note' as Parameters<typeof t>[0])}
           </div>
         </div>
@@ -579,7 +579,7 @@ function TripOverviewCard({
         <p className={`text-base font-bold tabular-nums ${BATTERY_TEXT_CLASS[getBatteryLevel(arrivalBattery, minArrivalPercent)]}`}>
           {t('trip_arrival_battery_hero', { percent: String(arrivalBattery) })}
         </p>
-        <p className="text-sm tabular-nums text-[var(--color-muted)]">
+        <p className="text-sm tabular-nums text-[var(--color-text-secondary)]">
           {eta
             ? hasPickedDeparture
               ? t('trip_duration_with_eta_picked' as Parameters<typeof t>[0], { time: totalTimeStr, eta })
@@ -628,7 +628,7 @@ function TripOverviewCard({
                   : tripPlan.traffic.peakWindowReasonEn,
             })}
           </div>
-          <div className="text-[10px] text-[var(--color-muted)]">
+          <div className="text-[10px] text-[var(--color-text-secondary)]">
             {tripPlan.traffic.source === 'mapbox-traffic'
               ? t('trip_traffic_realtime_badge' as Parameters<typeof t>[0])
               : t('trip_traffic_heuristic_badge' as Parameters<typeof t>[0])}
@@ -673,7 +673,7 @@ function TripOverviewCard({
           })}
         </p>
         {backupStationCount > 0 && (
-          <p data-testid="trip-backup-summary" className="text-xs text-[var(--color-muted)]">
+          <p data-testid="trip-backup-summary" className="text-xs text-[var(--color-text-secondary)]">
             {t(
               backupStationCount === 1
                 ? 'trip_backup_summary_one' as Parameters<typeof t>[0]
@@ -682,7 +682,7 @@ function TripOverviewCard({
             )}
           </p>
         )}
-        <p className="text-xs text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+        <p className="text-xs text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)]">
           {t('trip_breakdown_drive_charge', { drive: driveStr, charge: chargeStr })}
         </p>
       </div>
@@ -771,7 +771,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
             <span className="w-2 h-2 bg-[var(--color-accent)] rounded-full animate-bounce [animation-delay:150ms]" />
             <span className="w-2 h-2 bg-[var(--color-accent)] rounded-full animate-bounce [animation-delay:300ms]" />
           </span>
-          <span className="text-sm text-[var(--color-muted)]">{t('planning')}</span>
+          <span className="text-sm text-[var(--color-text-secondary)]">{t('planning')}</span>
         </div>
 
         {/* Skeleton: trip overview card */}
@@ -837,13 +837,13 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
+        <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-text-secondary)] uppercase tracking-wider">
           {t('trip_summary')}
         </h2>
         {onBackToChat && (
           <button
             onClick={onBackToChat}
-            className="text-xs text-[var(--color-muted)] hover:text-[var(--color-accent)] transition-colors"
+            className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors"
           >
             ← {t('evi_back_to_chat' as Parameters<typeof t>[0])}
           </button>
@@ -893,7 +893,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
       {tripPlan.routeProvider === 'mapbox' && (
         <p
           data-testid="route-provider-fallback-note"
-          className="text-xs text-[var(--color-muted)] leading-relaxed px-2"
+          className="text-xs text-[var(--color-text-secondary)] leading-relaxed px-2"
         >
           {t('route_provider_fallback' as Parameters<typeof t>[0])}
         </p>
@@ -902,7 +902,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
       {/* Charging stops list */}
       {cardTripPlan.chargingStops.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider">
+          <h3 className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
             {t('charging_stops')}
           </h3>
           {cardTripPlan.chargingStops.map((stop, i) => {
@@ -984,14 +984,14 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                           {rankLabel}
                         </span>
                       )}
-                      <span className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+                      <span className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-text-secondary)]">
                         {Math.round(distanceKm)} km
                       </span>
                     </div>
                   </div>
 
                   {/* Address */}
-                  <div className="text-xs text-[var(--color-muted)] truncate mt-1 ml-8" title={station.address}>
+                  <div className="text-xs text-[var(--color-text-secondary)] truncate mt-1 ml-8" title={station.address}>
                     {station.address}
                   </div>
                   {backupCount > 0 && (
@@ -1014,7 +1014,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                       minArrivalPercent={minArrivalPercent}
                     />
                     {isPrecautionary && (
-                      <div className="mt-1 text-[11px] text-[var(--color-muted)] font-[family-name:var(--font-mono)]">
+                      <div className="mt-1 text-[11px] text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)]">
                         {t('extra_stop_duration' as Parameters<typeof t>[0], {
                           minutes: String(Math.round(chargeTime)),
                         })}
@@ -1055,7 +1055,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                         type="button"
                         onClick={() => stopInteractions.requestDismiss(stopId)}
                         aria-label={t('extra_stop_dismiss_aria' as Parameters<typeof t>[0], { stationName: formatStationName(station.name) })}
-                        className="text-xs font-medium text-[var(--color-muted)] opacity-100 lg:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--color-foreground)] transition-[opacity,color]"
+                        className="text-xs font-medium text-[var(--color-text-secondary)] opacity-100 lg:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--color-foreground)] transition-[opacity,color]"
                       >
                         {t('extra_stop_dismiss' as Parameters<typeof t>[0])}
                       </button>
@@ -1116,7 +1116,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                 >
                   <div className="border-t border-[var(--color-surface-hover)] p-3 space-y-2">
                     {/* Detail stats: detour, total, ports, hours, parking */}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-muted)]">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--color-text-secondary)]">
                       {hasAlternatives && stop.selected.detourDriveTimeSec > 0 && (
                         <span>
                           {t('stations_detour', { time: String(Math.round(stop.selected.detourDriveTimeSec * 2 / 60)) })}
@@ -1172,7 +1172,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                     )}
                     {alternatives.length > 0 && (
                       <div className="mt-2">
-                        <div className="text-[10px] font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-1">
+                        <div className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1">
                           {t('stations_view_alternatives', { count: String(alternatives.length) })}
                         </div>
                         <div className="rounded-lg overflow-hidden border border-[var(--color-surface-hover)]" role="listbox">
@@ -1212,10 +1212,10 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
                                       +{detourMin}m
                                     </span>
                                   )}
-                                  <span className="text-[var(--color-muted)] font-[family-name:var(--font-mono)] w-12 text-right">
+                                  <span className="text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)] w-12 text-right">
                                     {alt.station.maxPowerKw}kW
                                   </span>
-                                  <span className="text-[var(--color-muted)] font-[family-name:var(--font-mono)] w-10 text-right">
+                                  <span className="text-[var(--color-text-secondary)] font-[family-name:var(--font-mono)] w-10 text-right">
                                     {Math.round(alt.estimatedChargeTimeMin)}m
                                   </span>
                                 </div>
@@ -1266,7 +1266,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
       )}
 
       {/* Disclaimer */}
-      <div className="text-[10px] text-[var(--color-muted)] leading-relaxed p-2">
+      <div className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed p-2">
         {t('disclaimer')}
       </div>
 
@@ -1284,7 +1284,7 @@ export default function TripSummary({ tripPlan, isLoading, vehicleEfficiencyWhPe
         </svg>
         {t('open_in_google_maps')}
       </a>
-      <p className="text-[11px] text-[var(--color-muted)] leading-relaxed px-2 -mt-1">
+      <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed px-2 -mt-1">
         {t('open_in_google_maps_caption')}
       </p>
     </div>
