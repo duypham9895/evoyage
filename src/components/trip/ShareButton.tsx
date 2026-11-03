@@ -6,6 +6,7 @@ import { toPng } from 'html-to-image';
 import QRCode from 'qrcode';
 import { useLocale } from '@/lib/locale';
 import { trackShareClicked } from '@/lib/analytics';
+import { formatStationName } from '@/lib/stations/format-station-name';
 import type { TripPlan } from '@/types';
 
 interface ShareButtonProps {
@@ -18,13 +19,13 @@ type LinkState = 'idle' | 'creating' | 'copied' | 'error';
 function getStopInfo(stop: TripPlan['chargingStops'][number]) {
   if ('selected' in stop) {
     return {
-      name: stop.selected.station.name,
+      name: formatStationName(stop.selected.station.name),
       powerKw: stop.selected.station.maxPowerKw,
       chargeTimeMin: Math.round(stop.selected.estimatedChargeTimeMin),
     };
   }
   return {
-    name: stop.station.name,
+    name: formatStationName(stop.station.name),
     powerKw: stop.station.maxPowerKw,
     chargeTimeMin: stop.estimatedChargingTimeMin,
   };
