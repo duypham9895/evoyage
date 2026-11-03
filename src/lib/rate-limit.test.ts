@@ -131,3 +131,87 @@ describe('Redis client configuration', () => {
     }
   });
 });
+
+describe('checkRateLimit with the real Upstash clients against a dead host', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://dead-host.upstash.io');
+    vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'test-token');
+    fetchMock = vi.fn(() => Promise.reject(new TypeError('fetch failed')));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.resetModules();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it('settles within 1 s through the in-memory fallback', async () => {
+    const mod = await import('./rate-limit');
+    let settled: unknown;
+    void mod.checkRateLimit('ip-dead', 5, 60_000, mod.stationsLimiter).then((r) => {
+      settled = r;
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(settled).toMatchObject({ allowed: true });
+  });
+
+  it('falls back within 500 ms when the host never answers', async () => {
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+    const mod = await import('./rate-limit');
+    let settled: unknown;
+    void mod.checkRateLimit('ip-silent', 5, 60_000, mod.stationsLimiter).then((r) => {
+      settled = r;
+    });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(settled).toMatchObject({ allowed: true });
+  });
+
+  it('skips Redis on the next request after a failure', async () => {
+    const mod = await import('./rate-limit');
+    await mod.checkRateLimit('ip-breaker', 5, 60_000, mod.stationsLimiter);
+    const callsAfterFirst = fetchMock.mock.calls.length;
+    expect(callsAfterFirst).toBeGreaterThan(0);
+
+    await mod.checkRateLimit('ip-breaker', 5, 60_000, mod.stationsLimiter);
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirst);
+  });
+
+  it('tries Redis again once the skip window has passed', async () => {
+    const mod = await import('./rate-limit');
+    await mod.checkRateLimit('ip-retry', 5, 60_000, mod.stationsLimiter);
+    const callsAfterFirst = fetchMock.mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    await mod.checkRateLimit('ip-retry', 5, 60_000, mod.stationsLimiter);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+  });
+});
+
+describe('checkRateLimit when the limiter reports a timeout', () => {
+  beforeEach(() => {
+    __resetRateLimitForTests();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // @upstash/ratelimit resolves { success: true, reason: 'timeout' } when its own
+  // timeout fires. That is not a verdict from Redis and must not count as allowed.
+  it('enforces the limit through the in-memory fallback', async () => {
+    const timingOutLimiter = {
+      limit: async () => ({ success: true, limit: 0, remaining: 0, reset: 0, reason: 'timeout' }),
+    } as unknown as Parameters<typeof checkRateLimit>[3];
+
+    expect((await checkRateLimit('ip-timeout', 2, 60_000, timingOutLimiter)).allowed).toBe(true);
+    expect((await checkRateLimit('ip-timeout', 2, 60_000, timingOutLimiter)).allowed).toBe(true);
+    expect((await checkRateLimit('ip-timeout', 2, 60_000, timingOutLimiter)).allowed).toBe(false);
+  });
+});
