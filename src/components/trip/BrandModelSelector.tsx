@@ -72,7 +72,7 @@ export default function BrandModelSelector({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
+      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-text-secondary)] uppercase tracking-wider">
         {t('select_vehicle')}
       </h2>
 
@@ -84,7 +84,7 @@ export default function BrandModelSelector({
           className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             vietnamOnly
               ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-              : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
+              : 'text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)]'
           }`}
         >
           {t('vietnam_tab')}
@@ -95,7 +95,7 @@ export default function BrandModelSelector({
           className={`flex-1 px-3 py-2.5 text-sm rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
             !vietnamOnly
               ? 'bg-[var(--color-accent)] text-[var(--color-background)] font-semibold'
-              : 'text-[var(--color-muted)] hover:text-[var(--color-foreground)]'
+              : 'text-[var(--color-text-secondary)] hover:text-[var(--color-foreground)]'
           }`}
         >
           {t('all_evs_tab')}
@@ -116,11 +116,11 @@ export default function BrandModelSelector({
       {/* Vehicle list */}
       <div className="max-h-56 overflow-y-auto space-y-1 scrollbar-thin">
         {isLoading ? (
-          <div className="text-center py-4 text-sm text-[var(--color-muted)]">
+          <div className="text-center py-4 text-sm text-[var(--color-text-secondary)]">
             {t('loading')}
           </div>
         ) : Object.keys(grouped).length === 0 ? (
-          <div className="text-center py-4 text-sm text-[var(--color-muted)]">
+          <div className="text-center py-4 text-sm text-[var(--color-text-secondary)]">
             {t('no_vehicles_found')}
           </div>
         ) : (
@@ -132,7 +132,7 @@ export default function BrandModelSelector({
             })
             .map(([brand, models]) => (
             <div key={brand}>
-              <div className="text-xs font-semibold text-[var(--color-muted)] px-2 py-1 sticky top-0 bg-[var(--color-surface)]">
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)] px-2 py-1 sticky top-0 bg-[var(--color-surface)]">
                 {brand}
               </div>
               {models.map((v) => (
@@ -149,12 +149,12 @@ export default function BrandModelSelector({
                   <span title={`${v.brand} ${displayName(v)} ${v.bodyType ?? ''}`}>
                     {displayName(v)}
                     {v.bodyType && (
-                      <span className="text-xs text-[var(--color-muted)] ml-2">
+                      <span className="text-xs text-[var(--color-text-secondary)] ml-2">
                         {v.bodyType}
                       </span>
                     )}
                   </span>
-                  <span className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-muted)]">
+                  <span className="text-xs font-[family-name:var(--font-mono)] text-[var(--color-text-secondary)]">
                     {v.officialRangeKm}km
                   </span>
                 </button>
@@ -168,7 +168,7 @@ export default function BrandModelSelector({
       <button
         onClick={onCustomCarClick}
         disabled={disabled}
-        className="w-full px-3 py-2 text-sm border border-dashed border-[var(--color-surface-hover)] rounded-lg text-[var(--color-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 text-sm border border-dashed border-[var(--color-surface-hover)] rounded-lg text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {t('car_not_listed')}
       </button>
@@ -181,12 +181,12 @@ export default function BrandModelSelector({
               {selectedVehicle.brand} {displayName(selectedVehicle)}
             </span>
             {selectedVehicle.priceVndMillions && (
-              <span className="text-xs text-[var(--color-muted)]">
+              <span className="text-xs text-[var(--color-text-secondary)]">
                 {selectedVehicle.priceVndMillions}M VND
               </span>
             )}
           </div>
-          <div className="flex gap-3 text-xs text-[var(--color-muted)]">
+          <div className="flex gap-3 text-xs text-[var(--color-text-secondary)]">
             <span className="font-[family-name:var(--font-mono)]">
               {t('vehicle_battery_label')} {selectedVehicle.batteryCapacityKwh} kWh
             </span>

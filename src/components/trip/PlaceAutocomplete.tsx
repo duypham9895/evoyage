@@ -271,7 +271,7 @@ export default function PlaceAutocomplete({
                 }`}
               >
                 <span className="block truncate" title={result.displayName}>{shortenName(result.displayName)}</span>
-                <span className="block text-xs text-[var(--color-muted)] truncate" title={result.displayName}>
+                <span className="block text-xs text-[var(--color-text-secondary)] truncate" title={result.displayName}>
                   {result.displayName}
                 </span>
               </button>

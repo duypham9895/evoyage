@@ -347,7 +347,7 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
               {greetingText}
             </p>
             {isFirstVisit && (
-              <p className="text-[11px] text-[var(--color-muted)] mt-0.5">
+              <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">
                 {t('evi_placeholder')}
               </p>
             )}
@@ -511,25 +511,25 @@ export default function EVi({ onTripParsed, onPlanTrip, onFindNearbyStations, is
               <div className="space-y-1.5 text-sm">
                 {lastResponse.tripParams.start && (
                   <div className="flex items-center gap-2">
-                    <span className="text-[var(--color-muted)] w-12 text-xs">{t('evi_from')}</span>
+                    <span className="text-[var(--color-text-secondary)] w-12 text-xs">{t('evi_from')}</span>
                     <span className="text-[var(--color-foreground)]">{lastResponse.tripParams.start}</span>
                   </div>
                 )}
                 {lastResponse.tripParams.end && (
                   <div className="flex items-center gap-2">
-                    <span className="text-[var(--color-muted)] w-12 text-xs">{t('evi_to')}</span>
+                    <span className="text-[var(--color-text-secondary)] w-12 text-xs">{t('evi_to')}</span>
                     <span className="text-[var(--color-foreground)]">{lastResponse.tripParams.end}</span>
                   </div>
                 )}
                 {lastResponse.tripParams.vehicleName && (
                   <div className="flex items-center gap-2">
-                    <span className="text-[var(--color-muted)] w-12 text-xs">{t('evi_vehicle')}</span>
+                    <span className="text-[var(--color-text-secondary)] w-12 text-xs">{t('evi_vehicle')}</span>
                     <span className="text-[var(--color-foreground)]">{lastResponse.tripParams.vehicleName}</span>
                   </div>
                 )}
                 {lastResponse.tripParams.currentBattery != null && (
                   <div className="flex items-center gap-2">
-                    <span className="text-[var(--color-muted)] w-12 text-xs">{t('evi_battery')}</span>
+                    <span className="text-[var(--color-text-secondary)] w-12 text-xs">{t('evi_battery')}</span>
                     <span className="text-[var(--color-foreground)]">{lastResponse.tripParams.currentBattery}%</span>
                   </div>
                 )}

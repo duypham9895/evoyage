@@ -72,7 +72,7 @@ export default function TripInput({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-muted)] uppercase tracking-wider">
+      <h2 className="text-sm font-semibold font-[family-name:var(--font-heading)] text-[var(--color-text-secondary)] uppercase tracking-wider">
         {t('trip_route')}
       </h2>
 
@@ -161,7 +161,7 @@ function RecentTrips({ onSelect }: { readonly onSelect: (start: string, end: str
 
   return (
     <div className="mt-3">
-      <div className="text-xs text-[var(--color-muted)] mb-2">{t('recent_trips' as Parameters<typeof t>[0])}</div>
+      <div className="text-xs text-[var(--color-text-secondary)] mb-2">{t('recent_trips' as Parameters<typeof t>[0])}</div>
       <div className="space-y-1.5">
         {trips.map((trip, i) => (
           <button
@@ -173,7 +173,7 @@ function RecentTrips({ onSelect }: { readonly onSelect: (start: string, end: str
               {trip.start.split(',')[0]} → {trip.end.split(',')[0]}
             </div>
             {trip.vehicleName && (
-              <div className="text-xs text-[var(--color-muted)] mt-0.5">{trip.vehicleName}</div>
+              <div className="text-xs text-[var(--color-text-secondary)] mt-0.5">{trip.vehicleName}</div>
             )}
           </button>
         ))}

@@ -111,7 +111,7 @@ export default function WaypointInput({
 
       {/* Max waypoints notice */}
       {waypoints.length >= MAX_WAYPOINTS && (
-        <div className="text-xs text-[var(--color-muted)] text-center py-1">
+        <div className="text-xs text-[var(--color-text-secondary)] text-center py-1">
           {t('waypoints_max')}
         </div>
       )}
@@ -123,7 +123,7 @@ export default function WaypointInput({
         className={`w-full py-2 text-xs rounded-lg border transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed ${
           isLoopTrip
             ? 'border-[var(--color-accent)] text-[var(--color-accent)] bg-[var(--color-accent)]/5'
-            : 'border-[var(--color-surface-hover)] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
+            : 'border-[var(--color-surface-hover)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]'
         }`}
       >
         <span>↻</span>

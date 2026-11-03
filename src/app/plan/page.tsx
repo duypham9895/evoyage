@@ -903,7 +903,7 @@ function HomeContent() {
         {t('plan_trip_button')}
       </button>
       {!canPlan && disabledReason && (
-        <p className="text-xs text-[var(--color-muted)] text-center mt-1.5">{disabledReason}</p>
+        <p className="text-xs text-[var(--color-text-secondary)] text-center mt-1.5">{disabledReason}</p>
       )}
     </div>
   );
