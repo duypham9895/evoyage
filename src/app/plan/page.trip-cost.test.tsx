@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import PlanPage from './page';
 
 /**
  * Trip cost props for custom vehicles.
@@ -81,7 +82,6 @@ afterEach(() => {
 });
 
 async function planWithCustomVehicle() {
-  const PlanPage = (await import('./page')).default;
   render(<PlanPage />);
   const calculate = await screen.findByRole('button', { name: 'Tính lộ trình' });
   fireEvent.click(calculate);

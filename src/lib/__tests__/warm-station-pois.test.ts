@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 
 // scripts/warm-station-pois.ts runs main() on import and is outside the vitest
 // include glob, so it is exercised here (cross-cutting test location).
@@ -35,6 +35,15 @@ async function runWarmer(): Promise<void> {
   await import('../../../scripts/warm-station-pois');
   await vi.waitFor(() => expect(disconnect).toHaveBeenCalled());
 }
+
+// runWarmer() must re-import the script per test (it runs main() on import),
+// so the first test used to pay the cold load of its dependency graph (Prisma
+// adapter, pg) inside its 5s timeout. Load those modules once here instead;
+// vi.resetModules() clears the registry, not vitest's transform cache.
+beforeAll(async () => {
+  await import('../prisma');
+  await import('../station/station-pois');
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

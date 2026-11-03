@@ -61,13 +61,23 @@ test.describe('F1: Trip Planning — Happy Path', () => {
   });
 
   test('keeps planning alive when route calculation takes longer than 10 seconds', async ({ page, isMobile }) => {
+    let releaseRoute!: () => void;
+    const routeGate = new Promise<void>((resolve) => {
+      releaseRoute = resolve;
+    });
+    let routeRequested!: () => void;
+    const routeRequest = new Promise<void>((resolve) => {
+      routeRequested = resolve;
+    });
+
     await page.route('**/api/route', async (route) => {
       if (route.request().method() !== 'POST') {
         await route.continue();
         return;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 11_000));
+      routeRequested();
+      await routeGate;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -101,10 +111,20 @@ test.describe('F1: Trip Planning — Happy Path', () => {
       'button:has-text("Calculate route"), button:has-text("Tính lộ trình"), button:has-text("Plan this trip"), button:has-text("Xem lịch trình")',
     );
     await expect(planButton).toBeEnabled({ timeout: 5_000 });
+    // Fake the page clock so the 11 s below cost no real time. A real 11 s sleep
+    // used a third of the 30 s budget and timed out on slow browsers. Installed
+    // only now so the map and autocomplete above run on real timers.
+    await page.clock.install();
     await planButton.click();
+    await routeRequest;
 
-    await expect(page.getByText(/Still calculating|Vẫn đang tính/)).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('text=/Bảo Lộc|charging|32|150/').first()).toBeVisible({ timeout: 20_000 });
+    // 11 s pass on the page clock while the request is still in flight: past the
+    // slow-calc notice (8 s), short of the abort (25 s).
+    await page.clock.fastForward(11_000);
+
+    await expect(page.getByText(/Still calculating|Vẫn đang tính/)).toBeVisible();
+    releaseRoute();
+    await expect(page.locator('text=/Bảo Lộc|charging|32|150/').first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/Calculation took longer|Tính lộ trình lâu hơn/)).toHaveCount(0);
   });
 

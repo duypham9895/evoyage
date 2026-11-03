@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { useEffect, useState } from 'react';
+import PlanPage from './page';
 
 /**
  * Regression tests for how src/app/plan/page.tsx hands off from the eVi chat
@@ -67,6 +68,13 @@ vi.mock('next/dynamic', () => ({
 
 vi.mock('@/components/map/Map', () => ({
   default: () => <div data-testid="mock-map" />,
+}));
+
+// No Mapbox token in tests, so MapboxMap never renders. Stubbed anyway: the
+// next/dynamic mock above calls every loader at import time, and the real
+// module pulls in mapbox-gl, a multi-second cold load that lands in the first test.
+vi.mock('@/components/map/MapboxMap', () => ({
+  default: () => <div data-testid="mock-mapbox-map" />,
 }));
 
 vi.mock('@/components/map/MapLocateButton', () => ({
@@ -147,7 +155,6 @@ afterEach(() => {
 });
 
 async function renderPlanPage() {
-  const PlanPage = (await import('./page')).default;
   render(<PlanPage />);
 }
 

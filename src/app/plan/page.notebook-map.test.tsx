@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import PlanPage from './page';
 
 /**
  * Regression tests for docs/bugs/2026-11-01-p2-planner-ui-state-and-map.md.
@@ -150,7 +151,6 @@ afterEach(() => {
 });
 
 async function renderPlanPage() {
-  const PlanPage = (await import('./page')).default;
   render(<PlanPage />);
   await screen.findByTestId('mock-locate-button');
 }
