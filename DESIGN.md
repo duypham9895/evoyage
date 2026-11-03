@@ -29,6 +29,7 @@
   - `3xl`: 40px — landing-page section headings (mobile starts at `xl: 24px` and scales up)
   - `display`: 56px — landing-page hero h1 + StatCounter values
   - Line-height: 1.5 body, 1.2 headings, 1.1 display
+  - These names are this scale's, not Tailwind classes. Tailwind v4 defaults differ from `lg` up: `text-lg` = 18px, `text-xl` = 20px, `text-2xl` = 24px, `text-3xl` = 30px. The 40px and 56px sizes ship as `text-[40px]` / `text-[56px]`. Semantic names (e.g. `text-heading`) arrive per primitive (2026-11-02, D9).
 
 ## Color
 - **Approach:** Restrained — accent is rare and meaningful, hierarchy from surface elevation
@@ -75,6 +76,7 @@
   - `xl`: 20px — bottom sheet handle area, prominent landing CTAs
   - `2xl`: 24px — landing-page feature/vehicle/transparency cards, `TripSummary` skeleton cards
   - `full`: 9999px — pills, chips, avatars
+  - These names are this scale's, not Tailwind classes. Tailwind v4 defaults: `rounded-md` = 6px, `rounded-lg` = 8px, `rounded-xl` = 12px, `rounded-2xl` = 16px, `rounded-3xl` = 24px. Most shipped surfaces use `rounded-lg` (8px), and the landing / `TripSummary` skeleton cards use `rounded-2xl` (16px), not 24px. Semantic names (e.g. `rounded-card`) arrive per primitive (2026-11-02, D9).
 
 ## Motion
 - **Approach:** Minimal-functional — only transitions that aid comprehension
@@ -136,6 +138,15 @@
 | 2026-03-21 | Surface elevation hierarchy | Three-tier depth (#0F0F11 → #1A1A1F → #252530) replaces single flat dark background |
 | 2026-03-21 | Keep existing fonts | Be Vietnam Pro, Space Grotesk, JetBrains Mono are excellent choices — no change needed |
 | 2026-05-01 | Reconcile Surface Hover / Surface Elevated naming with implementation | Original DESIGN.md had values swapped relative to globals.css. Components were authored against globals.css naming and shipped correctly for months — the doc was the drift, not the code. Updated descriptions to match shipped reality. |
-| 2026-05-01 | Add `3xl: 40px` and `display: 56px` to type scale | Landing hero/StatCounter (56px) and section headings (40px) had been shipping outside the documented scale. Doc was drift, not code. |
-| 2026-05-01 | Add `2xl: 24px` to border-radius scale | Landing cards and `TripSummary` skeleton cards had been shipping `rounded-2xl` outside the documented scale. Doc was drift, not code. |
+| 2026-05-01 | Add `3xl: 40px` and `display: 56px` to type scale | Landing hero/StatCounter (56px) and section headings (40px) had been shipping outside the documented scale. Doc was drift, not code. Corrected 2026-11-02: these ship as `text-[40px]` / `text-[56px]`; Tailwind v4 `text-3xl` is 30px and `text-2xl` is 24px, not 32px. |
+| 2026-05-01 | Add `2xl: 24px` to border-radius scale | Landing cards and `TripSummary` skeleton cards had been shipping `rounded-2xl` outside the documented scale. Doc was drift, not code. Corrected 2026-11-02: Tailwind v4 `rounded-2xl` is 16px, not 24px (`rounded-lg` is 8px, `rounded-xl` 12px), so these cards render at 16px. |
 | 2026-05-01 | Add four `--color-landing-*` tokens for marketing-only gradient surfaces | `#0D1B3E`, `#081428`, `#0B0B0D`, `#111114` are intentional dark-navy gradient art on the landing page. Tokenized so future changes happen in one place. Reserved for landing only — do not use in app surfaces. |
+| 2026-11-02 | Battery colour thresholds are relative to the user's `minArrival` (D3) | Danger below `minArrival`, warn below `minArrival + 15`, one shared function for hero, gauge and timeline. Fixed 20/40 showed red for arrivals the user had explicitly allowed. Shipped in PR #129. |
+| 2026-11-02 | Results screen leads with arrival battery + ETA (D4) | Battery and ETA (including charging time) first, cost second, route briefing last and collapsed. "Will I make it?" is the driver's first question. Shipped in PR #129. |
+| 2026-11-02 | Muted is for non-information text only (D5) | Information text moves to `text-secondary`; placeholders, borders and disabled text stay `muted`; token value unchanged. Raising muted either still failed AA or collapsed the hierarchy. PR #108. |
+| 2026-11-02 | Dark-only for now; measure `prefers-color-scheme` (D6) | A light theme waits for data: the colour scheme is logged through PostHog (PR #146) before deciding on Follow-OS. |
+| 2026-11-02 | Primitives hand-rolled + cva/tailwind-merge, Base UI for Dialog/Drawer (D7) | One dependency instead of owning focus trap, Escape and portals in every modal; Base UI only after a jsdom spike. `MobileBottomSheet` stays hand-rolled. |
+| 2026-11-02 | Keep `X-[var()]` tokens and add role tokens (D8) | Role tokens (status fg/bg/border, `on-accent`, `scrim`, z, size, motion) plus a TS export with a parity test. No codemod; primitives hide the long class strings. |
+| 2026-11-02 | Semantic radius/type names per primitive (D9) | `rounded-card`, `text-heading` and similar are set as each primitive lands, instead of overriding Tailwind's scale in one big visual shift (74 `rounded-lg` would jump from 8px to 16px). |
+| 2026-11-02 | Keep fonts and `#00D4AA`; drop Be Vietnam Pro 300; tabular numerals for live figures (D10) | No rebrand needed. Weight 300 is loaded for a single `font-light` use. |
+| 2026-11-02 | Fallback map tiles are darkened OSM | CARTO dark tiles now require an API key; darkened OSM keeps the fallback map on the dark palette. Shipped in PR #140. |
