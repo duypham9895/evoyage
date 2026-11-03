@@ -139,6 +139,37 @@ describe('POST /api/feedback', () => {
     expect(createMock).toHaveBeenCalledTimes(1);
   });
 
+  it('timing check — uses client-measured formElapsedMs, so a fast device clock does not drop real feedback', async () => {
+    // Device clock 60 s ahead of the server; form was open 10 s on the device.
+    const res = await POST(
+      makeRequest({ ...VALID, formOpenedAt: Date.now() + 60_000, formElapsedMs: 10_000 }),
+    );
+    expect(res.status).toBe(201);
+    expect(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('timing check — formElapsedMs under 3 s is silently accepted but not persisted', async () => {
+    const res = await POST(
+      makeRequest({ ...VALID, formOpenedAt: Date.now() - 60_000, formElapsedMs: 500 }),
+    );
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.id).toBe('ok');
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('timing check — legacy client with only a future formOpenedAt (fast clock) is persisted', async () => {
+    const res = await POST(makeRequest({ ...VALID, formOpenedAt: Date.now() + 60_000 }));
+    expect(res.status).toBe(201);
+    expect(createMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 400 when formElapsedMs is negative', async () => {
+    const res = await POST(makeRequest({ ...VALID, formElapsedMs: -1 }));
+    expect(res.status).toBe(400);
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when Prisma create throws', async () => {
     createMock.mockRejectedValueOnce(new Error('connection lost'));
     const res = await POST(makeRequest(VALID));

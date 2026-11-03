@@ -50,6 +50,7 @@ export const feedbackRequestSchema = z.object({
   // Spam prevention
   honeypot: z.string().optional(),
   formOpenedAt: z.number().optional(), // client-side timestamp
+  formElapsedMs: z.number().finite().min(0).max(86_400_000).optional(), // form open time, measured on the client
 });
 
 export type FeedbackRequest = z.infer<typeof feedbackRequestSchema>;

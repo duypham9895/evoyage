@@ -216,6 +216,7 @@ export default function FeedbackModal({
           routeParams: window.location.search || undefined,
           honeypot,
           formOpenedAt: formOpenedAt.current,
+          formElapsedMs: Math.min(86_400_000, Math.max(0, Date.now() - formOpenedAt.current)),
         }),
       });
 

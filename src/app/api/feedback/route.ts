@@ -86,9 +86,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, id: 'ok' }, { status: 201 });
   }
 
-  // 4. Timing check — reject if submitted too fast (< 3 seconds)
-  if (data.formOpenedAt) {
-    const elapsed = Date.now() - data.formOpenedAt;
+  // 4. Timing check — reject if submitted too fast (< 3 seconds).
+  // Prefer formElapsedMs (measured entirely on the client). The legacy
+  // formOpenedAt path mixes client and server clocks, so a negative elapsed
+  // (device clock ahead of the server) is treated as passing.
+  const elapsed =
+    data.formElapsedMs ?? (data.formOpenedAt ? Date.now() - data.formOpenedAt : undefined);
+  if (elapsed !== undefined && elapsed >= 0) {
     if (elapsed < MIN_SUBMIT_DELAY_MS) {
       // Silently accept to not reveal the check
       return NextResponse.json({ success: true, id: 'ok' }, { status: 201 });
