@@ -51,26 +51,32 @@ describe('mini-card', () => {
   });
 
   describe('status badge', () => {
-    it('renders Available badge for active status', () => {
+    it('renders Available badge using the available status token', () => {
       const html = renderMiniCardHtml(baseData);
       expect(html).toContain('Available');
-      expect(html).toContain('#34C759');
+      expect(html).toContain('var(--color-status-available-fg)');
+      expect(html).toContain('var(--color-status-available-bg)');
     });
 
-    it('renders Busy badge for busy status', () => {
+    it('renders Busy badge using the busy status token', () => {
       const html = renderMiniCardHtml({ ...baseData, chargingStatus: 'busy' });
       expect(html).toContain('Busy');
-      expect(html).toContain('#FFAB40');
+      expect(html).toContain('var(--color-status-busy-fg)');
+      expect(html).toContain('var(--color-status-busy-bg)');
     });
 
-    it('renders Offline badge for unavailable status', () => {
+    it('renders Offline badge using the unavailable status token', () => {
       const html = renderMiniCardHtml({ ...baseData, chargingStatus: 'unavailable' });
       expect(html).toContain('Offline');
+      expect(html).toContain('var(--color-status-unavailable-fg)');
+      expect(html).toContain('var(--color-status-unavailable-bg)');
     });
 
-    it('renders unknown badge for null status', () => {
+    it('renders unknown badge using the unknown status token for null status', () => {
       const html = renderMiniCardHtml({ ...baseData, chargingStatus: null });
       expect(html).toContain('Status unknown');
+      expect(html).toContain('var(--color-status-unknown-fg)');
+      expect(html).toContain('var(--color-status-unknown-bg)');
     });
   });
 

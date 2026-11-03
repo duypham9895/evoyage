@@ -72,7 +72,7 @@
     "undefinedVars": 2
   },
   "components/map/MapboxMap.tsx": {
-    "hex": 41,
+    "hex": 36,
     "tinyText": 0,
     "rawPalette": 0,
     "undefinedVars": 0
@@ -161,6 +161,12 @@
     "rawPalette": 0,
     "undefinedVars": 0
   },
+  "lib/design-tokens/tokens.ts": {
+    "hex": 14,
+    "tinyText": 0,
+    "rawPalette": 0,
+    "undefinedVars": 0
+  },
   "lib/feedback/email.ts": {
     "hex": 40,
     "tinyText": 0,
@@ -174,13 +180,13 @@
     "undefinedVars": 0
   },
   "lib/geo/mini-card.ts": {
-    "hex": 19,
+    "hex": 14,
     "tinyText": 0,
     "rawPalette": 0,
     "undefinedVars": 0
   },
   "lib/geo/smart-marker.ts": {
-    "hex": 15,
+    "hex": 5,
     "tinyText": 0,
     "rawPalette": 0,
     "undefinedVars": 0

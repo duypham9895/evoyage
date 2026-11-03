@@ -1,4 +1,4 @@
-import { PROVIDER_COLORS, DEFAULT_MARKER_COLOR } from './map-utils';
+import { PROVIDER_COLORS, DEFAULT_MARKER_COLOR, getStationColorKey } from './map-utils';
 
 // ── Types ──
 
@@ -33,23 +33,15 @@ export function getMarkerSize(powerKw: number): MarkerSizeResult {
 }
 
 // ── Status → Ring Style Mapping ──
-
-const STATUS_COLORS: Record<string, string> = {
-  ACTIVE: '#34C759',
-  active: '#34C759',
-  BUSY: '#FFAB40',
-  busy: '#FFAB40',
-  UNAVAILABLE: '#666666',
-  unavailable: '#666666',
-  INACTIVE: '#666666',
-  inactive: '#666666',
-};
+// Status colours come from the shared role tokens (D8-A), via map-utils.ts's
+// getStationColorKey, so the ring colour matches the mini-card badge exactly.
 
 export function getStatusRingStyle(status: string | null): StatusRingResult {
-  if (!status || !(status in STATUS_COLORS)) {
-    return { color: '#555555', style: 'border:2px dashed #555555' };
+  const key = getStationColorKey(status);
+  const color = `var(--color-status-${key}-border)`;
+  if (key === 'unknown') {
+    return { color, style: `border:2px dashed ${color}` };
   }
-  const color = STATUS_COLORS[status];
   return { color, style: `box-shadow:0 0 0 3px ${color}` };
 }
 

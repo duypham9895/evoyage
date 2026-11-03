@@ -71,7 +71,7 @@ function EndpointMarker({ lat, lng, label }: { readonly lat: number; readonly ln
           justifyContent: 'center',
           fontWeight: 'bold',
           fontSize: 13,
-          color: '#0F0F11',
+          color: 'var(--color-on-accent)',
           fontFamily: 'system-ui',
         }}
       >
@@ -241,7 +241,7 @@ function StopMarker({
                           );
                           stopInteractions.confirmDismiss(stopId);
                         }}
-                        style={{ border: 0, background: '#00D4AA', color: '#0F0F11', borderRadius: 4, padding: '4px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                        style={{ border: 0, background: '#00D4AA', color: 'var(--color-on-accent)', borderRadius: 4, padding: '4px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
                       >
                         {t('extra_stop_dismiss_confirm_action' as Parameters<typeof t>[0])}
                       </button>
@@ -262,7 +262,7 @@ function StopMarker({
                 marginTop: 8,
                 padding: '4px 12px',
                 background: '#00D4AA',
-                color: '#0F0F11',
+                color: 'var(--color-on-accent)',
                 borderRadius: 4,
                 textDecoration: 'none',
                 fontSize: 12,
@@ -357,7 +357,7 @@ function AlternativeMarker({
                 marginTop: 8,
                 padding: '4px 12px',
                 background: '#00D4AA',
-                color: '#0F0F11',
+                color: 'var(--color-on-accent)',
                 borderRadius: 4,
                 textDecoration: 'none',
                 fontSize: 12,
@@ -605,7 +605,7 @@ function NearbyOverlay({
                 marginTop: 8,
                 padding: '4px 12px',
                 background: '#00D4AA',
-                color: '#0F0F11',
+                color: 'var(--color-on-accent)',
                 borderRadius: 4,
                 textDecoration: 'none',
                 fontSize: 12,

@@ -59,6 +59,13 @@
 - `--color-landing-alt: #111114` — features/transparency section, one-shade-lighter than `background` for subtle alternation
 - These four tokens are reserved for the landing page only. Do not use them in app surfaces.
 
+### Role tokens (D8-A, Phase 2)
+- **Station status** — `--color-status-{available,busy,unavailable,unknown}-{fg,bg,border}`. `available` `#34C759`, `busy` `#FFAB40` (same hue as Warning), `unavailable` `#666666`, `unknown` `#6B6B78` (same as Muted). `bg` is the `fg`/`border` colour at 13% opacity. One status, one colour, shared by map pins (`smart-marker.ts`, `MapboxMap.tsx`) and the station list (`mini-card.ts`) — resolved through `getStationStatusKey()` in `map-utils.ts`.
+- **`--color-on-accent: #0F0F11`** — text/labels on an accent-coloured surface (buttons, markers). Same value as `background`, named separately so it reads as a role, not a coincidence.
+- **`--color-scrim: rgba(0, 0, 0, 0.6)`** — modal/sheet backdrop overlay.
+- Mirrored in `src/lib/design-tokens/tokens.ts` for surfaces that can't read CSS variables (Mapbox WebGL paint, email HTML); `tokens.test.ts` fails if the two drift apart.
+- Provider/brand colours (e.g. VinFast green) are a separate role and are never merged with status — two different VinFast stations can show different status colours while keeping the same brand colour.
+
 ## Spacing
 - **Base unit:** 4px
 - **Density:** Comfortable — chat messages need breathing room
@@ -150,3 +157,4 @@
 | 2026-11-02 | Semantic radius/type names per primitive (D9) | `rounded-card`, `text-heading` and similar are set as each primitive lands, instead of overriding Tailwind's scale in one big visual shift (74 `rounded-lg` would jump from 8px to 16px). |
 | 2026-11-02 | Keep fonts and `#00D4AA`; drop Be Vietnam Pro 300; tabular numerals for live figures (D10) | No rebrand needed. Weight 300 is loaded for a single `font-light` use. |
 | 2026-11-02 | Fallback map tiles are darkened OSM | CARTO dark tiles now require an API key; darkened OSM keeps the fallback map on the dark palette. Shipped in PR #140. |
+| 2026-11-03 | Ship D8-A role tokens: station status, `on-accent`, `scrim` (D8, Phase 2) | Added `--color-status-{available,busy,unavailable,unknown}-{fg,bg,border}`, `--color-on-accent`, `--color-scrim` to `@theme`, plus a TS mirror (`src/lib/design-tokens/tokens.ts`) with a parity test for Mapbox WebGL/email surfaces. No z-index/size/motion tokens added — nothing in this migration needed them. Migrated `smart-marker.ts` and `mini-card.ts`'s separately-hand-maintained status colours (and their mismatched "unknown" grey, `#555555` vs `#888888`) onto one shared resolver in `map-utils.ts`, and the on-accent text in `MapboxMap.tsx`'s markers/buttons. Provider/brand colours (VinFast green, etc.) are untouched — a different role. Did not add a status indicator to Mapbox's own station pins (they currently show provider colour only, with no status today) — that would be a new visible UI element needing its own design sign-off, not a token migration. |

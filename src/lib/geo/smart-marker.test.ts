@@ -30,32 +30,33 @@ describe('smart-marker', () => {
   });
 
   describe('getStatusRingStyle', () => {
-    it('returns green for available status (lowercase)', () => {
+    it('returns the available status border token for available status (lowercase)', () => {
       const result = getStatusRingStyle('active');
-      expect(result.color).toBe('#34C759');
+      expect(result.color).toBe('var(--color-status-available-border)');
       expect(result.style).toContain('3px');
     });
 
-    it('returns green for available status (UPPERCASE)', () => {
+    it('returns the available status border token for available status (UPPERCASE)', () => {
       const result = getStatusRingStyle('ACTIVE');
-      expect(result.color).toBe('#34C759');
+      expect(result.color).toBe('var(--color-status-available-border)');
     });
 
-    it('returns amber for busy status', () => {
-      expect(getStatusRingStyle('busy').color).toBe('#FFAB40');
-      expect(getStatusRingStyle('BUSY').color).toBe('#FFAB40');
+    it('returns the busy status border token for busy status', () => {
+      expect(getStatusRingStyle('busy').color).toBe('var(--color-status-busy-border)');
+      expect(getStatusRingStyle('BUSY').color).toBe('var(--color-status-busy-border)');
     });
 
-    it('returns gray for unavailable/inactive status', () => {
-      expect(getStatusRingStyle('unavailable').color).toBe('#666666');
-      expect(getStatusRingStyle('UNAVAILABLE').color).toBe('#666666');
-      expect(getStatusRingStyle('inactive').color).toBe('#666666');
-      expect(getStatusRingStyle('INACTIVE').color).toBe('#666666');
+    it('returns the unavailable status border token for unavailable/inactive status', () => {
+      expect(getStatusRingStyle('unavailable').color).toBe('var(--color-status-unavailable-border)');
+      expect(getStatusRingStyle('UNAVAILABLE').color).toBe('var(--color-status-unavailable-border)');
+      expect(getStatusRingStyle('inactive').color).toBe('var(--color-status-unavailable-border)');
+      expect(getStatusRingStyle('INACTIVE').color).toBe('var(--color-status-unavailable-border)');
     });
 
-    it('returns dashed style for null status (no data)', () => {
+    it('returns the unknown status border token with a dashed style for null status (no data)', () => {
       const result = getStatusRingStyle(null);
       expect(result.style).toContain('dashed');
+      expect(result.color).toBe('var(--color-status-unknown-border)');
     });
 
     it('returns dashed style for empty string status', () => {
@@ -103,16 +104,16 @@ describe('smart-marker', () => {
       expect(html).toContain('#6B6B78');
     });
 
-    it('renders green status ring for active status', () => {
+    it('renders the available status ring token for active status', () => {
       const html = renderSmartMarkerHtml(baseStation);
       // Status ring encoded as box-shadow
       expect(html).toContain('box-shadow');
-      expect(html).toContain('#34C759');
+      expect(html).toContain('var(--color-status-available-border)');
     });
 
-    it('renders amber status ring for busy status', () => {
+    it('renders the busy status ring token for busy status', () => {
       const html = renderSmartMarkerHtml({ ...baseStation, chargingStatus: 'busy' });
-      expect(html).toContain('#FFAB40');
+      expect(html).toContain('var(--color-status-busy-border)');
     });
 
     it('renders dashed border for null status', () => {
