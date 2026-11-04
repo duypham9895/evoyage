@@ -1,32 +1,32 @@
 {
-  "lastSyncedAt": "2026-11-03T10:30:04.025Z",
+  "lastSyncedAt": "2026-11-04T10:32:29.484Z",
   "petrolimex": {
     "source": "https://www.petrolimex.com.vn/index.html",
-    "effectiveAt": "2026-10-31T17:00:00.000Z",
+    "effectiveAt": "2026-11-03T15:02:35.799Z",
     "products": {
       "e10ron95iii": {
         "label": "Xăng E10 RON 95-III",
-        "vndPerLiter": 24150
+        "vndPerLiter": 23230
       },
       "e5ron92": {
-        "label": "Xăng E5 RON 92",
-        "vndPerLiter": 24220
+        "label": "Xăng E5 RON 92-II",
+        "vndPerLiter": 23200
       },
       "do0001s": {
         "label": "DO 0,001S-V",
-        "vndPerLiter": 31640
+        "vndPerLiter": 30270
       },
       "do005s": {
         "label": "DO 0,05S-II",
-        "vndPerLiter": 30240
+        "vndPerLiter": 28870
       },
       "kerosene": {
         "label": "Dầu hỏa 2-K",
-        "vndPerLiter": 29590
+        "vndPerLiter": 29010
       },
       "ron95iii": {
         "label": "Xăng E10 RON 95-III",
-        "vndPerLiter": 24150
+        "vndPerLiter": 23230
       }
     }
   },
@@ -38,7 +38,7 @@
   },
   "evnResidential": {
     "source": "https://en.evn.com.vn/d6/news/RETAIL-ELECTRICITY-TARIFF-9-28-252.aspx",
-    "effectiveAt": "2025-05-09",
+    "effectiveAt": "2026-10-31",
     "tiers": [
       {
         "minKwh": 0,
