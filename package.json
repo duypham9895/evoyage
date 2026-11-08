@@ -33,17 +33,17 @@
     "@sparticuz/chromium": "^149.0.0",
     "@types/leaflet": "^1.9.22",
     "@upstash/ratelimit": "^2.2.0",
-    "@upstash/redis": "^1.38.0",
+    "@upstash/redis": "^1.41.0",
     "@vercel/blob": "^2.8.2",
     "html-to-image": "^1.11.13",
     "impit": "^0.14.8",
     "leaflet": "^1.9.4",
-    "mapbox-gl": "^3.34.1",
+    "mapbox-gl": "^3.34.2",
     "nanoid": "^5.1.16",
-    "next": "16.4.3",
-    "openai": "^7.45.1",
+    "next": "16.4.5",
+    "openai": "^7.52.0",
     "playwright-core": "^1.58.2",
-    "posthog-js": "^1.442.1",
+    "posthog-js": "^1.447.0",
     "prisma": "7.10.1",
     "qrcode": "^1.5.4",
     "react": "19.3.1",
@@ -86,6 +86,6 @@
     "vitest": "^5.0.5"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.2.1"
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.3.4"
   }
 }
