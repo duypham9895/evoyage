@@ -71,6 +71,12 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      # tsconfig.json excludes scripts/, so the crawl scripts had no type gate
+      # at all: a half-removed symbol merged green and threw on the next
+      # scheduled run. See docs/bugs/2026-11-12-p1-energy-crawl-evn-tariff-restructure.md.
+      - name: Type check scripts
+        run: npm run typecheck:scripts
+
       - name: Run unit tests
         run: npm test
 

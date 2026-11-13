@@ -4,6 +4,7 @@ import {
   getGasolineVndPerLiter,
   getDieselVndPerLiter,
 } from './index';
+import { REPRESENTATIVE_MONTHLY_KWH } from './parse-evn';
 
 describe('getEnergyPrices', () => {
   it('returns a typed snapshot with all three sources populated', () => {
@@ -29,12 +30,17 @@ describe('getEnergyPrices', () => {
     expect(vgreen.freeForVinFastUntil).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('exposes EVN tier 4 as the representative residential rate', () => {
+  it('exposes the tier containing the representative monthly consumption', () => {
     const { evnResidential } = getEnergyPrices();
-    expect(evnResidential.representativeTier).toBe(4);
-    expect(evnResidential.representativeVndPerKwh).toBe(
-      evnResidential.tiers[3].vndPerKwh,
-    );
+    const tier = evnResidential.tiers[evnResidential.representativeTier - 1];
+    expect(tier).toBeDefined();
+    // The tier index moves with each regulator restructure; what must hold is
+    // that it is the band REPRESENTATIVE_MONTHLY_KWH falls in.
+    expect(REPRESENTATIVE_MONTHLY_KWH).toBeGreaterThanOrEqual(tier.minKwh);
+    if (tier.maxKwh !== null) {
+      expect(REPRESENTATIVE_MONTHLY_KWH).toBeLessThanOrEqual(tier.maxKwh);
+    }
+    expect(evnResidential.representativeVndPerKwh).toBe(tier.vndPerKwh);
   });
 });
 

@@ -101,7 +101,10 @@ describe('renderEnergyPricesBlock', () => {
   const prices = {
     gasolineVndPerLiter: 23750,
     dieselVndPerLiter: 28170,
-    evnHomeVndPerKwh: 2998,
+    evnHomeVndPerKwh: 2894,
+    evnHomeTier: 3,
+    evnHomeMinKwh: 201,
+    evnHomeMaxKwh: 400,
     vGreenVndPerKwh: 3858,
   };
 
@@ -121,16 +124,27 @@ describe('renderEnergyPricesBlock', () => {
     const out = renderEnergyPricesBlock(prices);
     expect(out).toContain('₫23,750');
     expect(out).toContain('₫28,170');
-    expect(out).toContain('₫2,998');
+    expect(out).toContain('₫2,894');
     expect(out).toContain('₫3,858');
   });
 
   it('attributes each price to the correct authoritative source', () => {
     const out = renderEnergyPricesBlock(prices);
     expect(out).toContain('Petrolimex');
-    expect(out).toContain('EVN tier 4');
+    expect(out).toContain('EVN tier 3 · 201–400 kWh/month');
     expect(out).toContain('V-GREEN');
     expect(out).toContain('free for VinFast owners until 2029');
+  });
+
+  it('renders an open-ended top tier as "<min>+ kWh/month", never "<min>–null"', () => {
+    const out = renderEnergyPricesBlock({
+      ...prices,
+      evnHomeTier: 5,
+      evnHomeMinKwh: 701,
+      evnHomeMaxKwh: null,
+    });
+    expect(out).toContain('EVN tier 5 · 701+ kWh/month');
+    expect(out).not.toContain('null');
   });
 });
 
@@ -139,6 +153,9 @@ describe('replaceEnergyPricesBlock', () => {
     gasolineVndPerLiter: 24000,
     dieselVndPerLiter: 28500,
     evnHomeVndPerKwh: 3050,
+    evnHomeTier: 3,
+    evnHomeMinKwh: 201,
+    evnHomeMaxKwh: 400,
     vGreenVndPerKwh: 3858,
   };
 
@@ -162,7 +179,10 @@ describe('syncReadmeBlocks', () => {
   const energy = {
     gasolineVndPerLiter: 24150,
     dieselVndPerLiter: 30240,
-    evnHomeVndPerKwh: 2998,
+    evnHomeVndPerKwh: 2894,
+    evnHomeTier: 3,
+    evnHomeMinKwh: 201,
+    evnHomeMaxKwh: 400,
     vGreenVndPerKwh: 3858,
   };
 

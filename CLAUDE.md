@@ -142,9 +142,9 @@ cross-cutting concerns  → src/lib/__tests__/name.test.ts (shared)
 
 ### Current Test Suite (baseline)
 
-- **2191 unit/integration tests** across **193 files** (vitest, ~20 seconds; 9 of them are `it.fails` bug reproductions)
+- **2431 unit/integration tests** across **204 files** (vitest, ~22 seconds; 11 of them are `it.fails` bug reproductions)
 - **38 E2E tests** across **13 spec files** (Playwright, on Desktop Chrome; the mobile-only autocomplete test skips there)
-- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar, energy-price parsers (Petrolimex / V-GREEN / EVN), trip-cost calculator, HomeEnergyPrices block, eVi LLM module (provider chain, fallback, telemetry — see ADR-0002), backup pressure score + alternative trim helper (ADR-0006), backup-station telemetry events
+- Unit/integration covers: geocoding, feedback validation, URL building, locale sync, PWA manifest, haptics, display logic, routing, coordinates, station finding, nearby stations API, eVi AI chat, eVi station search, speech engines (Web Speech + Whisper), suggestions client, transcription API, MapLocateButton, smart markers, mini-card popups, station event emitter, DesktopTabBar, energy-price parsers (Petrolimex / V-GREEN / EVN), trip-cost calculator, EVN tariff discovery, the energy-prices crawl end to end (offline) and its data contract, the crawl workflows' PR and failure-issue shell, README energy-prices block, eVi LLM module (provider chain, fallback, telemetry — see ADR-0002), backup pressure score + alternative trim helper (ADR-0006), backup-station telemetry events
 - E2E covers: trip planning, eVi chat, nearby stations, bottom sheet, desktop tabs, vehicle selection, sharing, bilingual toggle, feedback FAB, URL state, CSP smoke, precautionary stops, mobile start-point autocomplete
 - These counts should only go UP — never delete tests unless the feature is removed
 
@@ -162,4 +162,5 @@ Before every commit, verify:
 - Always select the correct skill for each process, matching each task to its appropriate skill before starting work.
 - Always search for and use a suitable ECC skill before starting work on a task.
 - Always search for and use suitable skills from ECC before starting work on a task.
+- Ensure automated tests exist and all pass before any production deployment; establish the test suite if it is missing.
 <!-- end claude-reflect -->

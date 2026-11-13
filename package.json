@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "typecheck:scripts": "tsc -p tsconfig.scripts.json",
     "test:watch": "vitest",
     "ratchet:update": "RATCHET_UPDATE=1 npx vitest run src/lib/__tests__/design-token-ratchet.test.ts",
     "test:e2e": "npx playwright test",

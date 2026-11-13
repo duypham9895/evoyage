@@ -36,7 +36,14 @@ interface EnergyPricesFile {
     readonly products: Record<string, { readonly vndPerLiter: number }>;
   };
   readonly vgreen: { readonly vndPerKwh: number };
-  readonly evnResidential: { readonly representativeVndPerKwh: number };
+  readonly evnResidential: {
+    readonly representativeTier: number;
+    readonly representativeVndPerKwh: number;
+    readonly tiers: ReadonlyArray<{
+      readonly minKwh: number;
+      readonly maxKwh: number | null;
+    }>;
+  };
 }
 
 function parseOnly(argv: readonly string[]): 'stations' | 'energy' | undefined {
@@ -66,10 +73,23 @@ function main(): void {
   let energy: EnergyPricesReadmeBlock | undefined;
   if (only !== 'stations' && existsSync(ENERGY_PATH)) {
     const data = JSON.parse(readFileSync(ENERGY_PATH, 'utf-8')) as EnergyPricesFile;
+    const { representativeTier, tiers } = data.evnResidential;
+    // The tier index moves with each regulator restructure, so the README band
+    // is read from the data rather than hardcoded in the template.
+    const band = tiers[representativeTier - 1];
+    if (!band) {
+      console.error(
+        `Refusing to update README: EVN tier ${representativeTier} missing from ${ENERGY_PATH}`,
+      );
+      process.exit(1);
+    }
     energy = {
       gasolineVndPerLiter: data.petrolimex.products.ron95iii?.vndPerLiter ?? 0,
       dieselVndPerLiter: data.petrolimex.products.do005s?.vndPerLiter ?? 0,
       evnHomeVndPerKwh: data.evnResidential.representativeVndPerKwh,
+      evnHomeTier: representativeTier,
+      evnHomeMinKwh: band.minKwh,
+      evnHomeMaxKwh: band.maxKwh,
       vGreenVndPerKwh: data.vgreen.vndPerKwh,
     };
   }

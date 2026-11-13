@@ -1,32 +1,32 @@
 {
-  "lastSyncedAt": "2026-11-03T10:30:04.025Z",
+  "lastSyncedAt": "2026-11-13T05:16:19.431Z",
   "petrolimex": {
     "source": "https://www.petrolimex.com.vn/index.html",
-    "effectiveAt": "2026-10-31T17:00:00.000Z",
+    "effectiveAt": "2026-11-12T07:52:11.126Z",
     "products": {
       "e10ron95iii": {
         "label": "Xăng E10 RON 95-III",
-        "vndPerLiter": 24150
+        "vndPerLiter": 19840
       },
       "e5ron92": {
-        "label": "Xăng E5 RON 92",
-        "vndPerLiter": 24220
+        "label": "Xăng E5 RON 92-II",
+        "vndPerLiter": 19390
       },
       "do0001s": {
         "label": "DO 0,001S-V",
-        "vndPerLiter": 31640
+        "vndPerLiter": 28620
       },
       "do005s": {
         "label": "DO 0,05S-II",
-        "vndPerLiter": 30240
+        "vndPerLiter": 26820
       },
       "kerosene": {
         "label": "Dầu hỏa 2-K",
-        "vndPerLiter": 29590
+        "vndPerLiter": 26400
       },
       "ron95iii": {
         "label": "Xăng E10 RON 95-III",
-        "vndPerLiter": 24150
+        "vndPerLiter": 19840
       }
     }
   },
@@ -37,41 +37,36 @@
     "freeForVinFastUntil": "2029-12-31"
   },
   "evnResidential": {
-    "source": "https://en.evn.com.vn/d6/news/RETAIL-ELECTRICITY-TARIFF-9-28-252.aspx",
-    "effectiveAt": "2025-05-09",
+    "source": "https://en.evn.com.vn/d/en-US/news/Retail-Electricity-Tariffs-by-Customer-Categories-Decision-No-2892QD-BCT-dated-October-31-2026-issued-by-Ministry-of-Industry-and-Trade-60-28-501776",
+    "effectiveAt": "2026-10-31",
     "tiers": [
       {
         "minKwh": 0,
-        "maxKwh": 50,
-        "vndPerKwh": 1984
-      },
-      {
-        "minKwh": 51,
         "maxKwh": 100,
-        "vndPerKwh": 2050
+        "vndPerKwh": 1901
       },
       {
         "minKwh": 101,
         "maxKwh": 200,
-        "vndPerKwh": 2380
+        "vndPerKwh": 2289
       },
       {
         "minKwh": 201,
-        "maxKwh": 300,
-        "vndPerKwh": 2998
-      },
-      {
-        "minKwh": 301,
         "maxKwh": 400,
-        "vndPerKwh": 3350
+        "vndPerKwh": 2894
       },
       {
         "minKwh": 401,
+        "maxKwh": 700,
+        "vndPerKwh": 3456
+      },
+      {
+        "minKwh": 701,
         "maxKwh": null,
-        "vndPerKwh": 3460
+        "vndPerKwh": 3844
       }
     ],
-    "representativeTier": 4,
-    "representativeVndPerKwh": 2998
+    "representativeTier": 3,
+    "representativeVndPerKwh": 2894
   }
 }

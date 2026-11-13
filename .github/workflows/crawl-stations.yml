@@ -49,8 +49,11 @@ jobs:
         run: npx playwright install chromium --with-deps
 
       # Primary source — VinFast / V-Green (~16k stations). Failure here fails the job.
+      # Tee'd so the failure-issue step can quote the actual error, not just the run URL.
       - name: Crawl VinFast stations
-        run: npx tsx scripts/crawl-vinfast-stations.ts
+        run: |
+          set -o pipefail
+          npx tsx scripts/crawl-vinfast-stations.ts 2>&1 | tee "${RUNNER_TEMP}/crawl.log"
 
       # Secondary sources — non-VinFast diversity (Tier A). Each step is wrapped in
       # `continue-on-error: true` so a flaky upstream doesn't block the others.
@@ -88,6 +91,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMATION_PAT }}
         run: |
+          # Actions' default shell is `bash -e {0}` — errexit on, pipefail OFF.
+          # Without this, `pr=$(gh pr create ... | tail -1)` takes tail's exit
+          # status (always 0) and a failed create silently yields an empty PR.
+          set -o pipefail
           if [ -z "$GH_TOKEN" ]; then
             echo "::error::AUTOMATION_PAT secret is not set. See docs/agents/automation-pat.md."
             exit 1
@@ -113,14 +120,40 @@ jobs:
           if [ -n "$pr" ]; then
             echo "Updated existing station sync PR #$pr."
           else
-            gh pr create \
+            # Use the URL `gh pr create` prints. The second `gh pr list` this
+            # replaces was a second GraphQL call that could fail after the PR
+            # already existed, and it had no `// ""` default, so an empty list
+            # produced `gh pr merge null`.
+            pr=$(gh pr create \
               --base main \
               --head "$branch" \
               --title "chore(stations): sync VinFast count to ${COUNT}" \
-              --body "Automated station count sync from the scheduled GitHub Actions workflow. Auto-merges once the required check passes."
-            pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number')
+              --body "Automated station count sync from the scheduled GitHub Actions workflow. Auto-merges once the required check passes." | tail -1) || {
+              echo "::error::gh pr create failed for ${branch}; see this step's log for its stderr."
+              exit 1
+            }
           fi
-          gh pr merge "$pr" --auto --merge
+
+          if [ -z "$pr" ]; then
+            # Never run `gh pr merge ""` — it would resolve the current branch
+            # or fail three times blaming the wrong command.
+            echo "::error::No PR to merge for ${branch}: gh pr create printed no URL."
+            exit 1
+          fi
+
+          # Retry: one transient GraphQL error here leaves the PR open with
+          # auto-merge off, and nothing re-arms it until the next green run.
+          for attempt in 1 2 3; do
+            if gh pr merge "$pr" --auto --merge; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "gh pr merge attempt ${attempt} failed; retrying in $((attempt * 10))s."
+              sleep $((attempt * 10))
+            fi
+          done
+          echo "::error::gh pr merge --auto failed 3 times for ${pr}."
+          exit 1
 
       # Finding C of docs/bugs/2026-11-01-p2-cron-silent-noops-and-observability.md:
       # nobody heard about a month of failed runs. Open one issue per workflow
@@ -135,12 +168,38 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           title="Scheduled workflow failing: ${WORKFLOW_NAME}"
+          log="${RUNNER_TEMP}/crawl.log"
+          captured=""
+          if [ -s "$log" ]; then
+            # The narrow grep pattern is a SECURITY CONTROL, not just a filter.
+            # This repo is public and the quoted text is upstream-controlled
+            # (URLs and HTML from the crawled sites reach the log through error
+            # messages). Line-based matching on these four words is what stops a
+            # line that is only ``` from closing the code fence below, and what
+            # keeps @mentions out of the issue body. Do not widen it, and do not
+            # add -A/-B context lines, without replacing it with real escaping.
+            # tee writes raw bytes, so the runner's secret masking does not apply
+            # here — and this job holds DATABASE_URL/DIRECT_URL. Redact what can
+            # carry a credential and cap line length before posting: database
+            # URLs and URLs with an embedded user:password. Plain https:// URLs
+            # are left alone because they are the diagnostic the alert carries.
+            # The sed runs ONLY on log lines — never on RUN_URL.
+            captured=$(grep -aE 'Error|FAILED|FATAL|error:' "$log" \
+              | tail -3 \
+              | sed -E -e 's#postgres(ql)?://[^[:space:]]*#<redacted-db-url>#g' \
+                       -e 's#(https?)://[^/@[:space:]]*:[^@[:space:]]*@[^[:space:]]*#\1://<redacted-credentials>#g' \
+              | cut -c1-400 || true)
+          fi
+          if [ -z "$captured" ]; then
+            captured="(no error line captured — open the run log)"
+          fi
+          body=$(printf 'The scheduled run failed: %s\n\nLast error lines from the crawl step (may predate the failure):\n\n```\n%s\n```' "${RUN_URL}" "$captured")
+
           issue=$(gh issue list --state open --search "\"${title}\" in:title" --json number,title \
             --jq "map(select(.title == \"${title}\")) | .[0].number // \"\"")
           if [ -n "$issue" ]; then
-            gh issue comment "$issue" --body "Failed again: ${RUN_URL}"
+            gh issue comment "$issue" --body "$body"
           else
-            body="The scheduled run failed: ${RUN_URL}"
             gh issue create --title "$title" --body "$body" --label needs-triage \
               || gh issue create --title "$title" --body "$body"
           fi

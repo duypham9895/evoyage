@@ -1,0 +1,16 @@
+{
+  "//": "tsconfig.json excludes scripts/, so the required check never type-checked the crawl scripts. A half-removed symbol merged green and threw TypeError on the next scheduled run (docs/bugs/2026-11-12-p1-energy-crawl-evn-tariff-restructure.md, Step 3). This config gates the energy scripts; run it with `npm run typecheck:scripts`.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts/crawl-energy-prices.ts",
+    "scripts/update-readme-stats.ts",
+    "scripts/__fixtures__/energy-prices/capture-fixtures.ts",
+    "src/lib/energy-prices/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
