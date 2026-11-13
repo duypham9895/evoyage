@@ -41,6 +41,11 @@ export interface EnergyPricesReadmeBlock {
   readonly gasolineVndPerLiter: number;
   readonly dieselVndPerLiter: number;
   readonly evnHomeVndPerKwh: number;
+  /** Which EVN tier the representative price came from — it moves when the regulator restructures. */
+  readonly evnHomeTier: number;
+  readonly evnHomeMinKwh: number;
+  /** `null` = open-ended top tier, rendered as "<min>+". */
+  readonly evnHomeMaxKwh: number | null;
   readonly vGreenVndPerKwh: number;
 }
 
@@ -50,11 +55,15 @@ export interface EnergyPricesReadmeBlock {
  */
 export function renderEnergyPricesBlock(prices: EnergyPricesReadmeBlock): string {
   const fmt = (n: number) => n.toLocaleString('en-US');
+  const band =
+    prices.evnHomeMaxKwh === null
+      ? `${fmt(prices.evnHomeMinKwh)}+`
+      : `${fmt(prices.evnHomeMinKwh)}–${fmt(prices.evnHomeMaxKwh)}`;
   return [
     '<!-- ENERGY_PRICES_START -->',
     `  - Gasoline E10 RON 95-III: ₫${fmt(prices.gasolineVndPerLiter)} / liter (Petrolimex)`,
     `  - Diesel DO 0,05S: ₫${fmt(prices.dieselVndPerLiter)} / liter (Petrolimex)`,
-    `  - Electricity at home: ₫${fmt(prices.evnHomeVndPerKwh)} / kWh (EVN tier 4 · 201–300 kWh/month)`,
+    `  - Electricity at home: ₫${fmt(prices.evnHomeVndPerKwh)} / kWh (EVN tier ${prices.evnHomeTier} · ${band} kWh/month)`,
     `  - V-GREEN public charging: ₫${fmt(prices.vGreenVndPerKwh)} / kWh (free for VinFast owners until 2029)`,
     '<!-- ENERGY_PRICES_END -->',
   ].join('\n');

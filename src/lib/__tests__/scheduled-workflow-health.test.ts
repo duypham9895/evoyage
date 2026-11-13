@@ -56,3 +56,55 @@ describe('scheduled workflows alert on failure', () => {
     },
   );
 });
+
+// docs/bugs/2026-11-12-p1-energy-crawl-evn-tariff-restructure.md, review rounds
+// 1-3. Each of these was a real defect, and each was left enforced only by a
+// code comment ("do not widen this", "pipefail matters here"). Behaviour is
+// tested in crawl-workflow-steps.test.ts; these assertions stop the control
+// from being deleted outright, which that suite could not distinguish from a
+// deliberate rewrite.
+const crawlWorkflows = ['crawl-energy-prices.yml', 'crawl-stations.yml'] as const;
+
+describe('crawl workflows keep their failure-reporting controls', () => {
+  it.each(crawlWorkflows)('%s sets pipefail in the tee\'d crawl step and in the PR step', (file) => {
+    const content = read(file);
+
+    // GitHub runs `run:` as `bash -e` — errexit WITHOUT pipefail. Both steps
+    // pipe (`npx … | tee`, `gh pr create … | tail -1`), so without this a
+    // failing command on the left of the pipe is swallowed.
+    expect(content).toContain('| tee "${RUNNER_TEMP}/crawl.log"');
+    expect(content.match(/set -o pipefail/g) ?? []).toHaveLength(2);
+  });
+
+  it.each(crawlWorkflows)('%s refuses to call gh pr merge without a PR', (file) => {
+    const content = read(file);
+
+    expect(content).toContain('::error::gh pr create failed');
+    expect(content).toContain('if [ -z "$pr" ]; then');
+    expect(content).toContain('gh pr create printed no URL');
+  });
+
+  it.each(crawlWorkflows)('%s redacts credentials from the quoted log lines', (file) => {
+    const content = read(file);
+
+    expect(content).toContain("s#postgres(ql)?://[^[:space:]]*#<redacted-db-url>#g");
+    expect(content).toContain(
+      "s#(https?)://[^/@[:space:]]*:[^@[:space:]]*@[^[:space:]]*#\\1://<redacted-credentials>#g",
+    );
+    expect(content).toContain('cut -c1-400');
+    // The run URL is a separate printf argument and must never be piped
+    // through sed, or the alert loses the link to the run.
+    expect(content).not.toMatch(/RUN_URL.*\|\s*sed/);
+  });
+
+  it.each(crawlWorkflows)('%s keeps the issue-quote grep narrow', (file) => {
+    const content = read(file);
+
+    // This repo is public and the quoted text is upstream-controlled. The
+    // pattern being line-based and narrow is what stops a line that is only
+    // ``` from closing the code fence in the issue body. Widening it, or
+    // adding -A/-B context, needs real escaping instead.
+    expect(content).toContain("grep -aE 'Error|FAILED|FATAL|error:'");
+    expect(content).not.toMatch(/grep -a?E? .*-[AB] ?\d/);
+  });
+});

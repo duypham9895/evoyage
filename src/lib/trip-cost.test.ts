@@ -22,16 +22,15 @@ const SNAPSHOT: EnergyPricesSnapshot = {
   },
   evnResidential: {
     source: 'x',
-    effectiveAt: '2025-05-09',
+    effectiveAt: '2026-10-31',
     tiers: [
-      { minKwh: 0, maxKwh: 50, vndPerKwh: 1984 },
-      { minKwh: 51, maxKwh: 100, vndPerKwh: 2050 },
-      { minKwh: 101, maxKwh: 200, vndPerKwh: 2380 },
-      { minKwh: 201, maxKwh: 300, vndPerKwh: 3_000 }, // representative tier
-      { minKwh: 301, maxKwh: 400, vndPerKwh: 3350 },
-      { minKwh: 401, maxKwh: null, vndPerKwh: 3460 },
+      { minKwh: 0, maxKwh: 100, vndPerKwh: 1901 },
+      { minKwh: 101, maxKwh: 200, vndPerKwh: 2289 },
+      { minKwh: 201, maxKwh: 400, vndPerKwh: 3_000 }, // representative tier
+      { minKwh: 401, maxKwh: 700, vndPerKwh: 3456 },
+      { minKwh: 701, maxKwh: null, vndPerKwh: 3844 },
     ],
-    representativeTier: 4,
+    representativeTier: 3,
     representativeVndPerKwh: 3_000,
   },
 };
@@ -175,7 +174,7 @@ describe('computeTripCost — V-GREEN free-for-VinFast policy', () => {
 });
 
 describe('computeTripCost — home-charging cost', () => {
-  it('uses EVN representative tier 4 for the homeChargingVnd line', () => {
+  it('uses the EVN representative tier for the homeChargingVnd line', () => {
     const cost = computeTripCost({
       distanceKm: 100,
       vehicle: VF8,

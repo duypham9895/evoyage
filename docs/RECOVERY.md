@@ -70,7 +70,7 @@ These steps assume Severity 2 — the Supabase project is gone and you're starti
    npx tsx scripts/seed-manual-stations.ts
    ```
 
-6c. **Seed today's energy prices** (RON95, diesel, EVN tier 4, V-GREEN). The full daily refresh runs on GitHub Actions; this is the one-shot bootstrap so the trip-cost panel renders with real numbers immediately.
+6c. **Seed today's energy prices** (RON95, diesel, the EVN household rate, V-GREEN). The full daily refresh runs on GitHub Actions; this is the one-shot bootstrap so the trip-cost panel renders with real numbers immediately.
    ```bash
    npx tsx scripts/crawl-energy-prices.ts
    ```

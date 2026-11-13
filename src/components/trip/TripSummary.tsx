@@ -299,8 +299,9 @@ function RouteBriefing({
  * When EV is more expensive than gasoline (rare, possible with stale fuel
  * pricing), the copy uses neutral muted color — we don't shame the driver.
  *
- * Tap "How is this calculated?" to expand the breakdown with assumptions
- * (EVN 3,500 ₫/kWh, RON95 23,000 ₫/L). Keeps the headline honest.
+ * Tap "How is this calculated?" to expand the breakdown with the assumptions
+ * behind it (the EVN household rate and the RON 95-III pump price, both from
+ * the daily crawl). Keeps the headline honest.
  */
 function TripCostSection({
   distanceKm,

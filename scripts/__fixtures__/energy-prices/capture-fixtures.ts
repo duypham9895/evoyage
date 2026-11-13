@@ -69,17 +69,41 @@ async function captureVGreen() {
   console.log(`[vgreen] captured ${html.length} bytes`);
 }
 
+// EVN has no stable article identity: it reused article id 252 for a reseller
+// (wholesale) price list after the 2892/QD-BCT restructure. Each capture target
+// is therefore pinned to the fixture role it plays in the tests, and article 252
+// may only ever write the NEGATIVE fixture — the one the parser must reject.
+// `evn-tariff-1279.html` is deliberately absent: that article no longer exists
+// upstream and the committed fixture is the only copy. Never recapture it.
+const EVN_CAPTURES: ReadonlyArray<{ readonly url: string; readonly file: string }> = [
+  {
+    // Positive: residential retail tariff, Decision 2892/QD-BCT (5 tiers).
+    url: 'https://en.evn.com.vn/d/en-US/news/Retail-Electricity-Tariffs-by-Customer-Categories-Decision-No-2892QD-BCT-dated-October-31-2026-issued-by-Ministry-of-Industry-and-Trade-60-28-501776',
+    file: 'evn-tariff-2892.html',
+  },
+  {
+    // Negative: prices EVN charges resellers. Must fail the residential anchor.
+    url: 'https://en.evn.com.vn/d6/news/RETAIL-ELECTRICITY-TARIFF-9-28-252.aspx',
+    file: 'evn-reseller-2892.html',
+  },
+  {
+    // Discovery: the Electricity Tariff archive listing (category 60-28).
+    url: 'https://en.evn.com.vn/en-US/news-l/Electricity-Tariff-60-28',
+    file: 'evn-listing.html',
+  },
+];
+
 async function captureEvn() {
-  // The English version is a static HTML table; the Vietnamese page is just a
-  // list of price-decision links and doesn't contain the tier numbers itself.
-  const res = await fetch(
-    'https://en.evn.com.vn/d6/news/RETAIL-ELECTRICITY-TARIFF-9-28-252.aspx',
-    { redirect: 'follow', headers: { 'User-Agent': 'Mozilla/5.0' } },
-  );
-  if (!res.ok) throw new Error(`EVN fetch failed: ${res.status}`);
-  const html = await res.text();
-  writeFileSync(resolve(FIXTURE_DIR, 'evn-tariff.html'), html, 'utf8');
-  console.log(`[evn] captured ${html.length} bytes`);
+  for (const { url, file } of EVN_CAPTURES) {
+    const res = await fetch(url, {
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    if (!res.ok) throw new Error(`EVN fetch failed for ${file}: ${res.status}`);
+    const html = await res.text();
+    writeFileSync(resolve(FIXTURE_DIR, file), html, 'utf8');
+    console.log(`[evn] captured ${html.length} bytes → ${file}`);
+  }
 }
 
 async function safe(label: string, fn: () => Promise<void>) {
