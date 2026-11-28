@@ -13,8 +13,8 @@ Plan EV road trips across Vietnam with real charging station data. Know exactly 
 - See **trip cost** in VND — gasoline vs diesel vs electric, scaled to your route, with V-GREEN free charging applied for VinFast owners through 2029
 - Live energy prices auto-updated daily from authoritative sources:
 <!-- ENERGY_PRICES_START -->
-  - Gasoline E10 RON 95-III: ₫19,840 / liter (Petrolimex)
-  - Diesel DO 0,05S: ₫26,820 / liter (Petrolimex)
+  - Gasoline E10 RON 95-III: ₫19,050 / liter (Petrolimex)
+  - Diesel DO 0,05S: ₫24,960 / liter (Petrolimex)
   - Electricity at home: ₫2,894 / kWh (EVN tier 3 · 201–400 kWh/month)
   - V-GREEN public charging: ₫3,858 / kWh (free for VinFast owners until 2029)
 <!-- ENERGY_PRICES_END -->
